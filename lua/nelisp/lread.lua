@@ -98,6 +98,23 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     end
     return vars.Qnil
 end
+F.intern={'intern',1,2,0,[[Return the canonical symbol whose name is STRING.
+If there is none, one is created by this function and returned.
+A second optional argument specifies the obarray to use;
+it defaults to the value of `obarray'.]]}
+function F.intern.f(s,obarray)
+    obarray=M.obarray_check(lisp.nilp(obarray) and vars.V.obarray or obarray)
+    lisp.check_string(s)
+    local found,longhand=M.lookup_considering_shorthand(obarray,s)
+    if type(found)=='number' then
+        if longhand then
+            error('TODO')
+        else
+            found=M.intern_drive(s,obarray,found)
+        end
+    end
+    return found
+end
 
 function M.init()
     if not _G.nelisp_later then
@@ -106,6 +123,7 @@ function M.init()
 end
 function M.init_syms()
     vars.setsubr(F,'load')
+    vars.setsubr(F,'intern')
 
     vars.defvar_lisp('obarray','obarray',[[Symbol table for use by `intern' and `read'.
 It is a vector whose length ought to be prime for best results.
