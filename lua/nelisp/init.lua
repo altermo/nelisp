@@ -13,6 +13,7 @@ require'nelisp.eval'.init_syms()
 require'nelisp.editfns'.init_syms()
 require'nelisp.buffer'.init_syms()
 require'nelisp.alloc'.init_syms()
+require'nelisp.dev'.init_syms()
 
 vars.commit_qsymbols()
 
