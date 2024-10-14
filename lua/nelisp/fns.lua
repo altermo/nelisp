@@ -83,7 +83,6 @@ local function mapcar1(leni,vals,fn,seq)
             end
             tail=cons.cdr(tail)
         end
-        error('TODO')
     else
         error('TODO')
     end
