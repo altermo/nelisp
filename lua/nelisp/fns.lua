@@ -268,6 +268,17 @@ function F.make_hash_table.f(args)
     end
     return hash_table.make(nil,nil)
 end
+F.puthash={'puthash',3,3,0,[[Associate KEY with VALUE in hash table TABLE.
+If KEY is already present in table, replace its current value with
+VALUE.  In any case, return VALUE.]]}
+function F.puthash.f(key,value,t)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    hash_table.put(t,key,value)
+    return value
+end
+
 F.delq={'delq',2,2,0,[[Delete members of LIST which are `eq' to ELT, and return the result.
 More precisely, this function skips any members `eq' to ELT at the
 front of LIST, then removes members `eq' to ELT from the remaining
@@ -312,6 +323,7 @@ function M.init_syms()
     vars.setsubr(F,'featurep')
     vars.setsubr(F,'provide')
     vars.setsubr(F,'make_hash_table')
+    vars.setsubr(F,'puthash')
     vars.setsubr(F,'delq')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.

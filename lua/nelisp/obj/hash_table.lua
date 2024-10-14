@@ -3,7 +3,7 @@ local types=require'nelisp.obj.types'
 ---@class nelisp.hash_table: nelisp.obj
 ---@field [1] nelisp.types.hash_table
 ---@field [2] table --content
----@field [3] table? --test
+---@field [3] nelisp.obj? --test
 ---@field [4] nelisp.obj? --weak
 ---@field [5] boolean? --not-mutable
 
@@ -19,5 +19,8 @@ function M.make(test,weak)
         test,
         weak,
     }
+end
+function M.put(t,key,value)
+    t[2][key]=value
 end
 return M
