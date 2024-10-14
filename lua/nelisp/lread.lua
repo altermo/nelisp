@@ -693,6 +693,8 @@ function M.read0(readcharfun,locate_syms)
             goto read_obj
         elseif ch==b'x' or ch==b'X' then
             obj=M.read_integer(readcharfun,16)
+        elseif ch==b'o' or ch==b'O' then
+            obj=M.read_integer(readcharfun,8)
         else
             error('TODO')
         end
