@@ -242,6 +242,32 @@ function F.make_hash_table.f(args)
     end
     return hash_table.make(nil,nil)
 end
+F.delq={'delq',2,2,0,[[Delete members of LIST which are `eq' to ELT, and return the result.
+More precisely, this function skips any members `eq' to ELT at the
+front of LIST, then removes members `eq' to ELT from the remaining
+sublist by modifying its list structure, then returns the resulting
+list.
+
+Write `(setq foo (delq element foo))' to be sure of correctly changing
+the value of a list `foo'.  See also `remq', which does not modify the
+argument.]]}
+function F.delq.f(elt,list)
+    local prev=vars.Qnil
+    local _,tail=lisp.for_each_tail(list,function (tail)
+        local tem=cons.car(tail)
+        if lisp.eq(tem,elt) then
+            if lisp.nilp(prev) then
+                list=cons.cdr(tail)
+            else
+                vars.F.setcdr(prev,cons.cdr(tail))
+            end
+        else
+            prev=tail
+        end
+    end)
+    lisp.check_list_end(tail,list)
+    return list
+end
 
 local M={}
 function M.init()
@@ -259,6 +285,7 @@ function M.init_syms()
     vars.setsubr(F,'put')
     vars.setsubr(F,'featurep')
     vars.setsubr(F,'make_hash_table')
+    vars.setsubr(F,'delq')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
