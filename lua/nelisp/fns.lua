@@ -3,6 +3,7 @@ local vars=require'nelisp.vars'
 local cons=require'nelisp.obj.cons'
 local fixnum=require'nelisp.obj.fixnum'
 local symbol=require'nelisp.obj.symbol'
+local hash_table=require'nelisp.obj.hash_table'
 
 local F={}
 F.assq={'assq',2,2,0,[[Return non-nil if KEY is `eq' to the car of an element of ALIST.
@@ -199,6 +200,48 @@ function F.featurep.f(feature,subfeature)
     end
     return lisp.nilp(tem) and vars.Qnil or vars.Qt
 end
+F.make_hash_table={'make-hash-table',0,-2,0,[[Create and return a new hash table.
+
+Arguments are specified as keyword/argument pairs.  The following
+arguments are defined:
+
+:test TEST -- TEST must be a symbol that specifies how to compare
+keys.  Default is `eql'.  Predefined are the tests `eq', `eql', and
+`equal'.  User-supplied test and hash functions can be specified via
+`define-hash-table-test'.
+
+:size SIZE -- A hint as to how many elements will be put in the table.
+Default is 65.
+
+:rehash-size REHASH-SIZE - Indicates how to expand the table when it
+fills up.  If REHASH-SIZE is an integer, increase the size by that
+amount.  If it is a float, it must be > 1.0, and the new size is the
+old size multiplied by that factor.  Default is 1.5.
+
+:rehash-threshold THRESHOLD -- THRESHOLD must a float > 0, and <= 1.0.
+Resize the hash table when the ratio (table entries / table size)
+exceeds an approximation to THRESHOLD.  Default is 0.8125.
+
+:weakness WEAK -- WEAK must be one of nil, t, `key', `value',
+`key-or-value', or `key-and-value'.  If WEAK is not nil, the table
+returned is a weak table.  Key/value pairs are removed from a weak
+hash table when there are no non-weak references pointing to their
+key, value, one of key or value, or both key and value, depending on
+WEAK.  WEAK t is equivalent to `key-and-value'.  Default value of WEAK
+is nil.
+
+:purecopy PURECOPY -- If PURECOPY is non-nil, the table can be copied
+to pure storage when Emacs is being dumped, making the contents of the
+table read only. Any further changes to purified tables will result
+in an error.
+
+usage: (make-hash-table &rest KEYWORD-ARGS)]]}
+function F.make_hash_table.f(args)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    return hash_table.make(nil,nil)
+end
 
 local M={}
 function M.init()
@@ -215,6 +258,7 @@ function M.init_syms()
     vars.setsubr(F,'length')
     vars.setsubr(F,'put')
     vars.setsubr(F,'featurep')
+    vars.setsubr(F,'make_hash_table')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
