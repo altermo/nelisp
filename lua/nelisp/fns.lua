@@ -145,6 +145,8 @@ function F.length.f(sequence)
     local val
     if lisp.consp(sequence) then
         val=lisp.list_length(sequence)
+    elseif lisp.nilp(sequence) then
+        val=0
     else
         error('TODO')
     end
