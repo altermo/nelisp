@@ -614,7 +614,7 @@ function F.apply.f(args)
     elseif numargs==1 then
         error('TODO')
     end
-    numargs=#args-2
+    numargs=numargs+#args-2
     if lisp.symbolp(fun) and not lisp.nilp(fun) then
         fun=symbol.get_func(fun)
         if lisp.symbolp(fun) then
@@ -625,8 +625,10 @@ function F.apply.f(args)
     for _,v in ipairs(args) do
         table.insert(funcall_args,v)
     end
+    local i=#args
     while not lisp.nilp(spread_arg) do
-        table.insert(funcall_args,cons.car(spread_arg))
+        funcall_args[i]=cons.car(spread_arg)
+        i=i+1
         spread_arg=cons.cdr(spread_arg)
     end
     return vars.F.funcall(funcall_args)
