@@ -1,4 +1,8 @@
+local vars=require'nelisp.vars'
+
 require'nelisp.lread'.obarray_init_once()
+
+vars.commit_qsymbols()
 
 require'nelisp.charset'.init_syms()
 require'nelisp.emacs'.init_syms()
@@ -9,6 +13,8 @@ require'nelisp.eval'.init_syms()
 require'nelisp.editfns'.init_syms()
 require'nelisp.buffer'.init_syms()
 require'nelisp.alloc'.init_syms()
+
+vars.commit_qsymbols()
 
 require'nelisp.eval'.init()
 require'nelisp.buffer'.init()

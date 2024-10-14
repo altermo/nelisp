@@ -22,13 +22,15 @@ function M.obarray_init_once()
     vars.V.obarray=vars.initial_obarray
 
     vars.defsym('Qunbound','unbound')
-
     vars.defsym('Qnil','nil')
+    vars.defsym('Qt','t')
+
+    vars.commit_qsymbols()
+
     symbol.set_var(vars.Qnil,vars.Qnil)
     symbol.set_constant(vars.Qnil)
     symbol.set_special(vars.Qnil)
 
-    vars.defsym('Qt','t')
     symbol.set_var(vars.Qt,vars.Qt)
     symbol.set_constant(vars.Qt)
     symbol.set_special(vars.Qt)

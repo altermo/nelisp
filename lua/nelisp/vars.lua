@@ -3,14 +3,21 @@ local cons=require'nelisp.obj.cons'
 local str=require'nelisp.obj.str'
 local subr=require'nelisp.obj.subr'
 local vars={}
+
+local Qsymbols={}
+local Qsymbols_later={}
 ---@param name string
 ---@param symname string
 function vars.defsym(name,symname)
     assert(name:sub(1,1)=='Q','DEV: Internal symbol must start with Q')
-    assert(not rawget(vars,name),'DEV: Internal symbol already defined: '..name)
+    assert(not Qsymbols_later[name] and not Qsymbols[name],'DEV: Internal symbol already defined: '..name)
     local lread=require'nelisp.lread'
     local sym=lread.define_symbol(symname)
-    vars[name]=sym
+    Qsymbols_later[name]=sym
+end
+function vars.commit_qsymbols()
+    Qsymbols=setmetatable(Qsymbols_later,{__index=Qsymbols})
+    Qsymbols_later={}
 end
 
 local Vsymbol_pre_values={}
@@ -62,6 +69,7 @@ end,__newindex=function (_,k,v)
         symbol.set_var(Vsymbols[k],v)
     end})
 
+vars.F={}
 ---@param name string
 ---@param map {[string]:{[1]:string,[2]:number,[3]:number,[4]:number,[5]:string,f:fun(...:nelisp.obj):nelisp.obj}}
 function vars.setsubr(map,name)
@@ -87,7 +95,10 @@ function vars.setsubr(map,name)
     local s=subr.make(f,d[2],d[3],symname,d[4],d[5])
     symbol.set_func(sym,s)
 end
-vars.F={}
+
 return setmetatable(vars,{__index=function (_,k)
+    if Qsymbols[k] then
+        return Qsymbols[k]
+    end
     error('DEV: try to index out of bounds: '..tostring(k))
 end})
