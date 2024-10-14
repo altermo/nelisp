@@ -8,8 +8,8 @@ Allows any number of arguments, including zero.
 usage: (list &rest OBJECTS)]]}
 function F.list.f(args)
     local val=vars.Qnil
-    for _,arg in ipairs(args) do
-        val=vars.F.cons(arg,val)
+    for i=#args,1,-1 do
+        val=vars.F.cons(args[i],val)
     end
     return val
 end
