@@ -188,6 +188,35 @@ function F.put.f(sym,propname,value)
     symbol.set_plist(sym,plist_put(symbol.get_plist(sym),propname,value))
     return value
 end
+local function plist_get(plist,prop)
+    local tail=plist
+    local has_visited={}
+    while lisp.consp(tail) do
+        if not lisp.consp(cons.cdr(tail)) then
+            break
+        end
+        if lisp.eq(cons.car(tail),prop) then
+            return cons.car(cons.cdr(tail) --[[@as nelisp.cons]])
+        end
+        if has_visited[tail] then
+            require'nelisp.signal'.xsignal(vars.Qcircular_list,plist)
+        end
+        has_visited[tail]=true
+        tail=cons.cdr(tail) --[[@as nelisp.cons]]
+        tail=cons.cdr(tail)
+    end
+    return vars.Qnil
+end
+F.get={'get',2,2,0,[[Return the value of SYMBOL's PROPNAME property.
+This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.]]}
+function F.get.f(sym,propname)
+    lisp.check_symbol(sym)
+    local propval=plist_get(vars.F.cdr(vars.F.assq(symbol,vars.V.overriding_plist_environment)),propname)
+    if not lisp.nilp(propval) then
+        return propval
+    end
+    return plist_get(symbol.get_plist(sym),propname)
+end
 F.featurep={'featurep',1,2,0,[[Return t if FEATURE is present in this Emacs.
 
 Use this to conditionalize execution of lisp code based on the
@@ -320,6 +349,7 @@ function M.init_syms()
     vars.setsubr(F,'nconc')
     vars.setsubr(F,'length')
     vars.setsubr(F,'put')
+    vars.setsubr(F,'get')
     vars.setsubr(F,'featurep')
     vars.setsubr(F,'provide')
     vars.setsubr(F,'make_hash_table')
@@ -328,6 +358,11 @@ function M.init_syms()
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
+
+  vars.defvar_lisp('overriding_plist_environment','overriding-plist-environment',[[An alist that overrides the plists of the symbols which it lists.
+Used by the byte-compiler to apply `define-symbol-prop' during
+compilation.]])
+  vars.V.overriding_plist_environment=vars.Qnil
 
     vars.defsym('Qplistp','plistp')
     vars.defsym('Qprovide','provide')
