@@ -553,6 +553,26 @@ function F.prog1.f(args)
     vars.F.progn(cons.cdr(args))
     return val
 end
+local function funcall_subr(fun,args)
+    local numargs=#args
+    local s=subr.totable(fun)
+    if numargs>=s.minargs then
+        if numargs<=s.maxargs and s.maxargs<=8 then
+            local a={}
+            if numargs<s.maxargs then
+                for i=1,s.maxargs do
+                    table.insert(a,args[i] or vars.Qnil)
+                end
+            else
+                a=args
+            end
+            return s.fun(unpack(a))
+        elseif s.maxargs==-1 or s.maxargs>8 then
+            return s.fun(args)
+        end
+    end
+    error('TODO: err')
+end
 local function funcall_general(fun,args)
     local original_fun=fun
     if lisp.symbolp(fun) and not lisp.nilp(fun) then
@@ -562,7 +582,7 @@ local function funcall_general(fun,args)
         end
     end
     if lisp.subrp(fun) and not lisp.subr_native_compiled_dynp(fun) then
-        error('TODO')
+        return funcall_subr(fun,args)
     elseif lisp.compiledp(fun) or lisp.subr_native_compiled_dynp(fun) or lisp.module_functionp(fun) then
         error('TODO')
     end
