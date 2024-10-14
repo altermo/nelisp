@@ -411,6 +411,7 @@ function M.read_escape(readcharfun)
     elseif c==b'v' then return b'\v'
     elseif c==b'\n' then
         signal.error('Invalid escape character syntax')
+        error('unreachable')
     elseif c==b'M' then return mod_key(b.CHAR_META)
     elseif c==b'S' then return mod_key(b.CHAR_SHIFT)
     elseif c==b'H' then return mod_key(b.CHAR_HYPER)
