@@ -128,8 +128,26 @@ function F.put.f(sym,propname,value)
     symbol.put(sym,propname,value)
     return value
 end
+F.featurep={'featurep',1,2,0,[[Return t if FEATURE is present in this Emacs.
+
+Use this to conditionalize execution of lisp code based on the
+presence or absence of Emacs or environment extensions.
+Use `provide' to declare that a feature is available.  This function
+looks at the value of the variable `features'.  The optional argument
+SUBFEATURE can be used to check a specific subfeature of FEATURE.]]}
+function F.featurep.f(feature,subfeature)
+    lisp.check_symbol(feature)
+    local tem=vars.F.memq(feature,vars.V.features)
+    if not lisp.nilp(tem) and not lisp.nilp(subfeature) then
+        error('TODO')
+    end
+    return lisp.nilp(tem) and vars.Qnil or vars.Qt
+end
 
 local M={}
+function M.init()
+    vars.V.features=cons.make(vars.Qemacs,vars.Qnil)
+end
 function M.init_syms()
     vars.setsubr(F,'assq')
     vars.setsubr(F,'member')
@@ -139,5 +157,9 @@ function M.init_syms()
     vars.setsubr(F,'mapcar')
     vars.setsubr(F,'length')
     vars.setsubr(F,'put')
+    vars.setsubr(F,'featurep')
+
+    vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
+Used by `featurep' and `require', and altered by `provide'.]])
 end
 return M

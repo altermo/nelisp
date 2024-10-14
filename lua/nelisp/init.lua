@@ -1,5 +1,6 @@
 require'nelisp.lread'.obarray_init_once()
 
+require'nelisp.charset'.init_syms()
 require'nelisp.emacs'.init_syms()
 require'nelisp.fns'.init_syms()
 require'nelisp.lread'.init_syms()
@@ -11,6 +12,7 @@ require'nelisp.alloc'.init_syms()
 
 require'nelisp.eval'.init()
 require'nelisp.buffer'.init()
+require'nelisp.fns'.init()
 
 if not _G.nelisp_later then
     local vars=require'nelisp.vars'
