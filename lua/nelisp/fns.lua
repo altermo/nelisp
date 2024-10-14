@@ -334,6 +334,16 @@ function F.delq.f(elt,list)
     lisp.check_list_end(tail,list)
     return list
 end
+F.concat={'concat',0,-2,0,[[Concatenate all the arguments and make the result a string.
+The result is a string whose elements are the elements of all the arguments.
+Each argument may be a string or a list or vector of characters (integers).
+
+Values of the `composition' property of the result are not guaranteed
+to be `eq'.
+usage: (concat &rest SEQUENCES)]]}
+function F.concat.f(args)
+    error('TODO')
+end
 
 local M={}
 function M.init()
@@ -355,6 +365,7 @@ function M.init_syms()
     vars.setsubr(F,'make_hash_table')
     vars.setsubr(F,'puthash')
     vars.setsubr(F,'delq')
+    vars.setsubr(F,'concat')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
