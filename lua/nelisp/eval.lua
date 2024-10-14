@@ -61,7 +61,10 @@ local function funcall_lambda(fun,args)
             rest=true
             previous_rest=true
         elseif lisp.eq(next_,vars.Qand_optional) then
-            error('TODO')
+            if optional or rest or previous_rest then
+                signal.xsignal(vars.Qinvalid_function,fun)
+            end
+            optional=true
         else
             local arg
             if rest then
@@ -73,7 +76,7 @@ local function funcall_lambda(fun,args)
             elseif not optional then
                 signal.xsignal(vars.Qwrong_number_of_arguments,fun,fixnum.make(#args))
             else
-                error('TODO')
+                arg=vars.Qnil
             end
             if not lisp.nilp(lexenv) and lisp.symbolp(next_) then
                 lexenv=vars.cons(vars.cons(next_,arg),lexenv)
