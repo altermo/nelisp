@@ -101,6 +101,35 @@ function F.mapcar.f(func,sequence)
     local nmapped=mapcar1(leni,args,func,sequence)
     return vars.F.list(nmapped,args)
 end
+F.nconc={'nconc',0,-2,0,[[Concatenate any number of lists by altering them.
+Only the last argument is not altered, and need not be a list.
+usage: (nconc &rest LISTS)]]}
+function F.nconc.f(args)
+    local val=vars.Qnil
+    for k,v in ipairs(args) do
+        local tem=v
+        if lisp.nilp(tem) then
+            goto continue
+        elseif lisp.nilp(val) then
+            val=tem
+        end
+        if k==#args then
+            break
+        end
+        lisp.check_cons(tem)
+        local tail
+        _,tem=lisp.for_each_tail(tem,function(t)
+            tail=t
+        end)
+        tem=args[k+1]
+        vars.F.setcdr(tail,tem)
+        if lisp.nilp(tem) then
+            args[k+1]=tail
+        end
+        ::continue::
+    end
+    return val
+end
 F.length={'length',1,1,0,[[Return the length of vector, list or string SEQUENCE.
 A byte-code function object is also allowed.
 
@@ -154,6 +183,7 @@ function M.init_syms()
     vars.setsubr(F,'nthcdr')
     vars.setsubr(F,'nth')
     vars.setsubr(F,'mapcar')
+    vars.setsubr(F,'nconc')
     vars.setsubr(F,'length')
     vars.setsubr(F,'put')
     vars.setsubr(F,'featurep')

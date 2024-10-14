@@ -86,6 +86,12 @@ function F.cdr.f(list)
         error('TODO: err')
     end
 end
+F.setcdr={'setcdr',2,2,0,[[Set the cdr of CELL to be NEWCDR.  Returns NEWCDR.]]}
+function F.setcdr.f(cell,newcdr)
+    lisp.check_cons(cell)
+    cons.setcdr(cell,newcdr)
+    return newcdr
+end
 F.eq={'eq',2,2,0,[[Return t if the two args are the same Lisp object.]]}
 function F.eq.f(a,b)
     if lisp.eq(a,b) then
@@ -175,6 +181,7 @@ function M.init_syms()
     vars.setsubr(F,'car')
     vars.setsubr(F,'car_safe')
     vars.setsubr(F,'cdr')
+    vars.setsubr(F,'setcdr')
 
     vars.setsubr(F,'fset')
     vars.setsubr(F,'set')
@@ -194,5 +201,6 @@ function M.init_syms()
     vars.defsym('Qsymbolp','symbolp')
     vars.defsym('Qintegerp','integerp')
     vars.defsym('Qstringp','stringp')
+    vars.defsym('Qconsp','consp')
 end
 return M

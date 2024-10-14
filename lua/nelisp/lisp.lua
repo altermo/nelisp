@@ -73,6 +73,8 @@ function M.check_symbol(x) M.check_type(M.symbolp(x),vars.Qsymbolp,x) end
 function M.check_integer(x) M.check_type(M.integerp(x),vars.Qintegerp,x) end
 ---@overload fun(x:nelisp.obj)
 function M.check_string(x) M.check_type(M.stringp(x),vars.Qstringp,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_cons(x) M.check_type(M.consp(x),vars.Qconsp,x) end
 
 ---@param x nelisp.obj
 ---@param fn fun(x:nelisp.cons):'continue'|'break'|nelisp.obj?
