@@ -39,7 +39,9 @@ function vars.defvar_lisp(name,symname,doc)
     end
     Vsymbols[name]=sym
     if doc then
-        symbol.put(sym,vars.Qvariable_documentation,str.make(doc,false))
+        if not _G.nelisp_later then
+            error('TODO')
+        end
     end
     if Vsymbol_pre_values[name] then
         symbol.set_var(sym,Vsymbol_pre_values[name])

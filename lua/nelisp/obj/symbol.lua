@@ -1,5 +1,4 @@
 local types=require'nelisp.obj.types'
-local cons=require'nelisp.obj.cons'
 
 ---@class nelisp.symbol: nelisp.obj
 ---@field [1] nelisp.types.symbol
@@ -126,40 +125,13 @@ function M.set_func(sym,func)
     sym[8]=func
 end
 ---@param sym nelisp.symbol
----@param prop nelisp.symbol
----@param val nelisp.obj
-function M.put(sym,prop,val)
-    local Qnil=require'nelisp.vars'.Qnil
-    if not sym[9] then
-        sym[9]=Qnil
-    end
-    local prev=Qnil
-    local tail=sym[9] --[[@as nelisp.obj]]
-    local has_visited={}
-    local lisp=require'nelisp.lisp'
-    while lisp.consp(tail) do
-        ---@cast tail nelisp.cons
-        if not lisp.consp(cons.cdr(tail)) then
-            break
-        end
-        if lisp.eq(cons.car(tail),val) then
-            cons.setcar(cons.cdr(tail) --[[@as nelisp.cons]],prop)
-            return val
-        end
-        prev=tail
-        tail=cons.cdr(cons.cdr(tail) --[[@as nelisp.cons]])
-        if has_visited[tail] then
-            error('TODO')
-        end
-        has_visited[tail]=true
-    end
-    if not lisp.nilp(tail) then
-        error('TODO')
-    end
-    if lisp.nilp(prev) then
-        sym[9]=cons.make(prop,cons.make(val,Qnil))
-    else
-        cons.setcdr(cons.cdr(prev) --[[@as nelisp.cons]],cons.make(prop,Qnil))
-    end
+---@return nelisp.obj
+function M.get_plist(sym)
+    return sym[9] or require'nelisp.vars'.Qnil
+end
+---@param sym nelisp.symbol
+---@param plist nelisp.cons
+function M.set_plist(sym,plist)
+    sym[9]=plist
 end
 return M

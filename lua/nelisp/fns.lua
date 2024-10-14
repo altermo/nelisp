@@ -149,11 +149,39 @@ function F.length.f(sequence)
     end
     return fixnum.make(val)
 end
+local function plist_put(plist,prop,val)
+    local prev=vars.Qnil
+    local tail=plist
+    local has_visited={}
+    while lisp.consp(tail) do
+        if not lisp.consp(cons.cdr(tail)) then
+            break
+        end
+        if lisp.eq(cons.car(tail),prop) then
+            vars.F.setcar(cons.cdr(tail),val)
+            return plist
+        end
+        if has_visited[tail] then
+            error('TODO: err')
+        end
+        prev=tail
+        tail=cons.cdr(tail) --[[@as nelisp.cons]]
+        has_visited[tail]=true
+        tail=cons.cdr(tail)
+    end
+    lisp.check_type(lisp.nilp(tail),vars.Qplistp,plist)
+    if lisp.nilp(prev) then
+        return vars.F.cons(prop,vars.F.cons(val,plist))
+    end
+    local newcell=vars.F.cons(prop,vars.F.cons(val,cons.cdr(cons.cdr(prev --[[@as nelisp.cons]]) --[[@as nelisp.cons]])))
+    vars.F.setcdr(cons.cdr(prev),newcell)
+    return plist
+end
 F.put={'put',3,3,0,[[Store SYMBOL's PROPNAME property with value VALUE.
 It can be retrieved with `(get SYMBOL PROPNAME)'.]]}
 function F.put.f(sym,propname,value)
     lisp.check_symbol(sym)
-    symbol.put(sym,propname,value)
+    symbol.set_plist(sym,plist_put(symbol.get_plist(sym),propname,value))
     return value
 end
 F.featurep={'featurep',1,2,0,[[Return t if FEATURE is present in this Emacs.
@@ -190,5 +218,7 @@ function M.init_syms()
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
+
+    vars.defsym('Qplistp','plistp')
 end
 return M
