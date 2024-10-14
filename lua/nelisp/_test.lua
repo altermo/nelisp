@@ -16,14 +16,10 @@ _G.p=require'nelisp._print'.p
 _G.ins=require'nelisp._print'.inspect
 _G.nelisp_later=true
 
-require'nelisp.initer'
+local api=require'nelisp.api'
+api.init()
 
 --vim.print(('%.1f%% of internal functions implemented (estimate)'):format(#vim.tbl_keys(require'nelisp.vars'.F)/1775*100))
-
-local lread=require'nelisp.lread'
-local eval=require'nelisp.eval'
-
-local content=table.concat(vim.fn.readfile(_G.nelisp_emacs..'/lisp/loadup.el'),'\n')
 
 local t=vim.api.nvim_get_current_tabpage()
 vim.cmd.tabnew()
@@ -34,6 +30,4 @@ vim.schedule(function ()
     vim.api.nvim_set_current_tabpage(t)
 end)
 
-for _,cons in ipairs(lread.full_read_lua_string(content)) do
-    eval.eval_sub(cons)
-end
+api.eval_file(_G.nelisp_emacs..'/lisp/loadup.el')
