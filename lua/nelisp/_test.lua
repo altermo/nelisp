@@ -16,7 +16,7 @@ _G.p=require'nelisp._print'.p
 _G.ins=require'nelisp._print'.inspect
 _G.nelisp_later=true
 
-require'nelisp.init'
+require'nelisp.initer'
 
 --vim.print(('%.1f%% of internal functions implemented (estimate)'):format(#vim.tbl_keys(require'nelisp.vars'.F)/1775*100))
 
