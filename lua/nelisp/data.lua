@@ -55,6 +55,21 @@ function F.bare_symbol.f(sym)
     end
     error('TODO')
 end
+F.indirect_function={'indirect-function',1,2,0,[[Return the function at the end of OBJECT's function chain.
+If OBJECT is not a symbol, just return it.  Otherwise, follow all
+function indirections to find the final function binding and return it.
+Signal a cyclic-function-indirection error if there is a loop in the
+function chain of symbols.]]}
+function F.indirect_function.f(obj,_)
+    local result=obj
+    if lisp.symbolp(result) and not lisp.nilp(result) then
+        result=symbol.get_func(result)
+        if lisp.symbolp(result) then
+            error('TODO')
+        end
+    end
+    return result
+end
 F.set={'set',2,2,0,[[Set SYMBOL's value to NEWVAL, and return NEWVAL.]]}
 ---@param sym nelisp.obj
 ---@param newval nelisp.obj
@@ -195,6 +210,7 @@ function M.init_syms()
     vars.setsubr(F,'symbol_value')
     vars.setsubr(F,'symbol_function')
     vars.setsubr(F,'bare_symbol')
+    vars.setsubr(F,'indirect_function')
     vars.setsubr(F,'car')
     vars.setsubr(F,'car_safe')
     vars.setsubr(F,'cdr')
