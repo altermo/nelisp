@@ -205,6 +205,8 @@ F.symbolp={'symbolp',1,1,0,[[Return t if OBJECT is a symbol.]]}
 function F.symbolp.f(a) return lisp.symbolp(a) and vars.Qt or vars.Qnil end
 F.floatp={'floatp',1,1,0,[[Return t if OBJECT is a floating point number.]]}
 function F.floatp.f(a) return lisp.floatp(a) and vars.Qt or vars.Qnil end
+F.vectorp={'vectorp',1,1,0,[[Return t if OBJECT is a vector.]]}
+function F.vectorp.f(a) return lisp.vectorp(a) and vars.Qt or vars.Qnil end
 
 function M.init_syms()
     vars.setsubr(F,'symbol_value')
@@ -230,6 +232,7 @@ function M.init_syms()
     vars.setsubr(F,'listp')
     vars.setsubr(F,'symbolp')
     vars.setsubr(F,'floatp')
+    vars.setsubr(F,'vectorp')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')
