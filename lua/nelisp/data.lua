@@ -43,6 +43,11 @@ function F.symbol_value.f(sym)
     signal.xsignal(vars.Qvoid_variable,sym)
     error('unreachable')
 end
+F.symbol_function={'symbol-function',1,1,0,[[Return SYMBOL's function definition, or nil if that is void.]]}
+function F.symbol_function.f(sym)
+    lisp.check_symbol(sym)
+    return symbol.get_func(sym)
+end
 F.bare_symbol={'bare-symbol',1,1,0,[[Extract, if need be, the bare symbol from SYM, a symbol.]]}
 function F.bare_symbol.f(sym)
     if lisp.symbolp(sym) then
@@ -188,6 +193,7 @@ function F.floatp.f(a) return lisp.floatp(a) and vars.Qt or vars.Qnil end
 
 function M.init_syms()
     vars.setsubr(F,'symbol_value')
+    vars.setsubr(F,'symbol_function')
     vars.setsubr(F,'bare_symbol')
     vars.setsubr(F,'car')
     vars.setsubr(F,'car_safe')

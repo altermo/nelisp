@@ -434,6 +434,44 @@ function F.internal__define_uninitialized_variable.f(sym,doc)
     lisp.loadhist_attach(sym)
     return vars.Qnil
 end
+F.defconst={'defconst',2,-1,0,[[Define SYMBOL as a constant variable.
+This declares that neither programs nor users should ever change the
+value.  This constancy is not actually enforced by Emacs Lisp, but
+SYMBOL is marked as a special variable so that it is never lexically
+bound.
+
+The `defconst' form always sets the value of SYMBOL to the result of
+evalling INITVALUE.  If SYMBOL is buffer-local, its default value is
+what is set; buffer-local values are not affected.  If SYMBOL has a
+local binding, then this form sets the local binding's value.
+However, you should normally not make local bindings for variables
+defined with this form.
+
+The optional DOCSTRING specifies the variable's documentation string.
+usage: (defconst SYMBOL INITVALUE [DOCSTRING])]]}
+function F.defconst.f(args)
+    local sym=cons.car(args)
+    lisp.check_symbol(sym)
+    local docstring=vars.Qnil
+    if not lisp.nilp(cons.cdr(cons.cdr(args) --[[@as nelisp.cons]])) then
+        if not lisp.nilp(cons.cdr(cons.cdr(cons.cdr(args) --[[@as nelisp.cons]]) --[[@as nelisp.cons]])) then
+            signal.error('Too many arguments')
+        end
+        docstring=cons.car(cons.cdr(cons.cdr(args) --[[@as nelisp.cons]]) --[[@as nelisp.cons]])
+    end
+    local tem=M.eval_sub(cons.car(cons.cdr(args) --[[@as nelisp.cons]]))
+    return vars.F.defconst_1(sym,tem,docstring)
+end
+F.defconst_1={'Fdefconst_1',2,3,0,[[Like `defconst' but as a function.
+More specifically, behaves like (defconst SYM 'INITVALUE DOCSTRING).]]}
+function F.defconst_1.f(sym,initvalue,docstring)
+    lisp.check_symbol(sym)
+    local tem=initvalue
+    vars.F.internal__define_uninitialized_variable(sym,docstring)
+    vars.F.set_default(sym,tem)
+    vars.F.put(sym,vars.Qrisky_local_variable,vars.Qt)
+    return sym
+end
 F.if_={'if',2,-1,0,[[If COND yields non-nil, do THEN, else do ELSE...
 Returns the value of THEN or the value of the last of the ELSE's.
 THEN must be one expression, but ELSE... can be zero or more expressions.
@@ -694,6 +732,8 @@ function M.init_syms()
     vars.setsubr(F,'letX')
     vars.setsubr(F,'defvar')
     vars.setsubr(F,'internal__define_uninitialized_variable')
+    vars.setsubr(F,'defconst')
+    vars.setsubr(F,'defconst_1')
     vars.setsubr(F,'if_')
     vars.setsubr(F,'while_')
     vars.setsubr(F,'cond')
