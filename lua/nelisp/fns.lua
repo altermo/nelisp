@@ -99,7 +99,7 @@ function F.mapcar.f(func,sequence)
     local leni=fixnum.tonumber(vars.F.length(sequence))
     local args={}
     local nmapped=mapcar1(leni,args,func,sequence)
-    return vars.F.list(nmapped,args)
+    return vars.F.list({unpack(args,1,nmapped)})
 end
 F.nconc={'nconc',0,-2,0,[[Concatenate any number of lists by altering them.
 Only the last argument is not altered, and need not be a list.
