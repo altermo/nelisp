@@ -37,6 +37,8 @@ function M.compiledp(x) return type_of(x)==types.compiled end
 function M.module_functionp(x) return type_of(x)==types.module_function end
 ---@overload fun(x:nelisp.obj):boolean
 function M.chartablep(x) return type_of(x)==types.char_table end
+---@overload fun(x:nelisp.obj):boolean
+function M.floatp(x) return type_of(x)==types.float end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.nilp(x) return x==vars.Qnil end
