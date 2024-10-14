@@ -174,6 +174,8 @@ F.stringp={'stringp',1,1,0,[[Return t if OBJECT is a string.]]}
 function F.stringp.f(a) return lisp.stringp(a) and vars.Qt or vars.Qnil end
 F.null={'null',1,1,0,[[Return t if OBJECT is nil, and return nil otherwise.]]}
 function F.null.f(a) return lisp.nilp(a) and vars.Qt or vars.Qnil end
+F.numberp={'numberp',1,1,0,[[Return t if OBJECT is a number (floating point or integer).]]}
+function F.numberp.f(a) return lisp.numberp(a) and vars.Qt or vars.Qnil end
 
 function M.init_syms()
     vars.setsubr(F,'symbol_value')
@@ -193,6 +195,7 @@ function M.init_syms()
     vars.setsubr(F,'default_boundp')
     vars.setsubr(F,'stringp')
     vars.setsubr(F,'null')
+    vars.setsubr(F,'numberp')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')

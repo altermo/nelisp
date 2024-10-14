@@ -12,6 +12,8 @@ end
 function M.subr_native_compiled_dynp(_) return false end
 ---@overload fun(x:nelisp.obj):boolean
 function M.integerp(x) return M.fixnump(x) or M.bignump(x) end
+---@overload fun(x:nelisp.obj):boolean
+function M.numberp(x) return M.integerp(x) or M.floatp(x) end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.baresymbolp(x) return type_of(x)==types.symbol end
