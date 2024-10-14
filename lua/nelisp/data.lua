@@ -48,6 +48,14 @@ function F.symbol_function.f(sym)
     lisp.check_symbol(sym)
     return symbol.get_func(sym)
 end
+F.symbol_name={'symbol-name',1,1,0,[[Return SYMBOL's name, a string.
+
+Warning: never alter the string returned by `symbol-name'.
+Doing that might make Emacs dysfunctional, and might even crash Emacs.]]}
+function F.symbol_name.f(sym)
+    lisp.check_symbol(sym)
+    return symbol.get_name(sym)
+end
 F.bare_symbol={'bare-symbol',1,1,0,[[Extract, if need be, the bare symbol from SYM, a symbol.]]}
 function F.bare_symbol.f(sym)
     if lisp.symbolp(sym) then
@@ -215,6 +223,7 @@ function F.consp.f(a) return lisp.consp(a) and vars.Qt or vars.Qnil end
 function M.init_syms()
     vars.setsubr(F,'symbol_value')
     vars.setsubr(F,'symbol_function')
+    vars.setsubr(F,'symbol_name')
     vars.setsubr(F,'bare_symbol')
     vars.setsubr(F,'indirect_function')
     vars.setsubr(F,'car')
