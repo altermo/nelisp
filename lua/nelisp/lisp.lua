@@ -86,7 +86,7 @@ function M.for_each_tail(x,fn)
     local has_visited={}
     while M.consp(x) do
         if has_visited[x] then
-            error('TODO: err')
+            require'nelisp.signal'.xsignal(vars.Qcircular_list,x)
         end
         has_visited[x]=true
         ---@cast x nelisp.cons
@@ -110,6 +110,16 @@ function M.list_length(x)
     end)
     M.check_list_end(list,list)
     return i
+end
+---@param ... nelisp.obj
+---@return nelisp.cons
+function M.list(...)
+    local args={...}
+    local val=vars.Qnil
+    for i=#args,1,-1 do
+        val=vars.F.cons(args[i],val)
+    end
+    return val
 end
 
 ---@param x nelisp.obj

@@ -2,6 +2,7 @@ local vars=require'nelisp.vars'
 local str=require'nelisp.obj.str'
 local lisp=require'nelisp.lisp'
 local nvim=require'nelisp.nvim'
+local signal=require'nelisp.signal'
 local M={}
 
 function M.init()
@@ -24,6 +25,12 @@ function F.get_buffer.f(buffer_or_name)
     lisp.check_string(buffer_or_name)
     return nvim.get_buffer(buffer_or_name)
 end
+local function nsberror(spec)
+    if lisp.stringp(spec) then
+        signal.error('No buffer named %s',str.to_lua_string(spec))
+    end
+    signal.error('Invalid buffer argument')
+end
 F.set_buffer={'set-buffer',1,1,0,[[Make buffer BUFFER-OR-NAME current for editing operations.
 BUFFER-OR-NAME may be a buffer or the name of an existing buffer.
 See also `with-current-buffer' when you want to make a buffer current
@@ -34,10 +41,10 @@ The return value is the buffer made current.]]}
 function F.set_buffer.f(buf)
     local buffer=vars.F.get_buffer(buf)
     if lisp.nilp(buffer) then
-        error('TODO: err')
+        nsberror(buf)
     end
     if not M.bufferlivep(buffer) then
-        error('TODO: err')
+        signal.error('Selecting deleted buffer')
     end
     nvim.set_current_buffer(buffer)
     return buffer
@@ -62,7 +69,7 @@ function F.get_buffer_create.f(buffer_or_name,inhibit_buffer_hooks)
         return buffer
     end
     if str.index1_neg(buffer_or_name,1)==-1 then
-        error('TODO: err')
+        signal.error('Empty string for buffer name is not allowed')
     end
     return nvim.create_buffer(buffer_or_name)
 end

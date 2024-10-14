@@ -2,6 +2,7 @@ local lisp=require'nelisp.lisp'
 local symbol=require'nelisp.obj.symbol'
 local vars=require'nelisp.vars'
 local cons=require'nelisp.obj.cons'
+local signal=require'nelisp.signal'
 
 local M={}
 ---@param sym nelisp.obj
@@ -39,7 +40,8 @@ function F.symbol_value.f(sym)
     if val then
         return val
     end
-    error('TODO: err: '..sym[2][2])
+    signal.xsignal(vars.Qvoid_variable,sym)
+    error('unreachable')
 end
 F.bare_symbol={'bare-symbol',1,1,0,[[Extract, if need be, the bare symbol from SYM, a symbol.]]}
 function F.bare_symbol.f(sym)
@@ -65,7 +67,7 @@ function F.car.f(list)
     elseif lisp.nilp(list) then
         return list
     else
-        error('TODO: err')
+        signal.wrong_type_argument(vars.Qlistp,list)
     end
 end
 F.car_safe={'car-safe',1,1,0,[[Return the car of OBJECT if it is a cons cell, or else nil.]]}
@@ -83,7 +85,7 @@ function F.cdr.f(list)
     elseif lisp.nilp(list) then
         return list
     else
-        error('TODO: err')
+        signal.wrong_type_argument(vars.Qlistp,list)
     end
 end
 F.setcdr={'setcdr',2,2,0,[[Set the cdr of CELL to be NEWCDR.  Returns NEWCDR.]]}
@@ -103,7 +105,7 @@ F.fset={'fset',2,2,0,[[Set SYMBOL's function definition to DEFINITION, and retur
 function F.fset.f(sym,definition)
     lisp.check_symbol(sym)
     if lisp.nilp(sym) and not lisp.nilp(definition) then
-        error('TODO: err')
+        signal.xsignal(vars.Qsetting_constant,sym)
     end
     symbol.set_func(sym,definition)
     return definition

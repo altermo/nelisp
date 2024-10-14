@@ -1,4 +1,5 @@
 local bytes=require'nelisp.bytes'
+local signal=require'nelisp.signal'
 local M={}
 
 ---@overload fun(c:number):boolean
@@ -34,7 +35,8 @@ function M.charstring(c)
         c=M.chartobyte8(c)
         return M.byte8string(c)
     else
-        error('TODO: err')
+        signal.error('"Invalid character: %x", c')
+        error('unreachable')
     end
 end
 ---@param s string

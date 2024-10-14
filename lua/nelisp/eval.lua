@@ -5,6 +5,8 @@ local cons=require'nelisp.obj.cons'
 local specpdl=require'nelisp.specpdl'
 local symbol=require'nelisp.obj.symbol'
 local subr=require'nelisp.obj.subr'
+local signal=require'nelisp.signal'
+local str=require'nelisp.obj.str'
 local M={}
 
 ---@param obj nelisp.symbol
@@ -19,7 +21,7 @@ function M.indirect_function(obj)
         end
         hare=symbol.get_func(hare --[[@as nelisp.symbol]])
         if has_visited[hare] then
-            error('TODO: err')
+            signal.xsignal(vars.Qcyclic_function_indirection,obj)
         end
         has_visited[hare]=true
     end
@@ -37,7 +39,7 @@ local function funcall_lambda(fun,args)
         if lisp.consp(syms_left) then
             syms_left=cons.car(syms_left --[[@as nelisp.cons]])
         else
-            error('TODO: err')
+            signal.xsignal(vars.Qinvalid_function,fun)
         end
     else
         error('TODO')
@@ -50,11 +52,11 @@ local function funcall_lambda(fun,args)
         ---@cast syms_left nelisp.cons
         local next_=cons.car(syms_left)
         if not lisp.symbolp(next_) then
-            error('TODO: err')
+            signal.xsignal(vars.Qinvalid_function,fun)
         end
         if lisp.eq(next_,vars.Qand_rest) then
             if rest or previous_rest then
-                error('TODO: err')
+                signal.xsignal(vars.Qinvalid_function,fun)
             end
             rest=true
             previous_rest=true
@@ -69,7 +71,7 @@ local function funcall_lambda(fun,args)
                 arg=args[idx]
                 idx=idx+1
             elseif not optional then
-                error('TODO: err')
+                signal.xsignal(vars.Qwrong_number_of_arguments,fun,fixnum.make(#args))
             else
                 error('TODO')
             end
@@ -83,9 +85,9 @@ local function funcall_lambda(fun,args)
         syms_left=cons.cdr(syms_left)
     end
     if not lisp.nilp(syms_left) or previous_rest then
-        error('TODO: err')
+        signal.xsignal(vars.Qinvalid_function,fun)
     elseif idx<=#args then
-        error('TODO: err')
+        signal.xsignal(vars.Qwrong_number_of_arguments,fun,fixnum.make(idx))
     end
     if not lisp.eq(lexenv,vars.V.internal_interpreter_environment) then
         error('TODO')
@@ -141,7 +143,7 @@ function M.eval_sub(form)
             vars.V.max_lisp_eval_depth=fixnum.make(100)
         end
         if vars.lisp_eval_depth>fixnum.tonumber(vars.V.max_lisp_eval_depth) then
-            error('TODO: err')
+            signal.xsignal(vars.Qexcessive_lisp_nesting,fixnum.make(vars.lisp_eval_depth))
         end
     end
     local original_fun=cons.car(form)
@@ -167,7 +169,7 @@ function M.eval_sub(form)
         local numargs=lisp.list_length(args_left)
         local t=subr.totable(fun --[[@as nelisp.subr]])
         if numargs<t.minargs or (t.maxargs>=0 and numargs>t.maxargs) then
-            error('TODO: err')
+            signal.xsignal(vars.Qwrong_number_of_arguments,original_fun,fixnum.make(numargs))
         elseif t.maxargs==-1 then
             val=t.fun(args_left)
         elseif t.maxargs==-2 or t.maxargs>8 then
@@ -195,14 +197,14 @@ function M.eval_sub(form)
     else
         if lisp.nilp(fun) then
             error('TODO: MAYBE need to implement: '..symbol.get_name(original_fun --[[@as nelisp.symbol]])[2])
-            error('TODO: err')
+            signal.xsignal(vars.Qvoid_function,original_fun)
         elseif not lisp.consp(fun) then
-            error('TODO: err')
+            signal.xsignal(vars.Qinvalid_function,original_fun)
         end
         ---@cast fun nelisp.cons
         local funcar=cons.car(fun)
         if not lisp.symbolp(funcar) then
-            error('TODO: err')
+            signal.xsignal(vars.Qinvalid_function,original_fun)
         elseif lisp.eq(funcar,vars.Qautoload) then
             error('TODO')
         elseif lisp.eq(funcar,vars.Qmacro) then
@@ -226,7 +228,7 @@ function M.eval_sub(form)
         elseif lisp.eq(funcar,vars.Qlambda) or lisp.eq(funcar,vars.Qclosure) then
             return apply_lambda(fun,original_args,count)
         else
-            error('TODO: err')
+            signal.xsignal(vars.Qinvalid_function,original_fun)
         end
     end
     vars.lisp_eval_depth=vars.lisp_eval_depth-1
@@ -259,7 +261,7 @@ function F.setq.f(args)
         local sym=cons.car(tail)
         tail=cons.cdr(tail)
         if not lisp.consp(tail) then
-            error('TODO: err')
+            signal.xsignal(vars.Qwrong_type_argument,vars.Qsetq,fixnum.make(nargs+1))
             ---@cast tail nelisp.cons
         end
         local arg=cons.car(tail)
@@ -295,7 +297,7 @@ function F.let.f(args)
         if lisp.symbolp(elt) then
             temps[argnum]=vars.Qnil
         elseif not lisp.nilp(vars.F.cdr(vars.F.cdr(elt))) then
-            error('TODO: err')
+            signal.signal_error("`let' bindings can have only one value-form",elt)
         else
             temps[argnum]=M.eval_sub(vars.F.car(vars.F.cdr(elt)))
         end
@@ -338,7 +340,7 @@ function F.letX.f(args)
         else
             var=vars.F.car(elt)
             if not lisp.nilp(vars.F.cdr(cons.cdr(elt --[[@as nelisp.cons]]))) then
-                error('TODO: err')
+            signal.signal_error("`let' bindings can have only one value-form",elt)
             end
             val=M.eval_sub(vars.F.car(cons.cdr(elt --[[@as nelisp.cons]])))
         end
@@ -397,7 +399,7 @@ function F.defvar.f(args)
     if not lisp.nilp(tail) then
         ---@cast tail nelisp.cons
         if not lisp.nilp(cons.cdr(tail)) and not lisp.nilp(cons.cdr(cons.cdr(tail) --[[@as nelisp.cons]])) then
-            error('TODO: err')
+            signal.error('Too many arguments')
         end
         local exp=cons.car(tail)
         tail=cons.cdr(tail)
@@ -422,7 +424,7 @@ This is like `defvar' and `defconst' but without affecting the variable's
 value.]]}
 function F.internal__define_uninitialized_variable.f(sym,doc)
     if not symbol.get_special(sym) and lexbound_p(sym) then
-        error('TODO: err')
+        signal.xsignal(vars.Qerror,str.make('Defining as dynamic an already lexical var','auto'),sym)
     end
     symbol.set_special(sym)
     if not lisp.nilp(doc) then
@@ -529,7 +531,7 @@ of unexpected results when a quoted object is modified.
 usage: (quote ARG)]]}
 function F.quote.f(args)
     if not lisp.nilp(cons.cdr(args)) then
-        error('TODO: err')
+        signal.xsignal(vars.Qwrong_number_of_arguments,vars.Qquote,vars.F.length(args))
     end
     return cons.car(args)
 end
@@ -571,7 +573,11 @@ local function funcall_subr(fun,args)
             return s.fun(args)
         end
     end
-    error('TODO: err')
+    if s.maxargs==-1 then
+        signal.xsignal(vars.Qinvalid_function,fun)
+    else
+        signal.xsignal(vars.Qwrong_number_of_arguments,fun,fixnum.make(numargs))
+    end
 end
 local function funcall_general(fun,args)
     local original_fun=fun
@@ -587,19 +593,19 @@ local function funcall_general(fun,args)
         error('TODO')
     end
     if lisp.nilp(fun) then
-        error('TODO: err')
+        signal.xsignal(vars.Qvoid_function,original_fun)
     elseif not lisp.consp(fun) then
-        error('TODO: err')
+        signal.xsignal(vars.Qinvalid_function,original_fun)
     end
     local funcar=cons.car(fun)
     if not lisp.symbolp(funcar) then
-        error('TODO: err')
+        signal.xsignal(vars.Qinvalid_function,original_fun)
     elseif lisp.eq(funcar,vars.Qlambda) or lisp.eq(funcar,vars.Qclosure) then
         return funcall_lambda(fun,args)
     elseif lisp.eq(funcar,vars.Qautoload) then
         error('TODO')
     else
-        error('TODO: err')
+        signal.xsignal(vars.Qinvalid_function,original_fun)
     end
 end
 F.funcall={'funcall',1,-2,0,[[Call first argument as a function, passing remaining arguments to it.
@@ -613,7 +619,7 @@ function F.funcall.f(args)
             vars.V.max_lisp_eval_depth=fixnum.make(100)
         end
         if vars.lisp_eval_depth>fixnum.tonumber(vars.V.max_lisp_eval_depth) then
-            error('TODO: err')
+            signal.xsignal(vars.Qexcessive_lisp_nesting,fixnum.make(vars.lisp_eval_depth))
         end
     end
     local fun_args={unpack(args,2)}
@@ -673,7 +679,7 @@ usage: (function ARG)]]}
 function F.function_.f(args)
     local quoted=cons.car(args)
     if not lisp.nilp(cons.cdr(args)) then
-        error('TODO: err')
+        signal.xsignal(vars.Qwrong_number_of_arguments,vars.Qfunction,vars.F.length(args))
     end
     if not lisp.nilp(vars.V.internal_interpreter_environment) then
         error('TODO')

@@ -4,6 +4,7 @@ local cons=require'nelisp.obj.cons'
 local fixnum=require'nelisp.obj.fixnum'
 local symbol=require'nelisp.obj.symbol'
 local hash_table=require'nelisp.obj.hash_table'
+local signal=require'nelisp.signal'
 
 local F={}
 F.assq={'assq',2,2,0,[[Return non-nil if KEY is `eq' to the car of an element of ALIST.
@@ -95,7 +96,7 @@ The result is a list just as long as SEQUENCE.
 SEQUENCE may be a list, a vector, a bool-vector, or a string.]]}
 function F.mapcar.f(func,sequence)
     if lisp.chartablep(sequence) then
-        error('TODO: err')
+        signal.wrong_type_argument(vars.Qlistp,sequence)
     end
     local leni=fixnum.tonumber(vars.F.length(sequence))
     local args={}
@@ -165,7 +166,7 @@ local function plist_put(plist,prop,val)
             return plist
         end
         if has_visited[tail] then
-            error('TODO: err')
+            require'nelisp.signal'.xsignal(vars.Qcircular_list,plist)
         end
         prev=tail
         tail=cons.cdr(tail) --[[@as nelisp.cons]]

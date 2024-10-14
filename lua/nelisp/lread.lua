@@ -8,6 +8,7 @@ local vars=require'nelisp.vars'
 local fixnum=require'nelisp.obj.fixnum'
 local symbol=require'nelisp.obj.symbol'
 local float=require'nelisp.obj.float'
+local signal=require'nelisp.signal'
 
 ---@class nelisp.obarray: nelisp.vec
 
@@ -245,22 +246,25 @@ function M.lookup_or_make(name)
 end
 
 local function end_of_file_error()
-    --TODO
-    error('No error handling yet, error: end_of_file}')
+    if lisp.stringp(vars.V.load_true_file_name) then
+        signal.xsignal(vars.Qend_of_file,vars.V.load_true_file_name)
+    end
+    signal.xsignal(vars.Qend_of_file)
 end
 ---@param s string
 ---@param readcharfun nelisp.lread.readcharfun
 local function invalid_syntax(s,readcharfun)
-    --TODO
-    _={s,readcharfun}
-    error('No error handling yet, error: invalid_syntax')
+    if lisp.bufferp(readcharfun.obj) then
+        error('TODO')
+    else
+        signal.xsignal(vars.Qinvalid_syntax,str.make(s,'auto'))
+    end
 end
 ---@param base number
 ---@param readcharfun nelisp.lread.readcharfun
 local function invalid_radix_integer(base,readcharfun)
-    --TODO
-    _={base,readcharfun}
-    error('No error handling yet, error: invalid_radix_integer')
+    local buf=('integer, radix %d'):format(base)
+    invalid_syntax(buf,readcharfun)
 end
 
 ---@class nelisp.lread.readcharfun
@@ -354,7 +358,7 @@ function M.read_escape(readcharfun)
     local function mod_key(mod)
         c=readcharfun.read()
         if c~=b'-' then
-            error('TODO: err')
+            signal.error('Invalid escape character syntax')
         end
         c=readcharfun.read()
         if c==b'\\' then
@@ -375,7 +379,7 @@ function M.read_escape(readcharfun)
     elseif c==b't' then return b'\t'
     elseif c==b'v' then return b'\v'
     elseif c==b'\n' then
-        error('TODO: err')
+        signal.error('Invalid escape character syntax')
     elseif c==b'M' then return mod_key(b.CHAR_META)
     elseif c==b'S' then return mod_key(b.CHAR_SHIFT)
     elseif c==b'H' then return mod_key(b.CHAR_HYPER)
@@ -392,7 +396,7 @@ function M.read_escape(readcharfun)
         if c==b'C' then
             c=readcharfun.read()
             if c~=b'-' then
-                error('TODO: err')
+                signal.error('Invalid escape character syntax')
             end
         end
         c=readcharfun.read()
@@ -437,7 +441,7 @@ function M.read_escape(readcharfun)
             end
             i=i*16+digit
             if bit.bor(b.CHAR_META,b.CHAR_META-1)<i then
-                error('TODO: err')
+                signal.error('Hex character out of range: \\x%x...',i)
             end
             count=count+(count<3 and 1 or 0)
         end

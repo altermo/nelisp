@@ -20,9 +20,8 @@ This file does the following things (this might be outdated):
 + Tries to run `emacs/lisp/loadup.el`
 
 It is recommended to use this file when running the interpreter.
-### `error('TODO')`, `error('TODO: err')` and `_G.nelisp_later`
+### `error('TODO')` and `_G.nelisp_later`
 + `error('TODO')` should be used for paths that are not yet implemented
-+ `error('TODO: err')` should be used when emacs raises an error (but because error handling isn't implemented yet, this is used)
 + `_G.nelisp_later` is (mostly) for when implementing a feature half way, and if this is false then error about needing to implement it full way.
 
 <!--
