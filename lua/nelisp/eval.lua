@@ -544,6 +544,15 @@ function F.progn.f(body)
     end
     return val
 end
+F.prog1={'prog1',1,-1,0,[[Eval FIRST and BODY sequentially; return value from FIRST.
+The value of FIRST is saved during the evaluation of the remaining args,
+whose values are discarded.
+usage: (prog1 FIRST BODY...)]]}
+function F.prog1.f(args)
+    local val=M.eval_sub(cons.car(args))
+    vars.F.progn(cons.cdr(args))
+    return val
+end
 local function funcall_general(fun,args)
     local original_fun=fun
     if lisp.symbolp(fun) and not lisp.nilp(fun) then
@@ -665,6 +674,7 @@ function M.init_syms()
     vars.setsubr(F,'and_')
     vars.setsubr(F,'quote')
     vars.setsubr(F,'progn')
+    vars.setsubr(F,'prog1')
     vars.setsubr(F,'funcall')
     vars.setsubr(F,'apply')
     vars.setsubr(F,'function_')
