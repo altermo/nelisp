@@ -612,7 +612,8 @@ function F.apply.f(args)
     if numargs==0 then
         error('TODO')
     elseif numargs==1 then
-        error('TODO')
+        args[#args]=cons.car(spread_arg)
+        return vars.F.funcall(args)
     end
     numargs=numargs+#args-2
     if lisp.symbolp(fun) and not lisp.nilp(fun) then
