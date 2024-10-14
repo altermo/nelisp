@@ -17,9 +17,16 @@ F.cons={'cons',2,2,0,[[Create a new cons, give it CAR and CDR as components, and
 function F.cons.f(car,cdr)
     return cons.make(car,cdr)
 end
+F.purecopy={'purecopy',1,1,0,[[Make a copy of object OBJ in pure storage.
+Recursively copies contents of vectors and cons cells.
+Does not copy symbols.  Copies strings without text properties.]]}
+function F.purecopy.f(obj)
+    return obj
+end
 
 function M.init_syms()
     vars.setsubr(F,'list')
     vars.setsubr(F,'cons')
+    vars.setsubr(F,'purecopy')
 end
 return M
