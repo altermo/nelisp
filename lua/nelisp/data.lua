@@ -207,6 +207,8 @@ F.floatp={'floatp',1,1,0,[[Return t if OBJECT is a floating point number.]]}
 function F.floatp.f(a) return lisp.floatp(a) and vars.Qt or vars.Qnil end
 F.vectorp={'vectorp',1,1,0,[[Return t if OBJECT is a vector.]]}
 function F.vectorp.f(a) return lisp.vectorp(a) and vars.Qt or vars.Qnil end
+F.atom={'atom',1,1,0,[[Return t if OBJECT is not a cons cell.  This includes nil.]]}
+function F.atom.f(a) return lisp.consp(a) and vars.Qnil or vars.Qt end
 
 function M.init_syms()
     vars.setsubr(F,'symbol_value')
@@ -233,6 +235,7 @@ function M.init_syms()
     vars.setsubr(F,'symbolp')
     vars.setsubr(F,'floatp')
     vars.setsubr(F,'vectorp')
+    vars.setsubr(F,'atom')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')
