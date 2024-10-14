@@ -145,6 +145,19 @@ and without trailing slashes.]])
 Only valid during macro-expansion.  Internal use only.]])
     vars.V.macroexp__dynvars=vars.Qnil
 
+    vars.defvar_lisp('after_load_alist','after-load-alist',[[An alist of functions to be evalled when particular files are loaded.
+Each element looks like (REGEXP-OR-FEATURE FUNCS...).
+
+REGEXP-OR-FEATURE is either a regular expression to match file names, or
+a symbol (a feature name).
+
+When `load' is run and the file-name argument matches an element's
+REGEXP-OR-FEATURE, or when `provide' is run and provides the symbol
+REGEXP-OR-FEATURE, the FUNCS in the element are called.
+
+An error in FUNCS does not undo the load, but does prevent calling
+the rest of the FUNCS.]])
+    vars.V.after_load_alist=vars.Qnil
 end
 ---@param obarray nelisp.obarray
 function M.obarray_check(obarray)

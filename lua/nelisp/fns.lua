@@ -203,6 +203,29 @@ function F.featurep.f(feature,subfeature)
     end
     return lisp.nilp(tem) and vars.Qnil or vars.Qt
 end
+F.provide={'provide',1,2,0,[[Announce that FEATURE is a feature of the current Emacs.
+The optional argument SUBFEATURES should be a list of symbols listing
+particular subfeatures supported in this version of FEATURE.]]}
+function F.provide.f(feature,subfeatures)
+    lisp.check_symbol(feature)
+    lisp.check_list(subfeatures)
+    if not lisp.nilp(vars.V.autoload_queue) then
+        error('TODO')
+    end
+    local tem=vars.F.memq(feature,vars.V.features)
+    if lisp.nilp(tem) then
+        vars.V.features=vars.F.cons(feature,vars.V.features)
+    end
+    if not lisp.nilp(subfeatures) then
+        error('TODO')
+    end
+    lisp.loadhist_attach(vars.F.cons(vars.Qprovide,feature))
+    tem=vars.F.assq(feature,vars.V.after_load_alist)
+    if lisp.consp(tem) then
+        error('TODO')
+    end
+    return feature
+end
 F.make_hash_table={'make-hash-table',0,-2,0,[[Create and return a new hash table.
 
 Arguments are specified as keyword/argument pairs.  The following
@@ -287,6 +310,7 @@ function M.init_syms()
     vars.setsubr(F,'length')
     vars.setsubr(F,'put')
     vars.setsubr(F,'featurep')
+    vars.setsubr(F,'provide')
     vars.setsubr(F,'make_hash_table')
     vars.setsubr(F,'delq')
 
@@ -294,5 +318,6 @@ function M.init_syms()
 Used by `featurep' and `require', and altered by `provide'.]])
 
     vars.defsym('Qplistp','plistp')
+    vars.defsym('Qprovide','provide')
 end
 return M
