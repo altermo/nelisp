@@ -13,6 +13,7 @@ require'nelisp.alloc'.init_syms()
 require'nelisp.eval'.init()
 require'nelisp.buffer'.init()
 require'nelisp.fns'.init()
+require'nelisp.lread'.init()
 
 if not _G.nelisp_later then
     local vars=require'nelisp.vars'

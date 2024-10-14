@@ -96,6 +96,11 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     return vars.Qnil
 end
 
+function M.init()
+    if not _G.nelisp_later then
+        error('TODO: initialize load path')
+    end
+end
 function M.init_syms()
     vars.setsubr(F,'load')
 
@@ -131,9 +136,6 @@ Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
 and without trailing slashes.]])
     vars.V.load_path=vars.Qnil
-    if not _G.nelisp_later then
-        error('TODO: initialize load path')
-    end
 
     vars.defsym('Qmacroexp__dynvars','macroexp--dynvars')
     vars.defvar_lisp('macroexp__dynvars','macroexp--dynvars',[[List of variables declared dynamic in the current scope.
