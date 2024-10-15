@@ -3,6 +3,7 @@ local cons=require'nelisp.obj.cons'
 local vars=require'nelisp.vars'
 local fixnum=require'nelisp.obj.fixnum'
 local str=require'nelisp.obj.str'
+local vec=require'nelisp.obj.vec'
 local type_of=types.type
 local M={}
 ---@overload fun(x:nelisp.obj):boolean
@@ -102,7 +103,7 @@ function M.check_vector(x) M.check_type(M.vectorp(x),vars.Qvectorp,x) end
 ---@return number
 function M.check_vector_or_string(x)
     if M.vectorp(x) then
-        error('TODO')
+        return vec.length(x --[[@as nelisp.vec]])
     elseif M.stringp(x) then
         return M.scars(x --[[@as nelisp.str]])
     else
