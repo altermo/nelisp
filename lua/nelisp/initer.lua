@@ -25,6 +25,7 @@ require'nelisp.buffer'.init()
 require'nelisp.fns'.init()
 require'nelisp.lread'.init()
 require'nelisp.keymap'.init()
+require'nelisp.emacs'.init()
 
 if not _G.nelisp_later then
     local vars=require'nelisp.vars'
