@@ -22,8 +22,10 @@ end
 ---@param index nelisp.specpdl.index
 ---@param val T
 ---@return T
-function M.unbind_to(index,val)
-    assert(index~=M.index(),'DEV: index not changed, unbind_to may be unnecessary')
+function M.unbind_to(index,val,assert_ignore)
+    if not assert_ignore then
+        assert(index~=M.index(),'DEV: index not changed, unbind_to may be unnecessary')
+    end
     while M.index()>index do
         local entry=table.remove(specpdl)
         if entry.type==M.type.let and lisp.symbolp(entry.symbol) and symbol.get_redirect(entry.symbol)==symbol.redirect.plain then
