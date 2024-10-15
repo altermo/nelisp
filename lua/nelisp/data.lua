@@ -91,7 +91,7 @@ See Info node `(elisp)Cons Cells' for a discussion of related basic
 Lisp concepts such as car, cdr, cons cell and list.]]}
 function F.car.f(list)
     if lisp.consp(list) then
-        return cons.car(list)
+        return lisp.xcar(list)
     elseif lisp.nilp(list) then
         return list
     else
@@ -100,7 +100,7 @@ function F.car.f(list)
 end
 F.car_safe={'car-safe',1,1,0,[[Return the car of OBJECT if it is a cons cell, or else nil.]]}
 function F.car_safe.f(obj)
-    return lisp.consp(obj) and cons.car(obj) or vars.Qnil
+    return lisp.consp(obj) and lisp.xcar(obj) or vars.Qnil
 end
 F.cdr={'cdr',1,1,0,[[Return the cdr of LIST.  If LIST is nil, return nil.
 Error if LIST is not nil and not a cons cell.  See also `cdr-safe'.
@@ -109,7 +109,7 @@ See Info node `(elisp)Cons Cells' for a discussion of related basic
 Lisp concepts such as cdr, car, cons cell and list.]]}
 function F.cdr.f(list)
     if lisp.consp(list) then
-        return cons.cdr(list)
+        return lisp.xcdr(list)
     elseif lisp.nilp(list) then
         return list
     else
@@ -119,7 +119,7 @@ end
 F.setcdr={'setcdr',2,2,0,[[Set the cdr of CELL to be NEWCDR.  Returns NEWCDR.]]}
 function F.setcdr.f(cell,newcdr)
     lisp.check_cons(cell)
-    cons.setcdr(cell,newcdr)
+    lisp.setcdr(cell,newcdr)
     return newcdr
 end
 F.eq={'eq',2,2,0,[[Return t if the two args are the same Lisp object.]]}

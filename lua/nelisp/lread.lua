@@ -90,7 +90,7 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     if not _G.nelisp_later then
         error('TODO')
     end
-    local f=assert(io.open('/home/user/.tmp/emacs/lisp/'..str.to_lua_string(file)..'.el','r'))
+    local f=assert(io.open('/home/user/.tmp/emacs/lisp/'..lisp.sdata(file)..'.el','r'))
     local content=f:read('*all')
     io.close(f)
     for _,v in ipairs(M.full_read_lua_string(content)) do
@@ -105,7 +105,7 @@ it defaults to the value of `obarray'.]]}
 function F.intern.f(s,obarray)
     obarray=M.obarray_check(lisp.nilp(obarray) and vars.V.obarray or obarray)
     lisp.check_string(s)
-    local found,longhand=M.lookup_considering_shorthand(obarray,str.to_lua_string(s))
+    local found,longhand=M.lookup_considering_shorthand(obarray,lisp.sdata(s))
     if type(found)=='number' then
         if longhand then
             error('TODO')
@@ -210,7 +210,7 @@ function M.lookup(obarray,name)
         ---@type nelisp.symbol|nil
         local buck=bucket --[[@as nelisp.symbol]]
         while buck~=nil do
-            if str.to_lua_string(symbol.get_name(buck))==name then return buck end
+            if lisp.sdata(symbol.get_name(buck))==name then return buck end
             buck=symbol.get_next(buck)
         end
     end
@@ -776,7 +776,7 @@ function M.read0(readcharfun,locate_syms)
             goto read_obj
         elseif t.t=='list' then
             local new_tail=cons.make(obj,vars.Qnil)
-            cons.setcdr(t.tail,new_tail)
+            lisp.setcdr(t.tail,new_tail)
             t.tail=new_tail
             goto read_obj
         elseif t.t=='special' then
@@ -791,7 +791,7 @@ function M.read0(readcharfun,locate_syms)
             if ch~=b')' then
                 invalid_syntax('expected )',readcharfun)
             end
-            cons.setcdr(t.tail,obj)
+            lisp.setcdr(t.tail,obj)
             table.remove(stack)
             obj=t.head
             if not lisp.nilp(vars.V.load_force_doc_strings) then

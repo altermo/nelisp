@@ -27,7 +27,7 @@ function F.get_buffer.f(buffer_or_name)
 end
 local function nsberror(spec)
     if lisp.stringp(spec) then
-        signal.error('No buffer named %s',str.to_lua_string(spec))
+        signal.error('No buffer named %s',lisp.sdata(spec))
     end
     signal.error('Invalid buffer argument')
 end

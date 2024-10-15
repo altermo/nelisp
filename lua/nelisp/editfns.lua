@@ -33,7 +33,7 @@ function F.message.f(args)
         error('TODO')
     end
     if lisp.stringp(args[1]) then
-        print(str.to_lua_string(args[1] --[[@as nelisp.str]]))
+        print(lisp.sdata(args[1] --[[@as nelisp.str]]))
         return args[1]
     end
 end

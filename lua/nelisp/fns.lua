@@ -16,8 +16,8 @@ Elements of ALIST that are not conses are ignored.]]}
 ---@return nelisp.obj
 function F.assq.f(key,alist)
     local ret,tail=lisp.for_each_tail(alist,function (tail)
-        if lisp.consp(cons.car(tail)) and lisp.eq(cons.car(cons.car(tail) --[[@as nelisp.cons]]),key) then
-            return cons.car(tail)
+        if lisp.consp(lisp.xcar(tail)) and lisp.eq(lisp.xcar(lisp.xcar(tail) --[[@as nelisp.cons]]),key) then
+            return lisp.xcar(tail)
         end
     end)
     if ret then return ret end
@@ -36,7 +36,7 @@ F.memq={'memq',2,2,0,[[Return non-nil if ELT is an element of LIST.  Comparison 
 The value is actually the tail of LIST whose car is ELT.]]}
 function F.memq.f(elt,list)
     local ret,tail=lisp.for_each_tail(list,function (tail)
-        if lisp.eq(cons.car(tail),elt) then
+        if lisp.eq(lisp.xcar(tail),elt) then
             return tail
         end
     end)
@@ -57,7 +57,7 @@ function F.nthcdr.f(n,list)
                     lisp.check_list_end(tail,list)
                     return vars.Qnil
                 end
-                tail=cons.cdr(tail)
+                tail=lisp.xcdr(tail)
             end
             return tail
         end
@@ -80,11 +80,11 @@ local function mapcar1(leni,vals,fn,seq)
             if not lisp.consp(tail) then
                 return i
             end
-            local dummy=vars.F.funcall({fn,cons.car(tail)})
+            local dummy=vars.F.funcall({fn,lisp.xcar(tail)})
             if vals then
                 vals[i+1]=dummy
             end
-            tail=cons.cdr(tail)
+            tail=lisp.xcdr(tail)
         end
     else
         error('TODO')
@@ -159,27 +159,27 @@ local function plist_put(plist,prop,val)
     local tail=plist
     local has_visited={}
     while lisp.consp(tail) do
-        if not lisp.consp(cons.cdr(tail)) then
+        if not lisp.consp(lisp.xcdr(tail)) then
             break
         end
-        if lisp.eq(cons.car(tail),prop) then
-            vars.F.setcar(cons.cdr(tail),val)
+        if lisp.eq(lisp.xcar(tail),prop) then
+            vars.F.setcar(lisp.xcdr(tail),val)
             return plist
         end
         if has_visited[tail] then
             require'nelisp.signal'.xsignal(vars.Qcircular_list,plist)
         end
         prev=tail
-        tail=cons.cdr(tail) --[[@as nelisp.cons]]
+        tail=lisp.xcdr(tail) --[[@as nelisp.cons]]
         has_visited[tail]=true
-        tail=cons.cdr(tail)
+        tail=lisp.xcdr(tail)
     end
     lisp.check_type(lisp.nilp(tail),vars.Qplistp,plist)
     if lisp.nilp(prev) then
         return vars.F.cons(prop,vars.F.cons(val,plist))
     end
-    local newcell=vars.F.cons(prop,vars.F.cons(val,cons.cdr(cons.cdr(prev --[[@as nelisp.cons]]) --[[@as nelisp.cons]])))
-    vars.F.setcdr(cons.cdr(prev),newcell)
+    local newcell=vars.F.cons(prop,vars.F.cons(val,lisp.xcdr(lisp.xcdr(prev --[[@as nelisp.cons]]) --[[@as nelisp.cons]])))
+    vars.F.setcdr(lisp.xcdr(prev),newcell)
     return plist
 end
 F.put={'put',3,3,0,[[Store SYMBOL's PROPNAME property with value VALUE.
@@ -193,18 +193,18 @@ local function plist_get(plist,prop)
     local tail=plist
     local has_visited={}
     while lisp.consp(tail) do
-        if not lisp.consp(cons.cdr(tail)) then
+        if not lisp.consp(lisp.xcdr(tail)) then
             break
         end
-        if lisp.eq(cons.car(tail),prop) then
-            return cons.car(cons.cdr(tail) --[[@as nelisp.cons]])
+        if lisp.eq(lisp.xcar(tail),prop) then
+            return lisp.xcar(lisp.xcdr(tail) --[[@as nelisp.cons]])
         end
         if has_visited[tail] then
             require'nelisp.signal'.xsignal(vars.Qcircular_list,plist)
         end
         has_visited[tail]=true
-        tail=cons.cdr(tail) --[[@as nelisp.cons]]
-        tail=cons.cdr(tail)
+        tail=lisp.xcdr(tail) --[[@as nelisp.cons]]
+        tail=lisp.xcdr(tail)
     end
     return vars.Qnil
 end
@@ -321,12 +321,12 @@ argument.]]}
 function F.delq.f(elt,list)
     local prev=vars.Qnil
     local _,tail=lisp.for_each_tail(list,function (tail)
-        local tem=cons.car(tail)
+        local tem=lisp.xcar(tail)
         if lisp.eq(tem,elt) then
             if lisp.nilp(prev) then
-                list=cons.cdr(tail)
+                list=lisp.xcdr(tail)
             else
-                vars.F.setcdr(prev,cons.cdr(tail))
+                vars.F.setcdr(prev,lisp.xcdr(tail))
             end
         else
             prev=tail
@@ -358,7 +358,7 @@ function F.concat.f(args)
                 error('TODO')
             end
             if str.is_multibyte(arg)==dest_multibyte then
-                table.insert(strs,str.to_lua_string(arg))
+                table.insert(strs,lisp.sdata(arg))
             else
                 error('TODO')
             end

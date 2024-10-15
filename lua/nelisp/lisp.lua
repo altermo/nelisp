@@ -2,6 +2,7 @@ local types=require'nelisp.obj.types'
 local cons=require'nelisp.obj.cons'
 local vars=require'nelisp.vars'
 local fixnum=require'nelisp.obj.fixnum'
+local str=require'nelisp.obj.str'
 local type_of=types.type
 local M={}
 ---@overload fun(x:nelisp.obj):boolean
@@ -102,7 +103,7 @@ function M.for_each_tail(x,fn)
         elseif result then
             return result --[[@as nelisp.obj]],x
         end
-        x=cons.cdr(x)
+        x=M.xcdr(x)
     end
     return nil,x
 end
@@ -132,6 +133,39 @@ function M.loadhist_attach(x)
     if not _G.nelisp_later then
         error('TODO')
     end
+end
+
+---@param x nelisp.str
+function M.scars(x)
+    return str.char_length(x)
+end
+---@param x nelisp.str
+function M.sbytes(x)
+    return str.byte_length(x)
+end
+---@param x nelisp.str
+---@return string
+function M.sdata(x)
+    return str.data(x)
+end
+
+---@param c nelisp.cons
+function M.xcar(c)
+    return cons.car(c)
+end
+---@param c nelisp.cons
+function M.xcdr(c)
+    return cons.cdr(c)
+end
+---@param c nelisp.cons
+---@param newcdr nelisp.cons
+function M.setcdr(c,newcdr)
+    cons.setcdr(c,newcdr)
+end
+---@param c nelisp.cons
+---@param newcar nelisp.obj
+function M.setcar(c,newcar)
+    cons.setcar(c,newcar)
 end
 
 return M

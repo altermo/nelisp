@@ -30,14 +30,14 @@ local function funcall_lambda(fun,args)
     local lexenv,syms_left
     local count=specpdl.index()
     if lisp.consp(fun) then
-        if lisp.eq(cons.car(fun),vars.Qclosure) then
+        if lisp.eq(lisp.xcar(fun),vars.Qclosure) then
             error('TODO')
         else
             lexenv=vars.Qnil
         end
-        syms_left=cons.cdr(fun)
+        syms_left=lisp.xcdr(fun)
         if lisp.consp(syms_left) then
-            syms_left=cons.car(syms_left --[[@as nelisp.cons]])
+            syms_left=lisp.xcar(syms_left --[[@as nelisp.cons]])
         else
             signal.xsignal(vars.Qinvalid_function,fun)
         end
@@ -50,7 +50,7 @@ local function funcall_lambda(fun,args)
     local previous_rest=false
     while lisp.consp(syms_left) do
         ---@cast syms_left nelisp.cons
-        local next_=cons.car(syms_left)
+        local next_=lisp.xcar(syms_left)
         if not lisp.symbolp(next_) then
             signal.xsignal(vars.Qinvalid_function,fun)
         end
@@ -85,7 +85,7 @@ local function funcall_lambda(fun,args)
             end
             previous_rest=false
         end
-        syms_left=cons.cdr(syms_left)
+        syms_left=lisp.xcdr(syms_left)
     end
     if not lisp.nilp(syms_left) or previous_rest then
         signal.xsignal(vars.Qinvalid_function,fun)
@@ -97,7 +97,7 @@ local function funcall_lambda(fun,args)
     end
     local val
     if lisp.consp(fun) then
-        val=vars.F.progn(cons.cdr(cons.cdr(fun) --[[@as nelisp.cons]]))
+        val=vars.F.progn(lisp.xcdr(lisp.xcdr(fun) --[[@as nelisp.cons]]))
     else
         error('TODO')
     end
@@ -128,7 +128,7 @@ end
 function M.eval_sub(form)
     if lisp.symbolp(form) then
         local lex_binding=vars.F.assq(form,vars.V.internal_interpreter_environment)
-        return not lisp.nilp(lex_binding) and cons.cdr(lex_binding) or vars.F.symbol_value(form)
+        return not lisp.nilp(lex_binding) and lisp.xcdr(lex_binding) or vars.F.symbol_value(form)
     end
     if not lisp.consp(form) then
         return form
@@ -149,8 +149,8 @@ function M.eval_sub(form)
             signal.xsignal(vars.Qexcessive_lisp_nesting,fixnum.make(vars.lisp_eval_depth))
         end
     end
-    local original_fun=cons.car(form)
-    local original_args=cons.cdr(form)
+    local original_fun=lisp.xcar(form)
+    local original_args=lisp.xcdr(form)
     local val
     lisp.check_list(original_args)
     local count=specpdl.record_in_backtrace(original_fun,original_args,'UNEVALLED')
@@ -179,8 +179,8 @@ function M.eval_sub(form)
             local vals={}
             while (lisp.consp(args_left) and #vals<numargs) do
                 ---@cast args_left nelisp.cons
-                local arg=cons.car(args_left)
-                args_left=cons.cdr(args_left)
+                local arg=lisp.xcar(args_left)
+                args_left=lisp.xcdr(args_left)
                 table.insert(vals,M.eval_sub(arg))
             end
 
@@ -205,7 +205,7 @@ function M.eval_sub(form)
             signal.xsignal(vars.Qinvalid_function,original_fun)
         end
         ---@cast fun nelisp.cons
-        local funcar=cons.car(fun)
+        local funcar=lisp.xcar(fun)
         if not lisp.symbolp(funcar) then
             signal.xsignal(vars.Qinvalid_function,original_fun)
         elseif lisp.eq(funcar,vars.Qautoload) then
@@ -216,11 +216,11 @@ function M.eval_sub(form)
             local p=vars.V.internal_interpreter_environment
             local dynvars=vars.V.macroexp__dynvars
             while not lisp.nilp(p) do
-                local e=cons.car(p)
+                local e=lisp.xcar(p)
                 if lisp.symbolp(e) then
                     dynvars=vars.F.cons(e, dynvars)
                 end
-                p=cons.cdr(p)
+                p=lisp.xcdr(p)
             end
             if lisp.eq(dynvars,vars.V.macroexp__dynvars) then
                 specpdl.bind(vars.Qmacroexp__dynvars,dynvars)
@@ -262,14 +262,14 @@ function F.setq.f(args)
     local tail=args
     local nargs=0
     while lisp.consp(tail) do
-        local sym=cons.car(tail)
-        tail=cons.cdr(tail)
+        local sym=lisp.xcar(tail)
+        tail=lisp.xcdr(tail)
         if not lisp.consp(tail) then
             signal.xsignal(vars.Qwrong_type_argument,vars.Qsetq,fixnum.make(nargs+1))
             ---@cast tail nelisp.cons
         end
-        local arg=cons.car(tail)
-        tail=cons.cdr(tail)
+        local arg=lisp.xcar(tail)
+        tail=lisp.xcdr(tail)
         val=M.eval_sub(arg)
         local lex_binding=lisp.symbolp(sym) and vars.F.assq(sym,vars.V.internal_interpreter_environment) or vars.Qnil
         if not lisp.nilp(lex_binding) then
@@ -289,15 +289,15 @@ All the VALUEFORMs are evalled before any symbols are bound.
 usage: (let VARLIST BODY...)]]}
 function F.let.f(args)
     local count=specpdl.index()
-    local varlist=cons.car(args)
+    local varlist=lisp.xcar(args)
     local varlist_len=lisp.list_length(varlist)
     local elt
     local temps={}
     local argnum=0
     while argnum<varlist_len and lisp.consp(varlist) do
         ---@cast varlist nelisp.cons
-        elt=cons.car(varlist)
-        varlist=cons.cdr(varlist)
+        elt=lisp.xcar(varlist)
+        varlist=lisp.xcdr(varlist)
         if lisp.symbolp(elt) then
             temps[argnum]=vars.Qnil
         elseif not lisp.nilp(vars.F.cdr(vars.F.cdr(elt))) then
@@ -306,13 +306,13 @@ function F.let.f(args)
             temps[argnum]=M.eval_sub(vars.F.car(vars.F.cdr(elt)))
         end
     end
-    varlist=cons.car(args)
+    varlist=lisp.xcar(args)
     local lexenv=vars.V.internal_interpreter_environment
     argnum=0
     while argnum<varlist_len and lisp.consp(varlist) do
         ---@cast varlist nelisp.cons
-        elt=cons.car(varlist)
-        varlist=cons.cdr(varlist)
+        elt=lisp.xcar(varlist)
+        varlist=lisp.xcdr(varlist)
         local var=lisp.symbolp(elt) and elt or vars.F.car(elt)
         local tem=temps[argnum]
         if not lisp.nilp(lexenv) then
@@ -336,17 +336,17 @@ usage: (let* VARLIST BODY...)]]}
 function F.letX.f(args)
     local count=specpdl.index()
     local lexenv=vars.V.internal_interpreter_environment
-    local _,tail=lisp.for_each_tail(cons.car(args),function (varlist)
-        local elt=cons.car(varlist)
+    local _,tail=lisp.for_each_tail(lisp.xcar(args),function (varlist)
+        local elt=lisp.xcar(varlist)
         local var,val
         if lisp.symbolp(elt) then
             error('TODO')
         else
             var=vars.F.car(elt)
-            if not lisp.nilp(vars.F.cdr(cons.cdr(elt --[[@as nelisp.cons]]))) then
+            if not lisp.nilp(vars.F.cdr(lisp.xcdr(elt --[[@as nelisp.cons]]))) then
             signal.signal_error("`let' bindings can have only one value-form",elt)
             end
-            val=M.eval_sub(vars.F.car(cons.cdr(elt --[[@as nelisp.cons]])))
+            val=M.eval_sub(vars.F.car(lisp.xcdr(elt --[[@as nelisp.cons]])))
         end
         if not lisp.nilp(lexenv) and lisp.symbolp(var)
             and not symbol.get_special(var)
@@ -356,8 +356,8 @@ function F.letX.f(args)
             specpdl.bind(var,val)
         end
     end)
-    lisp.check_list_end(tail,cons.car(args))
-    local val=vars.F.progn(cons.cdr(args))
+    lisp.check_list_end(tail,lisp.xcar(args))
+    local val=vars.F.progn(lisp.xcdr(args))
     return specpdl.unbind_to(count,val)
 end
 local function defvar(sym,initvalue,docstring,eval)
@@ -397,17 +397,17 @@ To define a user option, use `defcustom' instead of `defvar'.
 To define a buffer-local variable, use `defvar-local'.
 usage: (defvar SYMBOL &optional INITVALUE DOCSTRING)]]}
 function F.defvar.f(args)
-    local sym=cons.car(args)
-    local tail=cons.cdr(args)
+    local sym=lisp.xcar(args)
+    local tail=lisp.xcdr(args)
     lisp.check_symbol(sym)
     if not lisp.nilp(tail) then
         ---@cast tail nelisp.cons
-        if not lisp.nilp(cons.cdr(tail)) and not lisp.nilp(cons.cdr(cons.cdr(tail) --[[@as nelisp.cons]])) then
+        if not lisp.nilp(lisp.xcdr(tail)) and not lisp.nilp(lisp.xcdr(lisp.xcdr(tail) --[[@as nelisp.cons]])) then
             signal.error('Too many arguments')
         end
-        local exp=cons.car(tail)
-        tail=cons.cdr(tail)
-        return defvar(sym,exp,cons.car(tail --[[@as nelisp.cons]]),true)
+        local exp=lisp.xcar(tail)
+        tail=lisp.xcdr(tail)
+        return defvar(sym,exp,lisp.xcar(tail --[[@as nelisp.cons]]),true)
     else
         error('TODO')
     end
@@ -453,16 +453,16 @@ defined with this form.
 The optional DOCSTRING specifies the variable's documentation string.
 usage: (defconst SYMBOL INITVALUE [DOCSTRING])]]}
 function F.defconst.f(args)
-    local sym=cons.car(args)
+    local sym=lisp.xcar(args)
     lisp.check_symbol(sym)
     local docstring=vars.Qnil
-    if not lisp.nilp(cons.cdr(cons.cdr(args) --[[@as nelisp.cons]])) then
-        if not lisp.nilp(cons.cdr(cons.cdr(cons.cdr(args) --[[@as nelisp.cons]]) --[[@as nelisp.cons]])) then
+    if not lisp.nilp(lisp.xcdr(lisp.xcdr(args) --[[@as nelisp.cons]])) then
+        if not lisp.nilp(lisp.xcdr(lisp.xcdr(lisp.xcdr(args) --[[@as nelisp.cons]]) --[[@as nelisp.cons]])) then
             signal.error('Too many arguments')
         end
-        docstring=cons.car(cons.cdr(cons.cdr(args) --[[@as nelisp.cons]]) --[[@as nelisp.cons]])
+        docstring=lisp.xcar(lisp.xcdr(lisp.xcdr(args) --[[@as nelisp.cons]]) --[[@as nelisp.cons]])
     end
-    local tem=M.eval_sub(cons.car(cons.cdr(args) --[[@as nelisp.cons]]))
+    local tem=M.eval_sub(lisp.xcar(lisp.xcdr(args) --[[@as nelisp.cons]]))
     return vars.F.defconst_1(sym,tem,docstring)
 end
 F.defconst_1={'Fdefconst_1',2,3,0,[[Like `defconst' but as a function.
@@ -482,11 +482,11 @@ If COND yields nil, and there are no ELSE's, the value is nil.
 usage: (if COND THEN ELSE...)]]}
 ---@param args nelisp.cons
 function F.if_.f(args)
-    local cond=M.eval_sub(cons.car(args))
+    local cond=M.eval_sub(lisp.xcar(args))
     if not lisp.nilp(cond) then
-        return M.eval_sub(vars.F.car(cons.cdr(args)))
+        return M.eval_sub(vars.F.car(lisp.xcdr(args)))
     end
-    return vars.F.progn(vars.F.cdr(cons.cdr(args)))
+    return vars.F.progn(vars.F.cdr(lisp.xcdr(args)))
 end
 F.while_={'while',1,-1,0,[[If TEST yields non-nil, eval BODY... and repeat.
 The order of execution is thus TEST, BODY, TEST, BODY and so on
@@ -496,8 +496,8 @@ The value of a `while' form is always nil.
 
 usage: (while TEST BODY...)]]}
 function F.while_.f(args)
-    local test=cons.car(args)
-    local body=cons.cdr(args)
+    local test=lisp.xcar(args)
+    local body=lisp.xcdr(args)
     while not lisp.nilp(M.eval_sub(test)) do
         vars.F.progn(body)
     end
@@ -515,16 +515,16 @@ usage: (cond CLAUSES...)]]}
 function F.cond.f(args)
     local val=args
     while lisp.consp(args) do
-        local clause=cons.car(args)
+        local clause=lisp.xcar(args)
         val=M.eval_sub(vars.F.car(clause))
         if not lisp.nilp(val) then
             ---@cast clause nelisp.cons
-            if not lisp.nilp(cons.cdr(clause)) then
-                val=vars.F.progn(cons.cdr(clause))
+            if not lisp.nilp(lisp.xcdr(clause)) then
+                val=vars.F.progn(lisp.xcdr(clause))
             end
             break
         end
-        args=cons.cdr(args)
+        args=lisp.xcdr(args)
     end
     return val
 end
@@ -536,8 +536,8 @@ function F.or_.f(args)
     local val=vars.Qnil
     while lisp.consp(args) do
         ---@cast args nelisp.cons
-        local arg=cons.car(args)
-        args=cons.cdr(args)
+        local arg=lisp.xcar(args)
+        args=lisp.xcdr(args)
         val=M.eval_sub(arg)
         if not lisp.nilp(val) then
             break
@@ -552,8 +552,8 @@ usage: (and CONDITIONS...)]]}
 function F.and_.f(args)
     local val=lisp.T
     while lisp.consp(args) do
-        local arg=cons.car(args)
-        args=cons.cdr(args)
+        local arg=lisp.xcar(args)
+        args=lisp.xcdr(args)
         val=M.eval_sub(arg)
         if lisp.nilp(val) then
             break
@@ -572,18 +572,18 @@ See the common pitfall in info node `(elisp)Rearrangement' for an example
 of unexpected results when a quoted object is modified.
 usage: (quote ARG)]]}
 function F.quote.f(args)
-    if not lisp.nilp(cons.cdr(args)) then
+    if not lisp.nilp(lisp.xcdr(args)) then
         signal.xsignal(vars.Qwrong_number_of_arguments,vars.Qquote,vars.F.length(args))
     end
-    return cons.car(args)
+    return lisp.xcar(args)
 end
 F.progn={'progn',0,-1,0,[[Eval BODY forms sequentially and return value of last one.
 usage: (progn BODY...)]]}
 function F.progn.f(body)
     local val=vars.Qnil
     while lisp.consp(body) do
-        local form=cons.car(body)
-        body=cons.cdr(body)
+        local form=lisp.xcar(body)
+        body=lisp.xcdr(body)
         val=M.eval_sub(form)
     end
     return val
@@ -593,8 +593,8 @@ The value of FIRST is saved during the evaluation of the remaining args,
 whose values are discarded.
 usage: (prog1 FIRST BODY...)]]}
 function F.prog1.f(args)
-    local val=M.eval_sub(cons.car(args))
-    vars.F.progn(cons.cdr(args))
+    local val=M.eval_sub(lisp.xcar(args))
+    vars.F.progn(lisp.xcdr(args))
     return val
 end
 local function funcall_subr(fun,args)
@@ -639,7 +639,7 @@ local function funcall_general(fun,args)
     elseif not lisp.consp(fun) then
         signal.xsignal(vars.Qinvalid_function,original_fun)
     end
-    local funcar=cons.car(fun)
+    local funcar=lisp.xcar(fun)
     if not lisp.symbolp(funcar) then
         signal.xsignal(vars.Qinvalid_function,original_fun)
     elseif lisp.eq(funcar,vars.Qlambda) or lisp.eq(funcar,vars.Qclosure) then
@@ -689,7 +689,7 @@ function F.apply.f(args)
     if numargs==0 then
         error('TODO')
     elseif numargs==1 then
-        args[#args]=cons.car(spread_arg)
+        args[#args]=lisp.xcar(spread_arg)
         return vars.F.funcall(args)
     end
     numargs=numargs+#args-2
@@ -705,9 +705,9 @@ function F.apply.f(args)
     end
     local i=#args
     while not lisp.nilp(spread_arg) do
-        funcall_args[i]=cons.car(spread_arg)
+        funcall_args[i]=lisp.xcar(spread_arg)
         i=i+1
-        spread_arg=cons.cdr(spread_arg)
+        spread_arg=lisp.xcdr(spread_arg)
     end
     return vars.F.funcall(funcall_args)
 end
@@ -719,8 +719,8 @@ instead, this doesn't happen.
 
 usage: (function ARG)]]}
 function F.function_.f(args)
-    local quoted=cons.car(args)
-    if not lisp.nilp(cons.cdr(args)) then
+    local quoted=lisp.xcar(args)
+    if not lisp.nilp(lisp.xcdr(args)) then
         signal.xsignal(vars.Qwrong_number_of_arguments,vars.Qfunction,vars.F.length(args))
     end
     if not lisp.nilp(vars.V.internal_interpreter_environment) then

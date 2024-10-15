@@ -44,10 +44,25 @@ function M.index1_neg(obj,idx)
     local err,res=pcall(M.index1,obj,idx)
     return err and res or -1
 end
+
 ---@param obj nelisp.str
 ---@return string
-function M.to_lua_string(obj)
+function M.data(obj)
     return obj[2]
+end
+
+---@param obj nelisp.str
+---@return number
+function M.byte_length(obj)
+    return #obj[2]
+end
+---@param obj nelisp.str
+---@return number
+function M.char_length(obj)
+    if M.is_multibyte(obj) then
+        error('TODO')
+    end
+    return #obj[2]
 end
 
 ---@param obj nelisp.str

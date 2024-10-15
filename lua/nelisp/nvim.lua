@@ -1,5 +1,6 @@
 local vars=require'nelisp.vars'
 local str=require'nelisp.obj.str'
+local lisp=require'nelisp.lisp'
 local buffer=require'nelisp.obj.buffer'
 local M={}
 local buffer_to_id=setmetatable({},{__mode='k'})
@@ -17,7 +18,7 @@ end)
 ---@param str_obj nelisp.str
 ---@return nelisp.buffer|nelisp.nil
 function M.get_buffer(str_obj)
-    local name=str.to_lua_string(str_obj)
+    local name=lisp.sdata(str_obj)
     local id=vim.fn.bufnr(name)
     if id==-1 then
         return vars.Qnil
@@ -27,7 +28,7 @@ end
 ---@param str_obj nelisp.str
 ---@return nelisp.buffer
 function M.create_buffer(str_obj)
-    local name=str.to_lua_string(str_obj)
+    local name=lisp.sdata(str_obj)
     local id=vim.api.nvim_create_buf(true,false)
     vim.api.nvim_buf_set_name(id,name)
     if not _G.nelisp_later then
