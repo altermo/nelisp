@@ -219,6 +219,14 @@ F.set_default.f=function (sym,val)
     M.set_default_internal(sym,val,'SET')
     return val
 end
+F.lss={'<',1,-2,0,[[Return t if each arg (a number or marker), is less than the next arg.
+usage: (< NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
+function F.lss.f(args)
+    if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
+        return fixnum.tonumber(args[1])<fixnum.tonumber(args[2]) and vars.Qt or vars.Qnil
+    end
+    error('TODO')
+end
 local function default_value(sym)
     lisp.check_symbol(sym)
     local redirect=symbol.get_redirect(sym)
@@ -275,6 +283,8 @@ function M.init_syms()
 
     vars.setsubr(F,'eq')
     vars.setsubr(F,'defalias')
+
+    vars.setsubr(F,'lss')
 
     vars.setsubr(F,'default_boundp')
     vars.setsubr(F,'stringp')
