@@ -311,6 +311,9 @@ end
 ---@param code '+'|'or'
 ---@param args (number|nelisp.float|nelisp.bignum|nelisp.fixnum)[]
 local function arith_driver(code,args)
+    if not _G.nelisp_later then
+        error('TODO: args may contain markers')
+    end
     if code=='+' then
         local acc=0
         for _,v in ipairs(args) do
@@ -352,6 +355,34 @@ local function arith_driver(code,args)
             end
         end
         return acc
+    else
+        error('TODO')
+    end
+end
+---@param code '='
+---@param args (number|nelisp.float|nelisp.bignum|nelisp.fixnum)[]
+local function arithcompare_driver(code,args)
+    if not _G.nelisp_later then
+        error('TODO: args may contain markers')
+    end
+    for k,v in ipairs(args) do
+        if type(v)=='number' then
+        elseif lisp.fixnump(v) then
+            args[k]=fixnum.tonumber(v --[[@as nelisp.fixnum]])
+        else
+            error('TODO')
+        end
+    end
+    ---@cast args (number)[]
+    if code=='=' then
+        for i=1,#args-1 do
+            if args[i]~=args[i+1] then
+                return vars.Qnil
+            end
+        end
+        return vars.Qt
+    else
+        error('TODO')
     end
 end
 F.add1={'1+',1,1,0,[[Return NUMBER plus one.  NUMBER may be a number or a marker.
@@ -381,6 +412,11 @@ function F.logior.f(args)
     end
     local a=lisp.check_number_coerce_marker(args[1])
     return #args==1 and a or arith_driver('or',args)
+end
+F.eqlsign={'=',1,-2,0,[[Return t if args, all numbers or markers, are equal.
+usage: (= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
+function F.eqlsign.f(args)
+    return arithcompare_driver('=',args)
 end
 F.local_variable_if_set_p={'local-variable-if-set-p',1,2,0,[[Non-nil if VARIABLE is local in buffer BUFFER when set there.
 BUFFER defaults to the current buffer.
@@ -474,6 +510,7 @@ function M.init_syms()
     vars.setsubr(F,'add1')
     vars.setsubr(F,'logior')
     vars.setsubr(F,'lss')
+    vars.setsubr(F,'eqlsign')
 
     vars.setsubr(F,'local_variable_if_set_p')
     vars.setsubr(F,'default_boundp')
