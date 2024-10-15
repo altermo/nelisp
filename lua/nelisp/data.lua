@@ -233,6 +233,37 @@ function F.defalias.f(sym,definition,docstring)
     end
     return sym
 end
+F.make_variable_buffer_local={'make-variable-buffer-local',1,1,'vMake Variable Buffer Local: ',[[Make VARIABLE become buffer-local whenever it is set.
+At any time, the value for the current buffer is in effect,
+unless the variable has never been set in this buffer,
+in which case the default value is in effect.
+Note that binding the variable with `let', or setting it while
+a `let'-style binding made in this buffer is in effect,
+does not make the variable buffer-local.  Return VARIABLE.
+
+This globally affects all uses of this variable, so it belongs together with
+the variable declaration, rather than with its uses (if you just want to make
+a variable local to the current buffer for one particular use, use
+`make-local-variable').  Buffer-local bindings are normally cleared
+while setting up a new major mode, unless they have a `permanent-local'
+property.
+
+The function `default-value' gets the default value and `set-default' sets it.
+
+See also `defvar-local'.]]}
+function F.make_variable_buffer_local.f(var)
+    lisp.check_symbol(var)
+    local redirect=symbol.get_redirect(var)
+    local default
+    if redirect==symbol.redirect.plain then
+        default=symbol.get_var(var) or vars.Qnil
+    else
+        error('TODO')
+    end
+    symbol.set_redirect(var,symbol.redirect.localized)
+    symbol.set_blv(var,{default=default,local_if_set=true})
+    return var
+end
 ---@param bindflag 'SET'|'BIND'|'UNBIND'|'THREAD_SWITCH'
 function M.set_default_internal(sym,val,bindflag)
     lisp.check_symbol(sym)
@@ -399,6 +430,7 @@ function M.init_syms()
 
     vars.setsubr(F,'eq')
     vars.setsubr(F,'defalias')
+    vars.setsubr(F,'make_variable_buffer_local')
 
     vars.setsubr(F,'add1')
     vars.setsubr(F,'logior')

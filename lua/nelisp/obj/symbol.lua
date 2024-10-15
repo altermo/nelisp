@@ -1,5 +1,9 @@
 local types=require'nelisp.obj.types'
 
+---@class nelisp.buffer_local_vars: table
+---@field default nelisp.obj
+---@field local_if_set boolean
+
 ---@class nelisp.symbol: nelisp.obj
 ---@field [1] nelisp.types.symbol
 ---@field [2] nelisp.str --name
@@ -7,7 +11,7 @@ local types=require'nelisp.obj.types'
 ---@field [4]? nelisp.symbol.redirect --redirect
 ---@field [5]? nelisp.symbol.interned --interned
 ---@field [6]? boolean --declared_special
----@field [7]? any --value of symbol (dependent on "redirect")
+---@field [7]? nelisp.obj|nelisp.symbol|nelisp.buffer_local_vars --value of symbol (dependent on "redirect")
 ---@field [8]? nelisp.symbol|nelisp.subr|nelisp.cons --function
 ---@field [9]? nelisp.list --plist
 ---@field [10]? nelisp.symbol --next symbol in obarray
@@ -148,5 +152,11 @@ end
 ---@param redirect nelisp.symbol.redirect
 function M.set_redirect(sym,redirect)
     sym[4]=redirect
+end
+---@param sym nelisp.symbol
+---@param blv nelisp.buffer_local_vars
+function M.set_blv(sym,blv)
+    assert(sym[4]==M.redirect.localized)
+    sym[7]=blv
 end
 return M
