@@ -233,12 +233,58 @@ F.set_default.f=function (sym,val)
     M.set_default_internal(sym,val,'SET')
     return val
 end
+---@param code '+'|'or'
+---@param args (number|nelisp.float|nelisp.bignum|nelisp.fixnum)[]
+local function arith_driver(code,args)
+    if code=='+' then
+        local acc=0
+        for _,v in ipairs(args) do
+            if type(v)=='number' then
+                acc=acc+v
+            elseif lisp.bignump(v) then
+                error('TODO')
+            elseif lisp.floatp(v) then
+                error('TODO')
+            elseif lisp.fixnump(v) then
+                acc=acc+fixnum.tonumber(v --[[@as nelisp.fixnum]])
+            else
+                error('unreachable')
+            end
+        end
+        if acc>=0x20000000000000 or acc<-0x20000000000000 then
+            error('TODO')
+        elseif acc==-0x20000000000000 then
+            error('TODO')
+        end
+        return fixnum.make(acc)
+    elseif code=='or' then
+        if not _G.nelisp_later then
+            error('TODO: bit can only do numbers up to 32 bit, fixnum is 52 bit')
+            error('TODO: a number being negative is treated as it having infinite ones at the left side')
+        end
+        local acc=0
+        for _,v in ipairs(args) do
+            if type(v)=='number' then
+                acc=acc+v
+            elseif lisp.bignump(v) then
+                error('TODO')
+            elseif lisp.floatp(v) then
+                error('TODO')
+            elseif lisp.fixnump(v) then
+                acc=bit.bor(acc,fixnum.tonumber(v --[[@as nelisp.fixnum]]))
+            else
+                error('unreachable')
+            end
+        end
+        return acc
+    end
+end
 F.add1={'1+',1,1,0,[[Return NUMBER plus one.  NUMBER may be a number or a marker.
 Markers are converted to integers.]]}
 function F.add1.f(num)
     num=lisp.check_number_coerce_marker(num)
     if lisp.fixnump(num) then
-        return lisp.make_int_add(num --[[@as nelisp.fixnum]],1)
+        return arith_driver('+',{num,1})
     else
         error('TODO')
     end
@@ -250,6 +296,16 @@ function F.lss.f(args)
         return fixnum.tonumber(args[1])<fixnum.tonumber(args[2]) and vars.Qt or vars.Qnil
     end
     error('TODO')
+end
+F.logior={'logior',0,-2,0,[[Return bitwise-or of all the arguments.
+Arguments may be integers, or markers converted to integers.
+usage: (logior &rest INTS-OR-MARKERS)]]}
+function F.logior.f(args)
+    if #args==0 then
+        return fixnum.zero
+    end
+    local a=lisp.check_number_coerce_marker(args[1])
+    return #args==1 and a or arith_driver('or',args)
 end
 local function default_value(sym)
     lisp.check_symbol(sym)
@@ -309,6 +365,7 @@ function M.init_syms()
     vars.setsubr(F,'defalias')
 
     vars.setsubr(F,'add1')
+    vars.setsubr(F,'logior')
     vars.setsubr(F,'lss')
 
     vars.setsubr(F,'default_boundp')

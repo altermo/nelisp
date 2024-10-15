@@ -209,27 +209,4 @@ function M.event_head(event)
     return M.consp(event) and M.xcar(event) or event
 end
 
----@param ... nelisp.fixnum|nelisp.bignum|number
----@return nelisp.fixnum|nelisp.bignum
-function M.make_int_add(...)
-    local total=0
-    for _,v in ipairs({...}) do
-        if type(v)=='number' then
-            total=total+v
-        elseif M.bignump(v) then
-            error('TODO')
-        elseif M.fixnump(v) then
-            total=total+fixnum.tonumber(v --[[@as nelisp.fixnum]])
-        else
-            error('unreachable')
-        end
-    end
-    if total>=0x20000000000000 or total<-0x20000000000000 then
-        error('TODO')
-    elseif total==-0x20000000000000 then
-        error('TODO')
-    end
-    return fixnum.make(total)
-end
-
 return M
