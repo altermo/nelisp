@@ -181,7 +181,7 @@ function M.xcdr(c)
     return cons.cdr(c)
 end
 ---@param c nelisp.cons
----@param newcdr nelisp.cons
+---@param newcdr nelisp.obj
 function M.setcdr(c,newcdr)
     cons.setcdr(c,newcdr)
 end
