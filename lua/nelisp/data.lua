@@ -334,5 +334,7 @@ function M.init_syms()
     vars.defsym('Qchartablep','chartablep')
     vars.defsym('Qvectorp','vectorp')
     vars.defsym('Qnumber_or_marker_p','number-or-markerp')
+
+    vars.defsym('Qvoid_variable','void-variable')
 end
 return M
