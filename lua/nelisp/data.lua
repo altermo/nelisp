@@ -157,6 +157,7 @@ F.set={'set',2,2,0,[[Set SYMBOL's value to NEWVAL, and return NEWVAL.]]}
 ---@param newval nelisp.obj
 function F.set.f(sym,newval)
     M.set_internal(sym,newval,vars.Qnil,'SET')
+    return newval
 end
 F.car={'car',1,1,0,[[Return the car of LIST.  If LIST is nil, return nil.
 Error if LIST is not nil and not a cons cell.  See also `car-safe'.
