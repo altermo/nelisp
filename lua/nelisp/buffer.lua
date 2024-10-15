@@ -23,7 +23,7 @@ function F.get_buffer.f(buffer_or_name)
         return buffer_or_name
     end
     lisp.check_string(buffer_or_name)
-    return nvim.get_buffer(buffer_or_name)
+    return nvim.get_buffer_by_name(buffer_or_name)
 end
 local function nsberror(spec)
     if lisp.stringp(spec) then
