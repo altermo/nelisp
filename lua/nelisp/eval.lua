@@ -391,8 +391,10 @@ function F.defvar.f(args)
         local exp=lisp.xcar(tail)
         tail=lisp.xcdr(tail)
         return defvar(sym,exp,lisp.xcar(tail --[[@as nelisp.cons]]),true)
-    else
+    elseif not lisp.nilp(vars.V.internal_interpreter_environment) and lisp.symbolp(sym) and not symbol.get_special(sym --[[@as nelisp.symbol]]) then
         error('TODO')
+    else
+        return sym
     end
 end
 F.defvaralias={'defvaralias',2,3,0,[[Make NEW-ALIAS a variable alias for symbol BASE-VARIABLE.
