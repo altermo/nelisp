@@ -95,6 +95,8 @@ function M.check_fixnum(x) M.check_type(M.fixnump(x),vars.Qfixnump,x) end
 function M.check_array(x,predicate) M.check_type(M.arrayp(x),predicate,x) end
 ---@overload fun(x:nelisp.obj)
 function M.check_chartable(x) M.check_type(M.chartablep(x),vars.Qchartablep,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_vector(x) M.check_type(M.vectorp(x),vars.Qvectorp,x) end
 
 ---@param x nelisp.obj
 ---@return number

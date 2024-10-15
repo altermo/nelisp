@@ -5,6 +5,7 @@ local signal=require'nelisp.signal'
 local fixnum=require'nelisp.obj.fixnum'
 local str=require'nelisp.obj.str'
 local char_table=require'nelisp.obj.char_table'
+local vec=require'nelisp.obj.vec'
 
 local M={}
 ---@param sym nelisp.obj
@@ -109,6 +110,12 @@ function F.aset.f(array,idx,newval)
     if lisp.chartablep(array) then
         lisp.check_chartable(array)
         char_table.set(array,idxval,newval)
+    elseif lisp.vectorp(array) then
+        lisp.check_vector(array)
+        if idxval<0 or idxval>=vec.length(array) then
+            error('INDEX out of range')
+        end
+        vec.set_index0(array,idxval,newval)
     else
         error('TODO')
     end
@@ -309,5 +316,6 @@ function M.init_syms()
     vars.defsym('Qfixnump','fixnump')
     vars.defsym('Qarrayp','arrayp')
     vars.defsym('Qchartablep','chartablep')
+    vars.defsym('Qvectorp','vectorp')
 end
 return M
