@@ -416,6 +416,11 @@ function F.boundp.f(sym)
         error('TODO')
     end
 end
+F.fboundp={'fboundp',1,1,0,[[Return t if SYMBOL's function definition is not void.]]}
+function F.fboundp.f(sym)
+    lisp.check_symbol(sym)
+    return lisp.nilp(symbol.get_func(sym)) and vars.Qnil or vars.Qt
+end
 F.stringp={'stringp',1,1,0,[[Return t if OBJECT is a string.]]}
 function F.stringp.f(a) return lisp.stringp(a) and vars.Qt or vars.Qnil end
 F.null={'null',1,1,0,[[Return t if OBJECT is nil, and return nil otherwise.]]}
@@ -435,6 +440,14 @@ F.atom={'atom',1,1,0,[[Return t if OBJECT is not a cons cell.  This includes nil
 function F.atom.f(a) return lisp.consp(a) and vars.Qnil or vars.Qt end
 F.consp={'consp',1,1,0,[[Return t if OBJECT is a cons cell.]]}
 function F.consp.f(a) return lisp.consp(a) and vars.Qt or vars.Qnil end
+F.functionp={'functionp',1,1,0,[[Return t if OBJECT is a function.
+
+An object is a function if it is callable via `funcall'; this includes
+symbols with function bindings, but excludes macros and special forms.
+
+Ordinarily return nil if OBJECT is not a function, although t might be
+returned in rare cases.]]}
+function F.functionp.f(a) return lisp.functionp(a) and vars.Qt or vars.Qnil end
 
 function M.init_syms()
     vars.setsubr(F,'symbol_value')
@@ -465,6 +478,7 @@ function M.init_syms()
     vars.setsubr(F,'local_variable_if_set_p')
     vars.setsubr(F,'default_boundp')
     vars.setsubr(F,'boundp')
+    vars.setsubr(F,'fboundp')
     vars.setsubr(F,'stringp')
     vars.setsubr(F,'null')
     vars.setsubr(F,'numberp')
@@ -474,6 +488,7 @@ function M.init_syms()
     vars.setsubr(F,'vectorp')
     vars.setsubr(F,'atom')
     vars.setsubr(F,'consp')
+    vars.setsubr(F,'functionp')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')

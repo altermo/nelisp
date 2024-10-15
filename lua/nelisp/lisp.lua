@@ -12,6 +12,20 @@ function M.symbolp(x)
     assert(type_of(x)~=types.symbol_with_pos,'TODO')
     return type_of(x)==types.symbol
 end
+---@overload fun(x:nelisp.symbol):boolean
+function M.functionp(x)
+    if M.symbolp(x) and not M.nilp(vars.F.fboundp(x)) then
+        error('TODO')
+    end
+    if M.subrp(x) then
+        error('TODO')
+    elseif M.compiledp(x) or M.module_functionp(x) then
+        return true
+    elseif M.consp(x) then
+        error('TODO')
+    end
+    return false
+end
 ---@overload fun(x:nelisp.obj):boolean
 function M.subr_native_compiled_dynp(_) return false end
 ---@overload fun(x:nelisp.obj):boolean
