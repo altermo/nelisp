@@ -395,6 +395,46 @@ function F.defvar.f(args)
         error('TODO')
     end
 end
+F.defvaralias={'defvaralias',2,3,0,[[Make NEW-ALIAS a variable alias for symbol BASE-VARIABLE.
+Aliased variables always have the same value; setting one sets the other.
+Third arg DOCSTRING, if non-nil, is documentation for NEW-ALIAS.  If it is
+omitted or nil, NEW-ALIAS gets the documentation string of BASE-VARIABLE,
+or of the variable at the end of the chain of aliases, if BASE-VARIABLE is
+itself an alias.  If NEW-ALIAS is bound, and BASE-VARIABLE is not,
+then the value of BASE-VARIABLE is set to that of NEW-ALIAS.
+The return value is BASE-VARIABLE.]]}
+function F.defvaralias.f(new_alias,base_variable,docstring)
+    lisp.check_symbol(new_alias)
+    lisp.check_symbol(base_variable)
+    if lisp.symbolconstantp(new_alias) then
+        signal.error('Cannot make a constant an alias: %s',lisp.sdata(symbol.get_name(new_alias)))
+    end
+    local redirect=symbol.get_redirect(new_alias)
+    if redirect==symbol.redirect.localized then
+        signal.error("Don't know how to make a buffer-local variable an alias: %s",lisp.sdata(symbol.get_name(new_alias)))
+    end
+    if lisp.nilp(vars.F.boundp(base_variable)) then
+        data.set_internal(base_variable,data.find_symbol_value(new_alias),vars.Qnil,'BIND')
+    elseif not lisp.nilp(vars.F.fboundp(base_variable)) and not lisp.eq(data.find_symbol_value(new_alias),data.find_symbol_value(base_variable)) then
+        error('TODO')
+    end
+    for entry in specpdl.riter() do
+        if entry.type>=specpdl.type.let and lisp.eq(new_alias,entry.symbol) then
+            signal.error("Don't know how to make a let-bound variable an alias: %s",lisp.sdata(symbol.get_name(new_alias)))
+        end
+    end
+    if symbol.get_trapped_wire(new_alias)==symbol.trapped_wire.trapped_write then
+        error('TODO')
+    end
+    symbol.set_special(new_alias)
+    symbol.set_special(base_variable)
+    symbol.set_redirect(new_alias,symbol.redirect.varalias)
+    symbol.set_alias(new_alias,base_variable)
+    symbol.set_trapped_wire(new_alias,symbol.get_trapped_wire(base_variable))
+    lisp.loadhist_attach(new_alias)
+    vars.F.put(new_alias,vars.Qvariable_documentation,docstring)
+    return base_variable
+end
 local function lexbound_p(sym)
     for i in specpdl.riter() do
         if i.type==specpdl.type.let or i.type==specpdl.type.let_default then
@@ -717,6 +757,7 @@ function M.init_syms()
     vars.setsubr(F,'let')
     vars.setsubr(F,'letX')
     vars.setsubr(F,'defvar')
+    vars.setsubr(F,'defvaralias')
     vars.setsubr(F,'internal__define_uninitialized_variable')
     vars.setsubr(F,'defconst')
     vars.setsubr(F,'defconst_1')

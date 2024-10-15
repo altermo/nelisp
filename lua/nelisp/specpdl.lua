@@ -29,7 +29,7 @@ function M.unbind_to(index,val,assert_ignore)
     while M.index()>index do
         local entry=table.remove(specpdl)
         if entry.type==M.type.let and lisp.symbolp(entry.symbol) and symbol.get_redirect(entry.symbol)==symbol.redirect.plain then
-            if symbol.get_tapped_wire(entry.symbol)==symbol.trapped_wire.untrapped_write then
+            if symbol.get_trapped_wire(entry.symbol)==symbol.trapped_wire.untrapped_write then
                 symbol.set_var(entry.symbol,entry.old_value)
             else
                 error('TODO')
@@ -81,7 +81,7 @@ function M.bind(sym,val)
             symbol=sym,
             old_value=symbol.get_var(sym)
         })
-        if symbol.get_tapped_wire(sym)==symbol.trapped_wire.untrapped_write then
+        if symbol.get_trapped_wire(sym)==symbol.trapped_wire.untrapped_write then
             symbol.set_var(sym,val)
         else
             error('TODO')

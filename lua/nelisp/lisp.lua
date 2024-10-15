@@ -4,6 +4,7 @@ local vars=require'nelisp.vars'
 local fixnum=require'nelisp.obj.fixnum'
 local str=require'nelisp.obj.str'
 local vec=require'nelisp.obj.vec'
+local symbol=require'nelisp.obj.symbol'
 local type_of=types.type
 local M={}
 ---@overload fun(x:nelisp.obj):boolean
@@ -21,6 +22,8 @@ function M.numberp(x) return M.integerp(x) or M.floatp(x) end
 function M.fixnatp(x) return M.fixnump(x) and 0<=fixnum.tonumber(x --[[@as nelisp.fixnum]]) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.arrayp(x) return M.vectorp(x) or M.stringp(x) or M.chartablep(x) or M.bool_vectorp(x) end
+---@overload fun(x:nelisp.symbol):boolean
+function M.symbolconstantp(x) return symbol.get_trapped_wire(x)==symbol.trapped_wire.nowrite end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.baresymbolp(x) return type_of(x)==types.symbol end

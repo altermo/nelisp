@@ -15,7 +15,7 @@ local M={}
 function M.set_internal(sym,newval,where,bindflag)
     lisp.check_symbol(sym)
     ---@cast sym nelisp.symbol
-    local tapped_wire=symbol.get_tapped_wire(sym)
+    local tapped_wire=symbol.get_trapped_wire(sym)
     if tapped_wire==symbol.trapped_wire.nowrite then
         error('TODO')
     elseif tapped_wire==symbol.trapped_wire.trapped_write then
@@ -24,6 +24,15 @@ function M.set_internal(sym,newval,where,bindflag)
     local redirect=symbol.get_redirect(sym)
     if redirect==symbol.redirect.plain then
         symbol.set_var(sym,newval)
+    else
+        error('TODO')
+    end
+end
+function M.find_symbol_value(sym)
+    lisp.check_symbol(sym)
+    local redirect=symbol.get_redirect(sym)
+    if redirect==symbol.redirect.plain then
+        return symbol.get_var(sym)
     else
         error('TODO')
     end
@@ -227,7 +236,7 @@ end
 ---@param bindflag 'SET'|'BIND'|'UNBIND'|'THREAD_SWITCH'
 function M.set_default_internal(sym,val,bindflag)
     lisp.check_symbol(sym)
-    local trapped_wire=symbol.get_tapped_wire(sym)
+    local trapped_wire=symbol.get_trapped_wire(sym)
     if trapped_wire==symbol.trapped_wire.trapped_write then
         error('TODO')
     elseif trapped_wire==symbol.trapped_wire.nowrite then
@@ -339,6 +348,18 @@ function F.default_boundp.f(sym)
     local value=default_value(sym)
     return value==nil and vars.Qnil or vars.Qt
 end
+F.boundp={'boundp',1,1,0,[[Return t if SYMBOL's value is not void.
+Note that if `lexical-binding' is in effect, this refers to the
+global value outside of any lexical scope.]]}
+function F.boundp.f(sym)
+    lisp.check_symbol(sym)
+    local redirect=symbol.get_redirect(sym)
+    if redirect==symbol.redirect.plain then
+        return symbol.get_var(sym)==nil and vars.Qnil or vars.Qt
+    else
+        error('TODO')
+    end
+end
 F.stringp={'stringp',1,1,0,[[Return t if OBJECT is a string.]]}
 function F.stringp.f(a) return lisp.stringp(a) and vars.Qt or vars.Qnil end
 F.null={'null',1,1,0,[[Return t if OBJECT is nil, and return nil otherwise.]]}
@@ -384,6 +405,7 @@ function M.init_syms()
     vars.setsubr(F,'lss')
 
     vars.setsubr(F,'default_boundp')
+    vars.setsubr(F,'boundp')
     vars.setsubr(F,'stringp')
     vars.setsubr(F,'null')
     vars.setsubr(F,'numberp')

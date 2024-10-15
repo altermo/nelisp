@@ -77,8 +77,19 @@ function M.set_var(sym,val)
     sym[7]=val
 end
 ---@param sym nelisp.symbol
+---@param val nelisp.obj
+function M.set_alias(sym,val)
+    assert(sym[4]==M.redirect.varalias)
+    sym[7]=val
+end
+---@param sym nelisp.symbol
+---@param val nelisp.symbol.trapped_wire
+function M.set_trapped_wire(sym,val)
+    sym[3]=val
+end
+---@param sym nelisp.symbol
 ---@return nelisp.symbol.trapped_wire
-function M.get_tapped_wire(sym)
+function M.get_trapped_wire(sym)
     return sym[3]
 end
 ---@param sym nelisp.symbol
@@ -132,5 +143,10 @@ end
 ---@param plist nelisp.cons
 function M.set_plist(sym,plist)
     sym[9]=plist
+end
+---@param sym nelisp.symbol
+---@param redirect nelisp.symbol.redirect
+function M.set_redirect(sym,redirect)
+    sym[4]=redirect
 end
 return M
