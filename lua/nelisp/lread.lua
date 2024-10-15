@@ -105,7 +105,7 @@ it defaults to the value of `obarray'.]]}
 function F.intern.f(s,obarray)
     obarray=M.obarray_check(lisp.nilp(obarray) and vars.V.obarray or obarray)
     lisp.check_string(s)
-    local found,longhand=M.lookup_considering_shorthand(obarray,s)
+    local found,longhand=M.lookup_considering_shorthand(obarray,str.to_lua_string(s))
     if type(found)=='number' then
         if longhand then
             error('TODO')
