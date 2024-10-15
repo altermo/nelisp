@@ -257,5 +257,6 @@ function M.init_syms()
     vars.defsym('Qintegerp','integerp')
     vars.defsym('Qstringp','stringp')
     vars.defsym('Qconsp','consp')
+    vars.defsym('Qwholenump','wholenump')
 end
 return M

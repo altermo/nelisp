@@ -1,6 +1,7 @@
 local types=require'nelisp.obj.types'
 local cons=require'nelisp.obj.cons'
 local vars=require'nelisp.vars'
+local fixnum=require'nelisp.obj.fixnum'
 local type_of=types.type
 local M={}
 ---@overload fun(x:nelisp.obj):boolean
@@ -14,6 +15,8 @@ function M.subr_native_compiled_dynp(_) return false end
 function M.integerp(x) return M.fixnump(x) or M.bignump(x) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.numberp(x) return M.integerp(x) or M.floatp(x) end
+---@overload fun(x:nelisp.obj):boolean
+function M.fixnatp(x) return M.fixnump(x) and 0<=fixnum.tonumber(x --[[@as nelisp.fixnum]]) end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.baresymbolp(x) return type_of(x)==types.symbol end
@@ -79,6 +82,8 @@ function M.check_integer(x) M.check_type(M.integerp(x),vars.Qintegerp,x) end
 function M.check_string(x) M.check_type(M.stringp(x),vars.Qstringp,x) end
 ---@overload fun(x:nelisp.obj)
 function M.check_cons(x) M.check_type(M.consp(x),vars.Qconsp,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_fixnat(x) M.check_type(M.fixnatp(x),vars.Qwholenump,x) end
 
 ---@param x nelisp.obj
 ---@param fn fun(x:nelisp.cons):'continue'|'break'|nelisp.obj?

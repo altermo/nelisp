@@ -15,6 +15,8 @@ require'nelisp.buffer'.init_syms()
 require'nelisp.alloc'.init_syms()
 require'nelisp.dev'.init_syms()
 require'nelisp.doc'.init_syms()
+require'nelisp.keymap'.init_syms()
+require'nelisp.chartab'.init_syms()
 
 vars.commit_qsymbols()
 
@@ -22,6 +24,7 @@ require'nelisp.eval'.init()
 require'nelisp.buffer'.init()
 require'nelisp.fns'.init()
 require'nelisp.lread'.init()
+require'nelisp.keymap'.init()
 
 if not _G.nelisp_later then
     local vars=require'nelisp.vars'

@@ -28,5 +28,7 @@ function M.init_syms()
     vars.setsubr(F,'list')
     vars.setsubr(F,'cons')
     vars.setsubr(F,'purecopy')
+
+    vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end
 return M
