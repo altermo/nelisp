@@ -24,11 +24,20 @@ end
 ---@return T
 function M.unbind_to(index,val)
     assert(index~=M.index(),'DEV: index not changed, unbind_to may be unnecessary')
-    if not _G.nelisp_later then
-        error('TODO: do not ignore the specpdl entries')
-    end
     while M.index()>index do
-        table.remove(specpdl)
+        local entry=table.remove(specpdl)
+        if entry.type==M.type.let and lisp.symbolp(entry.symbol) and symbol.get_redirect(entry.symbol)==symbol.redirect.plain then
+            if symbol.get_tapped_wire(entry.symbol)==symbol.trapped_wire.untrapped_write then
+                symbol.set_var(entry.symbol,entry.old_value)
+            else
+                error('TODO')
+            end
+        elseif entry.type==M.type.let or entry.type==M.type.let_default then
+            error('TODO')
+        elseif entry.type==M.type.backtrace then
+        else
+            error('TODO')
+        end
     end
     return val
 end
@@ -66,7 +75,7 @@ function M.bind(sym,val)
     ---@cast sym nelisp.symbol
     if symbol.get_redirect(sym)==symbol.redirect.plain then
         table.insert(specpdl,{
-            t=M.type.let,
+            type=M.type.let,
             symbol=sym,
             old_value=symbol.get_var(sym)
         })
