@@ -54,6 +54,25 @@ function F.symbol_value.f(sym)
     signal.xsignal(vars.Qvoid_variable,sym)
     error('unreachable')
 end
+---@return nelisp.obj?
+local function default_value(sym)
+    lisp.check_symbol(sym)
+    local redirect=symbol.get_redirect(sym)
+    if redirect==symbol.redirect.plain then
+        return symbol.get_var(sym)
+    else
+        error('TODO')
+    end
+end
+F.default_value={'default-value',1,1,0,[[Return SYMBOL's default value.
+This is the value that is seen in buffers that do not have their own values
+for this variable.  The default value is meaningful for variables with
+local bindings in certain buffers.]]}
+function F.default_value.f(sym)
+    local val=default_value(sym)
+    if val then return val end
+    signal.xsignal(vars.Qvoid_variable,sym)
+end
 F.symbol_function={'symbol-function',1,1,0,[[Return SYMBOL's function definition, or nil if that is void.]]}
 function F.symbol_function.f(sym)
     lisp.check_symbol(sym)
@@ -363,15 +382,6 @@ function F.logior.f(args)
     local a=lisp.check_number_coerce_marker(args[1])
     return #args==1 and a or arith_driver('or',args)
 end
-local function default_value(sym)
-    lisp.check_symbol(sym)
-    local redirect=symbol.get_redirect(sym)
-    if redirect==symbol.redirect.plain then
-        return symbol.get_var(sym)
-    else
-        error('TODO')
-    end
-end
 F.local_variable_if_set_p={'local-variable-if-set-p',1,2,0,[[Non-nil if VARIABLE is local in buffer BUFFER when set there.
 BUFFER defaults to the current buffer.
 
@@ -428,6 +438,7 @@ function F.consp.f(a) return lisp.consp(a) and vars.Qt or vars.Qnil end
 
 function M.init_syms()
     vars.setsubr(F,'symbol_value')
+    vars.setsubr(F,'default_value')
     vars.setsubr(F,'symbol_function')
     vars.setsubr(F,'symbol_name')
     vars.setsubr(F,'bare_symbol')
