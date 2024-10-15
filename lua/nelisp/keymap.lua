@@ -266,6 +266,14 @@ function F.make_sparse_keymap.f(s)
     end
     return lisp.list(vars.Qkeymap)
 end
+F.use_global_map={'use-global-map',1,1,0,[[Select KEYMAP as the global keymap.]]}
+function F.use_global_map.f(keymap)
+    keymap=get_keymap(keymap,true,true)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    return vars.Qnil
+end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,fixnum.zero)
@@ -275,6 +283,7 @@ function M.init_syms()
     vars.setsubr(F,'make_keymap')
     vars.setsubr(F,'define_key')
     vars.setsubr(F,'make_sparse_keymap')
+    vars.setsubr(F,'use_global_map')
 
     vars.defsym('Qkeymap','keymap')
 end
