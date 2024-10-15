@@ -159,6 +159,20 @@ function F.define_key.f(keymap,key,def,remove)
         error('TODO')
     end
 end
+F.make_sparse_keymap={'make-sparse-keymap',0,1,0,[[Construct and return a new sparse keymap.
+Its car is `keymap' and its cdr is an alist of (CHAR . DEFINITION),
+which binds the character CHAR to DEFINITION, or (SYMBOL . DEFINITION),
+which binds the function key or mouse event SYMBOL to DEFINITION.
+Initially the alist is nil.
+
+The optional arg STRING supplies a menu name for the keymap
+in case you use it as a menu with `x-popup-menu'.]]}
+function F.make_sparse_keymap.f(s)
+    if not lisp.nilp(s) then
+        return lisp.list(vars.Qkeymap,s)
+    end
+    return lisp.list(vars.Qkeymap)
+end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,fixnum.zero)
@@ -167,6 +181,7 @@ end
 function M.init_syms()
     vars.setsubr(F,'make_keymap')
     vars.setsubr(F,'define_key')
+    vars.setsubr(F,'make_sparse_keymap')
 
     vars.defsym('Qkeymap','keymap')
 end
