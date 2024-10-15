@@ -4,6 +4,7 @@ local fixnum=require'nelisp.obj.fixnum'
 local signal=require'nelisp.signal'
 local str=require'nelisp.obj.str'
 local b=require'nelisp.bytes'
+local vec=require'nelisp.obj.vec'
 local M={}
 
 local F={}
@@ -33,7 +34,7 @@ local function get_keymap(obj,error_if_not_keymap,autoload)
     error('TODO')
 end
 local function possibly_translate_key_sequence(key)
-    if lisp.vectorp(key) then
+    if lisp.vectorp(key) and vec.length(key)==1 and lisp.stringp(vec.index0(key,0)) then
         error('TODO')
     end
     return key
