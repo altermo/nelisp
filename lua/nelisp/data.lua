@@ -94,6 +94,11 @@ function F.aref.f(array,idx)
             return fixnum.make(str.index0(array,idxval))
         end
         error('TODO')
+    elseif lisp.vectorp(array) then
+        if idxval<0 or idxval>=vec.length(array) then
+            signal.args_out_of_range(array,idx)
+        end
+        return vec.index0(array,idxval)
     else
         error('TODO')
     end
