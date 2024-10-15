@@ -1,31 +1,14 @@
 local lisp=require'nelisp.lisp'
 local fixnum=require'nelisp.obj.fixnum'
 local vars=require'nelisp.vars'
-local cons=require'nelisp.obj.cons'
 local specpdl=require'nelisp.specpdl'
 local symbol=require'nelisp.obj.symbol'
 local subr=require'nelisp.obj.subr'
 local signal=require'nelisp.signal'
 local str=require'nelisp.obj.str'
+local data=require'nelisp.data'
 local M={}
 
----@param obj nelisp.symbol
----@return nelisp.obj
-function M.indirect_function(obj)
-    local has_visited={}
-    ---@type nelisp.obj
-    local hare=obj
-    while true do
-        if not lisp.symbolp(hare) or lisp.nilp(hare) then
-            return hare
-        end
-        hare=symbol.get_func(hare --[[@as nelisp.symbol]])
-        if has_visited[hare] then
-            signal.xsignal(vars.Qcyclic_function_indirection,obj)
-        end
-        has_visited[hare]=true
-    end
-end
 local function funcall_lambda(fun,args)
     local lexenv,syms_left
     local count=specpdl.index()
@@ -164,7 +147,7 @@ function M.eval_sub(form)
     elseif (not lisp.nilp(fun)) then
         fun=symbol.get_func(fun)
         if lisp.symbolp(fun) then
-            fun=M.indirect_function(fun --[[@as nelisp.symbol]])
+            fun=data.indirect_function(fun --[[@as nelisp.symbol]])
         end
     end
     if lisp.subrp(fun) and not lisp.subr_native_compiled_dynp(fun) then

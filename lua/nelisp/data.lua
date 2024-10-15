@@ -65,6 +65,21 @@ function F.bare_symbol.f(sym)
     end
     error('TODO')
 end
+function M.indirect_function(obj)
+    local has_visited={}
+    ---@type nelisp.obj
+    local hare=obj
+    while true do
+        if not lisp.symbolp(hare) or lisp.nilp(hare) then
+            return hare
+        end
+        hare=symbol.get_func(hare --[[@as nelisp.symbol]])
+        if has_visited[hare] then
+            signal.xsignal(vars.Qcyclic_function_indirection,obj)
+        end
+        has_visited[hare]=true
+    end
+end
 F.indirect_function={'indirect-function',1,2,0,[[Return the function at the end of OBJECT's function chain.
 If OBJECT is not a symbol, just return it.  Otherwise, follow all
 function indirections to find the final function binding and return it.
@@ -75,7 +90,7 @@ function F.indirect_function.f(obj,_)
     if lisp.symbolp(result) and not lisp.nilp(result) then
         result=symbol.get_func(result)
         if lisp.symbolp(result) then
-            error('TODO')
+            result=M.indirect_function(result)
         end
     end
     return result

@@ -5,6 +5,7 @@ local signal=require'nelisp.signal'
 local str=require'nelisp.obj.str'
 local b=require'nelisp.bytes'
 local vec=require'nelisp.obj.vec'
+local data=require'nelisp.data'
 local M={}
 
 local F={}
@@ -32,7 +33,7 @@ local function get_keymap(obj,error_if_not_keymap,autoload)
     if lisp.consp(obj) and lisp.eq(lisp.xcar(obj),vars.Qkeymap) then
         return obj
     end
-    local tem=require'nelisp.eval'.indirect_function(obj)
+    local tem=data.indirect_function(obj)
     if lisp.consp(tem) then
         ---@cast tem nelisp.cons
         if lisp.eq(lisp.xcar(tem),vars.Qkeymap) then
