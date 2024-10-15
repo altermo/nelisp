@@ -18,6 +18,8 @@ function M.integerp(x) return M.fixnump(x) or M.bignump(x) end
 function M.numberp(x) return M.integerp(x) or M.floatp(x) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.fixnatp(x) return M.fixnump(x) and 0<=fixnum.tonumber(x --[[@as nelisp.fixnum]]) end
+---@overload fun(x:nelisp.obj):boolean
+function M.arrayp(x) return M.vectorp(x) or M.stringp(x) or M.chartablep(x) or M.bool_vectorp(x) end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.baresymbolp(x) return type_of(x)==types.symbol end
@@ -43,6 +45,8 @@ function M.module_functionp(x) return type_of(x)==types.module_function end
 function M.chartablep(x) return type_of(x)==types.char_table end
 ---@overload fun(x:nelisp.obj):boolean
 function M.floatp(x) return type_of(x)==types.float end
+---@overload fun(x:nelisp.obj):boolean
+function M.recodrp(x) return type_of(x)==types.record end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.nilp(x) return x==vars.Qnil end
@@ -85,6 +89,25 @@ function M.check_string(x) M.check_type(M.stringp(x),vars.Qstringp,x) end
 function M.check_cons(x) M.check_type(M.consp(x),vars.Qconsp,x) end
 ---@overload fun(x:nelisp.obj)
 function M.check_fixnat(x) M.check_type(M.fixnatp(x),vars.Qwholenump,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_fixnum(x) M.check_type(M.fixnump(x),vars.Qfixnump,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_array(x,predicate) M.check_type(M.arrayp(x),predicate,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_chartable(x) M.check_type(M.chartablep(x),vars.Qchartablep,x) end
+
+---@param x nelisp.obj
+---@return number
+function M.check_vector_or_string(x)
+    if M.vectorp(x) then
+        error('TODO')
+    elseif M.stringp(x) then
+        return M.scars(x --[[@as nelisp.str]])
+    else
+        require'nelisp.signal'.wrong_type_argument(vars.Qarrayp,x)
+        error('unreachable')
+    end
+end
 
 ---@param x nelisp.obj
 ---@param fn fun(x:nelisp.cons):'continue'|'break'|nelisp.obj?
@@ -166,6 +189,10 @@ end
 ---@param newcar nelisp.obj
 function M.setcar(c,newcar)
     cons.setcar(c,newcar)
+end
+
+function M.event_head(event)
+    return M.consp(event) and M.xcar(event) or event
 end
 
 return M

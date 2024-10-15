@@ -27,4 +27,13 @@ function M.make(purpose,extras,default,parent)
         extras~=0 and extras or nil,
     }
 end
+---@param t nelisp.char_table
+---@param c number
+---@param val nelisp.obj
+function M.set(t,c,val)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    t[2][c]=val
+end
 return M

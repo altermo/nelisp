@@ -40,6 +40,12 @@ end
 ---@param obj nelisp.str
 ---@param idx number
 ---@return number
+function M.index0(obj,idx)
+    return M.index1(obj,idx+1)
+end
+---@param obj nelisp.str
+---@param idx number
+---@return number
 function M.index1_neg(obj,idx)
     local err,res=pcall(M.index1,obj,idx)
     return err and res or -1

@@ -1,8 +1,10 @@
 local lisp=require'nelisp.lisp'
 local symbol=require'nelisp.obj.symbol'
 local vars=require'nelisp.vars'
-local cons=require'nelisp.obj.cons'
 local signal=require'nelisp.signal'
+local fixnum=require'nelisp.obj.fixnum'
+local str=require'nelisp.obj.str'
+local char_table=require'nelisp.obj.char_table'
 
 local M={}
 ---@param sym nelisp.obj
@@ -77,6 +79,40 @@ function F.indirect_function.f(obj,_)
         end
     end
     return result
+end
+F.aref={'aref',2,2,0,[[Return the element of ARRAY at index IDX.
+ARRAY may be a vector, a string, a char-table, a bool-vector, a record,
+or a byte-code object.  IDX starts at 0.]]}
+function F.aref.f(array,idx)
+    lisp.check_fixnum(idx)
+    local idxval=fixnum.tonumber(idx)
+    if lisp.stringp(array) then
+        if idxval<0 or idxval>=lisp.scars(array) then
+            signal.args_out_of_range(array,idx)
+        elseif not str.is_multibyte(array) then
+            return fixnum.make(str.index0(array,idxval))
+        end
+        error('TODO')
+    else
+        error('TODO')
+    end
+end
+F.aset={'aset',3,3,0,[[Store into the element of ARRAY at index IDX the value NEWELT.
+Return NEWELT.  ARRAY may be a vector, a string, a char-table or a
+bool-vector.  IDX starts at 0.]]}
+function F.aset.f(array,idx,newval)
+    lisp.check_fixnum(idx)
+    local idxval=fixnum.tonumber(idx)
+    if not lisp.recodrp(array) then
+        lisp.check_array(array,vars.Qarrayp)
+    end
+    if lisp.chartablep(array) then
+        lisp.check_chartable(array)
+        char_table.set(array,idxval,newval)
+    else
+        error('TODO')
+    end
+    return newval
 end
 F.set={'set',2,2,0,[[Set SYMBOL's value to NEWVAL, and return NEWVAL.]]}
 ---@param sym nelisp.obj
@@ -226,6 +262,8 @@ function M.init_syms()
     vars.setsubr(F,'symbol_name')
     vars.setsubr(F,'bare_symbol')
     vars.setsubr(F,'indirect_function')
+    vars.setsubr(F,'aref')
+    vars.setsubr(F,'aset')
     vars.setsubr(F,'car')
     vars.setsubr(F,'car_safe')
     vars.setsubr(F,'cdr')
@@ -258,5 +296,8 @@ function M.init_syms()
     vars.defsym('Qstringp','stringp')
     vars.defsym('Qconsp','consp')
     vars.defsym('Qwholenump','wholenump')
+    vars.defsym('Qfixnump','fixnump')
+    vars.defsym('Qarrayp','arrayp')
+    vars.defsym('Qchartablep','chartablep')
 end
 return M
