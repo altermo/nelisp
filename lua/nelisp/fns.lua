@@ -5,6 +5,7 @@ local fixnum=require'nelisp.obj.fixnum'
 local symbol=require'nelisp.obj.symbol'
 local hash_table=require'nelisp.obj.hash_table'
 local signal=require'nelisp.signal'
+local str=require'nelisp.obj.str'
 
 local F={}
 F.assq={'assq',2,2,0,[[Return non-nil if KEY is `eq' to the car of an element of ALIST.
@@ -342,7 +343,36 @@ Values of the `composition' property of the result are not guaranteed
 to be `eq'.
 usage: (concat &rest SEQUENCES)]]}
 function F.concat.f(args)
-    error('TODO')
+    local dest_multibyte=false
+    for _,arg in ipairs(args) do
+        if lisp.stringp(arg) then
+            if str.is_multibyte(arg) then
+                dest_multibyte=true
+            end
+        end
+    end
+    local strs={}
+    for _,arg in ipairs(args) do
+        if lisp.stringp(arg) then
+            if str.get_intervals(arg) then
+                error('TODO')
+            end
+            if str.is_multibyte(arg)==dest_multibyte then
+                table.insert(strs,str.to_lua_string(arg))
+            else
+                error('TODO')
+            end
+        elseif lisp.vectorp(arg) then
+            error('TODO')
+        elseif lisp.nilp(arg) then
+        elseif lisp.consp(arg) then
+            error('TODO')
+        else
+            signal.wrong_type_argument(vars.Qsequencep,arg)
+        end
+    end
+    local out_str=table.concat(strs)
+    return str.make(out_str,dest_multibyte)
 end
 
 local M={}
