@@ -231,6 +231,16 @@ F.set_default.f=function (sym,val)
     M.set_default_internal(sym,val,'SET')
     return val
 end
+F.add1={'1+',1,1,0,[[Return NUMBER plus one.  NUMBER may be a number or a marker.
+Markers are converted to integers.]]}
+function F.add1.f(num)
+    num=lisp.check_number_coerce_marker(num)
+    if lisp.fixnump(num) then
+        return lisp.make_int_add(num --[[@as nelisp.fixnum]],1)
+    else
+        error('TODO')
+    end
+end
 F.lss={'<',1,-2,0,[[Return t if each arg (a number or marker), is less than the next arg.
 usage: (< NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
 function F.lss.f(args)
@@ -296,6 +306,7 @@ function M.init_syms()
     vars.setsubr(F,'eq')
     vars.setsubr(F,'defalias')
 
+    vars.setsubr(F,'add1')
     vars.setsubr(F,'lss')
 
     vars.setsubr(F,'default_boundp')
@@ -322,5 +333,6 @@ function M.init_syms()
     vars.defsym('Qarrayp','arrayp')
     vars.defsym('Qchartablep','chartablep')
     vars.defsym('Qvectorp','vectorp')
+    vars.defsym('Qnumber_or_marker_p','number-or-markerp')
 end
 return M

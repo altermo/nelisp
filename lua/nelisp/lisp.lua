@@ -48,6 +48,8 @@ function M.chartablep(x) return type_of(x)==types.char_table end
 function M.floatp(x) return type_of(x)==types.float end
 ---@overload fun(x:nelisp.obj):boolean
 function M.recodrp(x) return type_of(x)==types.record end
+---@overload fun(x:nelisp.obj):boolean
+function M.markerp(x) return type_of(x)==types.marker end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.nilp(x) return x==vars.Qnil end
@@ -110,6 +112,15 @@ function M.check_vector_or_string(x)
         require'nelisp.signal'.wrong_type_argument(vars.Qarrayp,x)
         error('unreachable')
     end
+end
+---@param x nelisp.obj
+---@return nelisp.fixnum|nelisp.bignum|nelisp.float
+function M.check_number_coerce_marker(x)
+    if M.markerp(x) then
+        error('TODO')
+    end
+    M.check_type(M.numberp(x),vars.Qnumber_or_marker_p,x)
+    return x --[[@as nelisp.fixnum|nelisp.bignum|nelisp.float]]
 end
 
 ---@param x nelisp.obj
@@ -196,6 +207,29 @@ end
 
 function M.event_head(event)
     return M.consp(event) and M.xcar(event) or event
+end
+
+---@param ... nelisp.fixnum|nelisp.bignum|number
+---@return nelisp.fixnum|nelisp.bignum
+function M.make_int_add(...)
+    local total=0
+    for _,v in ipairs({...}) do
+        if type(v)=='number' then
+            total=total+v
+        elseif M.bignump(v) then
+            error('TODO')
+        elseif M.fixnump(v) then
+            total=total+fixnum.tonumber(v --[[@as nelisp.fixnum]])
+        else
+            error('unreachable')
+        end
+    end
+    if total>=0x20000000000000 or total<-0x20000000000000 then
+        error('TODO')
+    elseif total==-0x20000000000000 then
+        error('TODO')
+    end
+    return fixnum.make(total)
 end
 
 return M
