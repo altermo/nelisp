@@ -372,6 +372,20 @@ local function default_value(sym)
         error('TODO')
     end
 end
+F.local_variable_if_set_p={'local-variable-if-set-p',1,2,0,[[Non-nil if VARIABLE is local in buffer BUFFER when set there.
+BUFFER defaults to the current buffer.
+
+More precisely, return non-nil if either VARIABLE already has a local
+value in BUFFER, or if VARIABLE is automatically buffer-local (see
+`make-variable-buffer-local').]]}
+function F.local_variable_if_set_p.f(variable,buffer)
+    lisp.check_symbol(variable)
+    local redirect=symbol.get_redirect(variable)
+    if redirect==symbol.redirect.plain then
+        return vars.Qnil
+    end
+    error('TODO')
+end
 F.default_boundp={'default-boundp',1,1,0,[[Return t if SYMBOL has a non-void default value.
 A variable may have a buffer-local value.  This function says whether
 the variable has a non-void value outside of the current buffer
@@ -437,6 +451,7 @@ function M.init_syms()
     vars.setsubr(F,'logior')
     vars.setsubr(F,'lss')
 
+    vars.setsubr(F,'local_variable_if_set_p')
     vars.setsubr(F,'default_boundp')
     vars.setsubr(F,'boundp')
     vars.setsubr(F,'stringp')
