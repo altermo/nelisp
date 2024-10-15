@@ -1,5 +1,7 @@
 local vars=require'nelisp.vars'
 local cons=require'nelisp.obj.cons'
+local vec=require'nelisp.obj.vec'
+local fixnum=require'nelisp.obj.fixnum'
 local M={}
 
 local F={}
@@ -23,11 +25,21 @@ Does not copy symbols.  Copies strings without text properties.]]}
 function F.purecopy.f(obj)
     return obj
 end
+F.make_vector={'make-vector',2,2,0,[[Return a newly created vector of length LENGTH, with each element being INIT.
+See also the function `vector'.]]}
+function F.make_vector.f(length,init)
+    local v={}
+    for i=1,fixnum.tonumber(length) do
+        v[i]=init
+    end
+    return vec.make(v)
+end
 
 function M.init_syms()
     vars.setsubr(F,'list')
     vars.setsubr(F,'cons')
     vars.setsubr(F,'purecopy')
+    vars.setsubr(F,'make_vector')
 
     vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end
