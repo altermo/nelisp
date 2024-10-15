@@ -22,7 +22,6 @@ function M.obarray_init_once()
     vars.initial_obarray=vec.make(array) --[[@as nelisp.obarray]]
     vars.V.obarray=vars.initial_obarray
 
-    vars.defsym('Qunbound','unbound')
     vars.defsym('Qnil','nil')
     vars.defsym('Qt','t')
 

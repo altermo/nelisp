@@ -73,7 +73,6 @@ end
 ---@param sym nelisp.symbol
 ---@param val nelisp.obj
 function M.set_var(sym,val)
-    assert(val~=require'nelisp.vars'.Qunbound)
     assert(sym[4]==M.redirect.plain)
     sym[7]=val
 end

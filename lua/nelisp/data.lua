@@ -13,7 +13,6 @@ local M={}
 ---@param where nelisp.obj
 ---@param bindflag 'SET'|'BIND'|'UNBIND'|'THREAD_SWITCH'
 function M.set_internal(sym,newval,where,bindflag)
-    local voide=(newval==vars.Qunbound)
     lisp.check_symbol(sym)
     ---@cast sym nelisp.symbol
     local tapped_wire=symbol.get_tapped_wire(sym)
@@ -24,7 +23,7 @@ function M.set_internal(sym,newval,where,bindflag)
     end
     local redirect=symbol.get_redirect(sym)
     if redirect==symbol.redirect.plain then
-        symbol.set_var(sym,newval) --TODO: newval may be Qunbound
+        symbol.set_var(sym,newval)
     else
         error('TODO')
     end
