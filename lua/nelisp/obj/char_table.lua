@@ -36,4 +36,13 @@ function M.set(t,c,val)
     end
     t[2][c]=val
 end
+---@param t nelisp.char_table
+---@param c number
+---@return nelisp.obj
+function M.get(t,c)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    return t[2][c] or t[4] or vars.Qnil
+end
 return M

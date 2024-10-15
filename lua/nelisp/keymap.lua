@@ -21,6 +21,7 @@ function F.make_keymap.f(s)
     local tail=not lisp.nilp(s) and lisp.list(s) or vars.Qnil
     return vars.F.cons(vars.Qkeymap,vars.F.cons(vars.F.make_char_table(vars.Qkeymap,vars.Qnil),tail))
 end
+---@param error_if_not_keymap boolean
 local function get_keymap(obj,error_if_not_keymap,autoload)
     if lisp.nilp(obj) then
         if error_if_not_keymap then
@@ -31,7 +32,18 @@ local function get_keymap(obj,error_if_not_keymap,autoload)
     if lisp.consp(obj) and lisp.eq(lisp.xcar(obj),vars.Qkeymap) then
         return obj
     end
-    error('TODO')
+    local tem=require'nelisp.eval'.indirect_function(obj)
+    if lisp.consp(tem) then
+        ---@cast tem nelisp.cons
+        if lisp.eq(lisp.xcar(tem),vars.Qkeymap) then
+            return tem
+        end
+        error('TODO')
+    end
+    if error_if_not_keymap then
+        signal.wrong_type_argument(vars.Qkeymapp,obj)
+    end
+    return vars.Qnil
 end
 local function possibly_translate_key_sequence(key)
     if lisp.vectorp(key) and vec.length(key)==1 and lisp.stringp(vec.index0(key,0)) then
@@ -80,6 +92,79 @@ local function store_in_keymap(keymap,idx,def,remove)
         tail=lisp.xcdr(tail)
     end
     error('TODO')
+end
+local function get_keyelt(obj,autoload)
+    while true do
+        if not lisp.consp(obj) then
+            return obj
+        end
+        error('TODO')
+    end
+end
+local function keymapp(m)
+    return not lisp.nilp(get_keymap(m,false,false))
+end
+local function access_keymap_1(map,idx,t_ok,noinherit,autoload)
+    idx=lisp.event_head(idx)
+    if lisp.symbolp(idx) then
+        error('TODO')
+    elseif lisp.fixnump(idx) then
+        idx=fixnum.make(bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),bit.bor(b.CHAR_META,b.CHAR_META-1)))
+    end
+    if lisp.fixnump(idx) and bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),b.CHAR_META)>0 then
+        error('TODO')
+    end
+    local tail=lisp.consp(map) and lisp.eq(vars.Qkeymap,lisp.xcar(map)) and lisp.xcdr(map) or map
+    local retval=nil
+    local t_bindning=nil
+    while true do
+        if not lisp.consp(tail) then
+            tail=get_keymap(tail,false,autoload)
+            if not lisp.consp(tail) then
+                break
+            end
+        end
+
+        local val=nil
+        local binding=lisp.xcar(tail)
+        local submap=get_keymap(binding,false,autoload)
+        if lisp.eq(binding,vars.Qkeymap) then
+            error('TODO')
+        elseif lisp.consp(submap) then
+            error('TODO')
+        elseif lisp.consp(binding) then
+            error('TODO')
+        elseif lisp.vectorp(binding) then
+            error('TODO')
+        elseif lisp.chartablep(binding) then
+            if lisp.fixnump(idx) and bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),b.CHAR_MODIFIER_MASK)==0 then
+                val=vars.F.aref(binding,idx)
+                if lisp.nilp(val) then
+                    val=nil
+                end
+            end
+        end
+        if val then
+            if lisp.eq(val,vars.Qt) then
+                val=vars.Qnil
+            end
+            val=get_keyelt(val,autoload)
+            if not keymapp(val) then
+                error('TODO')
+            elseif retval==nil or lisp.nilp(retval) then
+                retval=val
+            else
+                error('TODO')
+            end
+        end
+
+        tail=lisp.xcdr(tail)
+    end
+    return retval~=nil and retval or (t_bindning~=nil and get_keyelt(t_bindning,autoload) or nil)
+end
+---@return nelisp.obj
+local function access_keymap(map,idx,t_ok,noinherit,autoload)
+    return access_keymap_1(map,idx,t_ok,noinherit,autoload) or vars.Qnil
 end
 F.define_key={'define-key',3,4,0,[[In KEYMAP, define key sequence KEY as DEF.
 This is a legacy function; see `keymap-set' for the recommended
@@ -157,7 +242,14 @@ function F.define_key.f(keymap,key,def,remove)
         if idx==length then
             return store_in_keymap(keymap,c,def,not lisp.nilp(remove))
         end
-        error('TODO')
+        local cmd=access_keymap(keymap,c,false,true,true)
+        if lisp.nilp(cmd) then
+            error('TODO')
+        end
+        keymap=get_keymap(cmd,false,true)
+        if not lisp.consp(keymap) then
+            error('TODO')
+        end
     end
 end
 F.make_sparse_keymap={'make-sparse-keymap',0,1,0,[[Construct and return a new sparse keymap.

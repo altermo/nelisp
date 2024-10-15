@@ -98,6 +98,9 @@ function F.aref.f(array,idx)
             signal.args_out_of_range(array,idx)
         end
         return vec.index0(array,idxval)
+    elseif lisp.chartablep(array) then
+        lisp.check_chartable(array)
+        return char_table.get(array,idxval)
     else
         error('TODO')
     end
