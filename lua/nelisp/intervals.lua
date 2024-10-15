@@ -1,0 +1,13 @@
+---@class nelisp.intervals
+---@field [1] number --total length
+---@field [2] number --position
+---@field [3] nelisp.intervals? --left
+---@field [4] nelisp.intervals? --right
+---@field [5] nelisp.intervals|nelisp.obj? --up
+---@field [6] boolean --up is obj
+---@field [7] nelisp.obj? --plist
+---@field [8] boolean? --write protect
+---@field [9] boolean? --invisible
+---@field [10] boolean? --front-sticky
+---@field [11] boolean? --rear-sticky
+

@@ -4,7 +4,7 @@ local b=require'nelisp.bytes'
 ---@class nelisp.str: nelisp.obj
 ---@field [1] nelisp.types.str
 ---@field [2] string
----@field [3] any --text properties
+---@field [3] nelisp.intervals? --text properties
 ---@field [4]? boolean --multibyte
 ---@class nelisp.str.multibyte: nelisp.str
 ---@field [2] number[]
@@ -53,6 +53,11 @@ end
 ---@param obj nelisp.str
 ---@return boolean
 function M.is_multibyte(obj)
-    return obj[3]==true
+    return obj[4]==true
+end
+---@param obj nelisp.str
+---@return nelisp.intervals?
+function M.get_intervals(obj)
+    return obj[3]
 end
 return M
