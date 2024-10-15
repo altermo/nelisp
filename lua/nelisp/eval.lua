@@ -751,6 +751,33 @@ function F.function_.f(args)
     end
     return quoted
 end
+F.autoload={'autoload',2,5,0,[[Define FUNCTION to autoload from FILE.
+FUNCTION is a symbol; FILE is a file name string to pass to `load'.
+
+Third arg DOCSTRING is documentation for the function.
+
+Fourth arg INTERACTIVE if non-nil says function can be called
+interactively.  If INTERACTIVE is a list, it is interpreted as a list
+of modes the function is applicable for.
+
+Fifth arg TYPE indicates the type of the object:
+   nil or omitted says FUNCTION is a function,
+   `keymap' says FUNCTION is really a keymap, and
+   `macro' or t says FUNCTION is really a macro.
+
+Third through fifth args give info about the real definition.
+They default to nil.
+
+If FUNCTION is already defined other than as an autoload,
+this does nothing and returns nil.]]}
+function F.autoload.f(func,file,docstring,interactive,type_)
+    lisp.check_symbol(func)
+    lisp.check_string(file)
+    if not lisp.nilp(symbol.get_func(func)) and not lisp.autoloadp(symbol.get_func(func)) then
+        return vars.Qnil
+    end
+    return vars.F.defalias(func,lisp.list(vars.Qautoload,file,docstring,interactive,type_),vars.Qnil)
+end
 
 function M.init_syms()
     vars.setsubr(F,'setq')
@@ -772,6 +799,7 @@ function M.init_syms()
     vars.setsubr(F,'funcall')
     vars.setsubr(F,'apply')
     vars.setsubr(F,'function_')
+    vars.setsubr(F,'autoload')
 
     vars.defvar_lisp('max_lisp_eval_depth','max-lisp-eval-depth',
         [[Limit on depth in `eval', `apply' and `funcall' before error.
