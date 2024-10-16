@@ -38,144 +38,6 @@ function M.obarray_init_once()
     vars.defsym('Qvariable_documentation','variable-documentation')
     vars.defsym('Qobarray_cache','obarray-cache')
 end
-
-local F={}
-F.load={'load',1,5,0,[[Execute a file of Lisp code named FILE.
-First try FILE with `.elc' appended, then try with `.el', then try
-with a system-dependent suffix of dynamic modules (see `load-suffixes'),
-then try FILE unmodified (the exact suffixes in the exact order are
-determined by `load-suffixes').  Environment variable references in
-FILE are replaced with their values by calling `substitute-in-file-name'.
-This function searches the directories in `load-path'.
-
-If optional second arg NOERROR is non-nil,
-report no error if FILE doesn't exist.
-Print messages at start and end of loading unless
-optional third arg NOMESSAGE is non-nil (but `force-load-messages'
-overrides that).
-If optional fourth arg NOSUFFIX is non-nil, don't try adding
-suffixes to the specified name FILE.
-If optional fifth arg MUST-SUFFIX is non-nil, insist on
-the suffix `.elc' or `.el' or the module suffix; don't accept just
-FILE unless it ends in one of those suffixes or includes a directory name.
-
-If NOSUFFIX is nil, then if a file could not be found, try looking for
-a different representation of the file by adding non-empty suffixes to
-its name, before trying another file.  Emacs uses this feature to find
-compressed versions of files when Auto Compression mode is enabled.
-If NOSUFFIX is non-nil, disable this feature.
-
-The suffixes that this function tries out, when NOSUFFIX is nil, are
-given by the return value of `get-load-suffixes' and the values listed
-in `load-file-rep-suffixes'.  If MUST-SUFFIX is non-nil, only the
-return value of `get-load-suffixes' is used, i.e. the file name is
-required to have a non-empty suffix.
-
-When searching suffixes, this function normally stops at the first
-one that exists.  If the option `load-prefer-newer' is non-nil,
-however, it tries all suffixes, and uses whichever file is the newest.
-
-Loading a file records its definitions, and its `provide' and
-`require' calls, in an element of `load-history' whose
-car is the file name loaded.  See `load-history'.
-
-While the file is in the process of being loaded, the variable
-`load-in-progress' is non-nil and the variable `load-file-name'
-is bound to the file's name.
-
-Return t if the file exists and loads successfully.]]}
-function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
-    lisp.check_string(file)
-    if not _G.nelisp_later then
-        error('TODO')
-    end
-    local f=assert(io.open('/home/user/.tmp/emacs/lisp/'..lisp.sdata(file)..'.el','r'))
-    local content=f:read('*all')
-    io.close(f)
-    for _,v in ipairs(M.full_read_lua_string(content)) do
-        require'nelisp.eval'.eval_sub(v)
-    end
-    return vars.Qnil
-end
-F.intern={'intern',1,2,0,[[Return the canonical symbol whose name is STRING.
-If there is none, one is created by this function and returned.
-A second optional argument specifies the obarray to use;
-it defaults to the value of `obarray'.]]}
-function F.intern.f(s,obarray)
-    obarray=M.obarray_check(lisp.nilp(obarray) and vars.V.obarray or obarray)
-    lisp.check_string(s)
-    local found,longhand=M.lookup_considering_shorthand(obarray,lisp.sdata(s))
-    if type(found)=='number' then
-        if longhand then
-            error('TODO')
-        else
-            found=M.intern_drive(s,obarray,found)
-        end
-    end
-    return found
-end
-
-function M.init()
-    if not _G.nelisp_later then
-        error('TODO: initialize load path')
-    end
-end
-function M.init_syms()
-    vars.setsubr(F,'load')
-    vars.setsubr(F,'intern')
-
-    vars.defvar_lisp('obarray','obarray',[[Symbol table for use by `intern' and `read'.
-It is a vector whose length ought to be prime for best results.
-The vector's contents don't make sense if examined from Lisp programs;
-to find all the symbols in an obarray, use `mapatoms'.]])
-
-    vars.defvar_lisp('read_symbol_shorthands','read-symbol-shorthands',[[Alist of known symbol-name shorthands.
-This variable's value can only be set via file-local variables.
-See Info node `(elisp)Shorthands' for more details.]])
-    vars.V.read_symbol_shorthands=vars.Qnil
-
-  vars.defvar_lisp('byte_boolean_vars','byte-boolean-vars',[[List of all DEFVAR_BOOL variables, used by the byte code optimizer.]])
-  vars.V.byte_boolean_vars = vars.Qnil;
-
-    vars.defvar_bool('load_force_doc_strings','load-force-doc-strings',[[Non-nil means `load' should force-load all dynamic doc strings.
-This is useful when the file being loaded is a temporary copy.]])
-    vars.V.load_force_doc_strings=vars.Qnil
-
-    vars.defsym('Qbackquote','`')
-    vars.defsym('Qcomma',',')
-    vars.defsym('Qcomma_at',',@')
-
-    vars.defsym('Qfunction','function')
-
-    vars.defvar_lisp('load_path','load-path',[[List of directories to search for files to load.
-Each element is a string (directory file name) or nil (meaning
-`default-directory').
-This list is consulted by the `require' function.
-Initialized during startup as described in Info node `(elisp)Library Search'.
-Use `directory-file-name' when adding items to this path.  However, Lisp
-programs that process this list should tolerate directories both with
-and without trailing slashes.]])
-    vars.V.load_path=vars.Qnil
-
-    vars.defsym('Qmacroexp__dynvars','macroexp--dynvars')
-    vars.defvar_lisp('macroexp__dynvars','macroexp--dynvars',[[List of variables declared dynamic in the current scope.
-Only valid during macro-expansion.  Internal use only.]])
-    vars.V.macroexp__dynvars=vars.Qnil
-
-    vars.defvar_lisp('after_load_alist','after-load-alist',[[An alist of functions to be evalled when particular files are loaded.
-Each element looks like (REGEXP-OR-FEATURE FUNCS...).
-
-REGEXP-OR-FEATURE is either a regular expression to match file names, or
-a symbol (a feature name).
-
-When `load' is run and the file-name argument matches an element's
-REGEXP-OR-FEATURE, or when `provide' is run and provides the symbol
-REGEXP-OR-FEATURE, the FUNCS in the element are called.
-
-An error in FUNCS does not undo the load, but does prevent calling
-the rest of the FUNCS.]])
-    vars.V.after_load_alist=vars.Qnil
-end
 ---@param obarray nelisp.obarray
 function M.obarray_check(obarray)
     if not lisp.vectorp(obarray) or vec.length(obarray)==0 then
@@ -306,8 +168,10 @@ end
 
 ---@param obj nelisp.obj
 ---@param idx number?
+---@param end_ number?
 ---@return nelisp.lread.readcharfun
-function M.make_readcharfun(obj,idx)
+function M.make_readcharfun(obj,idx,end_)
+    assert(end_==nil,'TODO')
     if lisp.stringp(obj) then
         ---@cast obj nelisp.str
         local readcharfun
@@ -837,5 +701,158 @@ function M.full_read_lua_string(s)
         ::read_next::
     end
     return ret
+end
+
+local F={}
+F.load={'load',1,5,0,[[Execute a file of Lisp code named FILE.
+First try FILE with `.elc' appended, then try with `.el', then try
+with a system-dependent suffix of dynamic modules (see `load-suffixes'),
+then try FILE unmodified (the exact suffixes in the exact order are
+determined by `load-suffixes').  Environment variable references in
+FILE are replaced with their values by calling `substitute-in-file-name'.
+This function searches the directories in `load-path'.
+
+If optional second arg NOERROR is non-nil,
+report no error if FILE doesn't exist.
+Print messages at start and end of loading unless
+optional third arg NOMESSAGE is non-nil (but `force-load-messages'
+overrides that).
+If optional fourth arg NOSUFFIX is non-nil, don't try adding
+suffixes to the specified name FILE.
+If optional fifth arg MUST-SUFFIX is non-nil, insist on
+the suffix `.elc' or `.el' or the module suffix; don't accept just
+FILE unless it ends in one of those suffixes or includes a directory name.
+
+If NOSUFFIX is nil, then if a file could not be found, try looking for
+a different representation of the file by adding non-empty suffixes to
+its name, before trying another file.  Emacs uses this feature to find
+compressed versions of files when Auto Compression mode is enabled.
+If NOSUFFIX is non-nil, disable this feature.
+
+The suffixes that this function tries out, when NOSUFFIX is nil, are
+given by the return value of `get-load-suffixes' and the values listed
+in `load-file-rep-suffixes'.  If MUST-SUFFIX is non-nil, only the
+return value of `get-load-suffixes' is used, i.e. the file name is
+required to have a non-empty suffix.
+
+When searching suffixes, this function normally stops at the first
+one that exists.  If the option `load-prefer-newer' is non-nil,
+however, it tries all suffixes, and uses whichever file is the newest.
+
+Loading a file records its definitions, and its `provide' and
+`require' calls, in an element of `load-history' whose
+car is the file name loaded.  See `load-history'.
+
+While the file is in the process of being loaded, the variable
+`load-in-progress' is non-nil and the variable `load-file-name'
+is bound to the file's name.
+
+Return t if the file exists and loads successfully.]]}
+function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
+    lisp.check_string(file)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    local f=assert(io.open('/home/user/.tmp/emacs/lisp/'..lisp.sdata(file)..'.el','r'))
+    local content=f:read('*all')
+    io.close(f)
+    for _,v in ipairs(M.full_read_lua_string(content)) do
+        require'nelisp.eval'.eval_sub(v)
+    end
+    return vars.Qnil
+end
+F.intern={'intern',1,2,0,[[Return the canonical symbol whose name is STRING.
+If there is none, one is created by this function and returned.
+A second optional argument specifies the obarray to use;
+it defaults to the value of `obarray'.]]}
+function F.intern.f(s,obarray)
+    obarray=M.obarray_check(lisp.nilp(obarray) and vars.V.obarray or obarray)
+    lisp.check_string(s)
+    local found,longhand=M.lookup_considering_shorthand(obarray,lisp.sdata(s))
+    if type(found)=='number' then
+        if longhand then
+            error('TODO')
+        else
+            found=M.intern_drive(s,obarray,found)
+        end
+    end
+    return found
+end
+F.read_from_string={'read-from-string',1,3,0,[[Read one Lisp expression which is represented as text by STRING.
+Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
+FINAL-STRING-INDEX is an integer giving the position of the next
+remaining character in STRING.  START and END optionally delimit
+a substring of STRING from which to read;  they default to 0 and
+\(length STRING) respectively.  Negative values are counted from
+the end of STRING.]]}
+function F.read_from_string.f(s,start,end_)
+    assert(lisp.nilp(start) and lisp.nilp(end_),'TODO')
+    lisp.check_string(s)
+    local iter=M.make_readcharfun(s)
+    local val=M.read0(iter,false)
+    return vars.F.cons(val,fixnum.make(iter.idx))
+end
+
+function M.init()
+    if not _G.nelisp_later then
+        error('TODO: initialize load path')
+    end
+end
+function M.init_syms()
+    vars.setsubr(F,'load')
+    vars.setsubr(F,'intern')
+    vars.setsubr(F,'read_from_string')
+
+    vars.defvar_lisp('obarray','obarray',[[Symbol table for use by `intern' and `read'.
+It is a vector whose length ought to be prime for best results.
+The vector's contents don't make sense if examined from Lisp programs;
+to find all the symbols in an obarray, use `mapatoms'.]])
+
+    vars.defvar_lisp('read_symbol_shorthands','read-symbol-shorthands',[[Alist of known symbol-name shorthands.
+This variable's value can only be set via file-local variables.
+See Info node `(elisp)Shorthands' for more details.]])
+    vars.V.read_symbol_shorthands=vars.Qnil
+
+  vars.defvar_lisp('byte_boolean_vars','byte-boolean-vars',[[List of all DEFVAR_BOOL variables, used by the byte code optimizer.]])
+  vars.V.byte_boolean_vars = vars.Qnil;
+
+    vars.defvar_bool('load_force_doc_strings','load-force-doc-strings',[[Non-nil means `load' should force-load all dynamic doc strings.
+This is useful when the file being loaded is a temporary copy.]])
+    vars.V.load_force_doc_strings=vars.Qnil
+
+    vars.defsym('Qbackquote','`')
+    vars.defsym('Qcomma',',')
+    vars.defsym('Qcomma_at',',@')
+
+    vars.defsym('Qfunction','function')
+
+    vars.defvar_lisp('load_path','load-path',[[List of directories to search for files to load.
+Each element is a string (directory file name) or nil (meaning
+`default-directory').
+This list is consulted by the `require' function.
+Initialized during startup as described in Info node `(elisp)Library Search'.
+Use `directory-file-name' when adding items to this path.  However, Lisp
+programs that process this list should tolerate directories both with
+and without trailing slashes.]])
+    vars.V.load_path=vars.Qnil
+
+    vars.defsym('Qmacroexp__dynvars','macroexp--dynvars')
+    vars.defvar_lisp('macroexp__dynvars','macroexp--dynvars',[[List of variables declared dynamic in the current scope.
+Only valid during macro-expansion.  Internal use only.]])
+    vars.V.macroexp__dynvars=vars.Qnil
+
+    vars.defvar_lisp('after_load_alist','after-load-alist',[[An alist of functions to be evalled when particular files are loaded.
+Each element looks like (REGEXP-OR-FEATURE FUNCS...).
+
+REGEXP-OR-FEATURE is either a regular expression to match file names, or
+a symbol (a feature name).
+
+When `load' is run and the file-name argument matches an element's
+REGEXP-OR-FEATURE, or when `provide' is run and provides the symbol
+REGEXP-OR-FEATURE, the FUNCS in the element are called.
+
+An error in FUNCS does not undo the load, but does prevent calling
+the rest of the FUNCS.]])
+    vars.V.after_load_alist=vars.Qnil
 end
 return M
