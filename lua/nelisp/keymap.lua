@@ -400,6 +400,45 @@ function F.use_global_map.f(keymap)
     end
     return vars.Qnil
 end
+local function keymap_parent(keymap,autoload)
+    keymap=get_keymap(keymap,true,autoload)
+    local list=lisp.xcdr(keymap)
+    while lisp.consp(list) do
+        ---@cast list nelisp.cons
+        if keymapp(list) then
+            return list
+        end
+        list=lisp.xcdr(list)
+    end
+    return get_keymap(list,false,autoload)
+end
+local function keymap_memberp(map,maps)
+    if lisp.nilp(map) then return false end
+    while keymapp(maps) and not lisp.eq(map,maps) do
+        maps=keymap_parent(maps,false)
+    end
+    return lisp.eq(map,maps)
+end
+F.set_keymap_parent={'set-keymap-parent',2,2,0,[[Modify KEYMAP to set its parent map to PARENT.
+Return PARENT.  PARENT should be nil or another keymap.]]}
+function F.set_keymap_parent.f(keymap,parent)
+    keymap=get_keymap(keymap,true,true)
+    if not lisp.nilp(parent) then
+        parent=get_keymap(parent,true,false)
+        if keymap_memberp(keymap,parent) then
+            signal.error('Cyclic keymap inheritance')
+        end
+    end
+    local prev=keymap
+    while true do
+        local list=lisp.xcdr(prev)
+        if not lisp.consp(list) or keymapp(list) then
+            lisp.setcdr(prev,parent)
+            return parent
+        end
+        prev=list --[[@as nelisp.cons]]
+    end
+end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,fixnum.zero)
@@ -421,6 +460,7 @@ function M.init_syms()
     vars.setsubr(F,'define_key')
     vars.setsubr(F,'make_sparse_keymap')
     vars.setsubr(F,'use_global_map')
+    vars.setsubr(F,'set_keymap_parent')
 
     vars.defsym('Qkeymap','keymap')
     vars.defsym('Qevent_symbol_element_mask','event-symbol-element-mask')
