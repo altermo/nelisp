@@ -1,14 +1,28 @@
 local types=require'nelisp.obj.types'
-local function inspect(obj)
+local function inspect(obj,has_visited)
+    has_visited=has_visited or {}
+    if has_visited[obj] then
+        return '<cycle>'
+    end
     local out=''
     if obj[1]==types.cons then
+        has_visited[obj]=true
         out=out..'('
+        local has_visit={}
         while obj[1]==types.cons do
             local i=obj[2]
             obj=obj[3]
-            out=out..inspect(i)..' '
+            out=out..inspect(i,has_visited)..' '
+            if has_visit[obj] then
+                out=out..'...)'
+                break
+            end
+            has_visit[obj]=true
         end
         out=out:sub(1,-2)
+        if obj[2]~='nil' then
+            out=out..' . '..inspect(obj,has_visited)
+        end
         out=out..')'
     elseif obj[1]==types.vec then
         out=out..'['
