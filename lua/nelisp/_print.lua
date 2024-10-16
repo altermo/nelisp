@@ -23,7 +23,6 @@ local function inspect(obj,has_visited)
         out=out:sub(1,-2)
         if obj==vars.Qnil then
         else
-            vim.print(obj)
             out=out..' . '..inspect(obj,has_visited)
         end
         out=out..')'
