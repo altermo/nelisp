@@ -206,7 +206,7 @@ function F.put.f(sym,propname,value)
     symbol.set_plist(sym,plist_put(symbol.get_plist(sym),propname,value))
     return value
 end
-local function plist_get(plist,prop)
+function M.plist_get(plist,prop)
     local tail=plist
     local has_visited={}
     while lisp.consp(tail) do
@@ -229,11 +229,11 @@ F.get={'get',2,2,0,[[Return the value of SYMBOL's PROPNAME property.
 This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.]]}
 function F.get.f(sym,propname)
     lisp.check_symbol(sym)
-    local propval=plist_get(vars.F.cdr(vars.F.assq(symbol,vars.V.overriding_plist_environment)),propname)
+    local propval=M.plist_get(vars.F.cdr(vars.F.assq(symbol,vars.V.overriding_plist_environment)),propname)
     if not lisp.nilp(propval) then
         return propval
     end
-    return plist_get(symbol.get_plist(sym),propname)
+    return M.plist_get(symbol.get_plist(sym),propname)
 end
 F.featurep={'featurep',1,2,0,[[Return t if FEATURE is present in this Emacs.
 

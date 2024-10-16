@@ -562,5 +562,12 @@ function M.init_syms()
     vars.defsym('Qnumber_or_marker_p','number-or-markerp')
 
     vars.defsym('Qvoid_variable','void-variable')
+
+    vars.defsym('QCtest',':test')
+    vars.defsym('QCsize',':size')
+    vars.defsym('QCpurecopy',':purecopy')
+    vars.defsym('QCrehash_size',':rehash-size')
+    vars.defsym('QCrehash_threshold',':rehash-threshold')
+    vars.defsym('QCweakness',':weakness')
 end
 return M

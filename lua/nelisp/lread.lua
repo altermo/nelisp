@@ -9,6 +9,7 @@ local fixnum=require'nelisp.obj.fixnum'
 local symbol=require'nelisp.obj.symbol'
 local float=require'nelisp.obj.float'
 local signal=require'nelisp.signal'
+local fns=require'nelisp.fns'
 
 ---@class nelisp.obarray: nelisp.vec
 
@@ -524,6 +525,48 @@ function M.read_symbol(readcharfun,uninterned_symbol,skip_shorthand,locate_syms)
     end
     return found
 end
+local function hash_table_from_plist(plist)
+    local params={}
+    local function addparam(name)
+        local val=fns.plist_get(plist,vars['Q'..name])
+        if not lisp.nilp(val) then
+            table.insert(params,vars['QC'..name])
+            table.insert(params,val)
+        end
+    end
+    addparam('size')
+    addparam('test')
+    addparam('weakness')
+    addparam('rehash_size')
+    addparam('rehash_threshold')
+    addparam('purecopy')
+    local data=fns.plist_get(plist,vars.Qdata)
+    local ht=vars.F.make_hash_table(params)
+    local last=data
+
+    local has_visited={}
+    while lisp.consp(data) do
+        ---@cast data nelisp.cons
+        local key=lisp.xcar(data)
+        data=lisp.xcdr(data)
+        if not lisp.consp(data) then
+            break
+        end
+        ---@cast data nelisp.cons
+        local val=lisp.xcar(data)
+        last=lisp.xcdr(data)
+        vars.F.puthash(key,val,ht)
+        data=lisp.xcdr(data)
+        if has_visited[data] then
+            data=vars.Qnil
+        end
+        has_visited[data]=true
+    end
+    if not lisp.nilp(last) then
+        signal.error('Hash table data is not a list of even length')
+    end
+    return ht
+end
 ---@param readcharfun nelisp.lread.readcharfun
 ---@param locate_syms boolean
 ---@return nelisp.obj
@@ -550,6 +593,17 @@ function M.read0(readcharfun,locate_syms)
         elseif t.t=='list' then
             table.remove(stack)
             obj=t.head
+        elseif t.t=='record' then
+            t=table.remove(stack)
+            locate_syms=t.old_locate_syms
+            if #t.elems==0 then
+                invalid_syntax('#s',readcharfun)
+            end
+            if t.elems[1]==vars.Qhash_table then
+                obj=hash_table_from_plist(lisp.xcdr(lisp.list(unpack(t.elems))))
+            else
+                error('TODO')
+            end
         else
             error('TODO')
         end
@@ -577,6 +631,19 @@ function M.read0(readcharfun,locate_syms)
             obj=M.read_integer(readcharfun,16)
         elseif ch==b'o' or ch==b'O' then
             obj=M.read_integer(readcharfun,8)
+        elseif ch==b's' then
+            ch=readcharfun.read()
+            if ch~=b'(' then
+                readcharfun.unread(ch)
+                invalid_syntax('%s',readcharfun)
+            end
+            table.insert(stack,{
+                t='record',
+                elems={},
+                old_locate_syms=locate_syms,
+            })
+            locate_syms=false
+            goto read_obj
         else
             error('TODO')
         end
@@ -645,7 +712,7 @@ function M.read0(readcharfun,locate_syms)
         elseif t.t=='special' then
             table.remove(stack)
             obj=cons.make(t.sym,cons.make(obj,vars.Qnil))
-        elseif t.t=='vector' then
+        elseif t.t=='vector' or t.t=='record' then
             table.insert(t.elems,obj)
             goto read_obj
         elseif t.t=='list_dot' then
@@ -788,13 +855,6 @@ the end of STRING.]]}
 function F.read_from_string.f(s,start,end_)
     assert(lisp.nilp(start) and lisp.nilp(end_),'TODO')
     lisp.check_string(s)
-    if not _G.nelisp_later then
-        error('TODO')
-    else
-        if lisp.sdata(s)=='#s(hash-table size 0 rehash-size 1 rehash-threshold 1 data ())' then
-            return vars.F.cons(require'nelisp.obj.hash_table'.make(),-1)
-        end
-    end
     local iter=M.make_readcharfun(s)
     local val=M.read0(iter,false)
     return vars.F.cons(val,fixnum.make(iter.idx))
@@ -832,6 +892,15 @@ This is useful when the file being loaded is a temporary copy.]])
     vars.defsym('Qcomma_at',',@')
 
     vars.defsym('Qfunction','function')
+
+    vars.defsym('Qhash_table','hash-table')
+    vars.defsym('Qdata','data')
+    vars.defsym('Qsize','size')
+    vars.defsym('Qtest','test')
+    vars.defsym('Qweakness','weakness')
+    vars.defsym('Qrehash_size','rehash-size')
+    vars.defsym('Qrehash_threshold','rehash-threshold')
+    vars.defsym('Qpurecopy','purecopy')
 
     vars.defvar_lisp('load_path','load-path',[[List of directories to search for files to load.
 Each element is a string (directory file name) or nil (meaning
