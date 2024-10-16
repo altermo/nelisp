@@ -3,6 +3,24 @@ local symbol=require'nelisp.obj.symbol'
 
 ---@class nelisp.specpdl.index: number
 
+---@class nelisp.specpdl.entry
+---@field type nelisp.specpdl.type
+
+---@class nelisp.specpdl.backtrace_entry: nelisp.specpdl.entry
+---@field type nelisp.specpdl.type.backtrace
+---@field debug_on_exit boolean
+---@field func nelisp.obj
+---@field args nelisp.obj[]|nelisp.obj
+---@field nargs number|'UNEVALLED'
+
+---@class nelisp.specpdl.let_entry: nelisp.specpdl.entry
+---@field type nelisp.specpdl.type.let
+---@field symbol nelisp.obj
+---@field old_value nelisp.obj?
+
+---@alias nelisp.specpdl.all_entries nelisp.specpdl.backtrace_entry|nelisp.specpdl.let_entry
+
+---@type (nelisp.specpdl.all_entries)[]
 local specpdl={}
 
 local M={}
@@ -50,12 +68,12 @@ end
 function M.record_in_backtrace(func,args,nargs)
     local index=M.index()
     table.insert(specpdl,{
-        type=M.type.backtrace,
+        type=M.type.backtrace --[[@as nelisp.specpdl.type.backtrace]],
         debug_on_exit=false,
         func=func,
         args=args,
         nargs=nargs,
-    })
+    } --[[@as nelisp.specpdl.backtrace_entry]])
     return index
 end
 ---@param index nelisp.specpdl.index
@@ -77,10 +95,10 @@ function M.bind(sym,val)
     ---@cast sym nelisp.symbol
     if symbol.get_redirect(sym)==symbol.redirect.plain then
         table.insert(specpdl,{
-            type=M.type.let,
+            type=M.type.let --[[@as nelisp.specpdl.type.let]],
             symbol=sym,
             old_value=symbol.get_var(sym)
-        })
+        } --[[@as nelisp.specpdl.let_entry]])
         if symbol.get_trapped_wire(sym)==symbol.trapped_wire.untrapped_write then
             symbol.set_var(sym,val)
         else
@@ -90,13 +108,12 @@ function M.bind(sym,val)
         error('TODO')
     end
 end
----@return fun():table
+---@return fun():nelisp.specpdl.all_entries
 function M.riter()
     return coroutine.wrap(function ()
         for i=#specpdl,1,-1 do
             coroutine.yield(specpdl[i])
         end
-
     end)
 end
 return M
