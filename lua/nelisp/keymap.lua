@@ -442,6 +442,7 @@ end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,fixnum.zero)
+
     vars.modifier_symbols={}
     local lread=require'nelisp.lread'
     for _,v in ipairs({'up','dow','drag','click','double','triple',0,0,
@@ -453,6 +454,8 @@ function M.init()
             table.insert(vars.modifier_symbols,sym)
         end
     end
+
+    vars.V.minibuffer_local_map=vars.F.make_sparse_keymap(vars.Qnil)
 end
 
 function M.init_syms()
@@ -461,6 +464,8 @@ function M.init_syms()
     vars.setsubr(F,'make_sparse_keymap')
     vars.setsubr(F,'use_global_map')
     vars.setsubr(F,'set_keymap_parent')
+
+    vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
 
     vars.defsym('Qkeymap','keymap')
     vars.defsym('Qevent_symbol_element_mask','event-symbol-element-mask')
