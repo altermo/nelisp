@@ -23,4 +23,13 @@ end
 function M.put(t,key,value)
     t[2][key]=value
 end
+---@return {content:table,test:nelisp.obj?,weak:nelisp.obj?,not_mutable:boolean?}
+function M.to_table(t)
+    return {
+        content=t[2],
+        test=t[3],
+        weak=t[4],
+        not_mutable=t[5],
+    }
+end
 return M
