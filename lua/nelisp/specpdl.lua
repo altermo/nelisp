@@ -82,11 +82,13 @@ function M.backtrace_debug_on_exit(index)
     assert(entry.type==M.type.backtrace)
     return entry.debug_on_exit
 end
+---@param args nelisp.obj[]
 ---@param index nelisp.specpdl.index
 function M.set_backtrace_args(index,args)
     local entry=specpdl[index]
     assert(entry.type==M.type.backtrace)
     entry.args=args
+    entry.nargs=#args
 end
 ---@param sym nelisp.obj
 ---@param val nelisp.obj
