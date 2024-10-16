@@ -6,7 +6,17 @@ local str=require'nelisp.obj.str'
 local b=require'nelisp.bytes'
 local vec=require'nelisp.obj.vec'
 local data=require'nelisp.data'
+local symbol=require'nelisp.obj.symbol'
+local fns=require'nelisp.fns'
 local M={}
+local modifiers_t={
+    up=1,
+    down=2,
+    drag=4,
+    click=8,
+    double=16,
+    triple=32,
+}
 
 local F={}
 F.make_keymap={'make-keymap',0,1,0,[[Construct and return a new keymap, of the form (keymap CHARTABLE . ALIST).
@@ -52,6 +62,97 @@ local function possibly_translate_key_sequence(key)
     end
     return key
 end
+local function parse_modifiers_uncached(sym)
+    lisp.check_symbol(sym)
+    local mods=0
+    local name=symbol.get_name(sym)
+    local i=0
+    if not _G.nelisp_later then
+        error('TODO: maybe ...-1 is incorrect, and it should just be ...')
+    end
+    while i<lisp.sbytes(name)-1 do
+        error('TODO')
+    end
+    if (bit.band(mods,bit.bor(modifiers_t.down,modifiers_t.drag
+        ,modifiers_t.double,modifiers_t.triple))==0)
+        and i+7==lisp.sbytes(name)
+        and lisp.sdata(name):sub(i-1,i-1+6)=='mouse-'
+        and b'0'<=str.index0(name,i+6) and str.index0(name,i+6)<=b'9'
+    then
+        error('TODO')
+    end
+    if (bit.band(mods,bit.bor(modifiers_t.double,modifiers_t.triple))==0)
+        and i+6==lisp.sbytes(name)
+        and lisp.sdata(name):sub(i-1,i-1+6)=='mouse-'
+    then
+        error('TODO')
+    end
+    return mods,i
+end
+local function lispy_modifier_list(modifiers)
+    local ret=vars.Qnil
+    while modifiers>0 do
+        error('TODO')
+    end
+    return ret
+end
+local function parse_modifiers(sym)
+    if lisp.fixnump(sym) then
+        error('TODO')
+    elseif not lisp.symbolp(sym) then
+        error('TODO')
+    end
+    local elements=vars.F.get(sym,vars.Qevent_symbol_element_mask)
+    if lisp.consp(elements) then
+        return elements
+    end
+    local modifiers,end_=parse_modifiers_uncached(sym)
+    local unmodified=vars.F.intern(str.make(lisp.sdata(symbol.get_name(sym)):sub(end_+1),'auto'),vars.Qnil)
+    local mask=fixnum.make(modifiers)
+    elements=lisp.list(unmodified,mask)
+    vars.F.put(sym,vars.Qevent_symbol_element_mask,elements)
+    vars.F.put(sym,vars.Qevent_symbol_elements,vars.F.cons(unmodified,lispy_modifier_list(modifiers)))
+    return elements
+end
+local function apply_modifiers_uncached(modifiers,base)
+    local new_mods={}
+    for _,v in ipairs({{b.CHAR_ALT,'A'},{b.CHAR_CTL,'C'},{b.CHAR_HYPER,'H'},{b.CHAR_SHIFT,'S'},
+        {b.CHAR_SUPER,'s'},{modifiers_t.double,'double'},{modifiers_t.triple,'triple'},{modifiers_t.up,'up'}
+        ,{modifiers_t.down,'down'},{modifiers_t.drag,'drag'},{modifiers_t.click,'click'}}) do
+        if bit.band(modifiers,v[1])>0 then
+            table.insert(new_mods,v[2]..'-')
+        end
+    end
+    local new_name=str.make(table.concat(new_mods)..base,true)
+    return vars.F.intern(new_name,vars.Qnil)
+end
+local function apply_modifiers(modifiers,base)
+    if lisp.fixnump(base) then
+        error('TODO')
+    end
+    local cache=vars.F.get(base,vars.Qmodifier_cache)
+    local idx=fixnum.make(bit.band(modifiers,bit.bnot(modifiers_t.click)))
+    local entry=fns.assq_no_quit(idx,cache)
+    local new_symbol
+    if lisp.consp(entry) then
+        error('TODO')
+    else
+        new_symbol=apply_modifiers_uncached(modifiers,lisp.sdata(symbol.get_name(base)))
+        entry=vars.F.cons(idx,new_symbol)
+        vars.F.put(base,vars.Qmodifier_cache,vars.F.cons(entry,cache))
+    end
+    if lisp.nilp(vars.F.get(new_symbol,vars.Qevent_kind)) then
+        local kind=vars.F.get(base,vars.Qevent_kind)
+        if not lisp.nilp(kind) then
+            vars.F.put(new_symbol,vars.Qevent_kind,kind)
+        end
+    end
+    return new_symbol
+end
+local function reorder_modifiers(sym)
+    local parsed=parse_modifiers(sym)
+    return apply_modifiers(fixnum.tonumber(lisp.xcar(lisp.xcdr(parsed) --[[@as nelisp.cons]]) --[[@as nelisp.fixnum]]),lisp.xcar(parsed))
+end
 local function store_in_keymap(keymap,idx,def,remove)
     if lisp.eq(idx,vars.Qkeymap) then
         signal.error("`keymap' is reserved for embedded parent maps")
@@ -65,11 +166,12 @@ local function store_in_keymap(keymap,idx,def,remove)
         idx=lisp.event_head(idx)
     end
     if lisp.symbolp(idx) then
-        error('TODO')
+        idx=reorder_modifiers(idx)
     elseif lisp.fixnump(idx) then
         idx=fixnum.make(bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),bit.bor(b.CHAR_META,b.CHAR_META-1)))
     end
     local tail=lisp.xcdr(keymap)
+    local insertion_point=keymap
     while lisp.consp(tail) do
         ---@cast tail nelisp.cons
         local elt=lisp.xcar(tail)
@@ -87,12 +189,30 @@ local function store_in_keymap(keymap,idx,def,remove)
                 return def
             end
             error('TODO')
-        else
-            error('TODO')
+        elseif lisp.consp(elt) then
+            ---@cast elt nelisp.cons
+            if lisp.eq(vars.Qkeymap,lisp.xcar(elt)) then
+                error('TODO')
+            elseif lisp.eq(idx,lisp.xcar(elt)) then
+                error('TODO')
+            elseif lisp.consp(idx) and lisp.chartablep(lisp.xcar(idx --[[@as nelisp.cons]])) and lisp.chartablep(lisp.xcar(elt --[[@as nelisp.cons]])) then
+                error('TODO')
+            end
+        elseif lisp.eq(elt,vars.Qkeymap) then
+            break
         end
         tail=lisp.xcdr(tail)
     end
-    error('TODO')
+    if not remove then
+        local elt
+        if lisp.consp(idx) and lisp.chartablep(lisp.xcar(idx --[[@as nelisp.cons]])) then
+            error('TODO')
+        else
+            elt=vars.F.cons(idx,def)
+        end
+        lisp.setcdr(insertion_point,vars.F.cons(elt,insertion_point))
+    end
+    return def
 end
 local function get_keyelt(obj,autoload)
     while true do
@@ -167,6 +287,11 @@ end
 local function access_keymap(map,idx,t_ok,noinherit,autoload)
     return access_keymap_1(map,idx,t_ok,noinherit,autoload) or vars.Qnil
 end
+local function silly_event_symbol_error(sym)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+end
 F.define_key={'define-key',3,4,0,[[In KEYMAP, define key sequence KEY as DEF.
 This is a legacy function; see `keymap-set' for the recommended
 function to use instead.
@@ -225,7 +350,7 @@ function F.define_key.f(keymap,key,def,remove)
             error('TODO')
         end
         if lisp.symbolp(c) then
-            error('TODO')
+            silly_event_symbol_error(c)
         end
         if lisp.fixnump(c) and bit.band(fixnum.tonumber(c),meta_bit)>0 and not metized then
             error('TODO')
@@ -278,6 +403,17 @@ end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,fixnum.zero)
+    vars.modifier_symbols={}
+    local lread=require'nelisp.lread'
+    for _,v in ipairs({'up','dow','drag','click','double','triple',0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,'alt','super','hyper','shift','control','meta'}) do
+        if v==0 then
+            table.insert(vars.modifier_symbols,0)
+        else
+            local sym=lread.define_symbol(v)
+            table.insert(vars.modifier_symbols,sym)
+        end
+    end
 end
 
 function M.init_syms()
@@ -287,5 +423,9 @@ function M.init_syms()
     vars.setsubr(F,'use_global_map')
 
     vars.defsym('Qkeymap','keymap')
+    vars.defsym('Qevent_symbol_element_mask','event-symbol-element-mask')
+    vars.defsym('Qevent_symbol_elements','event-symbol-elements')
+    vars.defsym('Qmodifier_cache','modifier-cache')
+    vars.defsym('Qevent_kind','event-kind')
 end
 return M

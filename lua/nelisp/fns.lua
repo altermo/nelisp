@@ -7,6 +7,8 @@ local hash_table=require'nelisp.obj.hash_table'
 local signal=require'nelisp.signal'
 local str=require'nelisp.obj.str'
 
+local M={}
+
 local F={}
 F.assq={'assq',2,2,0,[[Return non-nil if KEY is `eq' to the car of an element of ALIST.
 The value is actually the first element of ALIST whose car is KEY.
@@ -22,6 +24,15 @@ function F.assq.f(key,alist)
     end)
     if ret then return ret end
     lisp.check_list_end(tail,alist)
+    return vars.Qnil
+end
+function M.assq_no_quit(key,alist)
+    while not lisp.nilp(alist) do
+        if lisp.consp(lisp.xcar(alist)) and lisp.eq(lisp.xcar(lisp.xcar(alist) --[[@as nelisp.cons]]),key) then
+            return lisp.xcar(alist)
+        end
+        alist=lisp.xcdr(alist)
+    end
     return vars.Qnil
 end
 F.member={'member',2,2,0,[[Return non-nil if ELT is an element of LIST.  Comparison done with `equal'.
@@ -375,7 +386,6 @@ function F.concat.f(args)
     return str.make(out_str,dest_multibyte)
 end
 
-local M={}
 function M.init()
     vars.V.features=cons.make(vars.Qemacs,vars.Qnil)
 end
