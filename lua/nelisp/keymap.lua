@@ -49,7 +49,9 @@ local function get_keymap(obj,error_if_not_keymap,autoload)
         if lisp.eq(lisp.xcar(tem),vars.Qkeymap) then
             return tem
         end
-        error('TODO')
+        if (autoload or not error_if_not_keymap) and lisp.eq(lisp.xcar(tem),vars.Qautoload) and lisp.symbolp(obj) then
+            error('TODO')
+        end
     end
     if error_if_not_keymap then
         signal.wrong_type_argument(vars.Qkeymapp,obj)
@@ -71,6 +73,22 @@ local function parse_modifiers_uncached(sym)
         error('TODO: maybe ...-1 is incorrect, and it should just be ...')
     end
     while i<lisp.sbytes(name)-1 do
+        local this_mod_end=0
+        local this_mod=0
+        local c=str.index0(name,i)
+        if c=='A' then error('TODO')
+        elseif c=='C' then error('TODO')
+        elseif c=='H' then error('TODO')
+        elseif c=='M' then error('TODO')
+        elseif c=='S' then error('TODO')
+        elseif c=='s' then error('TODO')
+        elseif c=='d' then error('TODO')
+        elseif c=='t' then error('TODO')
+        elseif c=='u' then error('TODO')
+        end
+        if this_mod_end==0 then
+            break
+        end
         error('TODO')
     end
     if (bit.band(mods,bit.bor(modifiers_t.down,modifiers_t.drag
@@ -135,7 +153,7 @@ local function apply_modifiers(modifiers,base)
     local entry=fns.assq_no_quit(idx,cache)
     local new_symbol
     if lisp.consp(entry) then
-        error('TODO')
+        new_symbol=lisp.xcdr(entry --[[@as nelisp.cons]])
     else
         new_symbol=apply_modifiers_uncached(modifiers,lisp.sdata(symbol.get_name(base)))
         entry=vars.F.cons(idx,new_symbol)
@@ -218,8 +236,13 @@ local function get_keyelt(obj,autoload)
     while true do
         if not lisp.consp(obj) then
             return obj
+        elseif lisp.eq(lisp.xcar(obj),vars.Qmenu_item) then
+            error('TODO')
+        elseif lisp.stringp(lisp.xcar(obj)) then
+            error('TODO')
+        else
+            return obj
         end
-        error('TODO')
     end
 end
 local function keymapp(m)
@@ -228,7 +251,7 @@ end
 local function access_keymap_1(map,idx,t_ok,noinherit,autoload)
     idx=lisp.event_head(idx)
     if lisp.symbolp(idx) then
-        error('TODO')
+        idx=reorder_modifiers(idx)
     elseif lisp.fixnump(idx) then
         idx=fixnum.make(bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),bit.bor(b.CHAR_META,b.CHAR_META-1)))
     end
@@ -250,11 +273,20 @@ local function access_keymap_1(map,idx,t_ok,noinherit,autoload)
         local binding=lisp.xcar(tail)
         local submap=get_keymap(binding,false,autoload)
         if lisp.eq(binding,vars.Qkeymap) then
+            if noinherit or (retval==nil or lisp.nilp(retval)) then
+                break
+            end
             error('TODO')
         elseif lisp.consp(submap) then
             error('TODO')
         elseif lisp.consp(binding) then
-            error('TODO')
+            ---@cast binding nelisp.cons
+            local key=lisp.xcar(binding)
+            if lisp.eq(key,idx) then
+                val=lisp.xcdr(binding)
+            elseif (t_ok and lisp.eq(key,vars.Qt)) then
+                error('TODO')
+            end
         elseif lisp.vectorp(binding) then
             error('TODO')
         elseif lisp.chartablep(binding) then
@@ -291,6 +323,11 @@ local function silly_event_symbol_error(sym)
     if not _G.nelisp_later then
         error('TODO')
     end
+end
+local function define_as_prefix(keymap,c)
+    local cmd=vars.F.make_sparse_keymap(vars.Qnil)
+    store_in_keymap(keymap,c,cmd,false)
+    return cmd
 end
 F.define_key={'define-key',3,4,0,[[In KEYMAP, define key sequence KEY as DEF.
 This is a legacy function; see `keymap-set' for the recommended
@@ -370,7 +407,7 @@ function F.define_key.f(keymap,key,def,remove)
         end
         local cmd=access_keymap(keymap,c,false,true,true)
         if lisp.nilp(cmd) then
-            error('TODO')
+            cmd=define_as_prefix(keymap,c)
         end
         keymap=get_keymap(cmd,false,true)
         if not lisp.consp(keymap) then
@@ -468,6 +505,7 @@ function M.init_syms()
     vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
 
     vars.defsym('Qkeymap','keymap')
+    vars.defsym('Qmenu_item','menu-item')
     vars.defsym('Qevent_symbol_element_mask','event-symbol-element-mask')
     vars.defsym('Qevent_symbol_elements','event-symbol-elements')
     vars.defsym('Qmodifier_cache','modifier-cache')
