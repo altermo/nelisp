@@ -24,19 +24,18 @@ local function obj_to_string(obj,escapeflag,out)
         for _ in pairs(t.content) do
             size=size+1
         end
-        table.insert(out,('#s(hash-table size %d)'):format(size))
+        table.insert(out,('#s(hash-table size %d'):format(size))
         if t.test then
             error('TODO')
         end
         if t.weak then
             error('TODO')
         end
-        table.insert(out,' rehash-size 1 rehash-threshold 1 data(')
+        table.insert(out,' rehash-size 1 rehash-threshold 1 data (')
         table.insert(stack,{
             t='hash',
             obj=obj,
             content=t.content,
-            idx=0,
             printed=0,
             nobjs=size,
         })
@@ -49,7 +48,7 @@ local function obj_to_string(obj,escapeflag,out)
         local e=stack[#stack]
         if e.t=='hash' then
             if e.printed>=e.nobjs then
-                table.insert(out,')')
+                table.insert(out,'))')
                 table.remove(stack)
                 goto next_obj
             end
