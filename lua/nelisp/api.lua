@@ -17,7 +17,7 @@ function M.eval(str)
     end,function (msg)
             local err,ret=pcall(function ()
                 specpdl.unbind_to(1,nil,true)
-                vim.api.nvim_echo({{'E5108: Error executing lua '..debug.traceback(msg,4),'ErrorMsg'}},true,{})
+                vim.api.nvim_echo({{'E5108: Error executing lua '..debug.traceback(msg or 'nil',4),'ErrorMsg'}},true,{})
             end)
             if not err then
                 vim.api.nvim_err_writeln(ret --[[@as string]])
