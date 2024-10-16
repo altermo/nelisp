@@ -359,7 +359,7 @@ local function arith_driver(code,args)
         error('TODO')
     end
 end
----@param code '='
+---@param code '='|'<='
 ---@param args (number|nelisp.float|nelisp.bignum|nelisp.fixnum)[]
 local function arithcompare_driver(code,args)
     if not _G.nelisp_later then
@@ -377,6 +377,13 @@ local function arithcompare_driver(code,args)
     if code=='=' then
         for i=1,#args-1 do
             if args[i]~=args[i+1] then
+                return vars.Qnil
+            end
+        end
+        return vars.Qt
+    elseif code=='<=' then
+        for i=1,#args-1 do
+            if args[i]>args[i+1] then
                 return vars.Qnil
             end
         end
@@ -402,6 +409,14 @@ function F.lss.f(args)
         return fixnum.tonumber(args[1])<fixnum.tonumber(args[2]) and vars.Qt or vars.Qnil
     end
     error('TODO')
+end
+F.leq={'<=',1,-2,0,[[Return t if each arg (a number or marker) is less than or equal to the next.
+usage: (<= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
+function F.leq.f(args)
+    if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
+        return fixnum.tonumber(args[1])<=fixnum.tonumber(args[2]) and vars.Qt or vars.Qnil
+    end
+    return arithcompare_driver('<=',args)
 end
 F.logior={'logior',0,-2,0,[[Return bitwise-or of all the arguments.
 Arguments may be integers, or markers converted to integers.
@@ -510,6 +525,7 @@ function M.init_syms()
     vars.setsubr(F,'add1')
     vars.setsubr(F,'logior')
     vars.setsubr(F,'lss')
+    vars.setsubr(F,'leq')
     vars.setsubr(F,'eqlsign')
 
     vars.setsubr(F,'local_variable_if_set_p')
