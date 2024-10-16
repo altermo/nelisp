@@ -14,7 +14,6 @@ git clone https://github.com/altermo/nelisp ~/.nelisp/nelisp
 This file does the following things (this might be outdated):
 + Add path to runtimepath (if needed)
 + Reloads every nelisp module
-+ Set up `_G.p` and `_G.ins` to print and inspect nelisp objects
 + Initializes the interpreter
 + Creates a temp tabpage (because emacs changes buffers)
 + Tries to run `emacs/lisp/loadup.el`

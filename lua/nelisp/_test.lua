@@ -12,8 +12,6 @@ for k,_ in pairs(package.loaded) do
     end
 end
 
-_G.p=require'nelisp._print'.p
-_G.ins=require'nelisp._print'.inspect
 _G.nelisp_later=true
 
 local api=require'nelisp.api'
