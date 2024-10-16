@@ -2,6 +2,8 @@ local vars=require'nelisp.vars'
 local cons=require'nelisp.obj.cons'
 local vec=require'nelisp.obj.vec'
 local fixnum=require'nelisp.obj.fixnum'
+local lisp=require'nelisp.lisp'
+local symbol=require'nelisp.obj.symbol'
 local M={}
 
 local F={}
@@ -34,12 +36,19 @@ function F.make_vector.f(length,init)
     end
     return vec.make(v)
 end
+F.make_symbol={'make-symbol',1,1,0,[[Return a newly allocated uninterned symbol whose name is NAME.
+Its value is void, and its function definition and property list are nil.]]}
+function F.make_symbol.f(name)
+    lisp.check_string(name)
+    return symbol.make_uninterned(name)
+end
 
 function M.init_syms()
     vars.setsubr(F,'list')
     vars.setsubr(F,'cons')
     vars.setsubr(F,'purecopy')
     vars.setsubr(F,'make_vector')
+    vars.setsubr(F,'make_symbol')
 
     vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end
