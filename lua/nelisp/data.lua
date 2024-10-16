@@ -499,6 +499,8 @@ symbols with function bindings, but excludes macros and special forms.
 Ordinarily return nil if OBJECT is not a function, although t might be
 returned in rare cases.]]}
 function F.functionp.f(a) return lisp.functionp(a) and vars.Qt or vars.Qnil end
+F.hash_table_p={'hash-table-p',1,1,0,[[Return t if OBJ is a Lisp hash table object.]]}
+function F.hash_table_p.f(a) return lisp.hashtablep(a) and vars.Qt or vars.Qnil end
 
 function M.init_syms()
     vars.setsubr(F,'symbol_value')
@@ -542,6 +544,7 @@ function M.init_syms()
     vars.setsubr(F,'atom')
     vars.setsubr(F,'consp')
     vars.setsubr(F,'functionp')
+    vars.setsubr(F,'hash_table_p')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')

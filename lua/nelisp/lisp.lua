@@ -67,6 +67,8 @@ function M.floatp(x) return type_of(x)==types.float end
 function M.recodrp(x) return type_of(x)==types.record end
 ---@overload fun(x:nelisp.obj):boolean
 function M.markerp(x) return type_of(x)==types.marker end
+---@overload fun(x:nelisp.obj):boolean
+function M.hashtablep(x) return type_of(x)==types.hash_table end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.nilp(x) return x==vars.Qnil end
