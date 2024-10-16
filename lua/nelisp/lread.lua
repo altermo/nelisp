@@ -788,6 +788,13 @@ the end of STRING.]]}
 function F.read_from_string.f(s,start,end_)
     assert(lisp.nilp(start) and lisp.nilp(end_),'TODO')
     lisp.check_string(s)
+    if not _G.nelisp_later then
+        error('TODO')
+    else
+        if lisp.sdata(s)=='#s(hash-table size 0 rehash-size 1 rehash-threshold 1 data ())' then
+            return vars.F.cons(require'nelisp.obj.hash_table'.make(),-1)
+        end
+    end
     local iter=M.make_readcharfun(s)
     local val=M.read0(iter,false)
     return vars.F.cons(val,fixnum.make(iter.idx))
