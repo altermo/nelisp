@@ -41,7 +41,13 @@ function F.member.f(elt,list)
     if lisp.symbolp(elt) or lisp.fixnump(elt) then
         return vars.F.memq(elt,list)
     end
-    error('TODO')
+    local _,tail=lisp.for_each_tail(list,function (tail)
+        if not lisp.nilp(vars.F.equal(elt,lisp.xcar(tail))) then
+            return tail
+        end
+    end)
+    lisp.check_list_end(tail,list)
+    return vars.Qnil
 end
 F.memq={'memq',2,2,0,[[Return non-nil if ELT is an element of LIST.  Comparison done with `eq'.
 The value is actually the tail of LIST whose car is ELT.]]}
