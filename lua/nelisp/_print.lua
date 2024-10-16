@@ -1,4 +1,5 @@
 local types=require'nelisp.obj.types'
+local vars=require'nelisp.vars'
 local function inspect(obj,has_visited)
     has_visited=has_visited or {}
     if has_visited[obj] then
@@ -20,7 +21,9 @@ local function inspect(obj,has_visited)
             has_visit[obj]=true
         end
         out=out:sub(1,-2)
-        if obj[2]~='nil' then
+        if obj==vars.Qnil then
+        else
+            vim.print(obj)
             out=out..' . '..inspect(obj,has_visited)
         end
         out=out..')'
