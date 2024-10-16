@@ -228,7 +228,7 @@ local function store_in_keymap(keymap,idx,def,remove)
         else
             elt=vars.F.cons(idx,def)
         end
-        lisp.setcdr(insertion_point,vars.F.cons(elt,insertion_point))
+        lisp.setcdr(insertion_point,vars.F.cons(elt,lisp.xcdr(insertion_point)))
     end
     return def
 end
