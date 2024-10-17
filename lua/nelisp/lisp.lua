@@ -126,7 +126,7 @@ function M.check_vector_or_string(x)
     if M.vectorp(x) then
         return vec.length(x --[[@as nelisp.vec]])
     elseif M.stringp(x) then
-        return M.scars(x --[[@as nelisp.str]])
+        return M.schars(x --[[@as nelisp.str]])
     else
         require'nelisp.signal'.wrong_type_argument(vars.Qarrayp,x)
         error('unreachable')
@@ -192,7 +192,7 @@ function M.loadhist_attach(x)
 end
 
 ---@param x nelisp.str
-function M.scars(x)
+function M.schars(x)
     return str.char_length(x)
 end
 ---@param x nelisp.str

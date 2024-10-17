@@ -130,7 +130,7 @@ function F.aref.f(array,idx)
     lisp.check_fixnum(idx)
     local idxval=fixnum.tonumber(idx)
     if lisp.stringp(array) then
-        if idxval<0 or idxval>=lisp.scars(array) then
+        if idxval<0 or idxval>=lisp.schars(array) then
             signal.args_out_of_range(array,idx)
         elseif not str.is_multibyte(array) then
             return fixnum.make(str.index0(array,idxval))
