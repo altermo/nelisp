@@ -228,7 +228,7 @@ function M.init()
     if not _G.nelisp_later then
         vars.F.make_variable_buffer_local(vars.Qlexical_binding)
     end
-    vars.V.autoload_queue=vars.Qnil
+    vars.autoload_queue=vars.Qnil
 end
 
 local F={}

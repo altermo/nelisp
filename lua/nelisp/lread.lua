@@ -21,7 +21,7 @@ function M.obarray_init_once()
         array[i]=fixnum.zero
     end
     vars.initial_obarray=vec.make(array) --[[@as nelisp.obarray]]
-    vars.V.obarray=vars.initial_obarray
+    vars.obarray=vars.initial_obarray
 
     vars.defsym('Qnil','nil')
     vars.defsym('Qt','t')
@@ -874,6 +874,7 @@ function M.init_syms()
 It is a vector whose length ought to be prime for best results.
 The vector's contents don't make sense if examined from Lisp programs;
 to find all the symbols in an obarray, use `mapatoms'.]])
+    vars.V.obarray=vars.obarray
 
     vars.defvar_lisp('read_symbol_shorthands','read-symbol-shorthands',[[Alist of known symbol-name shorthands.
 This variable's value can only be set via file-local variables.

@@ -256,7 +256,7 @@ particular subfeatures supported in this version of FEATURE.]]}
 function F.provide.f(feature,subfeatures)
     lisp.check_symbol(feature)
     lisp.check_list(subfeatures)
-    if not lisp.nilp(vars.V.autoload_queue) then
+    if not lisp.nilp(vars.autoload_queue) then
         error('TODO')
     end
     local tem=vars.F.memq(feature,vars.V.features)

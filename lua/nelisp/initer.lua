@@ -29,9 +29,10 @@ require'nelisp.keymap'.init()
 require'nelisp.emacs'.init()
 
 if not _G.nelisp_later then
-    local vars=require'nelisp.vars'
     local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,2)
-    assert(name=='Vsymbol_pre_values',name)
-    assert(vim.tbl_isempty(val),'Vsymbol_pre_values not empty')
+    assert(name=='Vsymbols',name)
+    for k,_ in pairs(val) do
+        _=vars.V[k]
+    end
 end
 
