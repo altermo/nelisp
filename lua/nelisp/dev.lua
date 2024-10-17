@@ -1,6 +1,7 @@
 local vars=require'nelisp.vars'
 local specpdl=require'nelisp.specpdl'
 local lisp=require'nelisp.lisp'
+local print_=require'nelisp.print'
 local M={}
 
 local function convert_from_lua(x)
@@ -32,12 +33,16 @@ local function convert_from_lua(x)
     end
 end
 
-local inspect=require'nelisp._print'.inspect
+local inspect=function (x)
+    local printcharfun=print_.make_printcharfun()
+    print_.print_obj(x,true,printcharfun)
+    return printcharfun.out()
+end
 
 local F={}
 F.Xprint={'!print',1,1,0,[[internal function]]}
 function F.Xprint.f(x)
-    require'nelisp._print'.p(x)
+    print(inspect(x))
     return vars.Qt
 end
 F.Xbacktrace={'!backtrace',0,0,0,[[internal function]]}
