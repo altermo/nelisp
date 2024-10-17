@@ -119,10 +119,6 @@ function M.eval_sub(form)
 
     ---@cast form nelisp.cons
 
-    if not _G.nelisp_later then
-        error('TODO: vars.lisp_eval_depth may not be decreased if error, how to solve this? how does emacs do it?\nAlso how is specpdl reset to a previous state')
-        --Note that vars.lisp_eval_depth is being incremented/decremented in other places, so when changing how this works, remember to change those places too (if needed)
-    end
     vars.lisp_eval_depth=vars.lisp_eval_depth+1
     if vars.lisp_eval_depth>fixnum.tonumber(vars.V.max_lisp_eval_depth) then
         if fixnum.tonumber(vars.V.max_lisp_eval_depth)<100 then
