@@ -8,18 +8,17 @@ end
 ---@param str string
 ---@return nelisp.obj?
 function M.eval(str)
-    local noerr,ret=handler.with_handler(nil,'CATCHER_LUA',function ()
+    return handler.internal_catch_lua(function ()
         local ret
         for _,cons in ipairs(lread.full_read_lua_string(str)) do
             ret=eval.eval_sub(cons)
         end
         return ret
+    end,function (msg)
+        assert(#handler.handlerlist==0,'TODO')
+        vim.api.nvim_echo({{msg,'ErrorMsg'}},true,{})
+        error()
     end)
-    if noerr then
-        return ret --[[@as nelisp.obj]]
-    end
-    vim.api.nvim_echo({{ret,'ErrorMsg'}},true,{})
-    error()
 end
 ---@param path string
 ---@return nelisp.obj?
