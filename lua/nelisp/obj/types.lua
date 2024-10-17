@@ -11,6 +11,7 @@ local types={
     vec=3,
     cons=4,
     float=5,
+    _normal_vector=100,
     _free=101,
     bignum=102,
     marker=103,

@@ -8,6 +8,8 @@ function M.charbyte8p(c) return bytes.MAX_5_BYTE_CHAR<c end
 function M.asciicharp(c) return 0<=c and c<0x80 end
 ---@overload fun(c:number):boolean
 function M.charbyte8headp(c) return c==0xc0 or c==0xc1 end
+---@overload fun(c:number):boolean
+function M.singlebytecharp(c) return 0<=c and c<0x100 end
 
 ---@param c number
 ---@return string

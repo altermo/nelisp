@@ -38,6 +38,8 @@ function M.fixnatp(x) return M.fixnump(x) and 0<=fixnum.tonumber(x --[[@as nelis
 function M.arrayp(x) return M.vectorp(x) or M.stringp(x) or M.chartablep(x) or M.bool_vectorp(x) end
 ---@overload fun(x:nelisp.symbol):boolean
 function M.symbolconstantp(x) return symbol.get_trapped_wire(x)==symbol.trapped_wire.nowrite end
+---@overload fun(x:nelisp.obj):boolean
+function M.vectorlikep(x) return type_of(x)>=types._normal_vector or type_of(x)==types.vec end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.baresymbolp(x) return type_of(x)==types.symbol end
