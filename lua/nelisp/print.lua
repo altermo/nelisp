@@ -46,7 +46,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
     local stack={}
     ::print_obj::
     local typ=types.type(obj)
-    if lisp.nilp(vars.V.print_circe) then
+    if lisp.nilp(vars.V.print_circle) then
         if printcharfun.print_depth>=200 then
             signal.error('Apparently circular structure being printed')
         end
@@ -211,7 +211,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
                 goto next_obj
             elseif lisp.consp(next_) then
                 ---@cast next_ nelisp.cons
-                if not lisp.nilp(vars.V.print_circe) then
+                if not lisp.nilp(vars.V.print_circle) then
                     error('TODO')
                 end
                 printcharfun.write(' ')
@@ -294,7 +294,7 @@ If non-nil, shared substructures anywhere in the structure are printed
 with `#N=' before the first occurrence (in the order of the print
 representation) and `#N#' in place of each subsequent occurrence,
 where N is a positive decimal integer.]])
-    vars.V.print_circe=vars.Qnil
+    vars.V.print_circle=vars.Qnil
 
     vars.defvar_lisp('print_gensym','print-gensym',[[Non-nil means print uninterned symbols so they will read as uninterned.
 I.e., the value of (make-symbol \"foobar\") prints as #:foobar.
