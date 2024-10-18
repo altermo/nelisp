@@ -6,6 +6,7 @@ local fixnum=require'nelisp.obj.fixnum'
 local str=require'nelisp.obj.str'
 local char_table=require'nelisp.obj.char_table'
 local vec=require'nelisp.obj.vec'
+local lread=require'nelisp.lread'
 
 local M={}
 ---@param sym nelisp.obj
@@ -447,6 +448,29 @@ function F.local_variable_if_set_p.f(variable,buffer)
     end
     error('TODO')
 end
+F.string_to_number={'string-to-number',1,2,0,[[Parse STRING as a decimal number and return the number.
+Ignore leading spaces and tabs, and all trailing chars.  Return 0 if
+STRING cannot be parsed as an integer or floating point number.
+
+If BASE, interpret STRING as a number in that base.  If BASE isn't
+present, base 10 is used.  BASE must be between 2 and 16 (inclusive).
+If the base used is not 10, STRING is always parsed as an integer.]]}
+function F.string_to_number.f(s,base)
+    lisp.check_string(s)
+    local b
+    if lisp.nilp(base) then
+        b=10
+    else
+        lisp.check_fixnum(base)
+        if not (fixnum.tonumber(base)>=2 and fixnum.tonumber(base)<=16) then
+            signal.xsignal(vars.Qargs_out_of_range,base)
+        end
+        b=fixnum.tonumber(base)
+    end
+    local p=lisp.sdata(s):gsub('^[ \t]+','')
+    local val=lread.string_to_number(p,b)
+    return val==nil and fixnum.zero or val
+end
 F.default_boundp={'default-boundp',1,1,0,[[Return t if SYMBOL has a non-void default value.
 A variable may have a buffer-local value.  This function says whether
 the variable has a non-void value outside of the current buffer
@@ -529,6 +553,8 @@ function M.init_syms()
     vars.setsubr(F,'lss')
     vars.setsubr(F,'leq')
     vars.setsubr(F,'eqlsign')
+
+    vars.setsubr(F,'string_to_number')
 
     vars.setsubr(F,'local_variable_if_set_p')
     vars.setsubr(F,'default_boundp')
