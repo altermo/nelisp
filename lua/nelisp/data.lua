@@ -419,6 +419,14 @@ function F.leq.f(args)
     end
     return arithcompare_driver('<=',args)
 end
+F.gtr={'>',1,-2,0,[[Return t if each arg (a number or marker) is greater than the next arg.
+usage: (> NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
+function F.gtr.f(args)
+    if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
+        return fixnum.tonumber(args[1])>fixnum.tonumber(args[2]) and vars.Qt or vars.Qnil
+    end
+    error('TODO')
+end
 F.logior={'logior',0,-2,0,[[Return bitwise-or of all the arguments.
 Arguments may be integers, or markers converted to integers.
 usage: (logior &rest INTS-OR-MARKERS)]]}
@@ -552,6 +560,7 @@ function M.init_syms()
     vars.setsubr(F,'logior')
     vars.setsubr(F,'lss')
     vars.setsubr(F,'leq')
+    vars.setsubr(F,'gtr')
     vars.setsubr(F,'eqlsign')
 
     vars.setsubr(F,'string_to_number')
