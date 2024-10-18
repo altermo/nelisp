@@ -7,6 +7,7 @@ local subr=require'nelisp.obj.subr'
 local signal=require'nelisp.signal'
 local str=require'nelisp.obj.str'
 local data=require'nelisp.data'
+local handler=require'nelisp.handler'
 local M={}
 
 local function funcall_lambda(fun,args)
@@ -776,6 +777,20 @@ function F.autoload.f(func,file,docstring,interactive,type_)
     end
     return vars.F.defalias(func,lisp.list(vars.Qautoload,file,docstring,interactive,type_),vars.Qnil)
 end
+F.throw={'throw',2,2,0,[[Throw to the catch for TAG and return VALUE from it.
+Both TAG and VALUE are evalled.]]}
+function F.throw.f(tag,value)
+    if not lisp.nilp(tag) then
+        for _,c in ipairs(handler.handlerlist) do
+            if c.type=='CATCHER_ALL' then
+                handler.longjmp(c.jmp,vars.F.cons(tag,value),'THROW')
+            elseif c.type=='CATCHER' and lisp.eq(c.tag_or_ch,tag) then
+                handler.longjmp(c.jmp,value,'THROW')
+            end
+        end
+    end
+    signal.xsignal(vars.Qno_catch,tag,value)
+end
 
 function M.init_syms()
     vars.setsubr(F,'setq')
@@ -798,6 +813,7 @@ function M.init_syms()
     vars.setsubr(F,'apply')
     vars.setsubr(F,'function_')
     vars.setsubr(F,'autoload')
+    vars.setsubr(F,'throw')
 
     vars.defvar_lisp('max_lisp_eval_depth','max-lisp-eval-depth',
         [[Limit on depth in `eval', `apply' and `funcall' before error.
