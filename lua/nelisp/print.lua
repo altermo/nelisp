@@ -149,7 +149,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
                 printcharfun.write(c)
                 obj=lisp.xcar(lisp.xcdr(obj) --[[@as nelisp.cons]])
                 printcharfun.print_depth=printcharfun.print_depth-1
-                goto next_obj
+                goto print_obj
             end
         end
         table.insert(stack,{
