@@ -285,6 +285,7 @@ function F.let.f(args)
         else
             temps[argnum]=M.eval_sub(vars.F.car(vars.F.cdr(elt)))
         end
+        argnum=argnum+1
     end
     varlist=lisp.xcar(args)
     local lexenv=vars.V.internal_interpreter_environment
@@ -295,6 +296,7 @@ function F.let.f(args)
         varlist=lisp.xcdr(varlist)
         local var=lisp.symbolp(elt) and elt or vars.F.car(elt)
         local tem=temps[argnum]
+        argnum=argnum+1
         if not lisp.nilp(lexenv) then
             error('TODO')
         else
