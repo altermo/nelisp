@@ -825,6 +825,7 @@ alist of active lexical bindings.]])
     vars.defsym('Qand_rest','&rest')
     vars.defsym('Qand_optional','&optional')
     vars.defsym('Qclosure','closure')
+    vars.defsym('Qexit','exit')
 
     vars.defsym('Qlexical_binding','lexical-binding')
 end

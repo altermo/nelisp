@@ -548,6 +548,7 @@ function M.init_syms()
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')
+    vars.defsym('Qtop_level','top-level')
 
     vars.defsym('Qlistp','listp')
     vars.defsym('Qsymbolp','symbolp')
@@ -561,6 +562,7 @@ function M.init_syms()
     vars.defsym('Qvectorp','vectorp')
     vars.defsym('Qnumber_or_marker_p','number-or-markerp')
 
+    vars.defsym('Qerror','error')
     vars.defsym('Qvoid_variable','void-variable')
 
     vars.defsym('QCtest',':test')

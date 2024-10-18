@@ -99,9 +99,24 @@ end
 ---@param handler fun(a:string)
 function M.internal_catch_lua(fun,handler)
     local noerr,args=M.with_handler(nil,'CATCHER_LUA',fun)
-    if not noerr then
-        return handler(args --[[@as string]])
+    if noerr then
+        return unpack(args --[[@as(any[])]])
     end
-    return unpack(args --[[@as(any[])]])
+    return handler(args --[[@as string]])
+end
+function M.internal_catch(tag,fun,arg)
+    local noerr,args=M.with_handler(tag,'CATCHER',fun,arg)
+    if noerr then
+        return unpack(args --[[@as(any[])]])
+    end
+    ---@cast args nelisp.handler.msg_other
+    return args.val
+end
+function M.internal_condition_case(bfun,handlers,hfun)
+    local noerr,args=M.with_handler(handlers,'CONDITION_CASE',bfun)
+    if noerr then
+        return unpack(args --[[@as(any[])]])
+    end
+    return hfun(args --[[@as nelisp.handler.msg_other]])
 end
 return M
