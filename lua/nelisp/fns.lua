@@ -121,6 +121,30 @@ function F.mapcar.f(func,sequence)
     local nmapped=mapcar1(leni,args,func,sequence)
     return vars.F.list({unpack(args,1,nmapped)})
 end
+F.nreverse={'nreverse',1,1,0,[[Reverse order of items in a list, vector or string SEQ.
+If SEQ is a list, it should be nil-terminated.
+This function may destructively modify SEQ to produce the value.]]}
+function F.nreverse.f(seq)
+    if lisp.nilp(seq) then
+        return seq
+    elseif lisp.consp(seq) then
+        local prev=vars.Qnil
+        local tail=seq
+        while lisp.consp(tail) do
+            local next_=lisp.xcdr(tail)
+            if next_==seq then
+                require'nelisp.signal'.xsignal(vars.Qcircular_list,seq)
+            end
+            vars.F.setcdr(tail,prev)
+            prev=tail
+            tail=next_
+        end
+        lisp.check_list_end(tail,seq)
+        return prev
+    else
+        error('TODO')
+    end
+end
 F.nconc={'nconc',0,-2,0,[[Concatenate any number of lists by altering them.
 Only the last argument is not altered, and need not be a list.
 usage: (nconc &rest LISTS)]]}
@@ -402,6 +426,7 @@ function M.init_syms()
     vars.setsubr(F,'nthcdr')
     vars.setsubr(F,'nth')
     vars.setsubr(F,'mapcar')
+    vars.setsubr(F,'nreverse')
     vars.setsubr(F,'nconc')
     vars.setsubr(F,'length')
     vars.setsubr(F,'put')
