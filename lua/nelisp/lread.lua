@@ -10,6 +10,8 @@ local symbol=require'nelisp.obj.symbol'
 local float=require'nelisp.obj.float'
 local signal=require'nelisp.signal'
 local fns=require'nelisp.fns'
+local coding=require'nelisp.coding'
+local specpdl=require'nelisp.specpdl'
 
 ---@class nelisp.obarray: nelisp.vec
 
@@ -771,6 +773,89 @@ function M.full_read_lua_string(s)
 end
 
 local F={}
+local function suffix_p(s,suffix)
+    return lisp.sdata(s):sub(-#suffix)==suffix
+end
+local function complete_filename_p(pathname)
+    return lisp.IS_DIRECTORY_SEP(str.index1_neg(pathname,1)) or
+        (lisp.IS_DIRECTORY_SEP(str.index1_neg(pathname,2)) and
+        lisp.IS_DIRECTORY_SEP(str.index1_neg(pathname,3)))
+end
+---@return -1|file*
+local function openp(path,s,suffixes,storep,predicate,newer,no_native)
+    local _=no_native
+    newer=not lisp.nilp(newer)
+    local save_fd=-1
+    lisp.check_string(s)
+    lisp.for_each_tail_safe(suffixes,function (tail)
+        lisp.check_string_car(tail)
+    end)
+    if storep then
+        storep[1]=vars.Qnil
+    end
+    local absolute=complete_filename_p(s)
+    local just_use_str=lisp.list(vars.Qnil)
+    if lisp.nilp(path) then
+        path=just_use_str
+    end
+    local ret=lisp.for_each_tail_safe(path,function (p)
+        local filename
+        if lisp.eq(p,just_use_str) then
+            filename=s
+        else
+            filename=vars.F.expand_file_name(s,lisp.xcar(p))
+        end
+        if not complete_filename_p(filename) then
+            error('TODO')
+        end
+        local ofn=lisp.sdata(filename):gsub('^:/','')
+        local ret=lisp.for_each_tail_safe(lisp.nilp(suffixes) and error('TODO') or suffixes,function (tail)
+            local suffix=lisp.xcar(tail) --[[@as nelisp.str]]
+            local fn=ofn..lisp.sdata(suffix)
+            local fstr
+            if not str.is_multibyte(suffix) and not str.is_multibyte(filename) then
+                fstr=str.make(fn,false)
+            else
+                error('TODO')
+            end
+            local handler=vars.F.find_file_name_handler(fstr,vars.Qfile_exists_p)
+            if (not lisp.nilp(handler) or (not lisp.nilp(predicate) and not lisp.eq(predicate,vars.Qt))) and not lisp.fixnatp(predicate) then
+                error('TODO')
+            else
+                local fd
+                local encoded_fn=coding.encode_file_name(fstr)
+                local pfn=lisp.sdata(encoded_fn)
+                if lisp.fixnatp(predicate) then
+                    error('TODO')
+                else
+                    fd=io.open(pfn,'r+')
+                    if not fd then
+                        fd=-1
+                    end
+                end
+                if fd~=-1 then
+                    if newer and not lisp.fixnatp(predicate) then
+                        error('TODO')
+                    else
+                        if storep then
+                            storep[1]=fstr
+                        end
+                        return fd --[[@as unknown]]
+                    end
+                end
+                if 0<=save_fd and not lisp.consp(lisp.xcdr(tail)) then
+                    error('TODO')
+                end
+            end
+        end)
+        if ret then return ret end
+        if absolute then
+            return 'break'
+        end
+    end)
+    if ret then return ret --[[@as unknown]] end
+    return -1
+end
 F.load={'load',1,5,0,[[Execute a file of Lisp code named FILE.
 First try FILE with `.elc' appended, then try with `.el', then try
 with a system-dependent suffix of dynamic modules (see `load-suffixes'),
@@ -816,17 +901,76 @@ is bound to the file's name.
 
 Return t if the file exists and loads successfully.]]}
 function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
-    lisp.check_string(file)
     if not _G.nelisp_later then
         error('TODO')
     end
-    local f=assert(io.open('/home/user/.tmp/emacs/lisp/'..lisp.sdata(file)..'.el','r'))
-    local content=f:read('*all')
-    io.close(f)
-    for _,v in ipairs(M.full_read_lua_string(content)) do
-        require'nelisp.eval'.eval_sub(v)
+    local count=specpdl.index()
+    lisp.check_string(file)
+    local handler=vars.F.find_file_name_handler(file,vars.Qload)
+    if not lisp.nilp(handler) then
+        error('TODO')
     end
-    return vars.Qnil
+    if not lisp.nilp(noerror) then
+        error('TODO')
+    else
+        file=vars.F.substitute_in_file_name(file)
+    end
+    local no_native=suffix_p(file,'.elc')
+    local fd
+    local found={vars.Qnil}
+    if lisp.schars(file)==0 then
+        fd=-1
+    else
+        local suffixes
+        if not lisp.nilp(mustsuffix) then
+            error('TODO')
+        end
+        if not lisp.nilp(nosuffix) then
+            error('TODO')
+        else
+            suffixes=vars.F.get_load_suffixes()
+            if lisp.nilp(mustsuffix) then
+                suffixes=vars.F.append({suffixes,vars.V.load_file_rep_suffixes})
+            end
+        end
+        fd=openp(vars.V.load_path,file,suffixes,found,vars.Qnil,vars.V.load_prefer_newer,no_native)
+    end
+    if fd==-1 then
+        error('TODO')
+    end
+    if lisp.eq(vars.Qt,vars.V.user_init_file) then
+        vars.V.user_init_file=found[1]
+    end
+    if fd==-2 then
+        error('TODO')
+    end
+    ---@cast fd file*
+    specpdl.record_unwind_protect(function ()
+        io.close(fd)
+    end)
+    if not _G.nelisp_later then
+        error('TODO: a lot of stuff should be set up here')
+    else
+        local content=fd:read('*all')
+        for _,v in ipairs(M.full_read_lua_string(content)) do
+            require'nelisp.eval'.eval_sub(v)
+        end
+        specpdl.unbind_to(count,nil)
+    end
+    return vars.Qt
+end
+F.get_load_suffixes={'get-load-suffixes',0,0,0,[[Return the suffixes that `load' should try if a suffix is \
+required.
+This uses the variables `load-suffixes' and `load-file-rep-suffixes'.]]}
+function F.get_load_suffixes.f()
+    local ret_suffixes={}
+    lisp.for_each_tail(vars.V.load_suffixes,function (suffixes)
+        local suffix=lisp.xcar(suffixes)
+        lisp.for_each_tail(vars.V.load_file_rep_suffixes,function (exts)
+            table.insert(ret_suffixes,fns.concat_to_string({suffix,lisp.xcar(exts)}))
+        end)
+    end)
+    return lisp.list(unpack(ret_suffixes))
 end
 F.intern={'intern',1,2,0,[[Return the canonical symbol whose name is STRING.
 If there is none, one is created by this function and returned.
@@ -864,9 +1008,14 @@ function M.init()
     if not _G.nelisp_later then
         error('TODO: initialize load path')
     end
+    vars.V.load_suffixes=lisp.list(str.make('.elc',false),str.make('.el',false))
+    vars.V.load_file_rep_suffixes=lisp.list(str.make('',false))
+    assert(_G.nelisp_emacs)
+    vars.V.load_path=lisp.list(str.make(_G.nelisp_emacs..'/lisp',false))
 end
 function M.init_syms()
     vars.setsubr(F,'load')
+    vars.setsubr(F,'get_load_suffixes')
     vars.setsubr(F,'intern')
     vars.setsubr(F,'read_from_string')
 
@@ -876,13 +1025,32 @@ The vector's contents don't make sense if examined from Lisp programs;
 to find all the symbols in an obarray, use `mapatoms'.]])
     vars.V.obarray=vars.obarray
 
+    vars.defvar_lisp('load_suffixes','load-suffixes',[[List of suffixes for Emacs Lisp files and dynamic modules.
+This list includes suffixes for both compiled and source Emacs Lisp files.
+This list should not include the empty string.
+`load' and related functions try to append these suffixes, in order,
+to the specified file name if a suffix is allowed or required.]])
+
+    vars.defvar_lisp('load_file_rep_suffixes','load-file-rep-suffixes',[[List of suffixes that indicate representations of \
+the same file.
+This list should normally start with the empty string.
+
+Enabling Auto Compression mode appends the suffixes in
+`jka-compr-load-suffixes' to this list and disabling Auto Compression
+mode removes them again.  `load' and related functions use this list to
+determine whether they should look for compressed versions of a file
+and, if so, which suffixes they should try to append to the file name
+in order to do so.  However, if you want to customize which suffixes
+the loading functions recognize as compression suffixes, you should
+customize `jka-compr-load-suffixes' rather than the present variable.]])
+
     vars.defvar_lisp('read_symbol_shorthands','read-symbol-shorthands',[[Alist of known symbol-name shorthands.
 This variable's value can only be set via file-local variables.
 See Info node `(elisp)Shorthands' for more details.]])
     vars.V.read_symbol_shorthands=vars.Qnil
 
-  vars.defvar_lisp('byte_boolean_vars','byte-boolean-vars',[[List of all DEFVAR_BOOL variables, used by the byte code optimizer.]])
-  vars.V.byte_boolean_vars = vars.Qnil;
+    vars.defvar_lisp('byte_boolean_vars','byte-boolean-vars',[[List of all DEFVAR_BOOL variables, used by the byte code optimizer.]])
+    vars.V.byte_boolean_vars = vars.Qnil;
 
     vars.defvar_bool('load_force_doc_strings','load-force-doc-strings',[[Non-nil means `load' should force-load all dynamic doc strings.
 This is useful when the file being loaded is a temporary copy.]])
@@ -893,6 +1061,7 @@ This is useful when the file being loaded is a temporary copy.]])
     vars.defsym('Qcomma_at',',@')
 
     vars.defsym('Qfunction','function')
+    vars.defsym('Qload','load')
 
     vars.defsym('Qhash_table','hash-table')
     vars.defsym('Qdata','data')
@@ -911,7 +1080,6 @@ Initialized during startup as described in Info node `(elisp)Library Search'.
 Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
 and without trailing slashes.]])
-    vars.V.load_path=vars.Qnil
 
     vars.defsym('Qmacroexp__dynvars','macroexp--dynvars')
     vars.defvar_lisp('macroexp__dynvars','macroexp--dynvars',[[List of variables declared dynamic in the current scope.
@@ -931,5 +1099,24 @@ REGEXP-OR-FEATURE, the FUNCS in the element are called.
 An error in FUNCS does not undo the load, but does prevent calling
 the rest of the FUNCS.]])
     vars.V.after_load_alist=vars.Qnil
+
+    vars.defvar_bool('load_prefer_newer','load-prefer-newer',[[Non-nil means `load' prefers the newest version of a file.
+This applies when a filename suffix is not explicitly specified and
+`load' is trying various possible suffixes (see `load-suffixes' and
+`load-file-rep-suffixes').  Normally, it stops at the first file
+that exists unless you explicitly specify one or the other.  If this
+option is non-nil, it checks all suffixes and uses whichever file is
+newest.
+Note that if you customize this, obviously it will not affect files
+that are loaded before your customizations are read!]])
+    vars.V.load_prefer_newer=vars.Qnil
+
+    vars.defvar_lisp('user_init_file','user-init-file',[[File name, including directory, of user's initialization file.
+If the file loaded had extension `.elc', and the corresponding source file
+exists, this variable contains the name of source file, suitable for use
+by functions like `custom-save-all' which edit the init file.
+While Emacs loads and evaluates any init file, value is the real name
+of the file, regardless of whether or not it has the `.elc' extension.]])
+    vars.V.user_init_file=vars.Qnil
 end
 return M

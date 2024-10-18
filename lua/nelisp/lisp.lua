@@ -5,6 +5,7 @@ local fixnum=require'nelisp.obj.fixnum'
 local str=require'nelisp.obj.str'
 local vec=require'nelisp.obj.vec'
 local symbol=require'nelisp.obj.symbol'
+local b=require'nelisp.bytes'
 local type_of=types.type
 local M={}
 ---@overload fun(x:nelisp.obj):boolean
@@ -143,14 +144,22 @@ function M.check_number_coerce_marker(x)
     M.check_type(M.numberp(x),vars.Qnumber_or_marker_p,x)
     return x --[[@as nelisp.fixnum|nelisp.bignum|nelisp.float]]
 end
+---@param x nelisp.cons
+function M.check_string_car(x)
+    M.check_type(M.stringp(M.xcar(x)),vars.Qstringp,M.xcar(x))
+end
 
 ---@param x nelisp.obj
 ---@param fn fun(x:nelisp.cons):'continue'|'break'|nelisp.obj?
-function M.for_each_tail(x,fn)
+---@param safe boolean?
+function M.for_each_tail(x,fn,safe)
     local has_visited={}
     while M.consp(x) do
         if has_visited[x] then
-            require'nelisp.signal'.xsignal(vars.Qcircular_list,x)
+            if not safe then
+                require'nelisp.signal'.xsignal(vars.Qcircular_list,x)
+            end
+            return nil,x
         end
         has_visited[x]=true
         ---@cast x nelisp.cons
@@ -164,6 +173,11 @@ function M.for_each_tail(x,fn)
         x=M.xcdr(x)
     end
     return nil,x
+end
+---@param x nelisp.obj
+---@param fn fun(x:nelisp.cons):'continue'|'break'|nelisp.obj?
+function M.for_each_tail_safe(x,fn)
+    return M.for_each_tail(x,fn,true)
 end
 ---@param x nelisp.obj
 ---@return number
@@ -228,6 +242,12 @@ end
 
 function M.event_head(event)
     return M.consp(event) and M.xcar(event) or event
+end
+
+--This is set in `configure.ac` in gnu-emacs
+M.IS_DIRECTORY_SEP=function (c)
+    --TODO: change depending on operating system
+    return c==b'/'
 end
 
 return M

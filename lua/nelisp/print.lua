@@ -68,10 +68,15 @@ function M.print_obj(obj,escapeflag,printcharfun)
             printcharfun.write(M.fixnum_to_string(obj --[[@as nelisp.fixnum]]))
         end
     elseif typ==types.str then
-        if not escapeflag then
-            error('TODO')
-        end
         ---@cast obj nelisp.str
+        if not escapeflag then
+            if lisp.sbytes(obj)==lisp.schars(obj) then
+                printcharfun.write(lisp.sdata(obj))
+            else
+                error('TODO')
+            end
+            goto break_
+        end
         local multibyte=str.is_multibyte(obj)
         assert(not multibyte,'TODO')
         local has_properties=str.get_intervals(obj)

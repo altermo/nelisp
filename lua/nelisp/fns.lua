@@ -6,10 +6,94 @@ local symbol=require'nelisp.obj.symbol'
 local hash_table=require'nelisp.obj.hash_table'
 local signal=require'nelisp.signal'
 local str=require'nelisp.obj.str'
+local print_=require'nelisp.print'
 
 local M={}
 
+function M.concat_to_string(args)
+    local dest_multibyte=false
+    local some_multibyte=false
+    for _,arg in ipairs(args) do
+        if lisp.stringp(arg) then
+            if str.is_multibyte(arg) then
+                dest_multibyte=true
+            else
+                some_multibyte=true
+            end
+        else
+            error('TODO')
+        end
+    end
+    if dest_multibyte and some_multibyte then
+        error('TODO')
+    end
+    local buf=print_.make_printcharfun()
+    for _,arg in ipairs(args) do
+        if lisp.stringp(arg) then
+            if str.get_intervals(arg) then
+                error('TODO')
+            end
+            if str.is_multibyte(arg)==dest_multibyte then
+                buf.write(str.data(arg))
+            else
+                error('TODO')
+            end
+        else
+            error('TODO')
+        end
+    end
+    return str.make(buf.out(),dest_multibyte)
+end
+
 local F={}
+local function concat_to_list(args)
+    local nargs=#args-1
+    local last_tail=args[#args]
+    local result=vars.Qnil
+    local last=vars.Qnil
+    for i=1,nargs do
+        local arg=args[i]
+        if lisp.consp(arg) then
+            local head=vars.F.cons(lisp.xcar(arg),vars.Qnil)
+            local prev=head
+            arg=lisp.xcdr(arg)
+            local _,_end=lisp.for_each_tail(arg,function (a)
+                local next_=vars.F.cons(lisp.xcar(a),vars.Qnil)
+                lisp.setcdr(prev,next_)
+                prev=next_
+            end)
+            lisp.check_list_end(_end,arg)
+            if lisp.nilp(result) then
+                result=head
+            else
+                lisp.setcdr(last,head)
+            end
+            last=prev
+        else
+            error('TODO')
+        end
+    end
+    if result==vars.Qnil then
+        result=last_tail
+    else
+        lisp.setcdr(last,last_tail)
+    end
+    return result
+end
+F.append={'append',0,-2,0,[[Concatenate all the arguments and make the result a list.
+The result is a list whose elements are the elements of all the arguments.
+Each argument may be a list, vector or string.
+
+All arguments except the last argument are copied.  The last argument
+is just used as the tail of the new list.
+
+usage: (append &rest SEQUENCES)]]}
+function F.append.f(args)
+    if #args==0 then
+        return vars.Qnil
+    end
+    return concat_to_list(args)
+end
 F.assq={'assq',2,2,0,[[Return non-nil if KEY is `eq' to the car of an element of ALIST.
 The value is actually the first element of ALIST whose car is KEY.
 Elements of ALIST that are not conses are ignored.]]}
@@ -420,6 +504,7 @@ function M.init()
     vars.V.features=cons.make(vars.Qemacs,vars.Qnil)
 end
 function M.init_syms()
+    vars.setsubr(F,'append')
     vars.setsubr(F,'assq')
     vars.setsubr(F,'member')
     vars.setsubr(F,'memq')

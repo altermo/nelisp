@@ -1,5 +1,6 @@
 local lisp=require'nelisp.lisp'
 local symbol=require'nelisp.obj.symbol'
+local vars=require'nelisp.vars'
 
 ---@class nelisp.specpdl.index: number
 
@@ -18,7 +19,12 @@ local symbol=require'nelisp.obj.symbol'
 ---@field symbol nelisp.obj
 ---@field old_value nelisp.obj?
 
----@alias nelisp.specpdl.all_entries nelisp.specpdl.backtrace_entry|nelisp.specpdl.let_entry
+---@class nelisp.specpdl.unwind_entry: nelisp.specpdl.entry
+---@field type nelisp.specpdl.type.unwind
+---@field func function
+---@field lisp_eval_depth number
+
+---@alias nelisp.specpdl.all_entries nelisp.specpdl.backtrace_entry|nelisp.specpdl.let_entry|nelisp.specpdl.unwind_entry
 
 ---@type (nelisp.specpdl.all_entries)[]
 local specpdl={}
@@ -28,8 +34,9 @@ local M={}
 ---@enum nelisp.specpdl.type
 M.type={
     backtrace=1,
-    let=2,
-    let_default=3,
+    unwind=2,
+    let=100,
+    let_default=101,
 }
 
 ---@return nelisp.specpdl.index
@@ -45,16 +52,20 @@ function M.unbind_to(index,val,assert_ignore)
         assert(index~=M.index(),'DEV: index not changed, unbind_to may be unnecessary')
     end
     while M.index()>index do
+        ---@type nelisp.specpdl.all_entries
         local entry=table.remove(specpdl)
-        if entry.type==M.type.let and lisp.symbolp(entry.symbol) and symbol.get_redirect(entry.symbol)==symbol.redirect.plain then
-            if symbol.get_trapped_wire(entry.symbol)==symbol.trapped_wire.untrapped_write then
-                symbol.set_var(entry.symbol,entry.old_value)
+        if entry.type==M.type.let and lisp.symbolp(entry.symbol) and symbol.get_redirect(entry.symbol --[[@as nelisp.symbol]])==symbol.redirect.plain then
+            if symbol.get_trapped_wire(entry.symbol --[[@as nelisp.symbol]])==symbol.trapped_wire.untrapped_write then
+                symbol.set_var(entry.symbol --[[@as nelisp.symbol]],entry.old_value)
             else
                 error('TODO')
             end
         elseif entry.type==M.type.let or entry.type==M.type.let_default then
             error('TODO')
         elseif entry.type==M.type.backtrace then
+        elseif entry.type==M.type.unwind then
+            vars.lisp_eval_depth=entry.lisp_eval_depth
+            entry.func()
         else
             error('TODO')
         end
@@ -75,6 +86,13 @@ function M.record_in_backtrace(func,args,nargs)
         nargs=nargs,
     } --[[@as nelisp.specpdl.backtrace_entry]])
     return index
+end
+function M.record_unwind_protect(func)
+    table.insert(specpdl,{
+        type=M.type.unwind --[[@as nelisp.specpdl.type.unwind]],
+        func=func,
+        lisp_eval_depth=vars.lisp_eval_depth,
+    } --[[@as nelisp.specpdl.unwind_entry]])
 end
 ---@param index nelisp.specpdl.index
 function M.backtrace_debug_on_exit(index)

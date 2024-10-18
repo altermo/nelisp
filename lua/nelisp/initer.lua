@@ -19,6 +19,7 @@ require'nelisp.keymap'.init_syms()
 require'nelisp.chartab'.init_syms()
 require'nelisp.print'.init_syms()
 require'nelisp.search'.init_syms()
+require'nelisp.fileio'.init_syms()
 
 vars.commit_qsymbols()
 
