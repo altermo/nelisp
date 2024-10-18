@@ -8,6 +8,8 @@ function M.init()
     end
 
     vars.V.system_type=str.make('gnu/linux',false)
+
+    vars.V.emacs_version=str.make('29.4',false)
 end
 function M.init_syms()
     vars.defsym('Qrisky_local_variable','risky-local-variable')
@@ -30,5 +32,12 @@ Special values:
   `haiku'        compiled for a Haiku system.
 Anything else (in Emacs 26, the possibilities are: aix, berkeley-unix,
 hpux, usg-unix-v) indicates some sort of Unix system.]])
+
+    vars.defvar_lisp('emacs_version','emacs-version',[[Version numbers of this version of Emacs.
+This has the form: MAJOR.MINOR[.MICRO], where MAJOR/MINOR/MICRO are integers.
+MICRO is only present in unreleased development versions,
+and is not especially meaningful.  Prior to Emacs 26.1, an extra final
+component .BUILD is present.  This is now stored separately in
+`emacs-build-number'.]])
 end
 return M
