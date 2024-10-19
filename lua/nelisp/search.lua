@@ -13,12 +13,15 @@ local function at_endline_loc_p(...)
     end
     return false
 end
+local last_thing_searched=nil
 ---@param s nelisp.str
 ---@return string
+---@return table
 local function eregex_to_vimregex(s)
     if not _G.nelisp_later then
         error('TODO: signal error on bad pattern')
     end
+    local data={}
     local buf=lread.make_readcharfun(s,0)
     local ret_buf=print_.make_printcharfun()
     ret_buf.write('\\V')
@@ -96,10 +99,10 @@ local function eregex_to_vimregex(s)
         end
         goto continue
         ::normal_char::
-        error('TODO: '..string.char(c))
+        ret_buf.write(c)
         ::continue::
     end
-    return ret_buf.out()
+    return ret_buf.out(),data
 end
 
 local F={}
@@ -112,9 +115,19 @@ local function string_match_1(regexp,s,start,posix,modify_data)
     if not lisp.nilp(start) then
         error('TODO')
     end
-    local idx=vim.fn.match(lisp.sdata(s),eregex_to_vimregex(regexp))
-    vim.print(eregex_to_vimregex(regexp))
-    return idx==-1 and vars.Qnil or fixnum.make(idx)
+    local vregex,data=eregex_to_vimregex(regexp)
+    local re=vim.regex(vregex)
+    local f,t=re:match_str(lisp.sdata(s))
+    if not f or not t then
+        return vars.Qnil
+    end
+    last_thing_searched={
+        subpatterns=data.subpatterns,
+        start=f,
+        finish=t,
+        is_str=true,
+    }
+    return fixnum.make(f)
 end
 F.string_match={'string-match',2,4,0,[[Return index of start of first match for REGEXP in STRING, or nil.
 Matching ignores case if `case-fold-search' is non-nil.
@@ -131,8 +144,68 @@ constructions in REGEXP.  For index of first char beyond the match, do
 function F.string_match.f(regexp,s,start,inhibit_modify)
     return string_match_1(regexp,s,start,false,lisp.nilp(inhibit_modify))
 end
+F.match_data={'match-data',0,3,0,[[Return a list of positions that record text matched by the last search.
+Element 2N of the returned list is the position of the beginning of the
+match of the Nth subexpression; it corresponds to `(match-beginning N)';
+element 2N + 1 is the position of the end of the match of the Nth
+subexpression; it corresponds to `(match-end N)'.  See `match-beginning'
+and `match-end'.
+If the last search was on a buffer, all the elements are by default
+markers or nil (nil when the Nth pair didn't match); they are integers
+or nil if the search was on a string.  But if the optional argument
+INTEGERS is non-nil, the elements that represent buffer positions are
+always integers, not markers, and (if the search was on a buffer) the
+buffer itself is appended to the list as one additional element.
+
+Use `set-match-data' to reinstate the match data from the elements of
+this list.
+
+Note that non-matching optional groups at the end of the regexp are
+elided instead of being represented with two `nil's each.  For instance:
+
+  (progn
+    (string-match "^\\(a\\)?\\(b\\)\\(c\\)?$" "b")
+    (match-data))
+  => (0 1 nil nil 0 1)
+
+If REUSE is a list, store the value in REUSE by destructively modifying it.
+If REUSE is long enough to hold all the values, its length remains the
+same, and any unused elements are set to nil.  If REUSE is not long
+enough, it is extended.  Note that if REUSE is long enough and INTEGERS
+is non-nil, no consing is done to make the return value; this minimizes GC.
+
+If optional third argument RESEAT is non-nil, any previous markers on the
+REUSE list will be modified to point to nowhere.
+
+Return value is undefined if the last search failed.]]}
+function F.match_data.f(integers,reuse,reseat)
+    if not lisp.nilp(reseat) then
+        error('TODO')
+    end
+    if last_thing_searched==nil then
+        return vars.Qnil
+    end
+    local data={}
+    if last_thing_searched.subpatterns then
+        error('TODO')
+    else
+        if last_thing_searched.is_str then
+            data[1]=fixnum.make(last_thing_searched.start)
+            data[2]=fixnum.make(last_thing_searched.finish)
+        else
+            error('TODO')
+        end
+    end
+    if not lisp.consp(reuse) then
+        reuse=vars.F.list(data)
+    else
+        error('TODO')
+    end
+    return reuse
+end
 
 function M.init_syms()
     vars.setsubr(F,'string_match')
+    vars.setsubr(F,'match_data')
 end
 return M
