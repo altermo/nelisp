@@ -4,6 +4,7 @@ local vec=require'nelisp.obj.vec'
 local fixnum=require'nelisp.obj.fixnum'
 local lisp=require'nelisp.lisp'
 local symbol=require'nelisp.obj.symbol'
+local vec=require'nelisp.obj.vec'
 local M={}
 
 local F={}
@@ -42,6 +43,12 @@ function F.make_symbol.f(name)
     lisp.check_string(name)
     return symbol.make_uninterned(name)
 end
+F.vector={'vector',0,-2,0,[[Return a newly created vector with specified arguments as elements.
+Allows any number of arguments, including zero.
+usage: (vector &rest OBJECTS)]]}
+function F.vector.f(args)
+    return vec.make(args)
+end
 
 function M.init_syms()
     vars.setsubr(F,'list')
@@ -49,6 +56,7 @@ function M.init_syms()
     vars.setsubr(F,'purecopy')
     vars.setsubr(F,'make_vector')
     vars.setsubr(F,'make_symbol')
+    vars.setsubr(F,'vector')
 
     vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end
