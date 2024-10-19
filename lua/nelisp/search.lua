@@ -49,13 +49,20 @@ local function eregex_to_vimregex(s)
         elseif c==b'$' then
             error('TODO')
         elseif c==b'+' or c==b'*' or c==b'?' then
-            error('TODO')
+            if not _G.nelisp_later then
+                error('TODO: if previous expression is not valid the treat it as a literal')
+            end
+            ret_buf.write('\\')
+            ret_buf.write(c)
         elseif c==b'.' then
             error('TODO')
         elseif c==b'[' then
             ret_buf.write('\\[')
             local p=print_.make_printcharfun()
             c=buf.read()
+            if c==-1 then
+                signal.xsignal(vars.Qinvalid_regexp,'Unmatched [ or [^')
+            end
             if c==b'^' then
                 ret_buf.write('^')
                 c=buf.read()
