@@ -282,10 +282,48 @@ function F.set_match_data.f(list,reseat)
     end
     return vars.Qnil
 end
+local function match_limit(num,beginning)
+    lisp.check_fixnum(num)
+    local n=fixnum.tonumber(num)
+    if n<0 then
+        signal.args_out_of_range(num,fixnum.zero)
+    end
+    if #search_regs.start<=0 then
+        signal.error('No match data, because no search succeeded')
+    end
+    if n>=#search_regs.start or search_regs.start[n+1]<0 then
+        return vars.Qnil
+    end
+    return fixnum.make(beginning and search_regs.start[n+1] or search_regs.end_[n+1])
+end
+F.match_beginning={'match-beginning',1,1,0,[[Return position of start of text matched by last search.
+SUBEXP, a number, specifies which parenthesized expression in the last
+  regexp.
+Value is nil if SUBEXPth pair didn't match, or there were less than
+  SUBEXP pairs.
+Zero means the entire text matched by the whole regexp or whole string.
+
+Return value is undefined if the last search failed.]]}
+function F.match_beginning.f(subexp)
+    return match_limit(subexp,true)
+end
+F.match_end={'match-end',1,1,0,[[Return position of end of text matched by last search.
+SUBEXP, a number, specifies which parenthesized expression in the last
+  regexp.
+Value is nil if SUBEXPth pair didn't match, or there were less than
+  SUBEXP pairs.
+Zero means the entire text matched by the whole regexp or whole string.
+
+Return value is undefined if the last search failed.]]}
+function F.match_end.f(subexp)
+    return match_limit(subexp,false)
+end
 
 function M.init_syms()
     vars.setsubr(F,'string_match')
     vars.setsubr(F,'match_data')
     vars.setsubr(F,'set_match_data')
+    vars.setsubr(F,'match_beginning')
+    vars.setsubr(F,'match_end')
 end
 return M
