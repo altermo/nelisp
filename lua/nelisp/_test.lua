@@ -29,3 +29,4 @@ vim.schedule(function ()
 end)
 
 api.eval_file(_G.nelisp_emacs..'/lisp/loadup.el')
+--api.eval_file('/usr/share/emacs/29.4/lisp/subr.elc')

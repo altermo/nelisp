@@ -12,6 +12,8 @@ local signal=require'nelisp.signal'
 local fns=require'nelisp.fns'
 local coding=require'nelisp.coding'
 local specpdl=require'nelisp.specpdl'
+local overflow=require'nelisp.overflow'
+local compiled=require'nelisp.obj.compiled'
 
 ---@class nelisp.obarray: nelisp.vec
 
@@ -569,6 +571,89 @@ local function hash_table_from_plist(plist)
     end
     return ht
 end
+local function fromfilep(readcharfun)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    return false
+end
+local function skip_dyn_eof(readcharfun)
+    if fromfilep(readcharfun) then
+        error('TODO')
+    else
+        while readcharfun.read()>=0 do end
+    end
+end
+local function skip_dyn_bytes(readcharfun,n)
+    if fromfilep(readcharfun) then
+        error('TODO')
+    else
+        local c=readcharfun.read()
+        while c>=0 and c~=b'\31' do
+            c=readcharfun.read()
+        end
+    end
+end
+local function skip_lazy_string(readcharfun)
+    ---@type number?
+    local nskip=0
+    local digits=0
+    while true do
+        local c=readcharfun.read()
+        if c<b'0' or c>b'9' then
+            if nskip>0 then
+                nskip=nskip-1
+            else
+                readcharfun.unread()
+            end
+            break
+        end
+        nskip=overflow.mul(nskip,10)
+        nskip=overflow.add(nskip,c-b'0')
+        if not nskip then
+            invalid_syntax('#@',readcharfun)
+        end
+        digits=digits+1
+        if digits==2 and nskip==0 then
+            skip_dyn_eof(readcharfun)
+            return false
+        end
+    end
+    if vars.V.load_force_doc_strings and fromfilep(readcharfun) then
+        error('TODO')
+    else
+        skip_dyn_bytes(readcharfun,nskip)
+    end
+    return true
+end
+---@return nelisp.compiled
+local function bytecode_from_list(elems,readcharfun)
+    local cidx=compiled.idx
+    local size=#elems
+    if not (size>=cidx.stack_depth and size<=cidx.interactive
+        and (lisp.fixnump(elems[cidx.arglist]) or
+        lisp.consp(elems[cidx.arglist]) or
+        lisp.nilp(elems[cidx.arglist]))
+        and lisp.fixnatp(elems[cidx.stack_depth])) then
+        invalid_syntax('Invalid byte-code object',readcharfun)
+    end
+    if vars.V.load_force_doc_strings
+        and lisp.nilp(elems[cidx.constants])
+        and lisp.stringp(elems[cidx.bytecode]) then
+        error('TODO')
+    end
+    if not ((lisp.stringp(elems[cidx.bytecode]) and
+        lisp.vectorp(elems[cidx.constants]))
+        or lisp.consp(elems[cidx.bytecode])) then
+        invalid_syntax('Invalid byte-code object',readcharfun)
+    end
+    if lisp.stringp(elems[cidx.bytecode]) then
+        if str.is_multibyte(elems[cidx.bytecode]) then
+            error('TODO')
+        end
+    end
+    return compiled.make(elems)
+end
 ---@param readcharfun nelisp.lread.readcharfun
 ---@param locate_syms boolean
 ---@return nelisp.obj
@@ -621,6 +706,10 @@ function M.read0(readcharfun,locate_syms)
             table.remove(stack)
             locate_syms=t.old_locate_syms
             obj=vec.make(t.elems)
+        elseif t.t=='byte_code' then
+            table.remove(stack)
+            locate_syms=t.old_locate_syms
+            obj=bytecode_from_list(t.elems,readcharfun)
         else
             error('TODO')
         end
@@ -646,6 +735,21 @@ function M.read0(readcharfun,locate_syms)
             })
             locate_syms=false
             goto read_obj
+        elseif ch==b'@' then
+            if skip_lazy_string(readcharfun) then
+                goto read_obj
+            end
+            obj=vars.Qnil
+        elseif ch==b'[' then
+            table.insert(stack,{
+                t='byte_code',
+                elems={},
+                old_locate_syms=locate_syms
+            })
+            locate_syms=false
+            goto read_obj
+        elseif ch==b'$' then
+            obj=vars.V.load_file_name
         else
             error('TODO')
         end
@@ -714,7 +818,7 @@ function M.read0(readcharfun,locate_syms)
         elseif t.t=='special' then
             table.remove(stack)
             obj=cons.make(t.sym,cons.make(obj,vars.Qnil))
-        elseif t.t=='vector' or t.t=='record' then
+        elseif t.t=='vector' or t.t=='record' or t.t=='byte_code' then
             table.insert(t.elems,obj)
             goto read_obj
         elseif t.t=='list_dot' then
@@ -729,6 +833,8 @@ function M.read0(readcharfun,locate_syms)
             if not lisp.nilp(vars.V.load_force_doc_strings) then
                 error('TODO')
             end
+        elseif t.t=='byte_code' then
+            error('TODO')
         else
             error('TODO')
         end
@@ -1012,6 +1118,7 @@ function M.init()
     vars.V.load_file_rep_suffixes=lisp.list(str.make('',false))
     assert(_G.nelisp_emacs)
     vars.V.load_path=lisp.list(str.make(_G.nelisp_emacs..'/lisp',false))
+    vars.V.load_file_name=vars.Qnil --I don't know why emacs sets it to nil twice
 end
 function M.init_syms()
     vars.setsubr(F,'load')
@@ -1118,5 +1225,11 @@ by functions like `custom-save-all' which edit the init file.
 While Emacs loads and evaluates any init file, value is the real name
 of the file, regardless of whether or not it has the `.elc' extension.]])
     vars.V.user_init_file=vars.Qnil
+
+    vars.defvar_lisp('load_file_name','load-file-name',[[Full name of file being loaded by `load'.
+
+In case of native code being loaded this is indicating the
+corresponding bytecode filename.  Use `load-true-file-name' to obtain
+the .eln filename.]])
 end
 return M
