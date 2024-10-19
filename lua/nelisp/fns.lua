@@ -7,6 +7,7 @@ local hash_table=require'nelisp.obj.hash_table'
 local signal=require'nelisp.signal'
 local str=require'nelisp.obj.str'
 local print_=require'nelisp.print'
+local textprop=require'nelisp.textprop'
 
 local M={}
 
@@ -526,6 +527,68 @@ function F.copy_sequence.f(arg)
         signal.wrong_type_argument(vars.Qsequencep,arg)
     end
 end
+local function validate_subarray(array,from,to,size)
+    local f,t
+    if lisp.fixnump(from) then
+        f=fixnum.tonumber(from)
+        if f<0 then
+            f=size+f
+        end
+    elseif lisp.nilp(from) then
+        f=0
+    else
+        signal.wrong_type_argument(vars.Qintegerp,from)
+    end
+    if lisp.fixnump(to) then
+        t=fixnum.tonumber(to)
+        if t<0 then
+            t=size+t
+        end
+    elseif lisp.nilp(to) then
+        t=size
+    else
+        signal.wrong_type_argument(vars.Qintegerp,to)
+    end
+    if 0<=f and f<=t and t<=size then
+        return f,t
+    end
+    signal.args_out_of_range(array,from,to)
+    error('unreachable')
+end
+local function string_char_to_byte(s,idx)
+    local best_above=lisp.schars(s)
+    local best_above_byte=lisp.sbytes(s)
+    if best_above==best_above_byte then
+        return idx
+    end
+    error('TODO')
+end
+F.substring={'substring',1,3,0,[[Return a new string whose contents are a substring of STRING.
+The returned string consists of the characters between index FROM
+\(inclusive) and index TO (exclusive) of STRING.  FROM and TO are
+zero-indexed: 0 means the first character of STRING.  Negative values
+are counted from the end of STRING.  If TO is nil, the substring runs
+to the end of STRING.
+
+The STRING argument may also be a vector.  In that case, the return
+value is a new vector that contains the elements between index FROM
+\(inclusive) and index TO (exclusive) of that vector argument.
+
+With one argument, just copy STRING (with properties, if any).]]}
+function F.substring.f(s,from,to)
+    local size=lisp.check_vector_or_string(s)
+    local f,t=validate_subarray(s,from,to,size)
+    local res
+    if lisp.stringp(s) then
+        local from_byte=f~=0 and string_char_to_byte(s,f) or 0
+        local to_byte=t==size and lisp.sbytes(s) or string_char_to_byte(s,t)
+        res=str.make(lisp.sdata(s):sub(from_byte+1,to_byte),str.is_multibyte(s))
+        textprop.copy_textprop(fixnum.make(f),fixnum.make(t),s,fixnum.zero,res,vars.Qnil)
+    else
+        error('TODO')
+    end
+    return res
+end
 F.string_equal={'string-equal',2,2,0,[[Return t if two strings have identical contents.
 Case is significant, but text properties are ignored.
 Symbols are also allowed; their print names are used instead.
@@ -566,6 +629,7 @@ function M.init_syms()
     vars.setsubr(F,'delq')
     vars.setsubr(F,'concat')
     vars.setsubr(F,'copy_sequence')
+    vars.setsubr(F,'substring')
     vars.setsubr(F,'string_equal')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.

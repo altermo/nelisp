@@ -12,8 +12,12 @@ end
 function M.wrong_type_argument(predicate,x)
     M.xsignal(vars.Qwrong_type_argument,predicate,x)
 end
-function M.args_out_of_range(a1,a2)
-    M.xsignal(vars.Qargs_out_of_range,a1,a2)
+function M.args_out_of_range(a1,a2,a3)
+    if a3 then
+        M.xsignal(vars.Qargs_out_of_range,a1,a2,a3)
+    else
+        M.xsignal(vars.Qargs_out_of_range,a1,a2)
+    end
 end
 function M.signal_error(s,arg)
     error('TODO: err\n\n'..s..'\n\n'..vim.inspect(arg)..'\n\n')
