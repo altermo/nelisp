@@ -13,15 +13,14 @@ local function at_endline_loc_p(...)
     end
     return false
 end
-local last_thing_searched=nil
+local search_regs={start={},end_={}}
+local last_search_thing=vars.Qnil
 ---@param s nelisp.str
 ---@return string
----@return table
 local function eregex_to_vimregex(s)
     if not _G.nelisp_later then
         error('TODO: signal error on bad pattern')
     end
-    local data={}
     local buf=lread.make_readcharfun(s,0)
     local ret_buf=print_.make_printcharfun()
     ret_buf.write('\\V')
@@ -102,7 +101,7 @@ local function eregex_to_vimregex(s)
         ret_buf.write(c)
         ::continue::
     end
-    return ret_buf.out(),data
+    return ret_buf.out()
 end
 
 local F={}
@@ -115,18 +114,17 @@ local function string_match_1(regexp,s,start,posix,modify_data)
     if not lisp.nilp(start) then
         error('TODO')
     end
-    local vregex,data=eregex_to_vimregex(regexp)
+    local vregex=eregex_to_vimregex(regexp)
     local re=vim.regex(vregex)
     local f,t=re:match_str(lisp.sdata(s))
     if not f or not t then
         return vars.Qnil
     end
-    last_thing_searched={
-        subpatterns=data.subpatterns,
-        start=f,
-        finish=t,
-        is_str=true,
+    search_regs={
+        start={f},
+        end_={t},
     }
+    last_search_thing=vars.Qt
     return fixnum.make(f)
 end
 F.string_match={'string-match',2,4,0,[[Return index of start of first match for REGEXP in STRING, or nil.
@@ -182,16 +180,21 @@ function F.match_data.f(integers,reuse,reseat)
     if not lisp.nilp(reseat) then
         error('TODO')
     end
-    if last_thing_searched==nil then
+    if lisp.nilp(last_search_thing) then
         return vars.Qnil
     end
     local data={}
-    if last_thing_searched.subpatterns then
+    if #search_regs.start~=1 then
         error('TODO')
     else
-        if last_thing_searched.is_str then
-            data[1]=fixnum.make(last_thing_searched.start)
-            data[2]=fixnum.make(last_thing_searched.finish)
+        if lisp.eq(last_search_thing,vars.Qt) then
+            if search_regs.start[1]==-1 then
+                data[1]=vars.Qnil
+                data[2]=vars.Qnil
+            else
+                data[1]=fixnum.make(search_regs.start[1])
+                data[2]=fixnum.make(search_regs.end_[1])
+            end
         else
             error('TODO')
         end
@@ -203,9 +206,60 @@ function F.match_data.f(integers,reuse,reseat)
     end
     return reuse
 end
+F.set_match_data={'set-match-data',1,2,0,[[Set internal data on last search match from elements of LIST.
+LIST should have been created by calling `match-data' previously.
+
+If optional arg RESEAT is non-nil, make markers on LIST point nowhere.]]}
+function F.set_match_data.f(list,reseat)
+    lisp.check_list(list)
+    local length=lisp.list_length(list)/2
+    last_search_thing=vars.Qt
+    local num_regs=search_regs and #search_regs.start or 0
+    local i=0
+    while lisp.consp(list) do
+        local marker=lisp.xcar(list)
+        if lisp.bufferp(marker) then
+            error('TODO')
+        end
+        if i>=length then
+            break
+        end
+        if lisp.nilp(marker) then
+            search_regs.start[i+1]=-1
+            list=lisp.xcdr(list)
+        else
+            if lisp.markerp(marker) then
+                error('TODO')
+            end
+            local form=marker
+            if not lisp.nilp(reseat) and lisp.markerp(marker) then
+                error('TODO')
+            end
+            list=lisp.xcdr(list)
+            if not lisp.consp(list) then
+                break
+            end
+            marker=lisp.xcar(list --[[@as nelisp.cons]])
+            if lisp.markerp(marker) then
+                error('TODO')
+            end
+            search_regs.start[i+1]=fixnum.tonumber(form --[[@as nelisp.fixnum]])
+            search_regs.end_[i+1]=fixnum.tonumber(marker --[[@as nelisp.fixnum]])
+        end
+        list=lisp.xcdr(list --[[@as nelisp.cons]])
+        i=i+1
+    end
+    while i<num_regs do
+        search_regs.start[i+1]=nil
+        search_regs.end_[i+1]=nil
+        i=i+1
+    end
+    return vars.Qnil
+end
 
 function M.init_syms()
     vars.setsubr(F,'string_match')
     vars.setsubr(F,'match_data')
+    vars.setsubr(F,'set_match_data')
 end
 return M
