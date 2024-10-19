@@ -526,6 +526,22 @@ function F.copy_sequence.f(arg)
         signal.wrong_type_argument(vars.Qsequencep,arg)
     end
 end
+F.string_equal={'string-equal',2,2,0,[[Return t if two strings have identical contents.
+Case is significant, but text properties are ignored.
+Symbols are also allowed; their print names are used instead.
+
+See also `string-equal-ignore-case'.]]}
+function F.string_equal.f(a,b)
+    if lisp.symbolp(a) then
+        a=symbol.get_name(a)
+    end
+    if lisp.symbolp(b) then
+        b=symbol.get_name(b)
+    end
+    lisp.check_string(a)
+    lisp.check_string(b)
+    return lisp.sdata(a)==lisp.sdata(b) and vars.Qt or vars.Qnil
+end
 
 function M.init()
     vars.V.features=cons.make(vars.Qemacs,vars.Qnil)
@@ -550,6 +566,7 @@ function M.init_syms()
     vars.setsubr(F,'delq')
     vars.setsubr(F,'concat')
     vars.setsubr(F,'copy_sequence')
+    vars.setsubr(F,'string_equal')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
