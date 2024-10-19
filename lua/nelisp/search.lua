@@ -6,6 +6,7 @@ local lread=require'nelisp.lread'
 local b=require'nelisp.bytes'
 local print_=require'nelisp.print'
 local signal=require'nelisp.signal'
+local chars=require'nelisp.chars'
 local M={}
 local function at_endline_loc_p(...)
     if not _G.nelisp_later then
@@ -17,10 +18,12 @@ local search_regs={start={},end_={}}
 local last_search_thing=vars.Qnil
 ---@param s nelisp.str
 ---@return string
+---@return table
 local function eregex_to_vimregex(s)
     if not _G.nelisp_later then
         error('TODO: signal error on bad pattern')
     end
+    local data={}
     local buf=lread.make_readcharfun(s,0)
     local ret_buf=print_.make_printcharfun()
     ret_buf.write('\\V')
@@ -39,6 +42,7 @@ local function eregex_to_vimregex(s)
             if not (buf.idx==1 or at_endline_loc_p(buf,buf.idx)) then
                 goto normal_char
             end
+            data.start_match=true
             ret_buf.write('\\^')
         elseif c==b' ' then
             error('TODO')
@@ -101,7 +105,7 @@ local function eregex_to_vimregex(s)
         ret_buf.write(c)
         ::continue::
     end
-    return ret_buf.out()
+    return ret_buf.out(),data
 end
 
 local F={}
@@ -111,13 +115,28 @@ local function string_match_1(regexp,s,start,posix,modify_data)
     if not _G.nelisp_later then
         error('TODO')
     end
+    local pos_bytes=0
     if not lisp.nilp(start) then
-        error('TODO')
+        local len=lisp.schars(s)
+        lisp.check_fixnum(start)
+        local pos=fixnum.tonumber(start)
+        if pos<0 and -pos<=len then
+            pos=len+pos
+        elseif pos>0 and pos>len then
+            signal.args_out_of_range(s,start)
+        end
+        if str.is_multibyte(s) then
+            error('TODO')
+        else
+            pos_bytes=pos
+        end
     end
-    local vregex=eregex_to_vimregex(regexp)
-    local re=vim.regex(vregex)
-    local f,t=re:match_str(lisp.sdata(s))
-    if not f or not t then
+    local vregex,data=eregex_to_vimregex(regexp)
+    if data.start_match and pos_bytes>0 then
+        return vars.Qnil
+    end
+    local _,t,f=unpack(vim.fn.matchstrpos(lisp.sdata(s),vregex,pos_bytes))
+    if f==-1 or t==-1 then
         return vars.Qnil
     end
     search_regs={
