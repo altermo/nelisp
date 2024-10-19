@@ -142,7 +142,7 @@ local function string_match_1(regexp,s,start,posix,modify_data)
     if data.start_match and pos_bytes>0 then
         return vars.Qnil
     end
-    local _,t,f=unpack(vim.fn.matchstrpos(lisp.sdata(s),vregex,pos_bytes))
+    local _,f,t=unpack(vim.fn.matchstrpos(lisp.sdata(s),vregex,pos_bytes))
     if f==-1 or t==-1 then
         return vars.Qnil
     end
