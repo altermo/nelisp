@@ -499,6 +499,30 @@ function F.concat.f(args)
     local out_str=table.concat(strs)
     return str.make(out_str,dest_multibyte)
 end
+F.copy_sequence={'copy-sequence',1,1,0,[[Return a copy of a list, vector, string, char-table or record.
+The elements of a list, vector or record are not copied; they are
+shared with the original.  See Info node `(elisp) Sequence Functions'
+for more details about this sharing and its effects.
+If the original sequence is empty, this function may return
+the same empty object instead of its copy.]]}
+function F.copy_sequence.f(arg)
+    if lisp.nilp(arg) then
+        return arg
+    elseif lisp.consp(arg) then
+        local val=vars.F.cons(vars.F.car(arg),vars.Qnil)
+        local prev=val
+        local _,tail=lisp.for_each_tail(lisp.xcdr(arg),function (tail)
+            local c=vars.F.cons(lisp.xcar(tail),vars.Qnil)
+            lisp.setcdr(prev,c)
+            prev=c
+        end)
+        lisp.check_list_end(tail,tail)
+        return val
+    else
+        error('TODO')
+        signal.wrong_type_argument(vars.Qsequencep,arg)
+    end
+end
 
 function M.init()
     vars.V.features=cons.make(vars.Qemacs,vars.Qnil)
@@ -522,6 +546,7 @@ function M.init_syms()
     vars.setsubr(F,'puthash')
     vars.setsubr(F,'delq')
     vars.setsubr(F,'concat')
+    vars.setsubr(F,'copy_sequence')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
