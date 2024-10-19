@@ -621,6 +621,16 @@ function F.prog1.f(args)
     vars.F.progn(lisp.xcdr(args))
     return val
 end
+F.eval={'eval',1,2,0,[[Evaluate FORM and return its value.
+If LEXICAL is t, evaluate using lexical scoping.
+LEXICAL can also be an actual lexical environment, in the form of an
+alist mapping symbols to their value.]]}
+function F.eval.f(form,lexical)
+    local count=specpdl.index()
+    specpdl.bind(vars.Qinternal_interpreter_environment,
+        (lisp.consp(lexical) or lisp.nilp(lexical)) and lexical or lisp.list(vars.Qt))
+    return specpdl.unbind_to(count,M.eval_sub(form))
+end
 local function funcall_subr(fun,args)
     local numargs=#args
     local s=subr.totable(fun)
@@ -811,6 +821,7 @@ function M.init_syms()
     vars.setsubr(F,'quote')
     vars.setsubr(F,'progn')
     vars.setsubr(F,'prog1')
+    vars.setsubr(F,'eval')
     vars.setsubr(F,'funcall')
     vars.setsubr(F,'apply')
     vars.setsubr(F,'function_')
@@ -831,6 +842,7 @@ Emacs could overflow the real C stack, and crash.]])
         [[Non-nil means enter debugger before next `eval', `apply' or `funcall'.]])
     vars.V.debug_on_next_call=vars.Qnil
 
+    vars.defsym('Qinternal_interpreter_environment','internal-interpreter-environment')
     vars.defvar_lisp('internal_interpreter_environment',nil,
         [[If non-nil, the current lexical environment of the lisp interpreter.
 When lexical binding is not being used, this variable is nil.
