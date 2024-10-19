@@ -50,7 +50,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
         if printcharfun.print_depth>=200 then
             signal.error('Apparently circular structure being printed')
         end
-        for i=0,printcharfun.print_depth do
+        for i=0,printcharfun.print_depth-1 do
             if printcharfun.being_printed[i]==obj then
                 printcharfun.write(('#%d'):format(i))
                 goto next_obj
@@ -228,7 +228,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
                     e.n=e.m
                     e.tortoise=next_
                 elseif next_==e.tortoise then
-                    printcharfun.write(('%d'):format(e.tortoise_idx))
+                    printcharfun.write(('. #%d)'):format(e.tortoise_idx))
                     table.remove(stack)
                     printcharfun.print_depth=printcharfun.print_depth-1
                     goto next_obj
