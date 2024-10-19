@@ -803,6 +803,19 @@ function F.throw.f(tag,value)
     end
     signal.xsignal(vars.Qno_catch,tag,value)
 end
+F.unwind_protect={'unwind-protect',1,-1,0,[[Do BODYFORM, protecting with UNWINDFORMS.
+If BODYFORM completes normally, its value is returned
+after executing the UNWINDFORMS.
+If BODYFORM exits nonlocally, the UNWINDFORMS are executed anyway.
+usage: (unwind-protect BODYFORM UNWINDFORMS...)]]}
+function F.unwind_protect.f(args)
+    local count=specpdl.index()
+    specpdl.record_unwind_protect(function ()
+        vars.F.progn(lisp.xcdr(args))
+    end)
+    local val=M.eval_sub(lisp.xcar(args))
+    return specpdl.unbind_to(count,val)
+end
 
 function M.init_syms()
     vars.setsubr(F,'setq')
@@ -827,6 +840,7 @@ function M.init_syms()
     vars.setsubr(F,'function_')
     vars.setsubr(F,'autoload')
     vars.setsubr(F,'throw')
+    vars.setsubr(F,'unwind_protect')
 
     vars.defvar_lisp('max_lisp_eval_depth','max-lisp-eval-depth',
         [[Limit on depth in `eval', `apply' and `funcall' before error.
