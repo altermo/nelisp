@@ -274,8 +274,11 @@ function F.length.f(sequence)
         val=lisp.list_length(sequence)
     elseif lisp.nilp(sequence) then
         val=0
+    elseif lisp.stringp(sequence) then
+        val=lisp.schars(sequence)
     else
         error('TODO')
+        signal.wrong_type_argument(vars.Qsequencep,sequence)
     end
     return fixnum.make(val)
 end
