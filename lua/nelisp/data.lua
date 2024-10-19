@@ -360,38 +360,52 @@ local function arith_driver(code,args)
         error('TODO')
     end
 end
----@param code '='|'<='
----@param args (number|nelisp.float|nelisp.bignum|nelisp.fixnum)[]
-local function arithcompare_driver(code,args)
+---@param code '='|'<='|'/='
+---@return boolean
+local function arithcompare(a,b,code)
     if not _G.nelisp_later then
         error('TODO: args may contain markers')
     end
-    for k,v in ipairs(args) do
-        if type(v)=='number' then
-        elseif lisp.fixnump(v) then
-            args[k]=fixnum.tonumber(v --[[@as nelisp.fixnum]])
+    local lt,gt,eq
+    if lisp.fixnump(a) then
+        if lisp.fixnump(b) then
+            local i1=fixnum.tonumber(a --[[@as nelisp.fixnum]])
+            local i2=fixnum.tonumber(b --[[@as nelisp.fixnum]])
+            lt=i1<i2
+            gt=i1>i2
+            eq=i1==i2
         else
             error('TODO')
         end
-    end
-    ---@cast args (number)[]
-    if code=='=' then
-        for i=1,#args-1 do
-            if args[i]~=args[i+1] then
-                return vars.Qnil
-            end
-        end
-        return vars.Qt
-    elseif code=='<=' then
-        for i=1,#args-1 do
-            if args[i]>args[i+1] then
-                return vars.Qnil
-            end
-        end
-        return vars.Qt
     else
         error('TODO')
     end
+
+    if code=='=' then
+        return eq
+    elseif code=='/=' then
+        return not eq
+    elseif code=='<=' then
+        return lt or eq
+    elseif code=='<' then
+        return lt
+    elseif code=='>=' then
+        return gt or eq
+    elseif code=='>' then
+        return gt
+    else
+        error('TODO')
+    end
+end
+---@param code '='|'<='
+---@param args (number|nelisp.float|nelisp.bignum|nelisp.fixnum)[]
+local function arithcompare_driver(code,args)
+    for i=1,#args-1 do
+        if not arithcompare(args[i],args[i+1],code) then
+            return vars.Qnil
+        end
+    end
+    return vars.Qt
 end
 F.add1={'1+',1,1,0,[[Return NUMBER plus one.  NUMBER may be a number or a marker.
 Markers are converted to integers.]]}
@@ -441,6 +455,10 @@ F.eqlsign={'=',1,-2,0,[[Return t if args, all numbers or markers, are equal.
 usage: (= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
 function F.eqlsign.f(args)
     return arithcompare_driver('=',args)
+end
+F.neq={'/=',2,2,0,[[Return t if first arg is not equal to second arg.  Both must be numbers or markers.]]}
+function F.neq.f(a,b)
+    return arithcompare(a,b,'/=') and vars.Qt or vars.Qnil
 end
 F.local_variable_if_set_p={'local-variable-if-set-p',1,2,0,[[Non-nil if VARIABLE is local in buffer BUFFER when set there.
 BUFFER defaults to the current buffer.
@@ -562,6 +580,7 @@ function M.init_syms()
     vars.setsubr(F,'leq')
     vars.setsubr(F,'gtr')
     vars.setsubr(F,'eqlsign')
+    vars.setsubr(F,'neq')
 
     vars.setsubr(F,'string_to_number')
 
