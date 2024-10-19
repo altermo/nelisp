@@ -7,6 +7,7 @@ local str=require'nelisp.obj.str'
 local char_table=require'nelisp.obj.char_table'
 local vec=require'nelisp.obj.vec'
 local lread=require'nelisp.lread'
+local overflow=require'nelisp.overflow'
 
 local M={}
 ---@param sym nelisp.obj
@@ -316,6 +317,7 @@ local function arith_driver(code,args)
         error('TODO: args may contain markers')
     end
     if code=='+' then
+        ---@type number|nil
         local acc=0
         for _,v in ipairs(args) do
             if type(v)=='number' then
@@ -325,14 +327,12 @@ local function arith_driver(code,args)
             elseif lisp.floatp(v) then
                 error('TODO')
             elseif lisp.fixnump(v) then
-                acc=acc+fixnum.tonumber(v --[[@as nelisp.fixnum]])
+                acc=overflow.add(acc,fixnum.tonumber(v --[[@as nelisp.fixnum]]))
             else
                 error('unreachable')
             end
         end
-        if acc>=0x20000000000000 or acc<-0x20000000000000 then
-            error('TODO')
-        elseif acc==-0x20000000000000 then
+        if acc==nil then
             error('TODO')
         end
         return fixnum.make(acc)
