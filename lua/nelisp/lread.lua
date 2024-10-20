@@ -1069,7 +1069,7 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
         end
         local lex_bound=require'nelisp.data'.find_symbol_value(vars.Qlexical_binding)
         specpdl.bind(vars.Qinternal_interpreter_environment,
-            not (lex_bound==nil or lisp.nilp(lex_bound)) and vars.Qnil or lisp.list(vars.Qt))
+            (lex_bound==nil or lisp.nilp(lex_bound)) and vars.Qnil or lisp.list(vars.Qt))
         for _,v in ipairs(M.full_read_lua_string(content)) do
             require'nelisp.eval'.eval_sub(v)
         end

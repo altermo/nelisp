@@ -15,7 +15,12 @@ local function funcall_lambda(fun,args)
     local count=specpdl.index()
     if lisp.consp(fun) then
         if lisp.eq(lisp.xcar(fun),vars.Qclosure) then
-            error('TODO')
+            local cdr=lisp.xcdr(fun)
+            if not lisp.consp(cdr) then
+                signal.xsignal(vars.Qinvalid_function,fun)
+            end
+            fun=cdr
+            lexenv=lisp.xcar(fun --[[@as nelisp.cons]])
         else
             lexenv=vars.Qnil
         end
@@ -63,7 +68,7 @@ local function funcall_lambda(fun,args)
                 arg=vars.Qnil
             end
             if not lisp.nilp(lexenv) and lisp.symbolp(next_) then
-                lexenv=vars.cons(vars.cons(next_,arg),lexenv)
+                lexenv=vars.F.cons(vars.F.cons(next_,arg),lexenv)
             else
                 specpdl.bind(next_,arg)
             end
@@ -77,7 +82,7 @@ local function funcall_lambda(fun,args)
         signal.xsignal(vars.Qwrong_number_of_arguments,fun,fixnum.make(idx))
     end
     if not lisp.eq(lexenv,vars.V.internal_interpreter_environment) then
-        error('TODO')
+        specpdl.bind(vars.Qinternal_interpreter_environment,lexenv)
     end
     local val
     if lisp.consp(fun) then
@@ -256,7 +261,7 @@ function F.setq.f(args)
         val=M.eval_sub(arg)
         local lex_binding=lisp.symbolp(sym) and vars.F.assq(sym,vars.V.internal_interpreter_environment) or vars.Qnil
         if not lisp.nilp(lex_binding) then
-            error('TODO')
+            lisp.setcdr(lex_binding,val)
         else
             vars.F.set(sym,val)
         end
@@ -300,14 +305,15 @@ function F.let.f(args)
         local var=lisp.symbolp(elt) and elt or vars.F.car(elt)
         local tem=temps[argnum]
         argnum=argnum+1
-        if not lisp.nilp(lexenv) then
-            error('TODO')
+        if not lisp.nilp(lexenv) and lisp.symbolp(var) and not symbol.get_special(var --[[@as nelisp.symbol]])
+            and lisp.nilp(vars.F.memq(var,vars.V.internal_interpreter_environment)) then
+            lexenv=vars.F.cons(vars.F.cons(var,tem),lexenv)
         else
             specpdl.bind(var,tem)
         end
     end
     if not lisp.eq(lexenv,vars.V.internal_interpreter_environment) then
-        error('TODO')
+        specpdl.bind(vars.Qinternal_interpreter_environment,lexenv)
     end
     elt=vars.F.progn(vars.F.cdr(args))
     return specpdl.unbind_to(count,elt)
@@ -329,14 +335,19 @@ function F.letX.f(args)
         else
             var=vars.F.car(elt)
             if not lisp.nilp(vars.F.cdr(lisp.xcdr(elt --[[@as nelisp.cons]]))) then
-            signal.signal_error("`let' bindings can have only one value-form",elt)
+                signal.signal_error("`let' bindings can have only one value-form",elt)
             end
             val=M.eval_sub(vars.F.car(lisp.xcdr(elt --[[@as nelisp.cons]])))
         end
         if not lisp.nilp(lexenv) and lisp.symbolp(var)
             and not symbol.get_special(var)
             and lisp.nilp(vars.F.memq(var,vars.V.internal_interpreter_environment)) then
-            error('TODO')
+            local newenv=vars.F.cons(vars.F.cons(var,val),vars.V.internal_interpreter_environment)
+            if lisp.eq(vars.V.internal_interpreter_environment,lexenv) then
+                specpdl.bind(vars.Qinternal_interpreter_environment,newenv)
+            else
+                vars.V.internal_interpreter_environment=newenv
+            end
         else
             specpdl.bind(var,val)
         end
@@ -394,7 +405,8 @@ function F.defvar.f(args)
         tail=lisp.xcdr(tail)
         return defvar(sym,exp,lisp.xcar(tail --[[@as nelisp.cons]]),true)
     elseif not lisp.nilp(vars.V.internal_interpreter_environment) and lisp.symbolp(sym) and not symbol.get_special(sym --[[@as nelisp.symbol]]) then
-        error('TODO')
+        vars.V.internal_interpreter_environment=vars.F.cons(sym,vars.V.internal_interpreter_environment)
+        return sym
     else
         return sym
     end
@@ -443,7 +455,10 @@ local function lexbound_p(sym)
     for i in specpdl.riter() do
         if i.type==specpdl.type.let or i.type==specpdl.type.let_default then
             if lisp.eq(i.symbol,vars.Qinternal_interpreter_environment) then
-                error('TODO')
+                local env=i.old_value
+                if env and lisp.consp(env) and not lisp.nilp(vars.F.assq(sym,env)) then
+                    return true
+                end
             end
         end
     end
@@ -760,8 +775,25 @@ function F.function_.f(args)
     if not lisp.nilp(lisp.xcdr(args)) then
         signal.xsignal(vars.Qwrong_number_of_arguments,vars.Qfunction,vars.F.length(args))
     end
-    if not lisp.nilp(vars.V.internal_interpreter_environment) then
-        error('TODO')
+    if not lisp.nilp(vars.V.internal_interpreter_environment)
+        and lisp.consp(quoted) and lisp.eq(lisp.xcar(quoted --[[@as nelisp.cons]]),vars.Qlambda)
+    then
+        local cdr=lisp.xcdr(quoted --[[@as nelisp.cons]])
+        local tmp=cdr
+        if lisp.consp(tmp) then
+            tmp=lisp.xcdr(tmp --[[@as nelisp.cons]])
+            if lisp.consp(tmp) then
+                tmp=lisp.xcar(tmp --[[@as nelisp.cons]])
+                if lisp.consp(tmp) and lisp.eq(lisp.xcar(tmp --[[@as nelisp.cons]]),vars.QCdocumentation) then
+                    error('TODO')
+                end
+            end
+        end
+        if lisp.nilp(vars.V.internal_make_interpreted_closure_function) then
+            return vars.F.cons(vars.Qclosure,vars.F.cons(vars.V.internal_interpreter_environment,cdr))
+        else
+            error('TODO')
+        end
     end
     return quoted
 end
@@ -972,13 +1004,13 @@ Emacs could overflow the real C stack, and crash.]])
         [[Non-nil means enter debugger before next `eval', `apply' or `funcall'.]])
     vars.V.debug_on_next_call=vars.Qnil
 
-    vars.defsym('Qinternal_interpreter_environment','internal-interpreter-environment')
-    vars.defvar_lisp('internal_interpreter_environment',nil,
+    local sym=vars.defvar_lisp('internal_interpreter_environment',nil,
         [[If non-nil, the current lexical environment of the lisp interpreter.
 When lexical binding is not being used, this variable is nil.
 A value of `(t)' indicates an empty environment, otherwise it is an
 alist of active lexical bindings.]])
     vars.V.internal_interpreter_environment=vars.Qnil
+    vars.Qinternal_interpreter_environment=sym
 
     vars.defsym('Qautoload','autoload')
     vars.defsym('Qmacro','macro')
@@ -989,7 +1021,12 @@ alist of active lexical bindings.]])
 
     vars.defsym('Qlexical_binding','lexical-binding')
     vars.defsym('QCsuccess',':success')
+    vars.defsym('QCdocumentation',':documentation')
 
     vars.run_hooks=str.make('run-hooks','auto')
+
+    vars.defvar_lisp('internal_make_interpreted_closure_function','internal-make-interpreted-closure-function',
+    [[Function to filter the env when constructing a closure.]])
+    vars.V.internal_make_interpreted_closure_function=vars.Qnil
 end
 return M

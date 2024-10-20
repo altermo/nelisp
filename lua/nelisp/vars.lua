@@ -24,6 +24,7 @@ local Vsymbols={}
 ---@param name string
 ---@param symname string?
 ---@param doc string?
+---@return nelisp.symbol
 function vars.defvar_lisp(name,symname,doc)
     assert(not name:match('%-'),'DEV: Internal variable names must not contain -')
     assert(not symname or not symname:match('_'),'DEV: Internal variable symbol names must should probably not contain _')
@@ -42,6 +43,7 @@ function vars.defvar_lisp(name,symname,doc)
             error('TODO')
         end
     end
+    return sym
 end
 ---@param doc string?
 ---@param name string

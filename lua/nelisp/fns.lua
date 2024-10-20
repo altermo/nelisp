@@ -707,7 +707,9 @@ function F.require.f(feature,filename,noerror)
     lisp.check_symbol(feature)
     local from_file=not lisp.nilp(vars.V.load_in_progress)
     if not from_file then
-        error('TODO')
+        if not _G.nelisp_later then
+            error('TODO')
+        end
     end
     local tem
     if from_file then
