@@ -605,6 +605,44 @@ function F.string_equal.f(a,b)
     lisp.check_string(b)
     return lisp.sdata(a)==lisp.sdata(b) and vars.Qt or vars.Qnil
 end
+F.require={'require',1,3,0,[[If FEATURE is not already loaded, load it from FILENAME.
+If FEATURE is not a member of the list `features', then the feature was
+not yet loaded; so load it from file FILENAME.
+
+If FILENAME is omitted, the printname of FEATURE is used as the file
+name, and `load' is called to try to load the file by that name, after
+appending the suffix `.elc', `.el', or the system-dependent suffix for
+dynamic module files, in that order; but the function will not try to
+load the file without any suffix.  See `get-load-suffixes' for the
+complete list of suffixes.
+
+To find the file, this function searches the directories in `load-path'.
+
+If the optional third argument NOERROR is non-nil, then, if
+the file is not found, the function returns nil instead of signaling
+an error.  Normally the return value is FEATURE.
+
+The normal messages issued by `load' at start and end of loading
+FILENAME are suppressed.]]}
+function F.require.f(feature,filename,noerror)
+    lisp.check_symbol(feature)
+    local from_file=not lisp.nilp(vars.V.load_in_progress)
+    if not from_file then
+        error('TODO')
+    end
+    local tem
+    if from_file then
+        tem=vars.F.cons(vars.Qrequire,feature)
+        if lisp.nilp(vars.F.member(tem,vars.V.current_load_list)) then
+            lisp.loadhist_attach(tem)
+        end
+    end
+    tem=vars.F.memq(feature,vars.V.features)
+    if lisp.nilp(tem) then
+        error('TODO')
+    end
+    return feature
+end
 
 function M.init()
     vars.V.features=cons.make(vars.Qemacs,vars.Qnil)
@@ -631,6 +669,7 @@ function M.init_syms()
     vars.setsubr(F,'copy_sequence')
     vars.setsubr(F,'substring')
     vars.setsubr(F,'string_equal')
+    vars.setsubr(F,'require')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
@@ -642,5 +681,6 @@ compilation.]])
 
     vars.defsym('Qplistp','plistp')
     vars.defsym('Qprovide','provide')
+    vars.defsym('Qrequire','require')
 end
 return M

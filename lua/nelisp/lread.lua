@@ -1057,6 +1057,7 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     if not _G.nelisp_later then
         error('TODO: a lot of stuff should be set up here')
     else
+        specpdl.bind(vars.Qload_in_progress,vars.Qt)
         local content=fd:read('*all')
         for _,v in ipairs(M.full_read_lua_string(content)) do
             require'nelisp.eval'.eval_sub(v)
@@ -1231,5 +1232,12 @@ of the file, regardless of whether or not it has the `.elc' extension.]])
 In case of native code being loaded this is indicating the
 corresponding bytecode filename.  Use `load-true-file-name' to obtain
 the .eln filename.]])
+
+    vars.defvar_lisp('load_in_progress','load-in-progress',[[Non-nil if inside of `load'.]])
+    vars.V.load_in_progress=vars.Qnil
+    vars.defsym('Qload_in_progress','load-in-progress')
+
+    vars.defvar_lisp('current_load_list','current-load-list',[[Used for internal purposes by `load'.]])
+    vars.V.current_load_list=vars.Qnil
 end
 return M
