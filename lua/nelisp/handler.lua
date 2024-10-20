@@ -1,22 +1,24 @@
 local specpdl=require'nelisp.specpdl'
+local lisp=require'nelisp.lisp'
 local vars=require'nelisp.vars'
+local signal=require'nelisp.signal'
 
 ---@class nelisp.handler.msg_other
 ---@field id nelisp.handler.id
 ---@field val nelisp.obj
 ---@field is_lua nil
----@field jmp number
+---@field handler_id number
 ---@field nonlocal_exit 'SIGNAL'|'THROW'
 ---@class nelisp.handler.msg_lua: nelisp.handler.msg_other
 ---@field is_lua true
 ---@field backtrace string
 ---@field private val nil
----@field private jmp nil
+---@field private handler_id nil
 ---@field private nonlocal_exit nil
 ---@alias nelisp.handler.msg nelisp.handler.msg_other|nelisp.handler.msg_lua
 
 ---@class nelisp.handler
----@field jmp number
+---@field id number
 ---@field tag_or_ch nelisp.obj?
 ---@field type 'CATCHER'|'CONDITION_CASE'|'CATCHER_ALL'|'CATCHER_LUA'
 ---@field lisp_eval_depth number
@@ -40,7 +42,7 @@ function M.with_handler(tag_ch_cal,handlertype,fn,...)
         type=handlertype,
         lisp_eval_depth=vars.lisp_eval_depth,
         pdlcount=specpdl.index(),
-        jmp=#M.handlerlist,
+        id=#M.handlerlist,
     } --[[@as nelisp.handler]])
     ---@type nelisp.handler.msg
     local msg,err
@@ -55,7 +57,7 @@ function M.with_handler(tag_ch_cal,handlertype,fn,...)
     end,...))}
     if not err then
         local e=table.remove(M.handlerlist,1)
-        assert(e.jmp==#M.handlerlist)
+        assert(e.id==#M.handlerlist)
         assert(vars.lisp_eval_depth==e.lisp_eval_depth)
         assert(specpdl.index()==e.pdlcount)
         return true,ret
@@ -74,23 +76,23 @@ function M.with_handler(tag_ch_cal,handlertype,fn,...)
         end
     end
     ---@cast msg nelisp.handler.msg_other
-    if msg.jmp==e.jmp then
+    if msg.handler_id==e.id then
         assert(e.type~='CATCHER_LUA','TODO')
         return false,msg
     else
         error(msg)
     end
 end
----@param n number
+---@param handler_id number
 ---@param val nelisp.obj
 ---@param nonlocal_exit 'SIGNAL'|'THROW'
-function M.longjmp(n,val,nonlocal_exit)
-    assert(M.handlerlist[n+1])
+function M.unwind_to_catch(handler_id,val,nonlocal_exit)
+    assert(M.handlerlist[handler_id+1])
     ---@type nelisp.handler.msg_other
     local msg={
         id=id,
         val=val,
-        jmp=n,
+        handler_id=handler_id,
         nonlocal_exit=nonlocal_exit,
     }
     error(msg)
@@ -118,5 +120,49 @@ function M.internal_condition_case(bfun,handlers,hfun)
         return unpack(args --[[@as(any[])]])
     end
     return hfun(args --[[@as nelisp.handler.msg_other]])
+end
+function M.internal_lisp_condition_case(var,bodyform,handlers)
+    local tail=handlers
+    local success_handler=vars.Qnil
+    local clauses={}
+    while lisp.consp(tail) do
+        local tem=lisp.xcar(tail)
+        if not (lisp.nilp(tem)
+            or (lisp.consp(tem) and
+            (lisp.symbolp(lisp.xcar(tem --[[@as nelisp.cons]])) or lisp.consp(lisp.xcar(tem --[[@as nelisp.cons]]))))) then
+            signal.error('Invalid condition handler: %s',lisp.sdata(vars.F.prin1_to_string(tem,vars.Qt,vars.Qnil)))
+        end
+        if lisp.consp(tem) and lisp.eq(lisp.xcar(tem --[[@as nelisp.cons]]),vars.QCsuccess) then
+            success_handler=lisp.xcdr(tem --[[@as nelisp.cons]])
+        else
+            table.insert(clauses,1,tem)
+        end
+        tail=lisp.xcdr(tail)
+    end
+    local result
+    local function f(idx)
+        local clause=clauses[idx]
+        if not clause then
+            result=require'nelisp.eval'.eval_sub(bodyform)
+            return
+        end
+        local condition=lisp.consp(clause) and lisp.xcar(clause --[[@as nelisp.cons]]) or var.Qnil
+        if not lisp.consp(condition) then
+            condition=lisp.list(condition)
+        end
+        local noerr,ret=M.with_handler(condition,'CONDITION_CASE',f,idx+1)
+        if noerr then
+            return ret
+        end
+        error('TODO')
+    end
+    local ret=f(1)
+    if result==nil then
+        return ret
+    end
+    if not lisp.nilp(success_handler) then
+        error('TODO')
+    end
+    return result
 end
 return M

@@ -798,9 +798,9 @@ function F.throw.f(tag,value)
     if not lisp.nilp(tag) then
         for _,c in ipairs(handler.handlerlist) do
             if c.type=='CATCHER_ALL' then
-                handler.longjmp(c.jmp,vars.F.cons(tag,value),'THROW')
+                handler.unwind_to_catch(c.id,vars.F.cons(tag,value),'THROW')
             elseif c.type=='CATCHER' and lisp.eq(c.tag_or_ch,tag) then
-                handler.longjmp(c.jmp,value,'THROW')
+                handler.unwind_to_catch(c.id,value,'THROW')
             end
         end
     end
@@ -831,6 +831,43 @@ local function run_hook_with_args(args,fn)
         error('TODO')
     end
     error('TODO')
+end
+F.condition_case={'condition-case',2,-1,0,[[Regain control when an error is signaled.
+Executes BODYFORM and returns its value if no error happens.
+Each element of HANDLERS looks like (CONDITION-NAME BODY...)
+or (:success BODY...), where the BODY is made of Lisp expressions.
+
+A handler is applicable to an error if CONDITION-NAME is one of the
+error's condition names.  Handlers may also apply when non-error
+symbols are signaled (e.g., `quit').  A CONDITION-NAME of t applies to
+any symbol, including non-error symbols.  If multiple handlers are
+applicable, only the first one runs.
+
+The car of a handler may be a list of condition names instead of a
+single condition name; then it handles all of them.  If the special
+condition name `debug' is present in this list, it allows another
+condition in the list to run the debugger if `debug-on-error' and the
+other usual mechanisms say it should (otherwise, `condition-case'
+suppresses the debugger).
+
+When a handler handles an error, control returns to the `condition-case'
+and it executes the handler's BODY...
+with VAR bound to (ERROR-SYMBOL . SIGNAL-DATA) from the error.
+\(If VAR is nil, the handler can't access that information.)
+Then the value of the last BODY form is returned from the `condition-case'
+expression.
+
+The special handler (:success BODY...) is invoked if BODYFORM terminated
+without signaling an error.  BODY is then evaluated with VAR bound to
+the value returned by BODYFORM.
+
+See also the function `signal' for more info.
+usage: (condition-case VAR BODYFORM &rest HANDLERS)]]}
+function F.condition_case.f(args)
+    local var=lisp.xcar(args)
+    local bodyform=lisp.xcar(lisp.xcdr(args) --[[@as nelisp.cons]])
+    local handlers=lisp.xcdr(lisp.xcdr(args) --[[@as nelisp.cons]])
+    return handler.internal_lisp_condition_case(var,bodyform,handlers)
 end
 F.run_hook_with_args={'run-hook-with-args',1,-2,0,[[Run HOOK with the specified arguments ARGS.
 HOOK should be a symbol, a hook variable.  The value of HOOK
@@ -893,6 +930,7 @@ function M.init_syms()
     vars.setsubr(F,'autoload')
     vars.setsubr(F,'throw')
     vars.setsubr(F,'unwind_protect')
+    vars.setsubr(F,'condition_case')
     vars.setsubr(F,'run_hook_with_args')
     vars.setsubr(F,'run_hooks')
 
@@ -926,6 +964,7 @@ alist of active lexical bindings.]])
     vars.defsym('Qexit','exit')
 
     vars.defsym('Qlexical_binding','lexical-binding')
+    vars.defsym('QCsuccess',':success')
 
     vars.run_hooks=str.make('run-hooks','auto')
 end
