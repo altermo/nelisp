@@ -530,6 +530,18 @@ function F.fboundp.f(sym)
     lisp.check_symbol(sym)
     return lisp.nilp(symbol.get_func(sym)) and vars.Qnil or vars.Qt
 end
+F.keywordp={'keywordp',1,1,0,[[Return t if OBJECT is a keyword.
+This means that it is a symbol with a print name beginning with `:'
+interned in the initial obarray.]]}
+function F.keywordp.f(a)
+    if lisp.symbolp(a) and
+        str.index1_neg(symbol.get_name(a),1)==(require'nelisp.bytes')[':'] and
+        symbol.get_interned(a)==symbol.interned.interned_in_initial_obarray
+        then
+        return vars.Qt
+    end
+    return vars.Qnil
+end
 F.stringp={'stringp',1,1,0,[[Return t if OBJECT is a string.]]}
 function F.stringp.f(a) return lisp.stringp(a) and vars.Qt or vars.Qnil end
 F.null={'null',1,1,0,[[Return t if OBJECT is nil, and return nil otherwise.]]}
@@ -597,6 +609,7 @@ function M.init_syms()
     vars.setsubr(F,'default_boundp')
     vars.setsubr(F,'boundp')
     vars.setsubr(F,'fboundp')
+    vars.setsubr(F,'keywordp')
     vars.setsubr(F,'stringp')
     vars.setsubr(F,'null')
     vars.setsubr(F,'numberp')
