@@ -20,30 +20,91 @@ local last_search_thing=vars.Qnil
 ---@return string
 ---@return table
 local function eregex_to_vimregex(s)
+    local signal_err=function (msg)
+        signal.xsignal(vars.Qinvalid_regexp,str.make(msg,'auto'))
+    end
     if not _G.nelisp_later then
         error('TODO: signal error on bad pattern')
     end
     local data={}
-    local buf=lread.make_readcharfun(s,0)
-    local ret_buf=print_.make_printcharfun()
-    ret_buf.write('\\V')
+    local in_buf=lread.make_readcharfun(s,0)
+    local out_buf=print_.make_printcharfun()
+    out_buf.write('\\V')
+    local depth=0
     while true do
-        local c=buf.read()
+        local c=in_buf.read()
         if c==-1 then
             break
         end
         if c==b'\\' then
-            c=buf.read()
+            c=in_buf.read()
             if c==-1 then
-                signal.xsignal(vars.Qinvalid_regexp,str.make('Trailing backslash','auto'))
+                signal_err('Trailing backslash')
             end
-            error('TODO')
+            if c==b'(' then
+                if not _G.nelisp_later then
+                    error('TODO: signal error on bad capture')
+                end
+                c=in_buf.read()
+                in_buf.unread()
+                if c~=-1 then
+                    if c==b'?' then
+                        error('TODO')
+                    end
+                end
+                depth=depth+1
+                out_buf.write('\\(')
+            elseif c==b')' then
+                if depth==0 then
+                    signal_err('Unmatched ) or \\)')
+                end
+                depth=depth-1
+                out_buf.write('\\)')
+            elseif c==b'|' then
+                error('TODO')
+            elseif c==b'{' then
+                error('TODO')
+            elseif c==b'=' then
+                error('TODO')
+            elseif c==b's' then
+                error('TODO')
+            elseif c==b'S' then
+                error('TODO')
+            elseif c==b'c' then
+                error('TODO')
+            elseif c==b'C' then
+                error('TODO')
+            elseif c==b'w' then
+                error('TODO')
+            elseif c==b'W' then
+                error('TODO')
+            elseif c==b'<' then
+                error('TODO')
+            elseif c==b'>' then
+                error('TODO')
+            elseif c==b'_' then
+                error('TODO')
+            elseif c==b'b' then
+                error('TODO')
+            elseif c==b'B' then
+                error('TODO')
+            elseif c==b'`' then
+                error('TODO')
+            elseif c==b"'" then
+                error('TODO')
+            elseif string.char(c):match('[1-9]') then
+                error('TODO')
+            elseif c==b'\\' then
+                out_buf.write('\\\\')
+            else
+                out_buf.write(c)
+            end
         elseif c==b'^' then
-            if not (buf.idx==1 or at_endline_loc_p(buf,buf.idx)) then
+            if not (in_buf.idx==1 or at_endline_loc_p(in_buf,in_buf.idx)) then
                 goto normal_char
             end
             data.start_match=true
-            ret_buf.write('\\^')
+            out_buf.write('\\^')
         elseif c==b' ' then
             error('TODO')
         elseif c==b'$' then
@@ -52,31 +113,31 @@ local function eregex_to_vimregex(s)
             if not _G.nelisp_later then
                 error('TODO: if previous expression is not valid the treat it as a literal')
             end
-            ret_buf.write('\\')
-            ret_buf.write(c)
+            out_buf.write('\\')
+            out_buf.write(c)
         elseif c==b'.' then
             error('TODO')
         elseif c==b'[' then
-            ret_buf.write('\\[')
+            out_buf.write('\\[')
             local p=print_.make_printcharfun()
-            c=buf.read()
+            c=in_buf.read()
             if c==-1 then
-                signal.xsignal(vars.Qinvalid_regexp,'Unmatched [ or [^')
+                signal_err('Unmatched [ or [^')
             end
             if c==b'^' then
-                ret_buf.write('^')
-                c=buf.read()
+                out_buf.write('^')
+                c=in_buf.read()
             end
             if c==b']' then
-                ret_buf.write(']')
-                c=buf.read()
+                out_buf.write(']')
+                c=in_buf.read()
             end
             while c~=b']' do
                 p.write(c)
                 if c==-1 then
-                    signal.xsignal(vars.Qinvalid_regexp,'Unmatched [ or [^')
+                    signal_err('Unmatched [ or [^')
                 end
-                c=buf.read()
+                c=in_buf.read()
             end
             p.write(c)
             local pat=p.out()
@@ -103,16 +164,16 @@ local function eregex_to_vimregex(s)
             elseif pat:find('[:fname:]',1,true) then
                 pat=pat:gsub('%[:fname:%]',':fname:[]')
             end
-            ret_buf.write(pat)
+            out_buf.write(pat)
         else
             goto normal_char
         end
         goto continue
         ::normal_char::
-        ret_buf.write(c)
+        out_buf.write(c)
         ::continue::
     end
-    return ret_buf.out(),data
+    return out_buf.out(),data
 end
 
 local F={}
@@ -143,6 +204,9 @@ local function string_match_1(regexp,s,start,posix,modify_data)
         return vars.Qnil
     end
     local _,f,t=unpack(vim.fn.matchstrpos(lisp.sdata(s),vregex,pos_bytes))
+    if not _G.nelisp_later then
+        error('TODO: somehow also return the positions of the submatches (or nil if they didn\'t match)')
+    end
     if f==-1 or t==-1 then
         return vars.Qnil
     end
