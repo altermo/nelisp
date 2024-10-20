@@ -1,6 +1,9 @@
 local lread=require'nelisp.lread'
 local eval=require'nelisp.eval'
 local main_thread=require'nelisp.main_thread'
+local lisp=require'nelisp.lisp'
+local vars=require'nelisp.vars'
+local str=require'nelisp.obj.str'
 local M={}
 function M.init()
     require'nelisp.initer'
@@ -10,9 +13,9 @@ end
 ---@field [2] true?
 ---@field [3] nelisp.obj?
 
----@param str string
+---@param form string|nelisp.obj
 ---@return nelisp.obj|nelisp.eval.prommise?
-function M.eval(str)
+function M.eval(form)
     if not _G.nelisp_later then
         error('TODO: if it errors after it has prommised something, then the prommise is never resolved')
         --What should happen is `prommise[2]='error'`
@@ -20,8 +23,16 @@ function M.eval(str)
     end
     local done,prommise,ret
     local status=main_thread.call(function ()
-        for _,cons in ipairs(lread.full_read_lua_string(str)) do
-            ret=eval.eval_sub(cons)
+        if type(form)=='string' then
+            for _,cons in ipairs(lread.full_read_lua_string(form)) do
+                ret=eval.eval_sub(cons)
+            end
+        elseif lisp.consp(form) then
+            ret=eval.eval_sub(form)
+        elseif lisp.nilp(form) then
+            ret=nil
+        else
+            error('Unreachable')
         end
         done=true
         if prommise then
@@ -42,7 +53,6 @@ end
 ---@param path string
 ---@return nelisp.obj|nelisp.eval.prommise?
 function M.eval_file(path)
-    local content=table.concat(vim.fn.readfile(path),'\n')
-    return M.eval(content)
+    return M.eval(lisp.list(vars.Qload,str.make(path,'auto')))
 end
 return M

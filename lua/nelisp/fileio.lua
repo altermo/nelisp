@@ -73,8 +73,10 @@ function F.expand_file_name.f(name,default_directory)
         error('TODO')
     end
     if not lisp.nilp(default_directory) then
-        local path=vim.fs.normalize(lisp.sdata(default_directory)..'/'..lisp.sdata(name))
-        return str.make(vim.fn.expand(path),false)
+        if not lisp.IS_DIRECTORY_SEP(str.index1_neg(name,1)) then
+            local path=vim.fs.normalize(lisp.sdata(default_directory)..'/'..lisp.sdata(name))
+            return str.make(vim.fn.expand(path),false)
+        end
     end
     return str.make(vim.fn.expand(lisp.sdata(name)),false)
 end
