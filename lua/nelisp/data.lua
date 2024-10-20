@@ -311,7 +311,7 @@ F.set_default.f=function (sym,val)
     M.set_default_internal(sym,val,'SET')
     return val
 end
----@param code '+'|'or'
+---@param code '+'|'-'|'or'
 ---@param args (number|nelisp.float|nelisp.bignum|nelisp.fixnum)[]
 local function arith_driver(code,args)
     if not _G.nelisp_later then
@@ -322,13 +322,33 @@ local function arith_driver(code,args)
         local acc=0
         for _,v in ipairs(args) do
             if type(v)=='number' then
-                acc=acc+v
+                acc=overflow.add(acc,v)
             elseif lisp.bignump(v) then
                 error('TODO')
             elseif lisp.floatp(v) then
                 error('TODO')
             elseif lisp.fixnump(v) then
                 acc=overflow.add(acc,fixnum.tonumber(v --[[@as nelisp.fixnum]]))
+            else
+                error('unreachable')
+            end
+        end
+        if acc==nil then
+            error('TODO')
+        end
+        return fixnum.make(acc)
+    elseif code=='-' then
+        ---@type number|nil
+        local acc=0
+        for _,v in ipairs(args) do
+            if type(v)=='number' then
+                acc=overflow.sub(acc,v)
+            elseif lisp.bignump(v) then
+                error('TODO')
+            elseif lisp.floatp(v) then
+                error('TODO')
+            elseif lisp.fixnump(v) then
+                acc=overflow.sub(acc,fixnum.tonumber(v --[[@as nelisp.fixnum]]))
             else
                 error('unreachable')
             end
@@ -345,7 +365,7 @@ local function arith_driver(code,args)
         local acc=0
         for _,v in ipairs(args) do
             if type(v)=='number' then
-                acc=acc+v
+                acc=bit.bor(acc,v)
             elseif lisp.bignump(v) then
                 error('TODO')
             elseif lisp.floatp(v) then
@@ -414,6 +434,16 @@ function F.add1.f(num)
     num=lisp.check_number_coerce_marker(num)
     if lisp.fixnump(num) then
         return arith_driver('+',{num,1})
+    else
+        error('TODO')
+    end
+end
+F.sub1={'1-',1,1,0,[[Return NUMBER minus one.  NUMBER may be a number or a marker.
+Markers are converted to integers.]]}
+function F.sub1.f(num)
+    num=lisp.check_number_coerce_marker(num)
+    if lisp.fixnump(num) then
+        return arith_driver('-',{num,1})
     else
         error('TODO')
     end
@@ -596,6 +626,7 @@ function M.init_syms()
     vars.setsubr(F,'make_variable_buffer_local')
 
     vars.setsubr(F,'add1')
+    vars.setsubr(F,'sub1')
     vars.setsubr(F,'logior')
     vars.setsubr(F,'lss')
     vars.setsubr(F,'leq')

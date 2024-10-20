@@ -30,4 +30,14 @@ function M.add(a,b)
     local res=a+b
     return check_overflow(res,a,b,function (x) return res-x end)
 end
+---@param a number|nil
+---@param b number|nil
+---@return number|nil
+function M.sub(a,b)
+    if a==nil or b==nil then
+        return nil
+    end
+    local res=a-b
+    return check_overflow(res,a,b,function (x) return res+x end)
+end
 return M
