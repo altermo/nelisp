@@ -8,12 +8,14 @@ local function co_init()
     recursive_depth=0
     M.co=coroutine.create(function ()
         while true do
+            local err
             handler.internal_catch_lua(M.recursive_edit,function (msg)
                 M.co=nil
                 assert(#handler.handlerlist==0,'TODO')
                 vim.api.nvim_echo({{msg,'ErrorMsg'}},true,{})
-                error()
+                err=true
             end)
+            if err then return 'error' end
         end
     end)
     coroutine.resume(M.co)
@@ -53,6 +55,7 @@ function M.recursive_edit()
     recursive_depth=recursive_depth-1
     return val
 end
+---@return boolean|'error'
 function M.call(fn)
     co_init()
     if M.co==coroutine.running() then

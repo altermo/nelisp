@@ -42,6 +42,8 @@ function M.eval(form)
     end)
     if done then
         return ret
+    elseif status=='error' then
+        error()
     elseif status then
         ---@type nelisp.eval.prommise
         prommise={'Prommise, see :help ...'}
