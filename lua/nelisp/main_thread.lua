@@ -55,6 +55,9 @@ function M.recursive_edit()
 end
 function M.call(fn)
     co_init()
+    if M.co==coroutine.running() then
+        return fn()
+    end
     return select(2,coroutine.resume(M.co,fn))
 end
 return M
