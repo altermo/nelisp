@@ -951,6 +951,21 @@ local function openp(path,s,suffixes,storep,predicate,newer,no_native)
     if ret then return ret --[[@as unknown]] end
     return -1
 end
+local function lisp_file_lexically_bound_p(content)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    local l=assert(vim.lpeg,'vim.lpeg not found, neovim version too old')
+    local patt1=l.P({
+        l.V'shabang'^-1*l.V'comment',
+        shabang=l.P'#!'*(l.P(1)-l.P'\n')^0*l.P'\n',
+        comment=l.P';'*(l.P(1)-l.P'\n'-l.P'-*-')^0*l.V'opts',
+        opts=l.P'-*-'*l.C((l.P(1)-l.P'\n'-l.P'-*-')^0)*(l.P'-*-'+l.P'\n'),
+    })
+    local file_vars=patt1:match(content)
+    if not file_vars then return false end
+    return file_vars:match('[ \t;]lexical%-binding:[ \t]*t[ \t;]') and true or false
+end
 F.load={'load',1,5,0,[[Execute a file of Lisp code named FILE.
 First try FILE with `.elc' appended, then try with `.el', then try
 with a system-dependent suffix of dynamic modules (see `load-suffixes'),
@@ -1046,8 +1061,15 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     if not _G.nelisp_later then
         error('TODO: a lot of stuff should be set up here')
     else
-        specpdl.bind(vars.Qload_in_progress,vars.Qt)
+        specpdl.bind(vars.Qload_in_progress,vars.Qnil)
+        specpdl.bind(vars.Qlexical_binding,vars.Qnil)
         local content=fd:read('*all')
+        if lisp_file_lexically_bound_p(content) then
+            vars.F.set(vars.Qlexical_binding,vars.Qt)
+        end
+        local lex_bound=require'nelisp.data'.find_symbol_value(vars.Qlexical_binding)
+        specpdl.bind(vars.Qinternal_interpreter_environment,
+            not (lex_bound==nil or lisp.nilp(lex_bound)) and vars.Qnil or lisp.list(vars.Qt))
         for _,v in ipairs(M.full_read_lua_string(content)) do
             require'nelisp.eval'.eval_sub(v)
         end
