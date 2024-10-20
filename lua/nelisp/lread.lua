@@ -19,7 +19,7 @@ local compiled=require'nelisp.obj.compiled'
 
 local M={}
 
-function M.obarray_init_once()
+function M.init_once()
     local array={}
     for i=1,15121 do
         array[i]=fixnum.zero
@@ -29,17 +29,6 @@ function M.obarray_init_once()
 
     vars.defsym('Qnil','nil')
     vars.defsym('Qt','t')
-
-    vars.commit_qsymbols()
-
-    symbol.set_var(vars.Qnil,vars.Qnil)
-    symbol.set_constant(vars.Qnil)
-    symbol.set_special(vars.Qnil)
-
-    symbol.set_var(vars.Qt,vars.Qt)
-    symbol.set_constant(vars.Qt)
-    symbol.set_special(vars.Qt)
-
     vars.defsym('Qvariable_documentation','variable-documentation')
     vars.defsym('Qobarray_cache','obarray-cache')
 end
@@ -1120,6 +1109,15 @@ function M.init()
     assert(_G.nelisp_emacs)
     vars.V.load_path=lisp.list(str.make(_G.nelisp_emacs..'/lisp',false))
     vars.V.load_file_name=vars.Qnil --I don't know why emacs sets it to nil twice
+
+    symbol.set_var(vars.Qnil,vars.Qnil)
+    symbol.set_constant(vars.Qnil)
+    symbol.set_special(vars.Qnil)
+
+    symbol.set_var(vars.Qt,vars.Qt)
+    symbol.set_constant(vars.Qt)
+    symbol.set_special(vars.Qt)
+
 end
 function M.init_syms()
     vars.setsubr(F,'load')

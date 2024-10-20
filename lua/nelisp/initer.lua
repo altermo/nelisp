@@ -1,6 +1,8 @@
 local vars=require'nelisp.vars'
 
-require'nelisp.lread'.obarray_init_once()
+
+require'nelisp.lread'.init_once()
+vars.commit_qsymbols()
 
 vars.commit_qsymbols()
 
