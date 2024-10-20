@@ -30,6 +30,7 @@ function M.set_internal(sym,newval,where,bindflag)
         error('TODO')
     end
 end
+---@return nelisp.obj?
 function M.find_symbol_value(sym)
     lisp.check_symbol(sym)
     local redirect=symbol.get_redirect(sym)

@@ -220,6 +220,9 @@ function M.eval_sub(form)
     end
     return specpdl.unbind_to(specpdl.index()-1,assert(val))
 end
+function M.init_once()
+    vars.run_hooks=vars.Qnil
+end
 function M.init()
     vars.lisp_eval_depth=0
     if not _G.nelisp_later then
@@ -816,6 +819,55 @@ function F.unwind_protect.f(args)
     local val=M.eval_sub(lisp.xcar(args))
     return specpdl.unbind_to(count,val)
 end
+local function run_hook_with_args(args,fn)
+    if lisp.nilp(vars.run_hooks) then
+        return vars.Qnil
+    end
+    local sym=args[1]
+    local val=data.find_symbol_value(sym)
+    if val==nil or lisp.nilp(val) then
+        return vars.Qnil
+    elseif not lisp.consp(val) or lisp.functionp(val) then
+        error('TODO')
+    end
+    error('TODO')
+end
+F.run_hook_with_args={'run-hook-with-args',1,-2,0,[[Run HOOK with the specified arguments ARGS.
+HOOK should be a symbol, a hook variable.  The value of HOOK
+may be nil, a function, or a list of functions.  Call each
+function in order with arguments ARGS.  The final return value
+is unspecified.
+
+Do not use `make-local-variable' to make a hook variable buffer-local.
+Instead, use `add-hook' and specify t for the LOCAL argument.
+usage: (run-hook-with-args HOOK &rest ARGS)]]}
+function F.run_hook_with_args.f(args)
+    return run_hook_with_args(args,function (a)
+        vars.F.funcall(a)
+        return vars.Qnil
+    end)
+end
+F.run_hooks={'run-hooks',0,-2,0,[[Run each hook in HOOKS.
+Each argument should be a symbol, a hook variable.
+These symbols are processed in the order specified.
+If a hook symbol has a non-nil value, that value may be a function
+or a list of functions to be called to run the hook.
+If the value is a function, it is called with no arguments.
+If it is a list, the elements are called, in order, with no arguments.
+
+Major modes should not use this function directly to run their mode
+hook; they should use `run-mode-hooks' instead.
+
+Do not use `make-local-variable' to make a hook variable buffer-local.
+Instead, use `add-hook' and specify t for the LOCAL argument.
+usage: (run-hooks &rest HOOKS)]]}
+function F.run_hooks.f(args)
+    for _,v in ipairs(args) do
+        vars.F.run_hook_with_args({v})
+    end
+    return vars.Qnil
+end
+
 
 function M.init_syms()
     vars.setsubr(F,'setq')
@@ -841,6 +893,8 @@ function M.init_syms()
     vars.setsubr(F,'autoload')
     vars.setsubr(F,'throw')
     vars.setsubr(F,'unwind_protect')
+    vars.setsubr(F,'run_hook_with_args')
+    vars.setsubr(F,'run_hooks')
 
     vars.defvar_lisp('max_lisp_eval_depth','max-lisp-eval-depth',
         [[Limit on depth in `eval', `apply' and `funcall' before error.
@@ -872,5 +926,7 @@ alist of active lexical bindings.]])
     vars.defsym('Qexit','exit')
 
     vars.defsym('Qlexical_binding','lexical-binding')
+
+    vars.run_hooks=str.make('run-hooks','auto')
 end
 return M

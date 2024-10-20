@@ -13,7 +13,7 @@ function M.symbolp(x)
     assert(type_of(x)~=types.symbol_with_pos,'TODO')
     return type_of(x)==types.symbol
 end
----@overload fun(x:nelisp.symbol):boolean
+---@overload fun(x:nelisp.obj):boolean
 function M.functionp(x)
     if M.symbolp(x) and not M.nilp(vars.F.fboundp(x)) then
         error('TODO')

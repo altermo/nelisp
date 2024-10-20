@@ -3,6 +3,7 @@ local vars=require'nelisp.vars'
 
 require'nelisp.lread'.init_once()
 vars.commit_qsymbols()
+require'nelisp.eval'.init_once()
 
 vars.commit_qsymbols()
 
