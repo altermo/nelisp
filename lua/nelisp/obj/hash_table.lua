@@ -23,6 +23,9 @@ end
 function M.put(t,key,value)
     t[2][key]=value
 end
+function M.override(t,key,value)
+    t[2][key]=value
+end
 ---@return {content:table,test:nelisp.obj?,weak:nelisp.obj?,not_mutable:boolean?}
 function M.to_table(t)
     return {
@@ -31,5 +34,9 @@ function M.to_table(t)
         weak=t[4],
         not_mutable=t[5],
     }
+end
+---@return nelisp.obj?
+function M.lookup(ht,key)
+    return ht[2][key]
 end
 return M

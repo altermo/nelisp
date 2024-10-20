@@ -8,6 +8,7 @@ local signal=require'nelisp.signal'
 local str=require'nelisp.obj.str'
 local print_=require'nelisp.print'
 local textprop=require'nelisp.textprop'
+local types=require'nelisp.obj.types'
 
 local M={}
 
@@ -126,11 +127,12 @@ function F.member.f(elt,list)
     if lisp.symbolp(elt) or lisp.fixnump(elt) then
         return vars.F.memq(elt,list)
     end
-    local _,tail=lisp.for_each_tail(list,function (tail)
+    local ret,tail=lisp.for_each_tail(list,function (tail)
         if not lisp.nilp(vars.F.equal(elt,lisp.xcar(tail))) then
             return tail
         end
     end)
+    if ret then return ret end
     lisp.check_list_end(tail,list)
     return vars.Qnil
 end
@@ -282,6 +284,83 @@ function F.length.f(sequence)
         signal.wrong_type_argument(vars.Qsequencep,sequence)
     end
     return fixnum.make(val)
+end
+---@param kind 'plain'|'no_quit'
+local function internal_equal(a,b,kind,depth,ht)
+    ::tail_recursion::
+    if depth>10 then
+        assert(kind~='no_quit')
+        if depth>200 then
+            signal.error('Stack overflow in equal')
+        end
+        if lisp.nilp(ht) then
+            ht=vars.F.make_hash_table({vars.QCtest,vars.Qeq})
+        end
+        local t=types.type(a)
+        if t==types.cons or types.vectorlike_p(t) then
+            local val=hash_table.lookup(ht,a)
+            if val then
+                if not lisp.nilp(vars.F.memq(b,val)) then
+                    return true
+                else
+                    hash_table.override(ht,a,vars.F.cons(b,val))
+                end
+            else
+                hash_table.put(ht,a,b)
+            end
+        end
+    end
+    if lisp.symbolwithposp(a) then
+        error('TODO')
+    end
+    if lisp.symbolwithposp(b) then
+        error('TODO')
+    end
+    if a==b then
+        return true
+    elseif types.type(a)~=types.type(b) then
+        return false
+    end
+    local t=types.type(a)
+    if t==types.float then
+        error('TODO')
+    elseif t==types.cons then
+        if kind=='no_quit' then
+            error('TODO')
+        else
+            local o2=b
+            local ret=lisp.for_each_tail(a,function (o1)
+                if not lisp.consp(o2) then
+                    return false
+                end
+                if not internal_equal(lisp.xcar(o1),lisp.xcar(o2),kind,depth+1,ht) then
+                    return false
+                end
+                o2=lisp.xcdr(o2)
+                if lisp.eq(lisp.xcdr(o1),o2) then
+                    return true
+                end
+            end)
+            if ret then return ret end
+            depth=depth+1
+            goto tail_recursion
+        end
+    elseif types.vectorlike_p(t) then
+        error('TODO')
+    elseif t==types.str then
+        error('TODO')
+    end
+    return false
+end
+F.equal={'equal',2,2,0,[[Return t if two Lisp objects have similar structure and contents.
+They must have the same data type.
+Conses are compared by comparing the cars and the cdrs.
+Vectors and strings are compared element by element.
+Numbers are compared via `eql', so integers do not equal floats.
+\(Use `=' if you want integers and floats to be able to be equal.)
+Symbols must match exactly.]]}
+function F.equal.f(a,b)
+    return internal_equal(a,b,'plain',0,vars.Qnil) and vars.Qt or vars.Qnil
 end
 local function plist_put(plist,prop,val)
     local prev=vars.Qnil
@@ -658,6 +737,7 @@ function M.init_syms()
     vars.setsubr(F,'nreverse')
     vars.setsubr(F,'nconc')
     vars.setsubr(F,'length')
+    vars.setsubr(F,'equal')
     vars.setsubr(F,'put')
     vars.setsubr(F,'get')
     vars.setsubr(F,'featurep')
@@ -682,5 +762,6 @@ compilation.]])
     vars.defsym('Qplistp','plistp')
     vars.defsym('Qprovide','provide')
     vars.defsym('Qrequire','require')
+    vars.defsym('Qeq','eq')
 end
 return M

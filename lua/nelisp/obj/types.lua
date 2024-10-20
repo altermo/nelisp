@@ -56,8 +56,13 @@ for k,v in pairs(types) do
 end
 
 ---@param obj nelisp.obj
+---@return nelisp.types
 function M.type(obj)
     return obj[1]
+end
+---@param t nelisp.types
+function M.vectorlike_p(t)
+    return t>=types._normal_vector or t==types.vec
 end
 
 ---@alias nelisp.nil nelisp.symbol

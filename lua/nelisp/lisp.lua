@@ -40,7 +40,7 @@ function M.arrayp(x) return M.vectorp(x) or M.stringp(x) or M.chartablep(x) or M
 ---@overload fun(x:nelisp.symbol):boolean
 function M.symbolconstantp(x) return symbol.get_trapped_wire(x)==symbol.trapped_wire.nowrite end
 ---@overload fun(x:nelisp.obj):boolean
-function M.vectorlikep(x) return type_of(x)>=types._normal_vector or type_of(x)==types.vec end
+function M.vectorlikep(x) return types.vectorlike_p(types.type(x)) end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.baresymbolp(x) return type_of(x)==types.symbol end
@@ -72,6 +72,8 @@ function M.recodrp(x) return type_of(x)==types.record end
 function M.markerp(x) return type_of(x)==types.marker end
 ---@overload fun(x:nelisp.obj):boolean
 function M.hashtablep(x) return type_of(x)==types.hash_table end
+---@overload fun(x:nelisp.obj):boolean
+function M.symbolwithposp(x) return type_of(x)==types.symbol_with_pos end
 
 ---@overload fun(x:nelisp.obj):boolean
 function M.nilp(x) return x==vars.Qnil end
@@ -149,9 +151,12 @@ function M.check_string_car(x)
     M.check_type(M.stringp(M.xcar(x)),vars.Qstringp,M.xcar(x))
 end
 
+---@generic T: nelisp.obj|boolean
 ---@param x nelisp.obj
----@param fn fun(x:nelisp.cons):'continue'|'break'|nelisp.obj?
+---@param fn fun(x:nelisp.cons):'continue'|'break'|T|nil
 ---@param safe boolean?
+---@return T
+---@return nelisp.obj
 function M.for_each_tail(x,fn,safe)
     local has_visited={}
     while M.consp(x) do
@@ -167,8 +172,8 @@ function M.for_each_tail(x,fn,safe)
         if result=='break' then
             return nil,x
         elseif result=='continue' then
-        elseif result then
-            return result --[[@as nelisp.obj]],x
+        elseif result~=nil then
+            return result,x
         end
         x=M.xcdr(x)
     end
