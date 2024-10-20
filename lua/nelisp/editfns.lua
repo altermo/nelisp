@@ -198,9 +198,25 @@ function F.message.f(args)
     print(lisp.sdata(val))
     return val
 end
+F.system_name={'system-name',0,0,0,[[Return the host name of the machine you are running on, as a string.]]}
+function F.system_name.f()
+    if lisp.eq(vars.V.system_name,vars.cached_system_name) then
+        local name=vim.fn.hostname():gsub('[\t ]','-')
+        if name~=lisp.sdata(vars.V.system_name) then
+            vars.V.system_name=str.make(name,'auto')
+        end
+        vars.cached_system_name=vars.V.system_name
+    end
+    return vars.V.system_name
+end
 
 function M.init_syms()
     vars.setsubr(F,'format_message')
     vars.setsubr(F,'message')
+    vars.setsubr(F,'system_name')
+
+    vars.defvar_lisp('system_name','system-name',[[The host name of the machine Emacs is running on.]])
+    vars.V.system_name=vars.Qnil
+    vars.cached_system_name=vars.Qnil
 end
 return M
