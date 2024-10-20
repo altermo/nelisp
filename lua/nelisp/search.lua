@@ -6,7 +6,6 @@ local lread=require'nelisp.lread'
 local b=require'nelisp.bytes'
 local print_=require'nelisp.print'
 local signal=require'nelisp.signal'
-local chars=require'nelisp.chars'
 local M={}
 local function at_endline_loc_p(...)
     if not _G.nelisp_later then
@@ -29,7 +28,7 @@ local function eregex_to_vimregex(s)
     local data={}
     local in_buf=lread.make_readcharfun(s,0)
     local out_buf=print_.make_printcharfun()
-    out_buf.write('\\V')
+    local parens=0 --vim doesn't have a way to get the position of a sub-match, so this is the current workaround
     local depth=0
     while true do
         local c=in_buf.read()
@@ -53,10 +52,18 @@ local function eregex_to_vimregex(s)
                     end
                 end
                 depth=depth+1
+                do
+                    parens=parens+1
+                    out_buf.write('\\)')
+                    data.sub_patterns=(data.sub_patterns or 0)+1
+                end
                 out_buf.write('\\(')
             elseif c==b')' then
                 if depth==0 then
                     signal_err('Unmatched ) or \\)')
+                end
+                if depth>1 then
+                    error('TODO')
                 end
                 depth=depth-1
                 out_buf.write('\\)')
@@ -173,7 +180,7 @@ local function eregex_to_vimregex(s)
         out_buf.write(c)
         ::continue::
     end
-    return out_buf.out(),data
+    return '\\V'..('\\('):rep(parens)..out_buf.out(),data
 end
 
 local F={}
@@ -203,19 +210,36 @@ local function string_match_1(regexp,s,start,posix,modify_data)
     if data.start_match and pos_bytes>0 then
         return vars.Qnil
     end
-    local _,f,t=unpack(vim.fn.matchstrpos(lisp.sdata(s),vregex,pos_bytes))
+    local _,pat_start,pat_end=unpack(vim.fn.matchstrpos(lisp.sdata(s),vregex,pos_bytes))
     if not _G.nelisp_later then
         error('TODO: somehow also return the positions of the submatches (or nil if they didn\'t match)')
     end
-    if f==-1 or t==-1 then
+    if start==-1 or pat_end==-1 then
         return vars.Qnil
     end
     search_regs={
-        start={f},
-        end_={t},
+        start={pat_start},
+        end_={pat_end},
     }
+    if data.sub_patterns then
+        local idx=2
+        local list=vim.fn.matchlist(lisp.sdata(s),vregex,pos_bytes)
+        local sub_patterns=data.sub_patterns
+        while idx<=data.sub_patterns+1 do
+            local sub_start=#list[idx]
+            local sub_end=#list[idx+sub_patterns]+sub_start
+            if list[idx+sub_patterns]=='' then
+                table.insert(search_regs.start,vars.Qnil)
+                table.insert(search_regs.end_,vars.Qnil)
+            else
+                table.insert(search_regs.start,sub_start)
+                table.insert(search_regs.end_,sub_end)
+            end
+            idx=idx+1
+        end
+    end
     last_search_thing=vars.Qt
-    return fixnum.make(f)
+    return fixnum.make(pat_start)
 end
 F.string_match={'string-match',2,4,0,[[Return index of start of first match for REGEXP in STRING, or nil.
 Matching ignores case if `case-fold-search' is non-nil.
