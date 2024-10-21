@@ -13,10 +13,9 @@ local function co_init()
             handler.internal_catch_lua(M.recursive_edit,function (msg)
                 M.co=nil
                 assert(#handler.handlerlist==0,'TODO')
-                vim.api.nvim_echo({{msg,'ErrorMsg'}},true,{})
-                err=true
+                err=msg
             end)
-            if err then return 'error' end
+            if err then return '\r'..err end
         end
     end)
     coroutine.resume(M.co)
