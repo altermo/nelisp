@@ -37,7 +37,7 @@ function M.charstring(c)
         c=M.chartobyte8(c)
         return M.byte8string(c)
     else
-        signal.error('"Invalid character: %x", c')
+        signal.error('Invalid character: %x',c)
         error('unreachable')
     end
 end

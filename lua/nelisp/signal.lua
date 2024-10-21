@@ -1,13 +1,20 @@
 local lisp=require'nelisp.lisp'
 local vars=require'nelisp.vars'
+local doprnt=require'nelisp.doprnt'
+local str=require'nelisp.obj.str'
 
+local function vformat_string(fmt,...)
+    return doprnt.doprnt(fmt,{...},false)
+end
 local M={}
 function M.xsignal(error_symbol,...)
     local data=lisp.list(...)
     vars.F.signal(error_symbol,data)
 end
+---@param fmt string
+---@param ... string|number
 function M.error(fmt,...)
-    error('TODO: err\n\n'..fmt..'\n\n'..vim.inspect({...})..'\n\n')
+    M.xsignal(vars.Qerror,str.make(vformat_string(fmt,...),'auto'))
 end
 function M.wrong_type_argument(predicate,x)
     M.xsignal(vars.Qwrong_type_argument,predicate,x)

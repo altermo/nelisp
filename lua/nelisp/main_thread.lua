@@ -39,7 +39,7 @@ local function cmd_error(d)
         end
     end
     local readcharfun=print_.make_printcharfun()
-    print_.print_obj(d,false,readcharfun)
+    print_.print_obj(d,true,readcharfun)
     error('\n\nError (nelisp):\n'..readcharfun.out()..'\n')
 end
 local function command_loop_2(handlers)
