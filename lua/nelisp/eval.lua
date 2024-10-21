@@ -8,6 +8,7 @@ local signal=require'nelisp.signal'
 local str=require'nelisp.obj.str'
 local data=require'nelisp.data'
 local handler=require'nelisp.handler'
+local overflow=require'nelisp.overflow'
 local M={}
 
 local function funcall_lambda(fun,args)
@@ -184,7 +185,6 @@ function M.eval_sub(form)
         error('TODO')
     else
         if lisp.nilp(fun) then
-            error('TODO: MAYBE need to implement: '..symbol.get_name(original_fun --[[@as nelisp.symbol]])[2])
             signal.xsignal(vars.Qvoid_function,original_fun)
         elseif not lisp.consp(fun) then
             signal.xsignal(vars.Qinvalid_function,original_fun)
@@ -234,6 +234,7 @@ function M.init()
         vars.F.make_variable_buffer_local(vars.Qlexical_binding)
     end
     vars.autoload_queue=vars.Qnil
+    vars.signaling_function=vars.Qnil
 end
 
 local F={}
@@ -678,7 +679,7 @@ local function funcall_general(fun,args)
     if lisp.symbolp(fun) and not lisp.nilp(fun) then
         fun=symbol.get_func(fun)
         if lisp.symbolp(fun) then
-            error('TODO')
+            fun=data.indirect_function(fun)
         end
     end
     if lisp.subrp(fun) and not lisp.subr_native_compiled_dynp(fun) then
@@ -901,15 +902,148 @@ function F.condition_case.f(args)
     local handlers=lisp.xcdr(lisp.xcdr(args) --[[@as nelisp.cons]])
     return handler.internal_lisp_condition_case(var,bodyform,handlers)
 end
-F.run_hook_with_args={'run-hook-with-args',1,-2,0,[[Run HOOK with the specified arguments ARGS.
-HOOK should be a symbol, a hook variable.  The value of HOOK
-may be nil, a function, or a list of functions.  Call each
-function in order with arguments ARGS.  The final return value
-is unspecified.
+local function ensure_room(n)
+    local sum=overflow.add(vars.lisp_eval_depth,n) or overflow.max
+    if sum>fixnum.tonumber(vars.V.max_lisp_eval_depth) then
+        vars.V.max_lisp_eval_depth=fixnum.make(sum)
+    end
+end
+local function find_handler_clause(handlers,conditions)
+    if lisp.eq(handlers,vars.Qt) then
+        return vars.Qt
+    end
+    if lisp.eq(handlers,vars.Qerror) then
+        return vars.Qt
+    end
+    local h=handlers
+    while lisp.consp(h) do
+        local hand=lisp.xcar(h)
+        if not lisp.nilp(vars.F.memq(hand,conditions)) or lisp.eq(hand,vars.Qt) then
+            return handlers
+        end
+        h=lisp.xcdr(h)
+    end
+    return vars.Qnil
+end
+local function signal_quit_p(sig)
+    local list
+    return lisp.eq(sig,vars.Qquit) or
+        (not lisp.nilp(vars.F.symbolp(sig))
+        and lisp.consp((function () list=vars.F.get(sig,vars.Qerror_conditions) return list end)())
+        and not lisp.nilp(vars.F.memq(vars.Qquit,list)))
+end
+local function wants_debugger(list,conditions)
+    if lisp.nilp(list) then
+        return false
+    end
+    if not lisp.consp(list) then
+        return true
+    end
+    error('TODO')
+end
+local function maybe_call_debugger(conditions,sig,d)
+    local combined_data=vars.F.cons(sig,d)
+    if not _G.nelisp_later then
+        error('TODO: emacs does an if which basically checks if the debugger had an error')
+        --The if: when_entered_debugger < num_nonmacro_input_events
+    end
+    local s=signal_quit_p(sig)
+    if lisp.nilp(vars.V.inhibit_debugger)
+        and ((s and not lisp.nilp(vars.V.debug_on_quit)) or (not s and wants_debugger(vars.V.debug_on_error,conditions)))
+        and not skip_debugger(conditions,combined_data)
+    then
+        error('TODO')
+    end
+    return false
+end
+local function signal_or_quit(error_symbol,d,keyboard_quit)
+    if not lisp.nilp(vars.V.signal_hook_function)
+        and not lisp.nilp(error_symbol) then
+        ensure_room(20)
+        vars.F.funcall({vars.V.signal_hook_function,error_symbol,d})
+    end
+    local real_error_symbol=lisp.nilp(error_symbol) and vars.F.car(d) or error_symbol
+    local conditions=vars.F.get(real_error_symbol,vars.Qerror_conditions)
+    vars.signaling_function=vars.Qnil
+    if not lisp.nilp(error_symbol) then
+        local pdl,idx=specpdl.backtrace_next()
+        if pdl and lisp.eq(pdl.func,vars.Qerror) then
+            error('TODO')
+        end
+        if pdl then
+            vars.signaling_function=pdl.func
+        end
+    end
+    local clause=vars.Qnil
+    local h
+    for _,h1 in ipairs(handler.handlerlist) do
+        h=h1
+        if h1.type=='CATCHER_ALL' then
+            clause=vars.Qt
+            break
+        end
+        if h1.type=='CONDITION_CASE' then
+            clause=find_handler_clause(h1.tag_or_ch,conditions)
+            if not lisp.nilp(clause) then
+                break
+            end
+        end
+    end
+    local debugger_called=false
+    if not lisp.nilp(error_symbol)
+        and (not lisp.nilp(vars.V.debug_on_signal) or
+        lisp.nilp(clause) or
+        (lisp.consp(clause) and not lisp.nilp(vars.F.memq(vars.Qdebug,clause))) or
+        (h and lisp.eq(h.tag_or_ch,vars.Qerror))
+    ) then
+        debugger_called=maybe_call_debugger(conditions,error_symbol,d)
+        if debugger_called and keyboard_quit and lisp.eq(real_error_symbol,vars.Qquit) then
+            return vars.Qnil
+        end
+    end
+    if not _G.nelisp_later then
+        error('TODO: will we ever need to do backtrace on redisplay error?')
+        error('TODO: we will (for now) not support batch (noninteractive) mode')
+    end
+    if not lisp.nilp(clause) then
+        local unwind_data=lisp.nilp(error_symbol) and d or vars.F.cons(error_symbol,d)
+        handler.unwind_to_catch(h.id,unwind_data,'SIGNAL')
+    else
+        vars.F.throw(vars.Qtop_level,vars.Qt)
+    end
+end
+F.signal={'signal',2,2,0,[[Signal an error.  Args are ERROR-SYMBOL and associated DATA.
+        This function does not return.
 
-Do not use `make-local-variable' to make a hook variable buffer-local.
-Instead, use `add-hook' and specify t for the LOCAL argument.
-usage: (run-hook-with-args HOOK &rest ARGS)]]}
+        When `noninteractive' is non-nil (in particular, in batch mode), an
+        unhandled error calls `kill-emacs', which terminates the Emacs
+        session with a non-zero exit code.
+
+        An error symbol is a symbol with an `error-conditions' property
+        that is a list of condition names.  The symbol should be non-nil.
+        A handler for any of those names will get to handle this signal.
+        The symbol `error' should normally be one of them.
+
+        DATA should be a list.  Its elements are printed as part of the error message.
+        See Info anchor `(elisp)Definition of signal' for some details on how this
+        error message is constructed.
+        If the signal is handled, DATA is made available to the handler.
+        See also the function `condition-case'.]]}
+function F.signal.f(error_symbol,d)
+    if lisp.nilp(error_symbol) and lisp.nilp(d) then
+        error_symbol=vars.Qerror
+    end
+    signal_or_quit(error_symbol,d,false)
+end
+F.run_hook_with_args={'run-hook-with-args',1,-2,0,[[Run HOOK with the specified arguments ARGS.
+        HOOK should be a symbol, a hook variable.  The value of HOOK
+        may be nil, a function, or a list of functions.  Call each
+        function in order with arguments ARGS.  The final return value
+        is unspecified.
+
+        Do not use `make-local-variable' to make a hook variable buffer-local.
+        Instead, use `add-hook' and specify t for the LOCAL argument.
+        usage: (run-hook-with-args HOOK &rest ARGS)]]}
 function F.run_hook_with_args.f(args)
     return run_hook_with_args(args,function (a)
         vars.F.funcall(a)
@@ -917,19 +1051,19 @@ function F.run_hook_with_args.f(args)
     end)
 end
 F.run_hooks={'run-hooks',0,-2,0,[[Run each hook in HOOKS.
-Each argument should be a symbol, a hook variable.
-These symbols are processed in the order specified.
-If a hook symbol has a non-nil value, that value may be a function
-or a list of functions to be called to run the hook.
-If the value is a function, it is called with no arguments.
-If it is a list, the elements are called, in order, with no arguments.
+        Each argument should be a symbol, a hook variable.
+        These symbols are processed in the order specified.
+        If a hook symbol has a non-nil value, that value may be a function
+        or a list of functions to be called to run the hook.
+        If the value is a function, it is called with no arguments.
+        If it is a list, the elements are called, in order, with no arguments.
 
-Major modes should not use this function directly to run their mode
-hook; they should use `run-mode-hooks' instead.
+        Major modes should not use this function directly to run their mode
+        hook; they should use `run-mode-hooks' instead.
 
-Do not use `make-local-variable' to make a hook variable buffer-local.
-Instead, use `add-hook' and specify t for the LOCAL argument.
-usage: (run-hooks &rest HOOKS)]]}
+        Do not use `make-local-variable' to make a hook variable buffer-local.
+        Instead, use `add-hook' and specify t for the LOCAL argument.
+        usage: (run-hooks &rest HOOKS)]]}
 function F.run_hooks.f(args)
     for _,v in ipairs(args) do
         vars.F.run_hook_with_args({v})
@@ -948,7 +1082,7 @@ local function default_toplevel_binding(sym)
     return binding
 end
 F.default_toplevel_value={'default-toplevel-value',1,1,0,[[Return SYMBOL's toplevel default value.
-"Toplevel" means outside of any let binding.]]}
+        "Toplevel" means outside of any let binding.]]}
 function F.default_toplevel_value.f(sym)
     local binding=default_toplevel_binding(sym)
     local value=binding and binding.old_value or nil
@@ -986,6 +1120,7 @@ function M.init_syms()
     vars.setsubr(F,'throw')
     vars.setsubr(F,'unwind_protect')
     vars.setsubr(F,'condition_case')
+    vars.setsubr(F,'signal')
     vars.setsubr(F,'run_hook_with_args')
     vars.setsubr(F,'run_hooks')
     vars.setsubr(F,'default_toplevel_value')
@@ -993,11 +1128,11 @@ function M.init_syms()
     vars.defvar_lisp('max_lisp_eval_depth','max-lisp-eval-depth',
         [[Limit on depth in `eval', `apply' and `funcall' before error.
 
-This limit serves to catch infinite recursions for you before they cause
-actual stack overflow in C, which would be fatal for Emacs.
-You can safely make it considerably larger than its default value,
-if that proves inconveniently small.  However, if you increase it too far,
-Emacs could overflow the real C stack, and crash.]])
+        This limit serves to catch infinite recursions for you before they cause
+        actual stack overflow in C, which would be fatal for Emacs.
+        You can safely make it considerably larger than its default value,
+        if that proves inconveniently small.  However, if you increase it too far,
+        Emacs could overflow the real C stack, and crash.]])
     vars.V.max_lisp_eval_depth=fixnum.make(1600)
 
     vars.defvar_bool('debug_on_next_call','debug-on-next-call',
@@ -1006,9 +1141,9 @@ Emacs could overflow the real C stack, and crash.]])
 
     local sym=vars.defvar_lisp('internal_interpreter_environment',nil,
         [[If non-nil, the current lexical environment of the lisp interpreter.
-When lexical binding is not being used, this variable is nil.
-A value of `(t)' indicates an empty environment, otherwise it is an
-alist of active lexical bindings.]])
+        When lexical binding is not being used, this variable is nil.
+        A value of `(t)' indicates an empty environment, otherwise it is an
+        alist of active lexical bindings.]])
     vars.V.internal_interpreter_environment=vars.Qnil
     vars.Qinternal_interpreter_environment=sym
 
@@ -1018,6 +1153,7 @@ alist of active lexical bindings.]])
     vars.defsym('Qand_optional','&optional')
     vars.defsym('Qclosure','closure')
     vars.defsym('Qexit','exit')
+    vars.defsym('Qdebug','debug')
 
     vars.defsym('Qlexical_binding','lexical-binding')
     vars.defsym('QCsuccess',':success')
@@ -1026,7 +1162,33 @@ alist of active lexical bindings.]])
     vars.run_hooks=str.make('run-hooks','auto')
 
     vars.defvar_lisp('internal_make_interpreted_closure_function','internal-make-interpreted-closure-function',
-    [[Function to filter the env when constructing a closure.]])
+        [[Function to filter the env when constructing a closure.]])
     vars.V.internal_make_interpreted_closure_function=vars.Qnil
+
+    vars.defvar_lisp('signal_hook_function','signal-hook-function',[[If non-nil, this is a function for `signal' to call.
+        It receives the same arguments that `signal' was given.
+        The Edebug package uses this to regain control.]])
+    vars.V.signal_hook_function=vars.Qnil
+
+    vars.defvar_lisp('debug_on_signal','debug-on-signal',[[Non-nil means call the debugger regardless of condition handlers.
+        Note that `debug-on-error', `debug-on-quit' and friends
+        still determine whether to handle the particular condition.]])
+    vars.V.debug_on_signal=vars.Qnil
+
+    vars.defvar_lisp('inhibit_debugger','inhibit-debugger',[[Non-nil means never enter the debugger.
+        Normally set while the debugger is already active, to avoid recursive
+        invocations.]])
+    vars.V.inhibit_debugger=vars.Qnil
+
+    vars.defvar_lisp('debug_on_error','debug-on-error',[[Non-nil means enter debugger if an error is signaled.
+Does not apply to errors handled by `condition-case' or those
+matched by `debug-ignored-errors'.
+If the value is a list, an error only means to enter the debugger
+if one of its condition symbols appears in the list.
+When you evaluate an expression interactively, this variable
+is temporarily non-nil if `eval-expression-debug-on-error' is non-nil.
+The command `toggle-debug-on-error' toggles this.
+See also the variable `debug-on-quit' and `inhibit-debugger'.]])
+    vars.V.debug_on_error=vars.Qnil
 end
 return M

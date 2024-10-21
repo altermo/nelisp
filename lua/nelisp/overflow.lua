@@ -1,4 +1,6 @@
 local M={}
+M.max=0x1fffffffffffff
+M.min=-0x20000000000000
 local function check_overflow(res,a,b,undo)
     if res>=0x20000000000000 or res<-0x20000000000000 then
         return nil

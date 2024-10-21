@@ -12,10 +12,10 @@ local signal=require'nelisp.signal'
 ---@class nelisp.handler.msg_lua: nelisp.handler.msg_other
 ---@field is_lua true
 ---@field backtrace string
----@field private val nil
----@field private handler_id nil
----@field private nonlocal_exit nil
----@alias nelisp.handler.msg nelisp.handler.msg_other|nelisp.handler.msg_lua
+---@field val nil
+---@field handler_id nil
+---@field nonlocal_exit nil
+---@alias nelisp.handler.msg nelisp.handler.msg_lua|nelisp.handler.msg_other
 
 ---@class nelisp.handler
 ---@field id number
@@ -119,7 +119,7 @@ function M.internal_condition_case(bfun,handlers,hfun)
     if noerr then
         return unpack(args --[[@as(any[])]])
     end
-    return hfun(args --[[@as nelisp.handler.msg_other]])
+    return hfun(args.val)
 end
 function M.internal_lisp_condition_case(var,bodyform,handlers)
     local tail=handlers
@@ -154,7 +154,21 @@ function M.internal_lisp_condition_case(var,bodyform,handlers)
         if noerr then
             return ret
         end
-        error('TODO')
+        ---@cast ret nelisp.handler.msg_other
+        local val=ret.val
+        assert(lisp.consp(clause))
+        local handler_body=lisp.xcdr(clause --[[@as nelisp.cons]])
+        if lisp.nilp(var) then
+            return vars.F.progn(handler_body)
+        end
+        local handler_var=var
+        if not lisp.nilp(vars.V.internal_interpreter_environment) then
+            val=vars.F.cons(vars.F.cons(var,val),vars.V.internal_interpreter_environment)
+            handler_var=vars.Qinternal_interpreter_environment
+        end
+        local count=specpdl.index()
+        specpdl.bind(handler_var,val)
+        return specpdl.unbind_to(count,vars.F.progn(handler_body))
     end
     local ret=f(1)
     if result==nil then

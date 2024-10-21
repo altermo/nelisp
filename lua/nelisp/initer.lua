@@ -33,6 +33,7 @@ require'nelisp.fns'.init()
 require'nelisp.lread'.init()
 require'nelisp.keymap'.init()
 require'nelisp.emacs'.init()
+require'nelisp.data'.init()
 
 if not _G.nelisp_later then
     local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,2)

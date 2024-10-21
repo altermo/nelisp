@@ -8,6 +8,7 @@ local char_table=require'nelisp.obj.char_table'
 local vec=require'nelisp.obj.vec'
 local lread=require'nelisp.lread'
 local overflow=require'nelisp.overflow'
+local cons=require'nelisp.obj.cons'
 
 local M={}
 ---@param sym nelisp.obj
@@ -602,8 +603,25 @@ returned in rare cases.]]}
 function F.functionp.f(a) return lisp.functionp(a) and vars.Qt or vars.Qnil end
 F.hash_table_p={'hash-table-p',1,1,0,[[Return t if OBJ is a Lisp hash table object.]]}
 function F.hash_table_p.f(a) return lisp.hashtablep(a) and vars.Qt or vars.Qnil end
-
+function M.init()
+    local error_tail=cons.make(vars.Qerror,vars.Qnil)
+    vars.F.put(vars.Qerror,vars.Qerror_conditions,error_tail)
+    vars.F.put(vars.Qerror,vars.Qerror_message,str.make('error',false))
+    local function put_error(sym,tail,msg)
+        vars.F.put(sym,vars.Qerror_conditions,cons.make(sym,tail))
+        vars.F.put(sym,vars.Qerror_message,str.make(msg,false))
+    end
+    put_error(vars.Qquit,vars.Qnil,'Quit')
+    put_error(vars.Qvoid_variable,error_tail,"Symbol's value as variable is void")
+    put_error(vars.Qvoid_function,error_tail,"Symbol's function definition is void")
+end
 function M.init_syms()
+    ---These are errors and should have corresponding `put_error`
+    vars.defsym('Qerror','error')
+    vars.defsym('Qquit','quit')
+    vars.defsym('Qvoid_variable','void-variable')
+    vars.defsym('Qvoid_function','void-function')
+
     vars.setsubr(F,'symbol_value')
     vars.setsubr(F,'default_value')
     vars.setsubr(F,'symbol_function')
@@ -657,6 +675,8 @@ function M.init_syms()
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')
     vars.defsym('Qtop_level','top-level')
+    vars.defsym('Qerror_conditions','error-conditions')
+    vars.defsym('Qerror_message','error-message')
 
     vars.defsym('Qlistp','listp')
     vars.defsym('Qsymbolp','symbolp')
@@ -670,14 +690,13 @@ function M.init_syms()
     vars.defsym('Qvectorp','vectorp')
     vars.defsym('Qnumber_or_marker_p','number-or-markerp')
 
-    vars.defsym('Qerror','error')
-    vars.defsym('Qvoid_variable','void-variable')
-
     vars.defsym('QCtest',':test')
     vars.defsym('QCsize',':size')
     vars.defsym('QCpurecopy',':purecopy')
     vars.defsym('QCrehash_size',':rehash-size')
     vars.defsym('QCrehash_threshold',':rehash-threshold')
     vars.defsym('QCweakness',':weakness')
+
+
 end
 return M

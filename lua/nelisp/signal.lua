@@ -4,7 +4,7 @@ local vars=require'nelisp.vars'
 local M={}
 function M.xsignal(error_symbol,...)
     local data=lisp.list(...)
-    error('TODO: err\n\n'..vim.inspect(error_symbol)..'\n\n'..vim.inspect(data)..'\n\n')
+    vars.F.signal(error_symbol,data)
 end
 function M.error(fmt,...)
     error('TODO: err\n\n'..fmt..'\n\n'..vim.inspect({...})..'\n\n')

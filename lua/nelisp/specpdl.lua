@@ -136,4 +136,13 @@ function M.riter()
         end
     end)
 end
+---@return nelisp.specpdl.backtrace_entry?
+function M.backtrace_next()
+    for i in M.riter() do
+        if i.type==M.type.backtrace then
+            return i --[[@as nelisp.specpdl.backtrace_entry]]
+        end
+    end
+    return nil
+end
 return M
