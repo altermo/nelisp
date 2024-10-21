@@ -1070,10 +1070,12 @@ function F.run_hooks.f(args)
     end
     return vars.Qnil
 end
+---@return nelisp.specpdl.let_entry?
 local function default_toplevel_binding(sym)
     local binding=nil
     for pdl in specpdl.riter() do
         if pdl.type==specpdl.type.let or pdl.type==specpdl.type.let_default then
+            ---@cast pdl nelisp.specpdl.let_entry
             if lisp.eq(pdl.symbol,sym) then
                 binding=pdl
             end
@@ -1093,6 +1095,17 @@ function F.default_toplevel_value.f(sym)
         end
     end
     return value
+end
+F.set_default_toplevel_value={'set-default-toplevel-value',2,2,0,[[Set SYMBOL's toplevel default value to VALUE.
+"Toplevel" means outside of any let binding.]]}
+function F.set_default_toplevel_value.f(sym,val)
+    local binding=default_toplevel_binding(sym)
+    if binding then
+        binding.old_value=val
+    else
+        vars.F.set_default(sym,val)
+    end
+    return vars.Qnil
 end
 
 function M.init_syms()
@@ -1124,6 +1137,7 @@ function M.init_syms()
     vars.setsubr(F,'run_hook_with_args')
     vars.setsubr(F,'run_hooks')
     vars.setsubr(F,'default_toplevel_value')
+    vars.setsubr(F,'set_default_toplevel_value')
 
     vars.defvar_lisp('max_lisp_eval_depth','max-lisp-eval-depth',
         [[Limit on depth in `eval', `apply' and `funcall' before error.
