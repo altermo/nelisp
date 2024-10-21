@@ -1,6 +1,7 @@
 local handler=require'nelisp.handler'
 local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
+local print_=require'nelisp.print'
 local M={}
 local recursive_depth=0
 local function co_init()
@@ -27,8 +28,20 @@ local function command_loop_1()
         fn=coroutine.yield(false)
     end
 end
-local function cmd_error()
-    error('TODO')
+local function cmd_error(d)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    local sig=lisp.xcar(d)
+    if lisp.eq(sig,vars.Qvoid_function) then
+        local cdr=lisp.xcdr(d)
+        if lisp.consp(cdr) then
+            error('TODO: MAYBE need to implement: '..(lisp.xcar(cdr --[[@as nelisp.cons]])[2][2]))
+        end
+    end
+    local readcharfun=print_.make_printcharfun()
+    print_.print_obj(d,false,readcharfun)
+    error('\n\nError (nelisp):\n'..readcharfun.out()..'\n')
 end
 local function command_loop_2(handlers)
     local val
