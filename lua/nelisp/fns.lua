@@ -232,6 +232,22 @@ function F.nreverse.f(seq)
         error('TODO')
     end
 end
+F.reverse={'reverse',1,1,0,[[Return the reversed copy of list, vector, or string SEQ.
+See also the function `nreverse', which is used more often.]]}
+function F.reverse.f(seq)
+    if lisp.nilp(seq) then
+        return vars.Qnil
+    elseif lisp.consp(seq) then
+        local new=vars.Qnil
+        local _,t=lisp.for_each_tail(seq,function (t)
+            new=vars.F.cons(lisp.xcar(t),new)
+        end)
+        lisp.check_list_end(t,seq)
+        return new
+    else
+        error('TODO')
+    end
+end
 F.nconc={'nconc',0,-2,0,[[Concatenate any number of lists by altering them.
 Only the last argument is not altered, and need not be a list.
 usage: (nconc &rest LISTS)]]}
@@ -737,6 +753,7 @@ function M.init_syms()
     vars.setsubr(F,'nth')
     vars.setsubr(F,'mapcar')
     vars.setsubr(F,'nreverse')
+    vars.setsubr(F,'reverse')
     vars.setsubr(F,'nconc')
     vars.setsubr(F,'length')
     vars.setsubr(F,'equal')
