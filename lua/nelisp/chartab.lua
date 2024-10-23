@@ -47,8 +47,7 @@ end
 ---@param t nelisp._char_table
 ---@return number
 local function chartable_extra_slots(t)
-    assert(0<=(t.size-chartab_size[1]) and (t.size-chartab_size[1])<=10)
-    return t.size-chartab_size[1]
+    return lisp.asize(t.extras)
 end
 ---@param t nelisp.obj
 ---@return boolean
@@ -155,6 +154,50 @@ function M.ref(ctable,c)
     end
     return val
 end
+---@param ctable nelisp.obj
+---@return nelisp.obj
+local function copy_sub_char_table(ctable)
+    local tbl=(ctable --[[@as nelisp._sub_char_table]])
+    local depth=tbl.depth
+    local min_char=tbl.min_char
+    local copy=make_subchartable(depth,min_char,vars.Qnil)
+    for i=0,chartab_size[depth+1]-1 do
+        local val=(ctable --[[@as nelisp._sub_char_table]]).contents[i+1] or vars.Qnil
+        ;(copy --[[@as nelisp._sub_char_table]]).contents[i+1]=(lisp.subchartablep(val)
+        and copy_sub_char_table(val)
+        or val)
+    end
+    return copy
+end
+---@param ctable nelisp.obj
+---@return nelisp.obj
+function M.copy_char_table(ctable)
+    local tbl=(ctable --[[@as nelisp._char_table]])
+    local size=lisp.asize(ctable)
+    local copy=alloc.make_vector(size,'nil') --[[@as nelisp._char_table]]
+    copy.default=tbl.default
+    copy.parent=tbl.parent
+    copy.purpose=tbl.purpose
+    for i=0,chartab_size[1]-1 do
+        copy.contents[i+1]=(lisp.subchartablep(tbl.contents[i+1] or vars.Qnil)
+        and copy_sub_char_table(tbl.contents[i+1] or vars.Qnil)
+        or tbl.contents[i+1] or vars.Qnil)
+    end
+    local obj=lisp.make_vectorlike_ptr(copy,lisp.pvec.char_table)
+    copy.ascii=char_table_ascii(obj)
+    copy.extras=alloc.make_vector(chartable_extra_slots(tbl),'nil')
+    for i=0,chartable_extra_slots(tbl)-1 do
+        M.set_extra(obj,i,lisp.aref(tbl.extras,i))
+    end
+    return obj
+end
+---@param ctable nelisp.obj
+---@param idx number
+---@param val nelisp.obj
+function M.set_extra(ctable,idx,val)
+    assert(0<=idx and idx<chartable_extra_slots(ctable --[[@as nelisp._char_table]]))
+    lisp.aset((ctable --[[@as nelisp._char_table]]).extras,idx,val)
+end
 
 local F={}
 F.make_char_table={'make-char-table',1,2,0,[[Return a newly created char-table, with purpose PURPOSE.
@@ -177,11 +220,11 @@ function F.make_char_table.f(purpose,init)
         end
         n_extras=lisp.fixnum(n)
     end
-    local size=chartab_size[1]+n_extras
-    local vector=alloc.make_vector(size,init) --[[@as nelisp._char_table]]
+    local vector=alloc.make_vector(chartab_size[1],init) --[[@as nelisp._char_table]]
     -- Is this correct?:
     vector.ascii=init
     vector.default=init
+    vector.extras=alloc.make_vector(n_extras,init)
     --vector.ascii=vars.Qnil
     --vector.default=vars.Qnil
     vector.parent=vars.Qnil

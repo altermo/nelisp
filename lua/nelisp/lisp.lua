@@ -124,6 +124,7 @@ M.pvec={
     ---@field parent nelisp.obj
     ---@field purpose nelisp.obj
     ---@field ascii nelisp.obj
+    ---@field extras nelisp.obj
 
     sub_char_table=33,
     ---@class nelisp._sub_char_table: nelisp._normal_vector

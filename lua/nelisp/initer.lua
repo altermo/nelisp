@@ -25,6 +25,7 @@ require'nelisp.search'.init_syms()
 require'nelisp.fileio'.init_syms()
 require'nelisp.timefns'.init_syms()
 require'nelisp.callint'.init_syms()
+require'nelisp.casetab'.init_syms()
 
 vars.commit_qsymbols()
 
@@ -35,6 +36,7 @@ require'nelisp.lread'.init()
 require'nelisp.keymap'.init()
 require'nelisp.emacs'.init()
 require'nelisp.data'.init()
+require'nelisp.casetab'.init()
 
 if not _G.nelisp_later then
     local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,2)

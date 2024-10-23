@@ -5,6 +5,7 @@ local print_=require'nelisp.print'
 local textprop=require'nelisp.textprop'
 local alloc=require'nelisp.alloc'
 local overflow=require'nelisp.overflow'
+local chartab=require'nelisp.chartab'
 
 local M={}
 
@@ -828,6 +829,8 @@ function F.copy_sequence.f(arg)
         end)
         lisp.check_list_end(tail,tail)
         return val
+    elseif lisp.chartablep(arg) then
+        return chartab.copy_char_table(arg)
     else
         error('TODO')
         signal.wrong_type_argument(vars.Qsequencep,arg)
