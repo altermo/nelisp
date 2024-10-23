@@ -40,7 +40,7 @@ M.type={
     ---@class nelisp._vectorlike
     ---@field header nelisp.pvec
     ---@class nelisp._pvec
-    ---@field private content (table<number,nelisp.obj|nil>)?
+    ---@field private contents (table<number,nelisp.obj|nil>)?
     ---@field private size number?
 
     cons=3,
@@ -62,7 +62,7 @@ M.pvec={
     normal_vector=0,
     ---@class nelisp._normal_vector: nelisp._pvec
     ---@field size number?
-    ---@field content table<number,nelisp.obj|nil>
+    ---@field contents table<number,nelisp.obj|nil>
 
     _free=1,
     bignum=2,
@@ -98,7 +98,6 @@ M.pvec={
     window_configuration=17,
     subr=18,
     ---@class nelisp._subr: nelisp._pvec
-    ---@field content nil
     ---@field fn fun(...:nelisp.obj):nelisp.obj
     ---@field minargs number
     ---@field maxargs number
@@ -122,11 +121,15 @@ M.pvec={
     char_table=32,
     ---@class nelisp._char_table: nelisp._normal_vector
     ---@field default nelisp.obj
-    ---@field parents nelisp.obj
+    ---@field parent nelisp.obj
     ---@field purpose nelisp.obj
     ---@field ascii nelisp.obj
 
     sub_char_table=33,
+    ---@class nelisp._sub_char_table: nelisp._normal_vector
+    ---@field depth number
+    ---@field min_char number
+
     compiled=34,
     record=35,
     font=36,
@@ -243,7 +246,7 @@ end
 function M.aref(a,idx)
     assert(0<=idx and idx<M.asize(a))
     ---@diagnostic disable-next-line: invisible
-    return ((a --[[@as nelisp._pvec]]).content[idx+1] or vars.Qnil)
+    return ((a --[[@as nelisp._pvec]]).contents[idx+1] or vars.Qnil)
 end
 ---@param a nelisp.obj
 ---@param idx number
@@ -251,7 +254,7 @@ end
 function M.aset(a,idx,val)
     assert(0<=idx and idx<M.asize(a))
     ---@diagnostic disable-next-line: invisible
-    a --[[@as nelisp._pvec]].content[idx+1]=not M.nilp(val) and val or nil
+    a --[[@as nelisp._pvec]].contents[idx+1]=not M.nilp(val) and val or nil
 end
 
 --- ;; P functions
@@ -331,6 +334,8 @@ function M.hashtablep(x) return M.pseudovectorp(x,M.pvec.hash_table) end
 function M.recordp(x) return M.pseudovectorp(x,M.pvec.record) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.markerp(x) return M.pseudovectorp(x,M.pvec.marker) end
+---@overload fun(x:nelisp.obj):boolean
+function M.subchartablep(x) return M.pseudovectorp(x,M.pvec.sub_char_table) end
 
 --- ;; Other
 ---@param x nelisp.obj

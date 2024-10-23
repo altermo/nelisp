@@ -8,17 +8,17 @@ function M.make_vector(len,init)
     local v={}
     ---@cast v nelisp._normal_vector
     v.size=len
-    v.content={}
+    v.contents={}
     ---@cast init nelisp.obj
     if init=='zero' then
         ---Needed because make_vector is used before Qnil is inited
         local zero=lisp.make_fixnum(0)
         for i=1,len do
-            v.content[i]=zero
+            v.contents[i]=zero
         end
     elseif init~='nil' and not lisp.nilp(init) then
         for i=1,len do
-            v.content[i]=init
+            v.contents[i]=init
         end
     end
     return lisp.make_vectorlike_ptr(v,lisp.pvec.normal_vector)
@@ -154,7 +154,7 @@ usage: (vector &rest OBJECTS)]]}
 function F.vector.f(args)
     local vec=M.make_vector(#args,'nil')
     for i=1,#args do
-        (vec --[[@as nelisp._normal_vector]]).content[i]=args[i]
+        (vec --[[@as nelisp._normal_vector]]).contents[i]=args[i]
     end
     return vec
 end

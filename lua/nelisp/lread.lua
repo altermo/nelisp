@@ -699,7 +699,7 @@ function M.read0(readcharfun,locate_syms)
             locate_syms=t.old_locate_syms
             obj=alloc.make_vector(#t.elems,'nil')
             for i=1,#t.elems do
-                (obj --[[@as nelisp._normal_vector]]).content[i]=t.elems[i]
+                (obj --[[@as nelisp._normal_vector]]).contents[i]=t.elems[i]
             end
         elseif t.t=='byte_code' then
             table.remove(stack)

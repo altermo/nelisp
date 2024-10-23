@@ -504,7 +504,7 @@ function F.defconst.f(args)
     local tem=M.eval_sub(lisp.xcar(lisp.xcdr(args)))
     return vars.F.defconst_1(sym,tem,docstring)
 end
-F.defconst_1={'Fdefconst_1',2,3,0,[[Like `defconst' but as a function.
+F.defconst_1={'defconst-1',2,3,0,[[Like `defconst' but as a function.
 More specifically, behaves like (defconst SYM 'INITVALUE DOCSTRING).]]}
 function F.defconst_1.f(sym,initvalue,docstring)
     lisp.check_symbol(sym)
