@@ -8,6 +8,11 @@ local overflow=require'nelisp.overflow'
 
 local M={}
 
+---@param obj nelisp.obj
+---@return number
+local function sxhash(obj)
+    error('TODO')
+end
 function M.concat_to_string(args)
     local dest_multibyte=false
     local some_multibyte=false
@@ -298,23 +303,55 @@ function F.length.f(sequence)
     return lisp.make_fixnum(val)
 end
 ---@param h nelisp._hash_table
+---@param idx number
+---@return number
+local function hash_index(h,idx)
+    return lisp.fixnum(lisp.aref(h.index,idx))
+end
+---@param h nelisp._hash_table
 ---@param key nelisp.obj
 ---@return number
 ---@return number
 local function hash_lookup(h,key)
-    if not _G.nelisp_later then
+    local hash_code=h.test.hashfn(key,h)
+    assert(type(hash_code)=='number')
+    local i=hash_index(h,hash_code%lisp.asize(h.index))
+    while 0<=i do
+        if lisp.eq(key,lisp.aref(h.key_and_value,i*2))
+            or (h.test.cmpfn~=0
+            and lisp.eq(lisp.make_fixnum(hash_code),lisp.aref(h.hash,i))
+            and h.test.cmpfn(key,lisp.aref(h.key_and_value,i*2),h)) then
+            break
+        end
+        i=lisp.fixnum(lisp.aref(h.next,i))
+    end
+    return i,hash_code
+end
+---@param h nelisp._hash_table
+local function maybe_resize_hash_table(h)
+    if h.next_free<0 then
         error('TODO')
     end
-    return -1,h.test.hashfn(key,h)
 end
 ---@param h nelisp._hash_table
 ---@param key nelisp.obj
 ---@param val nelisp.obj
 ---@param hash number
+---@return number
 local function hash_put(h,key,val,hash)
-    if not _G.nelisp_later then
-        error('TODO')
-    end
+    maybe_resize_hash_table(h)
+    h.count=h.count+1
+    local i=h.next_free
+    assert(lisp.nilp(lisp.aref(h.hash,i)))
+    assert(lisp.aref(h.key_and_value,i*2)==vars.Qunique)
+    h.next_free=lisp.fixnum(lisp.aref(h.next,i))
+    lisp.aset(h.key_and_value,i*2,key)
+    lisp.aset(h.key_and_value,i*2+1,val)
+    lisp.aset(h.hash,i,val)
+    local start_of_bucket=hash%lisp.asize(h.index)
+    lisp.aset(h.next,i,lisp.aref(h.index,start_of_bucket))
+    lisp.aset(h.index,start_of_bucket,lisp.make_fixnum(i))
+    return i
 end
 ---@param a nelisp.obj
 ---@param b nelisp.obj
@@ -518,12 +555,7 @@ end
 ---@param rehash_size number (float)
 ---@param rehash_threshold number (float)
 ---@param weak nelisp.obj
----@param purecopy boolean
-local function make_hash_table(test,size,rehash_size,rehash_threshold,weak,purecopy)
-    if not _G.nelisp_later then
-        error('TODO')
-    end
-    _=purecopy
+local function make_hash_table(test,size,rehash_size,rehash_threshold,weak)
     ---@type nelisp._hash_table
     local h={
         test=test,
@@ -542,6 +574,37 @@ local function make_hash_table(test,size,rehash_size,rehash_threshold,weak,purec
         lisp.aset(h.next,i,lisp.make_fixnum(i+1))
     end
     return lisp.make_vectorlike_ptr(h,lisp.pvec.hash_table)
+end
+---@param key nelisp.obj
+---@param args nelisp.obj[]
+---@param used table<number,true?>
+---@return nelisp.obj|false
+local function get_key_arg(key,args,used)
+    for i=2,#args do
+        if not used[i-1] and lisp.eq(args[i-1],key) then
+            used[i-1]=true
+            used[i]=true
+            return args[i]
+        end
+    end
+    return false
+end
+local function hashfn_eq(key,_)
+    assert(not lisp.symbolwithposp(key),'TODO')
+    -- Do we need ...^XTYPE(key)?
+    return lisp.xhash(key)
+end
+local function cmpfn_equal(key1,key2,_)
+    return not lisp.nilp(vars.F.equal(key1,key2))
+end
+local function hashfn_equal(key,_)
+    return sxhash(key)
+end
+local function cmpfn_eql(key1,key2,_)
+    return not lisp.nilp(vars.F.eql(key1,key2))
+end
+local function hashfn_eql(key,h)
+    return ((lisp.floatp(key) or lisp.bignump(key)) and hashfn_equal or hashfn_eq)(key,h)
 end
 F.make_hash_table={'make-hash-table',0,-2,0,[[Create and return a new hash table.
 
@@ -580,21 +643,78 @@ in an error.
 
 usage: (make-hash-table &rest KEYWORD-ARGS)]]}
 function F.make_hash_table.f(args)
-    if not _G.nelisp_later then
+    local used={}
+    local test=get_key_arg(vars.QCtest,args,used) or vars.Qeql
+    local testdesc
+    if lisp.eq(test,vars.Qeq) then
+        ---@type nelisp.hash_table_test
+        testdesc={
+            name=vars.Qeq,
+            user_cmp_function=vars.Qnil,
+            user_hash_function=vars.Qnil,
+            cmpfn=0,
+            hashfn=hashfn_eq
+        }
+    elseif lisp.eq(test,vars.Qeql) then
+        ---@type nelisp.hash_table_test
+        testdesc={
+            name=vars.Qeql,
+            user_cmp_function=vars.Qnil,
+            user_hash_function=vars.Qnil,
+            cmpfn=cmpfn_eql,
+            hashfn=hashfn_eql
+        }
+    elseif lisp.eq(test,vars.Qequal) then
+        ---@type nelisp.hash_table_test
+        testdesc={
+            name=vars.Qequal,
+            user_cmp_function=vars.Qnil,
+            user_hash_function=vars.Qnil,
+            cmpfn=cmpfn_equal,
+            hashfn=hashfn_equal
+        }
+    else
         error('TODO')
     end
-    ---@type nelisp.hash_table_test
-    local hashtest_eq={
-        name=vars.Qeq,
-        user_hash_function=0,
-        user_cmp_function=0,
-        cmpfn=0,
-        hashfn=function (a,_)
-            assert(not lisp.symbolwithposp(a),'TODO')
-            return lisp.xhash(a)
-        end,
-    }
-    return make_hash_table(hashtest_eq,10,1.5,0.8125,vars.Qnil,false)
+    local _=get_key_arg(vars.QCpurecopy,args,used)
+    local size_arg=get_key_arg(vars.QCsize,args,used) or vars.Qnil
+    local size
+    if lisp.nilp(size_arg) then
+        size=65
+    elseif lisp.fixnatp(size_arg) then
+        size=lisp.fixnum(size_arg)
+    else
+        signal.signal_error('Invalid hash table size',size_arg)
+    end
+    local rehash_size_arg=get_key_arg(vars.QCrehash_size,args,used)
+    local rehash_size
+    if rehash_size_arg==false then
+        rehash_size=1.5-1
+    else
+        error('TODO')
+    end
+    local rehash_threshold_arg=get_key_arg(vars.QCrehash_threshold,args,used)
+    local rehash_threshold=rehash_threshold_arg==false and 0.8125 or error('TODO')
+    if not (0<rehash_threshold and rehash_threshold<=1) then
+        signal.signal_error("Invalid hash table rehash threshold",rehash_threshold_arg)
+    end
+    local weak=get_key_arg(vars.QCweakness,args,used) or vars.Qnil
+    if lisp.eq(weak,vars.Qt) then
+        weak=vars.Qkey_and_value
+    end
+    if not lisp.nilp(weak)
+        and not lisp.eq(weak,vars.Qkey)
+        and not lisp.eq(weak,vars.Qvalue)
+        and not lisp.eq(weak,vars.Qkey_or_value)
+        and not lisp.eq(weak,vars.Qkey_and_value) then
+        lisp.signal_error('Invalid hash table weakness',weak)
+    end
+    for i=1,#args-1 do
+        if not used[i] then
+            lisp.signal_error('Invalid hash table weakness',args[i])
+        end
+    end
+    return make_hash_table(testdesc,size,rehash_size,rehash_threshold,weak)
 end
 ---@param obj nelisp.obj
 ---@return nelisp._hash_table
@@ -617,7 +737,7 @@ function F.puthash.f(key,value,t)
     check_mutable_hash_table(t,h)
     local i,hash=hash_lookup(h,key)
     if i>=0 then
-        error('TODO')
+        lisp.aset(h.key_and_value,2*i+1,value)
     else
         hash_put(h,key,value,hash)
     end
@@ -866,15 +986,22 @@ function M.init_syms()
 Used by `featurep' and `require', and altered by `provide'.]])
     vars.defsym('Qfeatures','features')
 
-  vars.defvar_lisp('overriding_plist_environment','overriding-plist-environment',[[An alist that overrides the plists of the symbols which it lists.
+    vars.defvar_lisp('overriding_plist_environment','overriding-plist-environment',[[An alist that overrides the plists of the symbols which it lists.
 Used by the byte-compiler to apply `define-symbol-prop' during
 compilation.]])
-  vars.V.overriding_plist_environment=vars.Qnil
+    vars.V.overriding_plist_environment=vars.Qnil
 
     vars.defsym('Qhash_table_p','hash-table-p')
     vars.defsym('Qplistp','plistp')
     vars.defsym('Qprovide','provide')
     vars.defsym('Qrequire','require')
     vars.defsym('Qeq','eq')
+    vars.defsym('Qeql','eql')
+    vars.defsym('Qequal','equal')
+
+    vars.defsym('Qkey','key')
+    vars.defsym('Qvalue','value')
+    vars.defsym('Qkey_or_value','key-or-value')
+    vars.defsym('Qkey_and_value','key-and-value')
 end
 return M

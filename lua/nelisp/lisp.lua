@@ -243,7 +243,7 @@ end
 function M.aref(a,idx)
     assert(0<=idx and idx<M.asize(a))
     ---@diagnostic disable-next-line: invisible
-    return ((a --[[@as nelisp._pvec]]).content[idx-1] or vars.Qnil)
+    return ((a --[[@as nelisp._pvec]]).content[idx+1] or vars.Qnil)
 end
 ---@param a nelisp.obj
 ---@param idx number
@@ -251,7 +251,7 @@ end
 function M.aset(a,idx,val)
     assert(0<=idx and idx<M.asize(a))
     ---@diagnostic disable-next-line: invisible
-    a --[[@as nelisp._pvec]].content[idx-1]=not M.nilp(val) and val or nil
+    a --[[@as nelisp._pvec]].content[idx+1]=not M.nilp(val) and val or nil
 end
 
 --- ;; P functions
@@ -576,9 +576,9 @@ end
 --- ;; hashtable
 ---@class nelisp.hash_table_test
 ---@field name nelisp.obj
----@field user_hash_function nelisp.obj|0
----@field user_cmp_function nelisp.obj|0
----@field cmpfn (fun(a:nelisp.obj,b:nelisp.obj,h:nelisp._hash_table):nelisp.obj)|0
+---@field user_hash_function nelisp.obj
+---@field user_cmp_function nelisp.obj
+---@field cmpfn (fun(a:nelisp.obj,b:nelisp.obj,h:nelisp._hash_table):boolean)|0
 ---@field hashfn fun(a:nelisp.obj,h:nelisp._hash_table):number
 
 return M
