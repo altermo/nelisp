@@ -1,40 +1,29 @@
 local chars=require'nelisp.chars'
 local lisp=require'nelisp.lisp'
-local str=require'nelisp.obj.str'
-local cons=require'nelisp.obj.cons'
-local vec=require'nelisp.obj.vec'
 local b=require'nelisp.bytes'
 local vars=require'nelisp.vars'
-local fixnum=require'nelisp.obj.fixnum'
-local symbol=require'nelisp.obj.symbol'
-local float=require'nelisp.obj.float'
 local signal=require'nelisp.signal'
 local fns=require'nelisp.fns'
 local coding=require'nelisp.coding'
 local specpdl=require'nelisp.specpdl'
 local overflow=require'nelisp.overflow'
-local compiled=require'nelisp.obj.compiled'
-
----@class nelisp.obarray: nelisp.vec
+local alloc=require'nelisp.alloc'
 
 local M={}
 
 function M.init_once()
-    local array={}
-    for i=1,15121 do
-        array[i]=fixnum.zero
-    end
-    vars.initial_obarray=vec.make(array) --[[@as nelisp.obarray]]
-    vars.obarray=vars.initial_obarray
+    vars.initial_obarray=alloc.make_vector(15121,'zero')
 
     vars.defsym('Qnil','nil')
     vars.defsym('Qt','t')
     vars.defsym('Qvariable_documentation','variable-documentation')
     vars.defsym('Qobarray_cache','obarray-cache')
+    vars.defsym('Qbyte_boolean_vars','byte-boolean-vars')
 end
----@param obarray nelisp.obarray
+---@param obarray nelisp.obj
+---@return nelisp.obj
 function M.obarray_check(obarray)
-    if not lisp.vectorp(obarray) or vec.length(obarray)==0 then
+    if not lisp.vectorp(obarray) or lisp.asize(obarray)==0 then
         error('TODO')
     end
     return obarray
@@ -50,85 +39,97 @@ local function hash_string(s)
     end
     return hash
 end
----@param obarray nelisp.obarray
+---@param obarray nelisp.obj
 ---@param name string
----@return nelisp.symbol|number
+---@return nelisp.obj|number
 function M.lookup(obarray,name)
     obarray=M.obarray_check(obarray)
-    local obsize=vec.length(obarray)
+    local obsize=lisp.asize(obarray)
     local hash=hash_string(name) % obsize
-    local bucket=assert(vec.index0(obarray,hash))
-    if bucket==fixnum.zero then
+    local bucket=assert(lisp.aref(obarray,hash))
+    if bucket==lisp.make_fixnum(0) then
     elseif not lisp.symbolp(bucket) then
         error('TODO')
     else
-        ---@type nelisp.symbol|nil
-        local buck=bucket --[[@as nelisp.symbol]]
-        while buck~=nil do
-            if lisp.sdata(symbol.get_name(buck))==name then return buck end
-            buck=symbol.get_next(buck)
+        local tail=bucket
+        while true do
+            if lisp.sdata(lisp.symbol_name(tail))==name then
+                return tail
+            end
+            tail=(tail --[[@as nelisp._symbol]]).next
+            if tail==nil then
+                break
+            end
         end
     end
     return hash
 end
----@param obarray nelisp.obarray
+---@param obarray nelisp.obj
 ---@param sym string
----@return nelisp.symbol|number
+---@return nelisp.obj|number
 ---@return string?
 function M.lookup_considering_shorthand(obarray,sym)
     local tail=vars.V.read_symbol_shorthands
     assert(tail==vars.Qnil,'TODO')
     return M.lookup(obarray,sym),nil
 end
----@param name nelisp.str
----@param obarray nelisp.obarray
+---@param sym nelisp.obj
+---@param obarray nelisp.obj
 ---@param bucket number
----@return nelisp.symbol
-function M.make_intern_sym(name,obarray,bucket)
-    local sym
+local function intern_sym(sym,obarray,bucket)
+    assert(type(bucket)=='number')
     local in_initial_obarray=vars.initial_obarray==obarray
     if in_initial_obarray then
-        sym=symbol.make_interned_in_initial_obarray(name)
+        (sym --[[@as nelisp._symbol]]).interned=lisp.symbol_interned.interned_in_initial_obarray
     else
-        sym=symbol.make_interned(name)
+        (sym --[[@as nelisp._symbol]]).interned=lisp.symbol_interned.interned
     end
-    if str.index1_neg(name,1)==b':' and in_initial_obarray then
-        symbol.set_var(sym,sym)
-        symbol.set_constant(sym)
-        symbol.set_special(sym)
+    if lisp.sref(lisp.symbol_name(sym),0)==b':' and in_initial_obarray then
+        lisp.make_symbol_constant(sym)
+        sym --[[@as nelisp._symbol]].redirect=lisp.symbol_redirect.plainval
+        sym --[[@as nelisp._symbol]].declared_special=true
+        lisp.set_symbol_val(sym --[[@as nelisp._symbol]],sym)
     end
-    local old_sym=assert(vec.index0(obarray,bucket)) --[[@as nelisp.symbol]]
-    if lisp.symbolp(old_sym) then
-        symbol.set_next(sym,old_sym)
-    end
-    vec.set_index0(obarray,bucket,sym)
+    local old_sym=assert(lisp.aref(obarray,bucket))
+    lisp.set_symbol_next(sym,lisp.symbolp(old_sym) and old_sym or nil)
+    lisp.aset(obarray,bucket,sym)
     return sym
 end
+---@param sym nelisp.obj
 ---@param name string
----@return nelisp.symbol
-function M.define_symbol(name)
-    local s=str.make(name,false)
+function M.define_symbol(sym,name)
+    local s=alloc.make_pure_c_string(name)
+    alloc.init_symbol(sym,s)
     if name=='unbound' then
-        return symbol.make_uninterned(s)
+        error('DEV: we don\'t use unbound, we use lua-nil instead')
     end
     local bucket=M.lookup(vars.initial_obarray,name)
-    if type(bucket)~='number' then return bucket end
-    return M.make_intern_sym(s,vars.initial_obarray,bucket)
+    assert(type(bucket)=='number')
+    intern_sym(sym,vars.initial_obarray,bucket)
 end
----@param name nelisp.str
----@param obarray nelisp.obarray
+---@param name nelisp.obj
+---@param obarray nelisp.obj
 ---@param bucket number
 function M.intern_drive(name,obarray,bucket)
-    symbol.set_var(vars.Qobarray_cache,vars.Qnil)
-    return M.make_intern_sym(name,obarray,bucket)
+    lisp.set_symbol_val(vars.Qobarray_cache --[[@as nelisp._symbol]],vars.Qnil)
+    return intern_sym(alloc.make_symbol(name),obarray,bucket)
 end
+local has_inited_syms=false
 ---@param name string
-function M.lookup_or_make(name)
-    local found=M.lookup(vars.initial_obarray,name)
-    if type(found)~='number' and lisp.baresymbolp(found) then
-        return found
+---@return nelisp.obj
+function M.intern_c_string(name)
+    local obarray
+    if has_inited_syms then
+        obarray=M.obarray_check(vars.V.obarray)
+    else
+        obarray=vars.initial_obarray
     end
-    return M.intern_drive(str.make(name,false),vars.initial_obarray,found --[[@as number]])
+    local tem=M.lookup(obarray,name)
+    if type(tem)=='number' then
+        local s=alloc.make_string(name)
+        tem=M.intern_drive(s,obarray,tem)
+    end
+    return tem
 end
 
 local function end_of_file_error()
@@ -143,7 +144,7 @@ local function invalid_syntax(s,readcharfun)
     if lisp.bufferp(readcharfun.obj) then
         error('TODO')
     else
-        signal.xsignal(vars.Qinvalid_syntax,str.make(s,'auto'))
+        signal.xsignal(vars.Qinvalid_read_syntax,alloc.make_string(s))
     end
 end
 ---@param base number
@@ -167,17 +168,20 @@ end
 function M.make_readcharfun(obj,idx,end_)
     assert(end_==nil,'TODO')
     if lisp.stringp(obj) then
-        ---@cast obj nelisp.str
         local readcharfun
         ---@type nelisp.lread.readcharfun
+        assert(not lisp.string_multibyte(obj),'TODO')
+        local len=lisp.sbytes(obj)
         readcharfun={
-            ismultibyte=str.is_multibyte(obj),
+            ismultibyte=lisp.string_multibyte(obj),
             obj=obj,
-            idx=idx or 0,
+            idx=(idx or 0)-1,
             read=function()
-                assert(not str.is_multibyte(obj))
                 readcharfun.idx=readcharfun.idx+1
-                return str.index1_neg(obj,readcharfun.idx)
+                if len<=readcharfun.idx then
+                    return -1
+                end
+                return lisp.sref(obj,readcharfun.idx)
             end,
             unread=function()
                 readcharfun.idx=readcharfun.idx-1
@@ -402,7 +406,7 @@ function M.read_string_literal(readcharfun)
     if not force_multibyte and force_singlebyte then
         s=chars.strasunibyte(s)
     end
-    local obj=str.make(s,force_multibyte)
+    local obj=alloc.make_specified_string(s,-1,force_multibyte)
     return obj --TODO: may need unbind_to
 end
 ---@param digit number
@@ -422,7 +426,7 @@ function M.digit_to_number(digit,base)
 end
 ---@param s string
 ---@param base number
----@return nelisp.float|nelisp.fixnum|nelisp.bignum?
+---@return nelisp.obj?
 ---@return boolean whether the whole `s` was parsed, or only the beginning
 function M.string_to_number(s,base)
     if not _G.nelisp_later then
@@ -431,9 +435,9 @@ function M.string_to_number(s,base)
     local num=tonumber(s,base)
     if not num then return nil,false end
     if num==math.huge or num==-math.huge or math.floor(num)~=num or num==tonumber('nan') then
-        return float.make(num),false
+        return alloc.make_float(num),false
     end
-    return fixnum.make(num),false
+    return lisp.make_fixnum(num),false
 end
 ---@param readcharfun nelisp.lread.readcharfun
 ---@return nelisp.obj
@@ -443,7 +447,7 @@ function M.read_char_literal(readcharfun)
         end_of_file_error()
     end
     if ch==b' ' or ch==b'\t' then
-        return fixnum.make(ch)
+        return lisp.make_fixnum(ch)
     end
     if ch==b'(' or ch==b')' or ch==b'[' or ch==b']' or ch==b'"' or ch==b';' then
         error('TODO')
@@ -460,7 +464,7 @@ function M.read_char_literal(readcharfun)
     local nch=readcharfun.read()
     readcharfun.unread()
     if (nch<=32 or nch==b.no_break_space or string.char(nch):match'[]"\';()[#?`,.]') then
-        return fixnum.make(ch)
+        return lisp.make_fixnum(ch)
     end
     invalid_syntax('?',readcharfun)
     error('unreachable')
@@ -470,7 +474,7 @@ end
 ---@param uninterned_symbol boolean
 ---@param skip_shorthand boolean
 ---@param locate_syms boolean
----@return nelisp.symbol|nelisp.float|nelisp.fixnum|nelisp.bignum
+---@return nelisp.obj
 function M.read_symbol(readcharfun,uninterned_symbol,skip_shorthand,locate_syms)
     assert(not locate_syms,'TODO')
     readcharfun.unread()
@@ -505,12 +509,12 @@ function M.read_symbol(readcharfun,uninterned_symbol,skip_shorthand,locate_syms)
     else
         found,longhand=M.lookup_considering_shorthand(obarray,sym)
     end
-    if type(found)~='number' and lisp.baresymbolp(found) then
+    if type(found)~='number' and lisp.baresymbolp(found --[[@as nelisp.obj]]) then
     elseif longhand then
         error('TODO')
     else
         assert(type(found)=='number')
-        local name=str.make(sym,readcharfun.ismultibyte)
+        local name=alloc.make_specified_string(sym,-1,readcharfun.ismultibyte)
         found=M.intern_drive(name,obarray,found)
     end
     if locate_syms then
@@ -539,13 +543,11 @@ local function hash_table_from_plist(plist)
 
     local has_visited={}
     while lisp.consp(data) do
-        ---@cast data nelisp.cons
         local key=lisp.xcar(data)
         data=lisp.xcdr(data)
         if not lisp.consp(data) then
             break
         end
-        ---@cast data nelisp.cons
         local val=lisp.xcar(data)
         last=lisp.xcdr(data)
         vars.F.puthash(key,val,ht)
@@ -615,33 +617,34 @@ local function skip_lazy_string(readcharfun)
     end
     return true
 end
----@return nelisp.compiled
+---@return nelisp.obj
 local function bytecode_from_list(elems,readcharfun)
-    local cidx=compiled.idx
-    local size=#elems
-    if not (size>=cidx.stack_depth and size<=cidx.interactive
-        and (lisp.fixnump(elems[cidx.arglist]) or
-        lisp.consp(elems[cidx.arglist]) or
-        lisp.nilp(elems[cidx.arglist]))
-        and lisp.fixnatp(elems[cidx.stack_depth])) then
-        invalid_syntax('Invalid byte-code object',readcharfun)
-    end
-    if vars.V.load_force_doc_strings
-        and lisp.nilp(elems[cidx.constants])
-        and lisp.stringp(elems[cidx.bytecode]) then
-        error('TODO')
-    end
-    if not ((lisp.stringp(elems[cidx.bytecode]) and
-        lisp.vectorp(elems[cidx.constants]))
-        or lisp.consp(elems[cidx.bytecode])) then
-        invalid_syntax('Invalid byte-code object',readcharfun)
-    end
-    if lisp.stringp(elems[cidx.bytecode]) then
-        if str.is_multibyte(elems[cidx.bytecode]) then
-            error('TODO')
-        end
-    end
-    return compiled.make(elems)
+    error('TODO')
+    --local cidx=compiled.idx
+    --local size=#elems
+    --if not (size>=cidx.stack_depth and size<=cidx.interactive
+    --    and (lisp.fixnump(elems[cidx.arglist]) or
+    --    lisp.consp(elems[cidx.arglist]) or
+    --    lisp.nilp(elems[cidx.arglist]))
+    --    and lisp.fixnatp(elems[cidx.stack_depth])) then
+    --    invalid_syntax('Invalid byte-code object',readcharfun)
+    --end
+    --if vars.V.load_force_doc_strings
+    --    and lisp.nilp(elems[cidx.constants])
+    --    and lisp.stringp(elems[cidx.bytecode]) then
+    --    error('TODO')
+    --end
+    --if not ((lisp.stringp(elems[cidx.bytecode]) and
+    --    lisp.vectorp(elems[cidx.constants]))
+    --    or lisp.consp(elems[cidx.bytecode])) then
+    --    invalid_syntax('Invalid byte-code object',readcharfun)
+    --end
+    --if lisp.stringp(elems[cidx.bytecode]) then
+    --    if lisp.string_intervals(elems[cidx.bytecode]) then
+    --        error('TODO')
+    --    end
+    --end
+    --return compiled.make(elems)
 end
 ---@param readcharfun nelisp.lread.readcharfun
 ---@param locate_syms boolean
@@ -694,7 +697,10 @@ function M.read0(readcharfun,locate_syms)
         elseif t.t=='vector' then
             table.remove(stack)
             locate_syms=t.old_locate_syms
-            obj=vec.make(t.elems)
+            obj=alloc.make_vector(#t.elems,'nil')
+            for i=1,#t.elems do
+                (obj --[[@as nelisp._normal_vector]]).content[i]=t.elems[i]
+            end
         elseif t.t=='byte_code' then
             table.remove(stack)
             locate_syms=t.old_locate_syms
@@ -796,17 +802,17 @@ function M.read0(readcharfun,locate_syms)
         local t=stack[#stack]
         if t.t=='list_start' then
             t.t='list'
-            t.head=cons.make(obj,vars.Qnil)
+            t.head=alloc.cons(obj,vars.Qnil)
             t.tail=t.head
             goto read_obj
         elseif t.t=='list' then
-            local new_tail=cons.make(obj,vars.Qnil)
-            lisp.setcdr(t.tail,new_tail)
+            local new_tail=alloc.cons(obj,vars.Qnil)
+            lisp.xsetcdr(t.tail,new_tail)
             t.tail=new_tail
             goto read_obj
         elseif t.t=='special' then
             table.remove(stack)
-            obj=cons.make(t.sym,cons.make(obj,vars.Qnil))
+            obj=alloc.cons(t.sym,alloc.cons(obj,vars.Qnil))
         elseif t.t=='vector' or t.t=='record' or t.t=='byte_code' then
             table.insert(t.elems,obj)
             goto read_obj
@@ -816,7 +822,7 @@ function M.read0(readcharfun,locate_syms)
             if ch~=b')' then
                 invalid_syntax('expected )',readcharfun)
             end
-            lisp.setcdr(t.tail,obj)
+            lisp.xsetcdr(t.tail,obj)
             table.remove(stack)
             obj=t.head
             if not lisp.nilp(vars.V.load_force_doc_strings) then
@@ -841,7 +847,7 @@ function M.full_read_lua_string(s)
         --local readcharfun=M.make_readcharfun(str.make(s,(s:match('[\x80-\xff]') and true or false)))
         error('TODO')
     end
-    local readcharfun=M.make_readcharfun(str.make(s,false))
+    local readcharfun=M.make_readcharfun(alloc.make_string(s))
     local ret={}
     while true do
         local c=readcharfun.read()
@@ -872,9 +878,17 @@ local function suffix_p(s,suffix)
     return lisp.sdata(s):sub(-#suffix)==suffix
 end
 local function complete_filename_p(pathname)
-    return lisp.IS_DIRECTORY_SEP(str.index1_neg(pathname,1)) or
-        (lisp.IS_DIRECTORY_SEP(str.index1_neg(pathname,2)) and
-        lisp.IS_DIRECTORY_SEP(str.index1_neg(pathname,3)))
+    if lisp.IS_DIRECTORY_SEP(lisp.sref(pathname,0)) then
+        return true
+    end
+    if lisp.schars(pathname)<2 then
+        return false
+    end
+    if lisp.IS_DIRECTORY_SEP(lisp.sref(pathname,1)) and
+        lisp.IS_DIRECTORY_SEP(lisp.sref(pathname,2)) then
+        return true
+    end
+    return false
 end
 ---@return -1|file*
 local function openp(path,s,suffixes,storep,predicate,newer,no_native)
@@ -905,11 +919,11 @@ local function openp(path,s,suffixes,storep,predicate,newer,no_native)
         end
         local ofn=lisp.sdata(filename):gsub('^:/','')
         local ret=lisp.for_each_tail_safe(lisp.nilp(suffixes) and error('TODO') or suffixes,function (tail)
-            local suffix=lisp.xcar(tail) --[[@as nelisp.str]]
+            local suffix=lisp.xcar(tail)
             local fn=ofn..lisp.sdata(suffix)
             local fstr
-            if not str.is_multibyte(suffix) and not str.is_multibyte(filename) then
-                fstr=str.make(fn,false)
+            if not lisp.string_intervals(suffix) and not lisp.string_intervals(filename) then
+                fstr=alloc.make_unibyte_string(fn)
             else
                 error('TODO')
             end
@@ -1119,45 +1133,43 @@ function F.read_from_string.f(s,start,end_)
     lisp.check_string(s)
     local iter=M.make_readcharfun(s)
     local val=M.read0(iter,false)
-    return vars.F.cons(val,fixnum.make(iter.idx))
+    return vars.F.cons(val,lisp.make_fixnum(iter.idx))
 end
 
 function M.init()
     if not _G.nelisp_later then
         error('TODO: initialize load path')
     end
-    vars.V.load_suffixes=lisp.list(str.make('.elc',false),str.make('.el',false))
-    vars.V.load_file_rep_suffixes=lisp.list(str.make('',false))
     assert(_G.nelisp_emacs)
-    vars.V.load_path=lisp.list(str.make(_G.nelisp_emacs..'/lisp',false))
+    vars.V.load_path=lisp.list(alloc.make_string(_G.nelisp_emacs..'/lisp'))
     vars.V.load_file_name=vars.Qnil --I don't know why emacs sets it to nil twice
 
-    symbol.set_var(vars.Qnil,vars.Qnil)
-    symbol.set_constant(vars.Qnil)
-    symbol.set_special(vars.Qnil)
+    lisp.set_symbol_val(vars.Qnil --[[@as nelisp._symbol]],vars.Qnil)
+    lisp.make_symbol_constant(vars.Qnil)
+    ;(vars.Qnil --[[@as nelisp._symbol]]).declared_special=true
 
-    symbol.set_var(vars.Qt,vars.Qt)
-    symbol.set_constant(vars.Qt)
-    symbol.set_special(vars.Qt)
-
+    lisp.set_symbol_val(vars.Qt --[[@as nelisp._symbol]],vars.Qt)
+    lisp.make_symbol_constant(vars.Qt)
+    ;(vars.Qt --[[@as nelisp._symbol]]).declared_special=true
 end
 function M.init_syms()
-    vars.setsubr(F,'load')
-    vars.setsubr(F,'get_load_suffixes')
-    vars.setsubr(F,'intern')
-    vars.setsubr(F,'read_from_string')
+    vars.defsubr(F,'load')
+    vars.defsubr(F,'get_load_suffixes')
+    vars.defsubr(F,'intern')
+    vars.defsubr(F,'read_from_string')
 
     vars.defvar_lisp('obarray','obarray',[[Symbol table for use by `intern' and `read'.
 It is a vector whose length ought to be prime for best results.
 The vector's contents don't make sense if examined from Lisp programs;
 to find all the symbols in an obarray, use `mapatoms'.]])
-    vars.V.obarray=vars.obarray
+    vars.V.obarray=vars.initial_obarray
 
     vars.defvar_lisp('load_suffixes','load-suffixes',[[List of suffixes for Emacs Lisp files and dynamic modules.
 This list includes suffixes for both compiled and source Emacs Lisp files.
 This list should not include the empty string.
 `load' and related functions try to append these suffixes, in order,
 to the specified file name if a suffix is allowed or required.]])
+    vars.V.load_suffixes=lisp.list(alloc.make_pure_c_string('.elc'),alloc.make_pure_c_string('.el'))
 
     vars.defvar_lisp('load_file_rep_suffixes','load-file-rep-suffixes',[[List of suffixes that indicate representations of \
 the same file.
@@ -1171,6 +1183,7 @@ and, if so, which suffixes they should try to append to the file name
 in order to do so.  However, if you want to customize which suffixes
 the loading functions recognize as compression suffixes, you should
 customize `jka-compr-load-suffixes' rather than the present variable.]])
+    vars.V.load_file_rep_suffixes=lisp.list(alloc.make_pure_c_string(''))
 
     vars.defvar_lisp('read_symbol_shorthands','read-symbol-shorthands',[[Alist of known symbol-name shorthands.
 This variable's value can only be set via file-local variables.
@@ -1252,6 +1265,7 @@ of the file, regardless of whether or not it has the `.elc' extension.]])
 In case of native code being loaded this is indicating the
 corresponding bytecode filename.  Use `load-true-file-name' to obtain
 the .eln filename.]])
+    vars.V.load_file_name=vars.Qnil
 
     vars.defvar_lisp('load_in_progress','load-in-progress',[[Non-nil if inside of `load'.]])
     vars.V.load_in_progress=vars.Qnil
@@ -1259,5 +1273,6 @@ the .eln filename.]])
 
     vars.defvar_lisp('current_load_list','current-load-list',[[Used for internal purposes by `load'.]])
     vars.V.current_load_list=vars.Qnil
+    has_inited_syms=true
 end
 return M

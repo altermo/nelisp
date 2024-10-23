@@ -129,11 +129,11 @@ function M.internal_lisp_condition_case(var,bodyform,handlers)
         local tem=lisp.xcar(tail)
         if not (lisp.nilp(tem)
             or (lisp.consp(tem) and
-            (lisp.symbolp(lisp.xcar(tem --[[@as nelisp.cons]])) or lisp.consp(lisp.xcar(tem --[[@as nelisp.cons]]))))) then
+            (lisp.symbolp(lisp.xcar(tem)) or lisp.consp(lisp.xcar(tem))))) then
             signal.error('Invalid condition handler: %s',lisp.sdata(vars.F.prin1_to_string(tem,vars.Qt,vars.Qnil)))
         end
-        if lisp.consp(tem) and lisp.eq(lisp.xcar(tem --[[@as nelisp.cons]]),vars.QCsuccess) then
-            success_handler=lisp.xcdr(tem --[[@as nelisp.cons]])
+        if lisp.consp(tem) and lisp.eq(lisp.xcar(tem),vars.QCsuccess) then
+            success_handler=lisp.xcdr(tem)
         else
             table.insert(clauses,1,tem)
         end
@@ -146,7 +146,7 @@ function M.internal_lisp_condition_case(var,bodyform,handlers)
             result=require'nelisp.eval'.eval_sub(bodyform)
             return
         end
-        local condition=lisp.consp(clause) and lisp.xcar(clause --[[@as nelisp.cons]]) or var.Qnil
+        local condition=lisp.consp(clause) and lisp.xcar(clause) or var.Qnil
         if not lisp.consp(condition) then
             condition=lisp.list(condition)
         end
@@ -157,7 +157,7 @@ function M.internal_lisp_condition_case(var,bodyform,handlers)
         ---@cast ret nelisp.handler.msg_other
         local val=ret.val
         assert(lisp.consp(clause))
-        local handler_body=lisp.xcdr(clause --[[@as nelisp.cons]])
+        local handler_body=lisp.xcdr(clause)
         if lisp.nilp(var) then
             return vars.F.progn(handler_body)
         end

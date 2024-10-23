@@ -1,5 +1,6 @@
 local vars=require'nelisp.vars'
-local str=require'nelisp.obj.str'
+local lread=require'nelisp.lread'
+local alloc=require'nelisp.alloc'
 local M={}
 function M.init()
     if not _G.nelisp_later then
@@ -7,9 +8,9 @@ function M.init()
         error('TODO: system-type should also be initialized')
     end
 
-    vars.V.system_type=str.make('gnu/linux',false)
+    vars.V.system_type=lread.intern_c_string('gnu/linux')
 
-    vars.V.emacs_version=str.make('29.4',false)
+    vars.V.emacs_version=alloc.make_string('29.4')
 end
 function M.init_syms()
     vars.defsym('Qrisky_local_variable','risky-local-variable')

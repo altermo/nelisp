@@ -1,32 +1,26 @@
 local lisp=require'nelisp.lisp'
-local symbol=require'nelisp.obj.symbol'
 local vars=require'nelisp.vars'
 local signal=require'nelisp.signal'
-local fixnum=require'nelisp.obj.fixnum'
-local str=require'nelisp.obj.str'
-local char_table=require'nelisp.obj.char_table'
-local vec=require'nelisp.obj.vec'
 local lread=require'nelisp.lread'
 local overflow=require'nelisp.overflow'
-local cons=require'nelisp.obj.cons'
+local alloc=require'nelisp.alloc'
+local chartab=require'nelisp.chartab'
 
 local M={}
 ---@param sym nelisp.obj
----@param newval nelisp.obj
+---@param newval nelisp.obj?
 ---@param where nelisp.obj
 ---@param bindflag 'SET'|'BIND'|'UNBIND'|'THREAD_SWITCH'
 function M.set_internal(sym,newval,where,bindflag)
     lisp.check_symbol(sym)
-    ---@cast sym nelisp.symbol
-    local tapped_wire=symbol.get_trapped_wire(sym)
-    if tapped_wire==symbol.trapped_wire.nowrite then
+    local s=sym --[[@as nelisp._symbol]]
+    if s.trapped_write==lisp.symbol_trapped_write.nowrite then
         error('TODO')
-    elseif tapped_wire==symbol.trapped_wire.trapped_write then
+    elseif s.trapped_write==lisp.symbol_trapped_write.trapped then
         error('TODO')
     end
-    local redirect=symbol.get_redirect(sym)
-    if redirect==symbol.redirect.plain then
-        symbol.set_var(sym,newval)
+    if s.redirect==lisp.symbol_redirect.plainval then
+        lisp.set_symbol_val(s,newval)
     else
         error('TODO')
     end
@@ -34,9 +28,9 @@ end
 ---@return nelisp.obj?
 function M.find_symbol_value(sym)
     lisp.check_symbol(sym)
-    local redirect=symbol.get_redirect(sym)
-    if redirect==symbol.redirect.plain then
-        return symbol.get_var(sym)
+    local s=(sym --[[@as nelisp._symbol]])
+    if s.redirect==lisp.symbol_redirect.plainval then
+        return lisp.symbol_val(sym)
     else
         error('TODO')
     end
@@ -50,8 +44,7 @@ global value outside of any lexical scope.]]}
 ---@return nelisp.obj
 function F.symbol_value.f(sym)
     lisp.check_symbol(sym)
-    ---@cast sym nelisp.symbol
-    local val=symbol.get_var(sym)
+    local val=M.find_symbol_value(sym)
     if val then
         return val
     end
@@ -61,9 +54,9 @@ end
 ---@return nelisp.obj?
 local function default_value(sym)
     lisp.check_symbol(sym)
-    local redirect=symbol.get_redirect(sym)
-    if redirect==symbol.redirect.plain then
-        return symbol.get_var(sym)
+    local s=sym --[[@as nelisp._symbol]]
+    if s.redirect==lisp.symbol_redirect.plainval then
+        return lisp.symbol_val(s)
     else
         error('TODO')
     end
@@ -80,7 +73,7 @@ end
 F.symbol_function={'symbol-function',1,1,0,[[Return SYMBOL's function definition, or nil if that is void.]]}
 function F.symbol_function.f(sym)
     lisp.check_symbol(sym)
-    return symbol.get_func(sym)
+    return (sym --[[@as nelisp._symbol]]).fn
 end
 F.symbol_name={'symbol-name',1,1,0,[[Return SYMBOL's name, a string.
 
@@ -88,7 +81,7 @@ Warning: never alter the string returned by `symbol-name'.
 Doing that might make Emacs dysfunctional, and might even crash Emacs.]]}
 function F.symbol_name.f(sym)
     lisp.check_symbol(sym)
-    return symbol.get_name(sym)
+    return lisp.symbol_name(sym)
 end
 F.bare_symbol={'bare-symbol',1,1,0,[[Extract, if need be, the bare symbol from SYM, a symbol.]]}
 function F.bare_symbol.f(sym)
@@ -97,20 +90,27 @@ function F.bare_symbol.f(sym)
     end
     error('TODO')
 end
+---@param obj nelisp.obj
+---@return nelisp.obj
 function M.indirect_function(obj)
-    local has_visited={}
     ---@type nelisp.obj
     local hare=obj
+    local tortoise=obj
     while true do
         if not lisp.symbolp(hare) or lisp.nilp(hare) then
-            return hare
+            break
         end
-        hare=symbol.get_func(hare --[[@as nelisp.symbol]])
-        if has_visited[hare] then
+        hare=(hare --[[@as nelisp._symbol]]).fn
+        if not lisp.symbolp(hare) or lisp.nilp(hare) then
+            break
+        end
+        hare=(hare --[[@as nelisp._symbol]]).fn
+        tortoise=(tortoise --[[@as nelisp._symbol]]).fn
+        if lisp.eq(hare,tortoise) then
             signal.xsignal(vars.Qcyclic_function_indirection,obj)
         end
-        has_visited[hare]=true
     end
+    return hare
 end
 F.indirect_function={'indirect-function',1,2,0,[[Return the function at the end of OBJECT's function chain.
 If OBJECT is not a symbol, just return it.  Otherwise, follow all
@@ -120,7 +120,7 @@ function chain of symbols.]]}
 function F.indirect_function.f(obj,_)
     local result=obj
     if lisp.symbolp(result) and not lisp.nilp(result) then
-        result=symbol.get_func(result)
+        result=(result --[[@as nelisp._symbol]]).fn
         if lisp.symbolp(result) then
             result=M.indirect_function(result)
         end
@@ -132,24 +132,30 @@ ARRAY may be a vector, a string, a char-table, a bool-vector, a record,
 or a byte-code object.  IDX starts at 0.]]}
 function F.aref.f(array,idx)
     lisp.check_fixnum(idx)
-    local idxval=fixnum.tonumber(idx)
+    local idxval=lisp.fixnum(idx)
     if lisp.stringp(array) then
         if idxval<0 or idxval>=lisp.schars(array) then
             signal.args_out_of_range(array,idx)
-        elseif not str.is_multibyte(array) then
-            return fixnum.make(str.index0(array,idxval))
+        elseif not lisp.string_multibyte(array) then
+            return lisp.make_fixnum(lisp.sref(array,idxval))
         end
         error('TODO')
-    elseif lisp.vectorp(array) then
-        if idxval<0 or idxval>=vec.length(array) then
-            signal.args_out_of_range(array,idx)
-        end
-        return vec.index0(array,idxval)
     elseif lisp.chartablep(array) then
         lisp.check_chartable(array)
-        return char_table.get(array,idxval)
+        return chartab.ref(array,idxval)
     else
-        error('TODO')
+        local size
+        if lisp.vectorp(array) then
+            size=lisp.asize(array)
+        elseif lisp.compiledp(array) or lisp.recordp(array) then
+            error('TODO')
+        else
+            signal.wrong_type_argument(vars.Qarrayp,array)
+        end
+        if idxval<0 or idxval>=size then
+            signal.args_out_of_range(array,idx)
+        end
+        return lisp.aref(array,idxval)
     end
 end
 F.aset={'aset',3,3,0,[[Store into the element of ARRAY at index IDX the value NEWELT.
@@ -157,19 +163,19 @@ Return NEWELT.  ARRAY may be a vector, a string, a char-table or a
 bool-vector.  IDX starts at 0.]]}
 function F.aset.f(array,idx,newval)
     lisp.check_fixnum(idx)
-    local idxval=fixnum.tonumber(idx)
-    if not lisp.recodrp(array) then
+    local idxval=lisp.fixnum(idx)
+    if not lisp.recordp(array) then
         lisp.check_array(array,vars.Qarrayp)
     end
     if lisp.chartablep(array) then
         lisp.check_chartable(array)
-        char_table.set(array,idxval,newval)
+        chartab.set(array,idxval,newval)
     elseif lisp.vectorp(array) then
         lisp.check_vector(array)
-        if idxval<0 or idxval>=vec.length(array) then
-            error('INDEX out of range')
+        if idxval<0 or idxval>=lisp.asize(array) then
+            signal.args_out_of_range(array,idx)
         end
-        vec.set_index0(array,idxval,newval)
+        lisp.aset(array,idxval,newval)
     else
         error('TODO')
     end
@@ -217,7 +223,7 @@ end
 F.setcdr={'setcdr',2,2,0,[[Set the cdr of CELL to be NEWCDR.  Returns NEWCDR.]]}
 function F.setcdr.f(cell,newcdr)
     lisp.check_cons(cell)
-    lisp.setcdr(cell,newcdr)
+    lisp.xsetcdr(cell,newcdr)
     return newcdr
 end
 F.eq={'eq',2,2,0,[[Return t if the two args are the same Lisp object.]]}
@@ -233,7 +239,7 @@ function F.fset.f(sym,definition)
     if lisp.nilp(sym) and not lisp.nilp(definition) then
         signal.xsignal(vars.Qsetting_constant,sym)
     end
-    symbol.set_func(sym,definition)
+    lisp.set_symbol_function(sym,definition)
     return definition
 end
 F.defalias={'defalias',2,3,0,[[Set SYMBOL's function definition to DEFINITION.
@@ -257,6 +263,14 @@ function F.defalias.f(sym,definition,docstring)
     end
     return sym
 end
+---@param s nelisp._symbol
+---@param val nelisp.obj
+local function make_blv(s,val)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    return {}
+end
 F.make_variable_buffer_local={'make-variable-buffer-local',1,1,'vMake Variable Buffer Local: ',[[Make VARIABLE become buffer-local whenever it is set.
 At any time, the value for the current buffer is in effect,
 unless the variable has never been set in this buffer,
@@ -277,28 +291,36 @@ The function `default-value' gets the default value and `set-default' sets it.
 See also `defvar-local'.]]}
 function F.make_variable_buffer_local.f(var)
     lisp.check_symbol(var)
-    local redirect=symbol.get_redirect(var)
-    local default
-    if redirect==symbol.redirect.plain then
-        default=symbol.get_var(var) or vars.Qnil
+    local s=(var --[[@as nelisp._symbol]])
+    local val
+    ---@type nelisp.buffer_local_value
+    local blv
+    if s.redirect==lisp.symbol_redirect.plainval then
+        val=lisp.symbol_val(s) or vars.Qnil
     else
         error('TODO')
     end
-    symbol.set_redirect(var,symbol.redirect.localized)
-    symbol.set_blv(var,{default=default,local_if_set=true})
+    if lisp.symbolconstantp(var) then
+        signal.xsignal(vars.Qsetting_constant,var)
+    end
+    if not blv then
+        blv=make_blv(s,val)
+        s.redirect=lisp.symbol_redirect.localized
+        lisp.set_symbol_blv(s,blv)
+    end
+    blv.local_if_set=true
     return var
 end
 ---@param bindflag 'SET'|'BIND'|'UNBIND'|'THREAD_SWITCH'
 function M.set_default_internal(sym,val,bindflag)
     lisp.check_symbol(sym)
-    local trapped_wire=symbol.get_trapped_wire(sym)
-    if trapped_wire==symbol.trapped_wire.trapped_write then
+    local s=(sym --[[@as nelisp._symbol]])
+    if s.trapped_write==lisp.symbol_trapped_write.nowrite then
         error('TODO')
-    elseif trapped_wire==symbol.trapped_wire.nowrite then
+    elseif s.trapped_write==lisp.symbol_trapped_write.trapped then
         error('TODO')
     end
-    local redirect=symbol.get_redirect(sym)
-    if redirect==symbol.redirect.plain then
+    if s.redirect==lisp.symbol_redirect.plainval then
         M.set_internal(sym,val,vars.Qnil,bindflag)
         return
     else
@@ -313,7 +335,7 @@ F.set_default.f=function (sym,val)
     return val
 end
 ---@param code '+'|'-'|'or'
----@param args (number|nelisp.float|nelisp.bignum|nelisp.fixnum)[]
+---@param args (number|nelisp.obj)[]
 local function arith_driver(code,args)
     if not _G.nelisp_later then
         error('TODO: args may contain markers')
@@ -329,7 +351,7 @@ local function arith_driver(code,args)
             elseif lisp.floatp(v) then
                 error('TODO')
             elseif lisp.fixnump(v) then
-                acc=overflow.add(acc,fixnum.tonumber(v --[[@as nelisp.fixnum]]))
+                acc=overflow.add(acc,lisp.fixnum(v))
             else
                 error('unreachable')
             end
@@ -337,7 +359,7 @@ local function arith_driver(code,args)
         if acc==nil then
             error('TODO')
         end
-        return fixnum.make(acc)
+        return lisp.make_fixnum(acc)
     elseif code=='-' then
         ---@type number|nil
         local acc=0
@@ -349,7 +371,7 @@ local function arith_driver(code,args)
             elseif lisp.floatp(v) then
                 error('TODO')
             elseif lisp.fixnump(v) then
-                acc=overflow.sub(acc,fixnum.tonumber(v --[[@as nelisp.fixnum]]))
+                acc=overflow.sub(acc,lisp.fixnum(v))
             else
                 error('unreachable')
             end
@@ -357,7 +379,7 @@ local function arith_driver(code,args)
         if acc==nil then
             error('TODO')
         end
-        return fixnum.make(acc)
+        return lisp.make_fixnum(acc)
     elseif code=='or' then
         if not _G.nelisp_later then
             error('TODO: bit can only do numbers up to 32 bit, fixnum is 52 bit')
@@ -372,7 +394,7 @@ local function arith_driver(code,args)
             elseif lisp.floatp(v) then
                 error('TODO')
             elseif lisp.fixnump(v) then
-                acc=bit.bor(acc,fixnum.tonumber(v --[[@as nelisp.fixnum]]))
+                acc=bit.bor(acc,lisp.fixnum(v))
             else
                 error('unreachable')
             end
@@ -391,8 +413,8 @@ local function arithcompare(a,b,code)
     local lt,gt,eq
     if lisp.fixnump(a) then
         if lisp.fixnump(b) then
-            local i1=fixnum.tonumber(a --[[@as nelisp.fixnum]])
-            local i2=fixnum.tonumber(b --[[@as nelisp.fixnum]])
+            local i1=lisp.fixnum(a)
+            local i2=lisp.fixnum(b)
             lt=i1<i2
             gt=i1>i2
             eq=i1==i2
@@ -420,7 +442,7 @@ local function arithcompare(a,b,code)
     end
 end
 ---@param code '='|'<='
----@param args (number|nelisp.float|nelisp.bignum|nelisp.fixnum)[]
+---@param args (number|nelisp.obj)[]
 local function arithcompare_driver(code,args)
     for i=1,#args-1 do
         if not arithcompare(args[i],args[i+1],code) then
@@ -453,7 +475,7 @@ F.lss={'<',1,-2,0,[[Return t if each arg (a number or marker), is less than the 
 usage: (< NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
 function F.lss.f(args)
     if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
-        return fixnum.tonumber(args[1])<fixnum.tonumber(args[2]) and vars.Qt or vars.Qnil
+        return lisp.fixnum(args[1])<lisp.fixnum(args[2]) and vars.Qt or vars.Qnil
     end
     error('TODO')
 end
@@ -461,7 +483,7 @@ F.leq={'<=',1,-2,0,[[Return t if each arg (a number or marker) is less than or e
 usage: (<= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
 function F.leq.f(args)
     if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
-        return fixnum.tonumber(args[1])<=fixnum.tonumber(args[2]) and vars.Qt or vars.Qnil
+        return lisp.fixnum(args[1])<=lisp.fixnum(args[2]) and vars.Qt or vars.Qnil
     end
     return arithcompare_driver('<=',args)
 end
@@ -469,7 +491,7 @@ F.gtr={'>',1,-2,0,[[Return t if each arg (a number or marker) is greater than th
 usage: (> NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
 function F.gtr.f(args)
     if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
-        return fixnum.tonumber(args[1])>fixnum.tonumber(args[2]) and vars.Qt or vars.Qnil
+        return lisp.fixnum(args[1])>lisp.fixnum(args[2]) and vars.Qt or vars.Qnil
     end
     error('TODO')
 end
@@ -477,7 +499,7 @@ F.geq={'>=',1,-2,0,[[Return t if each arg (a number or marker) is greater than o
 usage: (>= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
 function F.geq.f(args)
     if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
-        return fixnum.tonumber(args[1])>=fixnum.tonumber(args[2]) and vars.Qt or vars.Qnil
+        return lisp.fixnum(args[1])>=lisp.fixnum(args[2]) and vars.Qt or vars.Qnil
     end
     error('TODO')
 end
@@ -486,7 +508,7 @@ Arguments may be integers, or markers converted to integers.
 usage: (logior &rest INTS-OR-MARKERS)]]}
 function F.logior.f(args)
     if #args==0 then
-        return fixnum.zero
+        return lisp.make_fixnum(0)
     end
     local a=lisp.check_number_coerce_marker(args[1])
     return #args==1 and a or arith_driver('or',args)
@@ -508,8 +530,8 @@ value in BUFFER, or if VARIABLE is automatically buffer-local (see
 `make-variable-buffer-local').]]}
 function F.local_variable_if_set_p.f(variable,buffer)
     lisp.check_symbol(variable)
-    local redirect=symbol.get_redirect(variable)
-    if redirect==symbol.redirect.plain then
+    local s=(variable --[[@as nelisp._symbol]])
+    if s.redirect==lisp.symbol_redirect.plainval then
         return vars.Qnil
     end
     error('TODO')
@@ -528,14 +550,14 @@ function F.string_to_number.f(s,base)
         b=10
     else
         lisp.check_fixnum(base)
-        if not (fixnum.tonumber(base)>=2 and fixnum.tonumber(base)<=16) then
+        if not (lisp.fixnum(base)>=2 and lisp.fixnum(base)<=16) then
             signal.xsignal(vars.Qargs_out_of_range,base)
         end
-        b=fixnum.tonumber(base)
+        b=lisp.fixnum(base)
     end
     local p=lisp.sdata(s):gsub('^[ \t]+','')
     local val=lread.string_to_number(p,b)
-    return val==nil and fixnum.zero or val
+    return val==nil and lisp.make_fixnum(0) or val
 end
 F.default_boundp={'default-boundp',1,1,0,[[Return t if SYMBOL has a non-void default value.
 A variable may have a buffer-local value.  This function says whether
@@ -550,9 +572,9 @@ Note that if `lexical-binding' is in effect, this refers to the
 global value outside of any lexical scope.]]}
 function F.boundp.f(sym)
     lisp.check_symbol(sym)
-    local redirect=symbol.get_redirect(sym)
-    if redirect==symbol.redirect.plain then
-        return symbol.get_var(sym)==nil and vars.Qnil or vars.Qt
+    local s=(sym --[[@as nelisp._symbol]])
+    if s.redirect==lisp.symbol_redirect.plainval then
+        return lisp.symbol_val(sym)==nil and vars.Qnil or vars.Qt
     else
         error('TODO')
     end
@@ -560,16 +582,16 @@ end
 F.fboundp={'fboundp',1,1,0,[[Return t if SYMBOL's function definition is not void.]]}
 function F.fboundp.f(sym)
     lisp.check_symbol(sym)
-    return lisp.nilp(symbol.get_func(sym)) and vars.Qnil or vars.Qt
+    return lisp.nilp((sym --[[@as nelisp._symbol]]).fn) and vars.Qnil or vars.Qt
 end
 F.keywordp={'keywordp',1,1,0,[[Return t if OBJECT is a keyword.
 This means that it is a symbol with a print name beginning with `:'
 interned in the initial obarray.]]}
 function F.keywordp.f(a)
     if lisp.symbolp(a) and
-        str.index1_neg(symbol.get_name(a),1)==(require'nelisp.bytes')[':'] and
-        symbol.get_interned(a)==symbol.interned.interned_in_initial_obarray
-        then
+        lisp.sref(lisp.symbol_name(a),0)==(require'nelisp.bytes')[':'] and
+        lisp.symbolinternedininitialobarrayp(a)
+    then
         return vars.Qt
     end
     return vars.Qnil
@@ -604,12 +626,12 @@ function F.functionp.f(a) return lisp.functionp(a) and vars.Qt or vars.Qnil end
 F.hash_table_p={'hash-table-p',1,1,0,[[Return t if OBJ is a Lisp hash table object.]]}
 function F.hash_table_p.f(a) return lisp.hashtablep(a) and vars.Qt or vars.Qnil end
 function M.init()
-    local error_tail=cons.make(vars.Qerror,vars.Qnil)
+    local error_tail=alloc.cons(vars.Qerror,vars.Qnil)
     vars.F.put(vars.Qerror,vars.Qerror_conditions,error_tail)
-    vars.F.put(vars.Qerror,vars.Qerror_message,str.make('error',false))
+    vars.F.put(vars.Qerror,vars.Qerror_message,alloc.make_pure_c_string('error'))
     local function put_error(sym,tail,msg)
-        vars.F.put(sym,vars.Qerror_conditions,cons.make(sym,tail))
-        vars.F.put(sym,vars.Qerror_message,str.make(msg,false))
+        vars.F.put(sym,vars.Qerror_conditions,alloc.cons(sym,tail))
+        vars.F.put(sym,vars.Qerror_message,alloc.make_pure_c_string(msg))
     end
     put_error(vars.Qquit,vars.Qnil,'Quit')
     put_error(vars.Qvoid_variable,error_tail,"Symbol's value as variable is void")
@@ -622,55 +644,55 @@ function M.init_syms()
     vars.defsym('Qvoid_variable','void-variable')
     vars.defsym('Qvoid_function','void-function')
 
-    vars.setsubr(F,'symbol_value')
-    vars.setsubr(F,'default_value')
-    vars.setsubr(F,'symbol_function')
-    vars.setsubr(F,'symbol_name')
-    vars.setsubr(F,'bare_symbol')
-    vars.setsubr(F,'indirect_function')
-    vars.setsubr(F,'aref')
-    vars.setsubr(F,'aset')
-    vars.setsubr(F,'car')
-    vars.setsubr(F,'car_safe')
-    vars.setsubr(F,'cdr')
-    vars.setsubr(F,'setcdr')
+    vars.defsubr(F,'symbol_value')
+    vars.defsubr(F,'default_value')
+    vars.defsubr(F,'symbol_function')
+    vars.defsubr(F,'symbol_name')
+    vars.defsubr(F,'bare_symbol')
+    vars.defsubr(F,'indirect_function')
+    vars.defsubr(F,'aref')
+    vars.defsubr(F,'aset')
+    vars.defsubr(F,'car')
+    vars.defsubr(F,'car_safe')
+    vars.defsubr(F,'cdr')
+    vars.defsubr(F,'setcdr')
 
-    vars.setsubr(F,'fset')
-    vars.setsubr(F,'set')
-    vars.setsubr(F,'set_default')
+    vars.defsubr(F,'fset')
+    vars.defsubr(F,'set')
+    vars.defsubr(F,'set_default')
 
-    vars.setsubr(F,'eq')
-    vars.setsubr(F,'defalias')
-    vars.setsubr(F,'make_variable_buffer_local')
+    vars.defsubr(F,'eq')
+    vars.defsubr(F,'defalias')
+    vars.defsubr(F,'make_variable_buffer_local')
 
-    vars.setsubr(F,'add1')
-    vars.setsubr(F,'sub1')
-    vars.setsubr(F,'logior')
-    vars.setsubr(F,'lss')
-    vars.setsubr(F,'leq')
-    vars.setsubr(F,'gtr')
-    vars.setsubr(F,'geq')
-    vars.setsubr(F,'eqlsign')
-    vars.setsubr(F,'neq')
+    vars.defsubr(F,'add1')
+    vars.defsubr(F,'sub1')
+    vars.defsubr(F,'logior')
+    vars.defsubr(F,'lss')
+    vars.defsubr(F,'leq')
+    vars.defsubr(F,'gtr')
+    vars.defsubr(F,'geq')
+    vars.defsubr(F,'eqlsign')
+    vars.defsubr(F,'neq')
 
-    vars.setsubr(F,'string_to_number')
+    vars.defsubr(F,'string_to_number')
 
-    vars.setsubr(F,'local_variable_if_set_p')
-    vars.setsubr(F,'default_boundp')
-    vars.setsubr(F,'boundp')
-    vars.setsubr(F,'fboundp')
-    vars.setsubr(F,'keywordp')
-    vars.setsubr(F,'stringp')
-    vars.setsubr(F,'null')
-    vars.setsubr(F,'numberp')
-    vars.setsubr(F,'listp')
-    vars.setsubr(F,'symbolp')
-    vars.setsubr(F,'floatp')
-    vars.setsubr(F,'vectorp')
-    vars.setsubr(F,'atom')
-    vars.setsubr(F,'consp')
-    vars.setsubr(F,'functionp')
-    vars.setsubr(F,'hash_table_p')
+    vars.defsubr(F,'local_variable_if_set_p')
+    vars.defsubr(F,'default_boundp')
+    vars.defsubr(F,'boundp')
+    vars.defsubr(F,'fboundp')
+    vars.defsubr(F,'keywordp')
+    vars.defsubr(F,'stringp')
+    vars.defsubr(F,'null')
+    vars.defsubr(F,'numberp')
+    vars.defsubr(F,'listp')
+    vars.defsubr(F,'symbolp')
+    vars.defsubr(F,'floatp')
+    vars.defsubr(F,'vectorp')
+    vars.defsubr(F,'atom')
+    vars.defsubr(F,'consp')
+    vars.defsubr(F,'functionp')
+    vars.defsubr(F,'hash_table_p')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')
@@ -697,6 +719,6 @@ function M.init_syms()
     vars.defsym('QCrehash_threshold',':rehash-threshold')
     vars.defsym('QCweakness',':weakness')
 
-
+    vars.Qunique=alloc.make_symbol(alloc.make_pure_c_string'unbound')
 end
 return M

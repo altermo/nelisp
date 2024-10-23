@@ -1,7 +1,14 @@
-local symbol=require'nelisp.obj.symbol'
-local cons=require'nelisp.obj.cons'
-local str=require'nelisp.obj.str'
-local subr=require'nelisp.obj.subr'
+---@class nelisp.vars
+---@field defsym fun(name:string,symname:string)
+---@field commit_qsymbols fun()
+---@field defvar_lisp fun(name:string,symname:string?,doc:string?):nelisp.obj
+---@field defvar_bool fun(name:string,symname:string,doc:string?)
+---@field defsubr fun(map:nelisp.defsubr_map,name:string)
+---@field F table<string,fun(...:(nelisp.obj|nelisp.obj[])):nelisp.obj>
+---@field V table<string,nelisp.obj>
+---@field modifier_symbols (0|nelisp.obj)[]
+---@field lisp_eval_depth number
+---@field [string] nelisp.obj
 local vars={}
 
 local Qsymbols={}
@@ -12,30 +19,52 @@ function vars.defsym(name,symname)
     assert(name:sub(1,1)=='Q','DEV: Internal symbol must start with Q')
     assert(not Qsymbols_later[name] and not Qsymbols[name],'DEV: Internal symbol already defined: '..name)
     local lread=require'nelisp.lread'
-    local sym=lread.define_symbol(symname)
-    Qsymbols_later[name]=sym
+    local lisp=require'nelisp.lisp'
+    local sym
+    local found=lread.lookup(vars.initial_obarray,symname)
+    if type(found)=='number' then
+        sym=lisp.make_empty_ptr(lisp.type.symbol)
+        if symname=='nil' then
+            Qsymbols[name]=sym
+        else
+            Qsymbols_later[name]=sym
+        end
+        lread.define_symbol(sym,symname)
+    else
+        Qsymbols_later[name]=found
+    end
 end
 function vars.commit_qsymbols()
     Qsymbols=setmetatable(Qsymbols_later,{__index=Qsymbols})
     Qsymbols_later={}
 end
 
+---@type table<string,nelisp.obj>
 local Vsymbols={}
 ---@param name string
 ---@param symname string?
 ---@param doc string?
----@return nelisp.symbol
+---@return nelisp.obj
 function vars.defvar_lisp(name,symname,doc)
     assert(not name:match('%-'),'DEV: Internal variable names must not contain -')
     assert(not symname or not symname:match('_'),'DEV: Internal variable symbol names must should probably not contain _')
     assert(name:sub(1,1)~='V','DEV: Internal variable names must not start with V')
     assert(not Vsymbols[name],'DEV: Internal variable already defined: '..name)
     local lread=require'nelisp.lread'
+    local lisp=require'nelisp.lisp'
     local sym
     if symname then
-        sym=lread.define_symbol(symname)
+        local found=lread.lookup(vars.initial_obarray,symname)
+        if type(found)=='number' then
+            sym=lisp.make_empty_ptr(lisp.type.symbol)
+            lread.define_symbol(sym,symname)
+        else
+            sym=found
+        end
     else
-        sym=symbol.make_uninterned(str.make(name,false))
+        sym=lisp.make_empty_ptr(lisp.type.symbol)
+        local alloc=require'nelisp.alloc'
+        alloc.init_symbol(sym,alloc.make_pure_c_string(name))
     end
     Vsymbols[name]=sym
     if doc then
@@ -50,22 +79,29 @@ end
 ---@param symname string
 function vars.defvar_bool(name,symname,doc)
     vars.defvar_lisp(name,symname,doc)
-    vars.V.byte_boolean_vars=cons.make(Vsymbols[name],vars.V.byte_boolean_vars)
+    local alloc=require'nelisp.alloc'
+    local lisp=require'nelisp.lisp'
+    lisp.set_symbol_val(vars.Qbyte_boolean_vars --[[@as nelisp._symbol]],
+        alloc.cons(Vsymbols[name],lisp.symbol_val(vars.Qbyte_boolean_vars --[[@as nelisp._symbol]])))
 end
 vars.V=setmetatable({},{__index=function (_,k)
     if not Vsymbols[k] then
         error('DEV: Not an internal variable: '..tostring(k))
     end
-    return assert(symbol.get_var(Vsymbols[k]),'DEV: Internal variable not set: '..tostring(k))
+    local lisp=require'nelisp.lisp'
+    return assert(lisp.symbol_val(Vsymbols[k] --[[@as nelisp._symbol]]),'DEV: Internal variable not set: '..tostring(k))
 end,__newindex=function (_,k,v)
         assert(type(v)=='table' and type(v[1])=='number')
-        symbol.set_var(assert(Vsymbols[k],'DEV: Not an internal variable: '..tostring(k)),v)
+        local lisp=require'nelisp.lisp'
+        local sym=assert(Vsymbols[k],'DEV: Not an internal variable: '..tostring(k))
+        lisp.set_symbol_val(sym --[[@as nelisp._symbol]],v)
     end})
 
 vars.F={}
+---@alias nelisp.defsubr_map {[string]:{[1]:string,[2]:number,[3]:number,[4]:string|0,[5]:string,f:fun(...:nelisp.obj):nelisp.obj}}
+---@param map nelisp.defsubr_map
 ---@param name string
----@param map {[string]:{[1]:string,[2]:number,[3]:number,[4]:number,[5]:string,f:fun(...:nelisp.obj):nelisp.obj}}
-function vars.setsubr(map,name)
+function vars.defsubr(map,name)
     assert(not vars.F[name],'DEV: internal function already defined: '..name)
     local d=assert(map[name])
     local f=assert(d.f)
@@ -77,16 +113,25 @@ function vars.setsubr(map,name)
     assert(type(d.f)=='function')
     assert(#d==5)
     vars.F[name]=f
-    local lread=require'nelisp.lread'
     local symname=d[1]
     if d[3]>=0 and d[3]<=8 then
         assert(debug.getinfo(f,'u').nparams==d[3])
     else
         assert(debug.getinfo(f,'u').nparams==1)
     end
-    local sym=lread.lookup_or_make(symname)
-    local s=subr.make(f,d[2],d[3],symname,d[4],d[5])
-    symbol.set_func(sym,s)
+    local lread=require'nelisp.lread'
+    local sym=lread.intern_c_string(symname)
+    local lisp=require'nelisp.lisp'
+    local subr=lisp.make_vectorlike_ptr(
+        {
+            fn=f,
+            minargs=d[2],
+            maxargs=d[3],
+            symbol_name=symname,
+            intspec=d[4]~=0 and d[4] --[[@as string]] or nil,
+            docs=d[5],
+        } --[[@as nelisp._subr]],lisp.pvec.subr)
+    lisp.set_symbol_function(sym,subr)
 end
 
 return setmetatable(vars,{__index=function (_,k)

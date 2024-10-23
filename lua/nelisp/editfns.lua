@@ -1,10 +1,9 @@
 local lisp=require'nelisp.lisp'
 local vars=require'nelisp.vars'
-local str=require'nelisp.obj.str'
 local print_=require'nelisp.print'
 local b=require'nelisp.bytes'
 local signal=require'nelisp.signal'
-local symbol=require'nelisp.obj.symbol'
+local alloc=require'nelisp.alloc'
 
 local M={}
 
@@ -12,25 +11,25 @@ local F={}
 local function styled_format(args,message)
     lisp.check_string(args[1])
     local formatlen=lisp.sbytes(args[1])
-    local idx=1
+    local idx=0
     local argsidx=2
     local buf=print_.make_printcharfun()
-    local multibyte_format=str.is_multibyte(args[1])
+    local multibyte_format=lisp.string_multibyte(args[1])
     local multibyte=multibyte_format
-    local fmt_props=not not str.get_intervals(args[1])
+    local fmt_props=not not lisp.string_intervals(args[1])
     local arg_intervals=false
     local n=0
     for i=2,#args do
         if multibyte then break end
-        if lisp.stringp(args[i]) and str.is_multibyte(args[i]) then
+        if lisp.stringp(args[i]) and lisp.string_multibyte(args[i]) then
             multibyte=true
         end
     end
-    while idx<=formatlen do
-        local format_char=str.index1(args[1],idx)
+    while idx<formatlen do
+        local format_char=lisp.sref(args[1],idx)
         idx=idx+1
         if format_char==b'%' then
-            local c=str.index1_neg(args[1],idx)
+            local c=lisp.sref(args[1],idx)
             local num=0
             local num_end
             if string.match('%d',string.char(c)) then
@@ -40,7 +39,7 @@ local function styled_format(args,message)
             idx=idx-1
             while true do
                 idx=idx+1
-                c=str.index1_neg(args[1],idx)
+                c=lisp.sref(args[1],idx)
                 if c==b'-' then flags.minus=true
                 elseif c==b'+' then flags.plus=true
                 elseif c==b' ' then flags.space=true
@@ -54,10 +53,10 @@ local function styled_format(args,message)
             local field_width=num
             local precision_given=num_end==b'.'
             local precision=precision_given and error('TODO') or math.huge
-            if idx>formatlen then
+            if idx>=formatlen then
                 signal.error('Format string ends in middle of format specifier')
             end
-            c=str.index1_neg(args[1],idx)
+            c=lisp.sref(args[1],idx)
             idx=idx+1
             if c==b'%' then
                 error('TODO')
@@ -71,7 +70,7 @@ local function styled_format(args,message)
             if c==b'S' or (c==b's' and not lisp.stringp(arg) and not lisp.symbolp(arg)) then
                 local noescape=c==b'S' and vars.Qnil or vars.Qt
                 arg=vars.F.prin1_to_string(arg,noescape,vars.Qnil)
-                if str.is_multibyte(arg) then
+                if lisp.string_multibyte(arg) then
                     error('TODO')
                 end
                 c=b's'
@@ -79,14 +78,14 @@ local function styled_format(args,message)
                 error('TODO')
             end
             if lisp.symbolp(arg) then
-                arg=symbol.get_name(arg)
-                if str.is_multibyte(arg) then
+                arg=lisp.symbol_name(arg)
+                if lisp.string_multibyte(arg) then
                     error('TODO')
                 end
             end
             local float_conversion=c==b'e' or c==b'f' or c==b'g'
             if c==b's' then
-                if formatlen==2 and idx-1==formatlen then
+                if formatlen==2 and idx==formatlen then
                     error('TODO')
                 end
                 local prec=-1
@@ -109,7 +108,7 @@ local function styled_format(args,message)
                     end
                 end
                 local convbytes=nbytes
-                if convbytes>0 and multibyte and not str.is_multibyte(arg) then
+                if convbytes>0 and multibyte and not lisp.string_multibyte(arg) then
                     error('TODO')
                 end
                 local padding=width<field_width and field_width-width or 0
@@ -122,14 +121,14 @@ local function styled_format(args,message)
                 if multibyte then
                     error('TODO: more checks and set maybe_combine_byte')
                 end
-                if str.is_multibyte(arg) then
+                if lisp.string_multibyte(arg) then
                     error('TODO')
                 end
                 buf.write(lisp.sdata(arg))
                 if flags.minus and padding>0 then
                     buf.write((' '):rep(padding))
                 end
-                if str.get_intervals(args[1]) then
+                if lisp.string_intervals(args[1]) then
                     error('TODO')
                 end
             else
@@ -151,8 +150,8 @@ local function styled_format(args,message)
             end
         end
     end
-    local val=str.make(buf.out(),multibyte)
-    if str.get_intervals(args[1]) or arg_intervals then
+    local val=alloc.make_specified_string(buf.out(),-1,multibyte)
+    if lisp.string_intervals(args[1]) or arg_intervals then
         error('TODO')
     end
     return val
@@ -191,7 +190,7 @@ also `current-message'.
 usage: (message FORMAT-STRING &rest ARGS)]]}
 ---@param args nelisp.obj[]
 function F.message.f(args)
-    if lisp.nilp(args[1]) or (lisp.stringp(args[1]) and str.index1_neg(args[1] --[[@as nelisp.str]],1)==-1) then
+    if lisp.nilp(args[1]) or (lisp.stringp(args[1]) and lisp.sbytes(args[1])==0) then
         error('TODO')
     end
     local val=vars.F.format_message(args)
@@ -203,7 +202,7 @@ function F.system_name.f()
     if lisp.eq(vars.V.system_name,vars.cached_system_name) then
         local name=vim.fn.hostname():gsub('[\t ]','-')
         if name~=lisp.sdata(vars.V.system_name) then
-            vars.V.system_name=str.make(name,'auto')
+            vars.V.system_name=alloc.make_string(name)
         end
         vars.cached_system_name=vars.V.system_name
     end
@@ -211,9 +210,9 @@ function F.system_name.f()
 end
 
 function M.init_syms()
-    vars.setsubr(F,'format_message')
-    vars.setsubr(F,'message')
-    vars.setsubr(F,'system_name')
+    vars.defsubr(F,'format_message')
+    vars.defsubr(F,'message')
+    vars.defsubr(F,'system_name')
 
     vars.defvar_lisp('system_name','system-name',[[The host name of the machine Emacs is running on.]])
     vars.V.system_name=vars.Qnil

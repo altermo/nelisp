@@ -1,13 +1,9 @@
 local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
-local types=require'nelisp.obj.types'
-local hash_table=require'nelisp.obj.hash_table'
-local str=require'nelisp.obj.str'
-local fixnum=require'nelisp.obj.fixnum'
-local chars=require'nelisp.chars'
 local b=require'nelisp.bytes'
-local symbol=require'nelisp.obj.symbol'
 local signal=require'nelisp.signal'
+local alloc=require'nelisp.alloc'
+local chars=require'nelisp.chars'
 local M={}
 
 ---@class nelisp.print.printcharfun
@@ -16,9 +12,10 @@ local M={}
 ---@field print_depth number
 ---@field being_printed table<number,nelisp.obj>
 
----@param x nelisp.fixnum
+---@param x nelisp.obj
+---@return string
 function M.fixnum_to_string(x)
-    return ('%d'):format(fixnum.tonumber(x))
+    return ('%d'):format(lisp.fixnum(x))
 end
 ---@return nelisp.print.printcharfun
 function M.make_printcharfun()
@@ -45,7 +42,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
     local base_depth=printcharfun.print_depth
     local stack={}
     ::print_obj::
-    local typ=types.type(obj)
+    local typ=lisp.xtype(obj)
     if lisp.nilp(vars.V.print_circle) then
         if printcharfun.print_depth>=200 then
             signal.error('Apparently circular structure being printed')
@@ -61,14 +58,13 @@ function M.print_obj(obj,escapeflag,printcharfun)
         error('TODO')
     end
     printcharfun.print_depth=printcharfun.print_depth+1
-    if typ==types.fixnum then
+    if typ==lisp.type.int0 then
         if not lisp.nilp(vars.V.print_integers_as_characters) then
             error('TODO')
         else
-            printcharfun.write(M.fixnum_to_string(obj --[[@as nelisp.fixnum]]))
+            printcharfun.write(M.fixnum_to_string(obj))
         end
-    elseif typ==types.str then
-        ---@cast obj nelisp.str
+    elseif typ==lisp.type.string then
         if not escapeflag then
             if lisp.sbytes(obj)==lisp.schars(obj) then
                 printcharfun.write(lisp.sdata(obj))
@@ -77,14 +73,14 @@ function M.print_obj(obj,escapeflag,printcharfun)
             end
             goto break_
         end
-        local multibyte=str.is_multibyte(obj)
+        local multibyte=lisp.string_multibyte(obj)
         assert(not multibyte,'TODO')
-        local has_properties=str.get_intervals(obj)
+        local has_properties=lisp.string_intervals(obj)
         assert(not has_properties,'TODO')
         printcharfun.write('"')
         local need_nohex=false
-        for i=1,str.byte_length(obj) do
-            local c=str.index1(obj,i)
+        for i=0,lisp.sbytes(obj)-1 do
+            local c=lisp.sref(obj,i)
             if chars.singlebytecharp(c) and not chars.asciicharp(c) and vars.V.print_escape_nonascii then
                 error('TODO')
             else
@@ -105,19 +101,17 @@ function M.print_obj(obj,escapeflag,printcharfun)
             end
         end
         printcharfun.write('\"')
-    elseif typ==types.symbol then
-        ---@cast obj nelisp.symbol
-        local name=symbol.get_name(obj)
-        local size_chars=lisp.schars(name)
-        local c=str.index1_neg(name,(str.index1_neg(name,1)==b'-' or str.index1_neg(name,1)==b'+') and 2 or 1)
+    elseif typ==lisp.type.symbol then
+        local name=lisp.symbol_name(obj)
+        local c=lisp.sref(name,(lisp.sref(name,0)==b'-' or lisp.sref(name,0)==b'+') and 1 or 0)
         local confusing=(((b'0'<=c and c<=b'9') or c==b'.') and error('TODO')) or c==b'?' or c==b'.'
-        if not lisp.nilp(vars.V.print_gensym) and not symbol.is_interned_in_initial_obarray(obj) then
+        if not lisp.nilp(vars.V.print_gensym) and not lisp.symbolinternedininitialobarrayp(obj) then
             printcharfun.write('#:')
-        elseif size_chars==0 then
+        elseif lisp.sbytes(name)==0 then
             printcharfun.write('##')
         else
-            for i=1,size_chars do
-                c=str.index1(name,i)
+            for i=0,lisp.sbytes(name)-1 do
+                c=lisp.sref(name,i)
                 if escapeflag and c<=32 or c==b.no_break_space or string.char(c):match('[]"\\\';#(),`[]') or confusing then
                     printcharfun.write('\\')
                     confusing=false
@@ -125,13 +119,12 @@ function M.print_obj(obj,escapeflag,printcharfun)
                 printcharfun.write(c)
             end
         end
-    elseif typ==types.cons then
-        ---@cast obj nelisp.cons
+    elseif typ==lisp.type.cons then
         local print_quoted=not lisp.nilp(vars.V.print_quoted)
-        if lisp.fixnump(vars.V.print_level) and printcharfun.print_depth>fixnum.tonumber(vars.V.print_level)  then
+        if lisp.fixnump(vars.V.print_level) and printcharfun.print_depth>lisp.fixnum(vars.V.print_level)  then
             printcharfun.write('...')
             goto break_
-        elseif print_quoted and lisp.consp(lisp.xcdr(obj)) and lisp.nilp(lisp.xcdr(lisp.xcdr(obj) --[[@as nelisp.cons]])) then
+        elseif print_quoted and lisp.consp(lisp.xcdr(obj)) and lisp.nilp(lisp.xcdr(lisp.xcdr(obj))) then
             local c
             if lisp.eq(lisp.xcar(obj),vars.Qquote) then
                 c='\''
@@ -142,12 +135,12 @@ function M.print_obj(obj,escapeflag,printcharfun)
             elseif lisp.eq(lisp.xcar(obj),vars.Qcomma) or
                 lisp.eq(lisp.xcar(obj),vars.Qcomma_at) then
                 M.print_obj(lisp.xcar(obj),false,printcharfun)
-                M.print_obj(lisp.xcar(lisp.xcdr(obj) --[[@as nelisp.cons]]),escapeflag,printcharfun)
+                M.print_obj(lisp.xcar(lisp.xcdr(obj)),escapeflag,printcharfun)
                 goto break_
             end
             if c then
                 printcharfun.write(c)
-                obj=lisp.xcar(lisp.xcdr(obj) --[[@as nelisp.cons]])
+                obj=lisp.xcar(lisp.xcdr(obj))
                 printcharfun.print_depth=printcharfun.print_depth-1
                 goto print_obj
             end
@@ -162,35 +155,27 @@ function M.print_obj(obj,escapeflag,printcharfun)
         printcharfun.write('(')
         obj=lisp.xcar(obj)
         goto print_obj
-    elseif typ==types.hash_table then
-        local size=0
-        local t=hash_table.to_table(obj)
-        for _ in pairs(t.content) do
-            size=size+1
-        end
-        printcharfun.write(('#s(hash-table size %d'):format(size))
-        if t.test then
+    elseif typ==lisp.type.vectorlike then
+        local ptyp=lisp.pseudovector_type(obj)
+        if not _G.nelisp_later then
             error('TODO')
         end
-        if t.weak then
-            error('TODO')
+        if ptyp==lisp.pvec.hash_table then
+            printcharfun.write('#s(hash-table size 0 data (')
+            table.insert(stack,{
+                t='hash',
+                printed=0,
+                nobjs=0,
+            })
+            goto next_obj
         end
-        printcharfun.write(' rehash-size 1 rehash-threshold 1 data (')
-        table.insert(stack,{
-            t='hash',
-            obj=obj,
-            content=t.content,
-            printed=0,
-            nobjs=size,
-        })
-        goto next_obj
+        printcharfun.write('#<EMACS BUG: INVALID DATATYPE ')
+        printcharfun.write(('(PVEC 0x%x)'):format(ptyp))
+        --printcharfun.write(' Save your buffers immediately and please report this bug>')
+        printcharfun.write(' Save your buffers immediately>')
     else
         printcharfun.write('#<EMACS BUG: INVALID DATATYPE ')
-        if lisp.vectorlikep(obj) then
-            printcharfun.write(('(PVEC 0x%x)'):format(typ))
-        else
-            printcharfun.write(('(0x%x)'):format(typ))
-        end
+        printcharfun.write(('(0x%x)'):format(typ))
         --printcharfun.write(' Save your buffers immediately and please report this bug>')
         printcharfun.write(' Save your buffers immediately>')
     end
@@ -215,7 +200,6 @@ function M.print_obj(obj,escapeflag,printcharfun)
                 printcharfun.print_depth=printcharfun.print_depth-1
                 goto next_obj
             elseif lisp.consp(next_) then
-                ---@cast next_ nelisp.cons
                 if not lisp.nilp(vars.V.print_circle) then
                     error('TODO')
                 end
@@ -268,12 +252,12 @@ function F.prin1_to_string.f(obj,noescape,overrides)
     end
     local printcharfun=M.make_printcharfun()
     M.print_obj(obj,lisp.nilp(noescape),printcharfun)
-    obj=str.make(printcharfun.out(),'auto')
+    obj=alloc.make_string(printcharfun.out())
     return obj
 end
 
 function M.init_syms()
-    vars.setsubr(F,'prin1_to_string')
+    vars.defsubr(F,'prin1_to_string')
 
     vars.defvar_bool('print_integers_as_characters','print-integers-as-characters',[[Non-nil means integers are printed using characters syntax.
 Only independent graphic characters, and control characters with named

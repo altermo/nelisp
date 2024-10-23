@@ -1,13 +1,10 @@
 local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
-local fixnum=require'nelisp.obj.fixnum'
 local signal=require'nelisp.signal'
-local str=require'nelisp.obj.str'
 local b=require'nelisp.bytes'
-local vec=require'nelisp.obj.vec'
 local data=require'nelisp.data'
-local symbol=require'nelisp.obj.symbol'
 local fns=require'nelisp.fns'
+local alloc=require'nelisp.alloc'
 local M={}
 local modifiers_t={
     up=1,
@@ -45,7 +42,6 @@ local function get_keymap(obj,error_if_not_keymap,autoload)
     end
     local tem=data.indirect_function(obj)
     if lisp.consp(tem) then
-        ---@cast tem nelisp.cons
         if lisp.eq(lisp.xcar(tem),vars.Qkeymap) then
             return tem
         end
@@ -59,7 +55,7 @@ local function get_keymap(obj,error_if_not_keymap,autoload)
     return vars.Qnil
 end
 local function possibly_translate_key_sequence(key)
-    if lisp.vectorp(key) and vec.length(key)==1 and lisp.stringp(vec.index0(key,0)) then
+    if lisp.vectorp(key) and lisp.asize(key)==1 and lisp.stringp(lisp.aref(key,0)) then
         error('TODO')
     end
     return key
@@ -67,7 +63,7 @@ end
 local function parse_modifiers_uncached(sym)
     lisp.check_symbol(sym)
     local mods=0
-    local name=symbol.get_name(sym)
+    local name=lisp.symbol_name(sym)
     local i=0
     if not _G.nelisp_later then
         error('TODO: maybe ...-1 is incorrect, and it should just be ...')
@@ -75,7 +71,7 @@ local function parse_modifiers_uncached(sym)
     while i<lisp.sbytes(name)-1 do
         local this_mod_end=0
         local this_mod=0
-        local c=str.index0(name,i)
+        local c=lisp.sref(name,i)
         if c=='A' then error('TODO')
         elseif c=='C' then error('TODO')
         elseif c=='H' then error('TODO')
@@ -95,7 +91,7 @@ local function parse_modifiers_uncached(sym)
         ,modifiers_t.double,modifiers_t.triple))==0)
         and i+7==lisp.sbytes(name)
         and lisp.sdata(name):sub(i-1,i-1+6)=='mouse-'
-        and b'0'<=str.index0(name,i+6) and str.index0(name,i+6)<=b'9'
+        and b'0'<=lisp.sref(name,i+6) and lisp.sref(name,i+6)<=b'9'
     then
         error('TODO')
     end
@@ -125,8 +121,8 @@ local function parse_modifiers(sym)
         return elements
     end
     local modifiers,end_=parse_modifiers_uncached(sym)
-    local unmodified=vars.F.intern(str.make(lisp.sdata(symbol.get_name(sym)):sub(end_+1),'auto'),vars.Qnil)
-    local mask=fixnum.make(modifiers)
+    local unmodified=vars.F.intern(alloc.make_string(lisp.sdata(lisp.symbol_name(sym)):sub(end_+1)),vars.Qnil)
+    local mask=lisp.make_fixnum(modifiers)
     elements=lisp.list(unmodified,mask)
     vars.F.put(sym,vars.Qevent_symbol_element_mask,elements)
     vars.F.put(sym,vars.Qevent_symbol_elements,vars.F.cons(unmodified,lispy_modifier_list(modifiers)))
@@ -141,7 +137,7 @@ local function apply_modifiers_uncached(modifiers,base)
             table.insert(new_mods,v[2]..'-')
         end
     end
-    local new_name=str.make(table.concat(new_mods)..base,true)
+    local new_name=alloc.make_multibyte_string(table.concat(new_mods)..base)
     return vars.F.intern(new_name,vars.Qnil)
 end
 local function apply_modifiers(modifiers,base)
@@ -149,13 +145,13 @@ local function apply_modifiers(modifiers,base)
         error('TODO')
     end
     local cache=vars.F.get(base,vars.Qmodifier_cache)
-    local idx=fixnum.make(bit.band(modifiers,bit.bnot(modifiers_t.click)))
+    local idx=lisp.make_fixnum(bit.band(modifiers,bit.bnot(modifiers_t.click)))
     local entry=fns.assq_no_quit(idx,cache)
     local new_symbol
     if lisp.consp(entry) then
-        new_symbol=lisp.xcdr(entry --[[@as nelisp.cons]])
+        new_symbol=lisp.xcdr(entry)
     else
-        new_symbol=apply_modifiers_uncached(modifiers,lisp.sdata(symbol.get_name(base)))
+        new_symbol=apply_modifiers_uncached(modifiers,lisp.sdata(lisp.symbol_name(base)))
         entry=vars.F.cons(idx,new_symbol)
         vars.F.put(base,vars.Qmodifier_cache,vars.F.cons(entry,cache))
     end
@@ -169,7 +165,7 @@ local function apply_modifiers(modifiers,base)
 end
 local function reorder_modifiers(sym)
     local parsed=parse_modifiers(sym)
-    return apply_modifiers(fixnum.tonumber(lisp.xcar(lisp.xcdr(parsed) --[[@as nelisp.cons]]) --[[@as nelisp.fixnum]]),lisp.xcar(parsed))
+    return apply_modifiers(lisp.fixnum(lisp.xcar(lisp.xcdr(parsed))),lisp.xcar(parsed))
 end
 local function store_in_keymap(keymap,idx,def,remove)
     if lisp.eq(idx,vars.Qkeymap) then
@@ -186,12 +182,11 @@ local function store_in_keymap(keymap,idx,def,remove)
     if lisp.symbolp(idx) then
         idx=reorder_modifiers(idx)
     elseif lisp.fixnump(idx) then
-        idx=fixnum.make(bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),bit.bor(b.CHAR_META,b.CHAR_META-1)))
+        idx=lisp.make_fixnum(bit.band(lisp.fixnum(idx),bit.bor(b.CHAR_META,b.CHAR_META-1)))
     end
     local tail=lisp.xcdr(keymap)
     local insertion_point=keymap
     while lisp.consp(tail) do
-        ---@cast tail nelisp.cons
         local elt=lisp.xcar(tail)
         if lisp.vectorp(elt) then
             error('TODO')
@@ -202,18 +197,22 @@ local function store_in_keymap(keymap,idx,def,remove)
             elseif lisp.nilp(def) then
                 sdef=vars.Qt
             end
-            if lisp.fixnatp(idx) and bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),b.CHAR_MODIFIER_MASK)==0 then
+            if lisp.fixnatp(idx) and bit.band(lisp.fixnum(idx),b.CHAR_MODIFIER_MASK)==0 then
                 vars.F.aset(elt,idx,sdef)
                 return def
             end
             error('TODO')
         elseif lisp.consp(elt) then
-            ---@cast elt nelisp.cons
             if lisp.eq(vars.Qkeymap,lisp.xcar(elt)) then
                 error('TODO')
             elseif lisp.eq(idx,lisp.xcar(elt)) then
-                error('TODO')
-            elseif lisp.consp(idx) and lisp.chartablep(lisp.xcar(idx --[[@as nelisp.cons]])) and lisp.chartablep(lisp.xcar(elt --[[@as nelisp.cons]])) then
+                if remove then
+                    error('TODO')
+                else
+                    lisp.xsetcdr(elt,def)
+                end
+                return def
+            elseif lisp.consp(idx) and lisp.chartablep(lisp.xcar(idx)) and lisp.chartablep(lisp.xcar(elt)) then
                 error('TODO')
             end
         elseif lisp.eq(elt,vars.Qkeymap) then
@@ -223,12 +222,12 @@ local function store_in_keymap(keymap,idx,def,remove)
     end
     if not remove then
         local elt
-        if lisp.consp(idx) and lisp.chartablep(lisp.xcar(idx --[[@as nelisp.cons]])) then
+        if lisp.consp(idx) and lisp.chartablep(lisp.xcar(idx)) then
             error('TODO')
         else
             elt=vars.F.cons(idx,def)
         end
-        lisp.setcdr(insertion_point,vars.F.cons(elt,lisp.xcdr(insertion_point)))
+        lisp.xsetcdr(insertion_point,vars.F.cons(elt,lisp.xcdr(insertion_point)))
     end
     return def
 end
@@ -253,9 +252,9 @@ local function access_keymap_1(map,idx,t_ok,noinherit,autoload)
     if lisp.symbolp(idx) then
         idx=reorder_modifiers(idx)
     elseif lisp.fixnump(idx) then
-        idx=fixnum.make(bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),bit.bor(b.CHAR_META,b.CHAR_META-1)))
+        idx=lisp.make_fixnum(bit.band(lisp.fixnum(idx),bit.bor(b.CHAR_META,b.CHAR_META-1)))
     end
-    if lisp.fixnump(idx) and bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),b.CHAR_META)>0 then
+    if lisp.fixnump(idx) and bit.band(lisp.fixnum(idx),b.CHAR_META)>0 then
         error('TODO')
     end
     local tail=lisp.consp(map) and lisp.eq(vars.Qkeymap,lisp.xcar(map)) and lisp.xcdr(map) or map
@@ -280,7 +279,6 @@ local function access_keymap_1(map,idx,t_ok,noinherit,autoload)
         elseif lisp.consp(submap) then
             error('TODO')
         elseif lisp.consp(binding) then
-            ---@cast binding nelisp.cons
             local key=lisp.xcar(binding)
             if lisp.eq(key,idx) then
                 val=lisp.xcdr(binding)
@@ -290,7 +288,7 @@ local function access_keymap_1(map,idx,t_ok,noinherit,autoload)
         elseif lisp.vectorp(binding) then
             error('TODO')
         elseif lisp.chartablep(binding) then
-            if lisp.fixnump(idx) and bit.band(fixnum.tonumber(idx --[[@as nelisp.fixnum]]),b.CHAR_MODIFIER_MASK)==0 then
+            if lisp.fixnump(idx) and bit.band(lisp.fixnum(idx),b.CHAR_MODIFIER_MASK)==0 then
                 val=vars.F.aref(binding,idx)
                 if lisp.nilp(val) then
                     val=nil
@@ -374,7 +372,7 @@ function F.define_key.f(keymap,key,def,remove)
     if length==0 then
         return vars.Qnil
     end
-    local meta_bit=(lisp.vectorp(key) or (lisp.stringp(key) and str.is_multibyte(key))) and b.CHAR_META or 0x80
+    local meta_bit=(lisp.vectorp(key) or (lisp.stringp(key) and lisp.string_multibyte(key))) and b.CHAR_META or 0x80
     if lisp.vectorp(def) then
         error('TODO')
     end
@@ -382,24 +380,24 @@ function F.define_key.f(keymap,key,def,remove)
     local idx=0
     local metized=false
     while true do
-        local c=vars.F.aref(key,fixnum.make(idx))
+        local c=vars.F.aref(key,lisp.make_fixnum(idx))
         if lisp.consp(c) then
             error('TODO')
         end
         if lisp.symbolp(c) then
             silly_event_symbol_error(c)
         end
-        if lisp.fixnump(c) and bit.band(fixnum.tonumber(c),meta_bit)>0 and not metized then
+        if lisp.fixnump(c) and bit.band(lisp.fixnum(c),meta_bit)>0 and not metized then
             error('TODO')
         else
             if lisp.fixnump(c) then
-                c=fixnum.make(bit.band(fixnum.tonumber(c),bit.bnot(meta_bit)))
+                c=lisp.make_fixnum(bit.band(lisp.fixnum(c),bit.bnot(meta_bit)))
             end
             metized=false
             idx=idx+1
         end
         if not lisp.fixnump(c) and not lisp.symbolp(c) and
-            (not lisp.consp(c) or (lisp.fixnump(lisp.xcar(c --[[@as nelisp.cons]])) and idx~=length)) then
+            (not lisp.consp(c) or (lisp.fixnump(lisp.xcar(c)) and idx~=length)) then
             error('TODO')
         end
         if idx==length then
@@ -441,7 +439,6 @@ local function keymap_parent(keymap,autoload)
     keymap=get_keymap(keymap,true,autoload)
     local list=lisp.xcdr(keymap)
     while lisp.consp(list) do
-        ---@cast list nelisp.cons
         if keymapp(list) then
             return list
         end
@@ -470,15 +467,15 @@ function F.set_keymap_parent.f(keymap,parent)
     while true do
         local list=lisp.xcdr(prev)
         if not lisp.consp(list) or keymapp(list) then
-            lisp.setcdr(prev,parent)
+            lisp.xsetcdr(prev,parent)
             return parent
         end
-        prev=list --[[@as nelisp.cons]]
+        prev=list
     end
 end
 
 function M.init()
-    vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,fixnum.zero)
+    vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,lisp.make_fixnum(0))
 
     vars.modifier_symbols={}
     local lread=require'nelisp.lread'
@@ -487,7 +484,8 @@ function M.init()
         if v==0 then
             table.insert(vars.modifier_symbols,0)
         else
-            local sym=lread.define_symbol(v)
+            local sym=lisp.make_empty_ptr(lisp.type.symbol)
+            lread.define_symbol(sym,v)
             table.insert(vars.modifier_symbols,sym)
         end
     end
@@ -496,11 +494,11 @@ function M.init()
 end
 
 function M.init_syms()
-    vars.setsubr(F,'make_keymap')
-    vars.setsubr(F,'define_key')
-    vars.setsubr(F,'make_sparse_keymap')
-    vars.setsubr(F,'use_global_map')
-    vars.setsubr(F,'set_keymap_parent')
+    vars.defsubr(F,'make_keymap')
+    vars.defsubr(F,'define_key')
+    vars.defsubr(F,'make_sparse_keymap')
+    vars.defsubr(F,'use_global_map')
+    vars.defsubr(F,'set_keymap_parent')
 
     vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
 

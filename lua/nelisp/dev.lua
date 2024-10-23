@@ -70,9 +70,9 @@ function F.Xlua_eval.f(x)
 end
 
 function M.init_syms()
-    vars.setsubr(F,'Xprint')
-    vars.setsubr(F,'Xbacktrace')
-    vars.setsubr(F,'Xerror')
-    vars.setsubr(F,'Xlua_eval')
+    vars.defsubr(F,'Xprint')
+    vars.defsubr(F,'Xbacktrace')
+    vars.defsubr(F,'Xerror')
+    vars.defsubr(F,'Xlua_eval')
 end
 return M

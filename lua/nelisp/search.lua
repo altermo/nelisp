@@ -1,11 +1,10 @@
 local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
-local str=require'nelisp.obj.str'
-local fixnum=require'nelisp.obj.fixnum'
 local lread=require'nelisp.lread'
 local b=require'nelisp.bytes'
 local print_=require'nelisp.print'
 local signal=require'nelisp.signal'
+local alloc=require'nelisp.alloc'
 local M={}
 local function at_endline_loc_p(...)
     if not _G.nelisp_later then
@@ -15,12 +14,12 @@ local function at_endline_loc_p(...)
 end
 local search_regs={start={},end_={}}
 local last_search_thing=vars.Qnil
----@param s nelisp.str
+---@param s nelisp.obj
 ---@return string
 ---@return table
 local function eregex_to_vimregex(s)
     local signal_err=function (msg)
-        signal.xsignal(vars.Qinvalid_regexp,str.make(msg,'auto'))
+        signal.xsignal(vars.Qinvalid_regexp,alloc.make_string(msg))
     end
     if not _G.nelisp_later then
         error('TODO: signal error on bad pattern')
@@ -107,7 +106,7 @@ local function eregex_to_vimregex(s)
                 out_buf.write(c)
             end
         elseif c==b'^' then
-            if not (in_buf.idx==1 or at_endline_loc_p(in_buf,in_buf.idx)) then
+            if not (in_buf.idx==0 or at_endline_loc_p(in_buf,in_buf.idx)) then
                 goto normal_char
             end
             data.start_match=true
@@ -194,13 +193,13 @@ local function string_match_1(regexp,s,start,posix,modify_data)
     if not lisp.nilp(start) then
         local len=lisp.schars(s)
         lisp.check_fixnum(start)
-        local pos=fixnum.tonumber(start)
+        local pos=lisp.fixnum(start)
         if pos<0 and -pos<=len then
             pos=len+pos
         elseif pos>0 and pos>len then
             signal.args_out_of_range(s,start)
         end
-        if str.is_multibyte(s) then
+        if lisp.string_multibyte(s) then
             error('TODO')
         else
             pos_bytes=pos
@@ -239,7 +238,7 @@ local function string_match_1(regexp,s,start,posix,modify_data)
         end
     end
     last_search_thing=vars.Qt
-    return fixnum.make(pat_start)
+    return lisp.make_fixnum(pat_start)
 end
 F.string_match={'string-match',2,4,0,[[Return index of start of first match for REGEXP in STRING, or nil.
 Matching ignores case if `case-fold-search' is non-nil.
@@ -306,8 +305,8 @@ function F.match_data.f(integers,reuse,reseat)
                 data[1]=vars.Qnil
                 data[2]=vars.Qnil
             else
-                data[1]=fixnum.make(search_regs.start[1])
-                data[2]=fixnum.make(search_regs.end_[1])
+                data[1]=lisp.make_fixnum(search_regs.start[1])
+                data[2]=lisp.make_fixnum(search_regs.end_[1])
             end
         else
             error('TODO')
@@ -353,14 +352,14 @@ function F.set_match_data.f(list,reseat)
             if not lisp.consp(list) then
                 break
             end
-            marker=lisp.xcar(list --[[@as nelisp.cons]])
+            marker=lisp.xcar(list)
             if lisp.markerp(marker) then
                 error('TODO')
             end
-            search_regs.start[i+1]=fixnum.tonumber(form --[[@as nelisp.fixnum]])
-            search_regs.end_[i+1]=fixnum.tonumber(marker --[[@as nelisp.fixnum]])
+            search_regs.start[i+1]=lisp.fixnum(form)
+            search_regs.end_[i+1]=lisp.fixnum(marker)
         end
-        list=lisp.xcdr(list --[[@as nelisp.cons]])
+        list=lisp.xcdr(list)
         i=i+1
     end
     while i<num_regs do
@@ -372,9 +371,9 @@ function F.set_match_data.f(list,reseat)
 end
 local function match_limit(num,beginning)
     lisp.check_fixnum(num)
-    local n=fixnum.tonumber(num)
+    local n=lisp.fixnum(num)
     if n<0 then
-        signal.args_out_of_range(num,fixnum.zero)
+        signal.args_out_of_range(num,lisp.make_fixnum(0))
     end
     if #search_regs.start<=0 then
         signal.error('No match data, because no search succeeded')
@@ -382,7 +381,7 @@ local function match_limit(num,beginning)
     if n>=#search_regs.start or search_regs.start[n+1]<0 then
         return vars.Qnil
     end
-    return fixnum.make(beginning and search_regs.start[n+1] or search_regs.end_[n+1])
+    return lisp.make_fixnum(beginning and search_regs.start[n+1] or search_regs.end_[n+1])
 end
 F.match_beginning={'match-beginning',1,1,0,[[Return position of start of text matched by last search.
 SUBEXP, a number, specifies which parenthesized expression in the last
@@ -408,10 +407,10 @@ function F.match_end.f(subexp)
 end
 
 function M.init_syms()
-    vars.setsubr(F,'string_match')
-    vars.setsubr(F,'match_data')
-    vars.setsubr(F,'set_match_data')
-    vars.setsubr(F,'match_beginning')
-    vars.setsubr(F,'match_end')
+    vars.defsubr(F,'string_match')
+    vars.defsubr(F,'match_data')
+    vars.defsubr(F,'set_match_data')
+    vars.defsubr(F,'match_beginning')
+    vars.defsubr(F,'match_end')
 end
 return M

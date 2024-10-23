@@ -1,5 +1,4 @@
 local lisp=require'nelisp.lisp'
-local symbol=require'nelisp.obj.symbol'
 local vars=require'nelisp.vars'
 
 ---@class nelisp.specpdl.index: number
@@ -54,9 +53,10 @@ function M.unbind_to(index,val,assert_ignore)
     while M.index()>index do
         ---@type nelisp.specpdl.all_entries
         local entry=table.remove(specpdl)
-        if entry.type==M.type.let and lisp.symbolp(entry.symbol) and symbol.get_redirect(entry.symbol --[[@as nelisp.symbol]])==symbol.redirect.plain then
-            if symbol.get_trapped_wire(entry.symbol --[[@as nelisp.symbol]])==symbol.trapped_wire.untrapped_write then
-                symbol.set_var(entry.symbol --[[@as nelisp.symbol]],entry.old_value)
+        if entry.type==M.type.let and lisp.symbolp(entry.symbol) and
+            (entry.symbol --[[@as nelisp._symbol]]).redirect==lisp.symbol_redirect.plainval then
+            if (entry.symbol --[[@as nelisp._symbol]]).trapped_write==lisp.symbol_trapped_write.untrapped then
+                lisp.set_symbol_val(entry.symbol --[[@as nelisp._symbol]],entry.old_value)
             else
                 error('TODO')
             end
@@ -112,15 +112,15 @@ end
 ---@param val nelisp.obj
 function M.bind(sym,val)
     lisp.check_symbol(sym)
-    ---@cast sym nelisp.symbol
-    if symbol.get_redirect(sym)==symbol.redirect.plain then
+    local s=sym --[[@as nelisp._symbol]]
+    if s.redirect==lisp.symbol_redirect.plainval then
         table.insert(specpdl,{
             type=M.type.let --[[@as nelisp.specpdl.type.let]],
             symbol=sym,
-            old_value=symbol.get_var(sym)
+            old_value=lisp.symbol_val(s)
         } --[[@as nelisp.specpdl.let_entry]])
-        if symbol.get_trapped_wire(sym)==symbol.trapped_wire.untrapped_write then
-            symbol.set_var(sym,val)
+        if s.trapped_write==lisp.symbol_trapped_write.untrapped then
+            lisp.set_symbol_val(s,val)
         else
             error('TODO')
         end

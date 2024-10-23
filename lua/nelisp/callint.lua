@@ -86,6 +86,6 @@ function F.interactive.f(_)
 end
 
 function M.init_syms()
-    vars.setsubr(F,'interactive')
+    vars.defsubr(F,'interactive')
 end
 return M

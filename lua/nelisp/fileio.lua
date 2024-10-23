@@ -1,6 +1,6 @@
-local str=require'nelisp.obj.str'
 local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
+local alloc=require'nelisp.alloc'
 local M={}
 
 local F={}
@@ -73,12 +73,12 @@ function F.expand_file_name.f(name,default_directory)
         error('TODO')
     end
     if not lisp.nilp(default_directory) then
-        if not lisp.IS_DIRECTORY_SEP(str.index1_neg(name,1)) then
+        if not lisp.IS_DIRECTORY_SEP(lisp.sref(name,0)) then
             local path=vim.fs.normalize(lisp.sdata(default_directory)..'/'..lisp.sdata(name))
-            return str.make(vim.fn.expand(path),false)
+            return alloc.make_specified_string(vim.fn.expand(path),-1,false)
         end
     end
-    return str.make(vim.fn.expand(lisp.sdata(name)),false)
+    return alloc.make_specified_string(vim.fn.expand(lisp.sdata(name)),-1,false)
 end
 F.file_directory_p={'file-directory-p',1,1,0,[[Return t if FILENAME names an existing directory.
 Return nil if FILENAME does not name a directory, or if there
@@ -98,10 +98,10 @@ function F.file_directory_p.f(filename)
 end
 
 function M.init_syms()
-    vars.setsubr(F,'find_file_name_handler')
-    vars.setsubr(F,'substitute_in_file_name')
-    vars.setsubr(F,'expand_file_name')
-    vars.setsubr(F,'file_directory_p')
+    vars.defsubr(F,'find_file_name_handler')
+    vars.defsubr(F,'substitute_in_file_name')
+    vars.defsubr(F,'expand_file_name')
+    vars.defsubr(F,'file_directory_p')
 
     vars.defsym('Qfile_exists_p','file-exists-p')
 end

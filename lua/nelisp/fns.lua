@@ -1,14 +1,10 @@
 local lisp=require'nelisp.lisp'
 local vars=require'nelisp.vars'
-local cons=require'nelisp.obj.cons'
-local fixnum=require'nelisp.obj.fixnum'
-local symbol=require'nelisp.obj.symbol'
-local hash_table=require'nelisp.obj.hash_table'
 local signal=require'nelisp.signal'
-local str=require'nelisp.obj.str'
 local print_=require'nelisp.print'
 local textprop=require'nelisp.textprop'
-local types=require'nelisp.obj.types'
+local alloc=require'nelisp.alloc'
+local overflow=require'nelisp.overflow'
 
 local M={}
 
@@ -17,7 +13,7 @@ function M.concat_to_string(args)
     local some_multibyte=false
     for _,arg in ipairs(args) do
         if lisp.stringp(arg) then
-            if str.is_multibyte(arg) then
+            if lisp.string_multibyte(arg) then
                 dest_multibyte=true
             else
                 some_multibyte=true
@@ -32,11 +28,11 @@ function M.concat_to_string(args)
     local buf=print_.make_printcharfun()
     for _,arg in ipairs(args) do
         if lisp.stringp(arg) then
-            if str.get_intervals(arg) then
+            if lisp.string_intervals(arg) then
                 error('TODO')
             end
-            if str.is_multibyte(arg)==dest_multibyte then
-                buf.write(str.data(arg))
+            if lisp.string_multibyte(arg)==dest_multibyte then
+                buf.write(lisp.sdata(arg))
             else
                 error('TODO')
             end
@@ -44,7 +40,7 @@ function M.concat_to_string(args)
             error('TODO')
         end
     end
-    return str.make(buf.out(),dest_multibyte)
+    return dest_multibyte and error('TODO') or alloc.make_unibyte_string(buf.out())
 end
 
 local F={}
@@ -61,14 +57,14 @@ local function concat_to_list(args)
             arg=lisp.xcdr(arg)
             local _,_end=lisp.for_each_tail(arg,function (a)
                 local next_=vars.F.cons(lisp.xcar(a),vars.Qnil)
-                lisp.setcdr(prev,next_)
+                lisp.xsetcdr(prev,next_)
                 prev=next_
             end)
             lisp.check_list_end(_end,arg)
             if lisp.nilp(result) then
                 result=head
             else
-                lisp.setcdr(last,head)
+                lisp.xsetcdr(last,head)
             end
             last=prev
         else
@@ -78,7 +74,7 @@ local function concat_to_list(args)
     if result==vars.Qnil then
         result=last_tail
     else
-        lisp.setcdr(last,last_tail)
+        lisp.xsetcdr(last,last_tail)
     end
     return result
 end
@@ -104,7 +100,7 @@ Elements of ALIST that are not conses are ignored.]]}
 ---@return nelisp.obj
 function F.assq.f(key,alist)
     local ret,tail=lisp.for_each_tail(alist,function (tail)
-        if lisp.consp(lisp.xcar(tail)) and lisp.eq(lisp.xcar(lisp.xcar(tail) --[[@as nelisp.cons]]),key) then
+        if lisp.consp(lisp.xcar(tail)) and lisp.eq(lisp.xcar(lisp.xcar(tail)),key) then
             return lisp.xcar(tail)
         end
     end)
@@ -114,7 +110,7 @@ function F.assq.f(key,alist)
 end
 function M.assq_no_quit(key,alist)
     while not lisp.nilp(alist) do
-        if lisp.consp(lisp.xcar(alist)) and lisp.eq(lisp.xcar(lisp.xcar(alist) --[[@as nelisp.cons]]),key) then
+        if lisp.consp(lisp.xcar(alist)) and lisp.eq(lisp.xcar(lisp.xcar(alist)),key) then
             return lisp.xcar(alist)
         end
         alist=lisp.xcdr(alist)
@@ -154,7 +150,7 @@ function F.nthcdr.f(n,list)
     lisp.check_integer(n)
     local num
     if lisp.fixnump(n) then
-        num=fixnum.tonumber(n)
+        num=lisp.fixnum(n)
         if num<=127 then
             for _=1,num do
                 if not lisp.consp(tail) then
@@ -203,7 +199,7 @@ function F.mapcar.f(func,sequence)
     if lisp.chartablep(sequence) then
         signal.wrong_type_argument(vars.Qlistp,sequence)
     end
-    local leni=fixnum.tonumber(vars.F.length(sequence))
+    local leni=lisp.fixnum(vars.F.length(sequence))
     local args={}
     local nmapped=mapcar1(leni,args,func,sequence)
     return vars.F.list({unpack(args,1,nmapped)})
@@ -299,9 +295,32 @@ function F.length.f(sequence)
         error('TODO')
         signal.wrong_type_argument(vars.Qsequencep,sequence)
     end
-    return fixnum.make(val)
+    return lisp.make_fixnum(val)
 end
+---@param h nelisp._hash_table
+---@param key nelisp.obj
+---@return number
+---@return number
+local function hash_lookup(h,key)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    return -1,h.test.hashfn(key,h)
+end
+---@param h nelisp._hash_table
+---@param key nelisp.obj
+---@param val nelisp.obj
+---@param hash number
+local function hash_put(h,key,val,hash)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+end
+---@param a nelisp.obj
+---@param b nelisp.obj
 ---@param kind 'plain'|'no_quit'
+---@param depth number
+---@param ht table
 local function internal_equal(a,b,kind,depth,ht)
     ::tail_recursion::
     if depth>10 then
@@ -309,20 +328,17 @@ local function internal_equal(a,b,kind,depth,ht)
         if depth>200 then
             signal.error('Stack overflow in equal')
         end
-        if lisp.nilp(ht) then
-            ht=vars.F.make_hash_table({vars.QCtest,vars.Qeq})
-        end
-        local t=types.type(a)
-        if t==types.cons or types.vectorlike_p(t) then
-            local val=hash_table.lookup(ht,a)
+        local t=lisp.xtype(a)
+        if t==lisp.type.cons or t==lisp.type.vectorlike then
+            local val=ht[a]
             if val then
                 if not lisp.nilp(vars.F.memq(b,val)) then
                     return true
                 else
-                    hash_table.override(ht,a,vars.F.cons(b,val))
+                    ht[a]=vars.F.cons(b,ht[a])
                 end
             else
-                hash_table.put(ht,a,b)
+                ht[a]=vars.F.cons(b,vars.Qnil)
             end
         end
     end
@@ -334,13 +350,13 @@ local function internal_equal(a,b,kind,depth,ht)
     end
     if a==b then
         return true
-    elseif types.type(a)~=types.type(b) then
+    elseif lisp.xtype(a)~=lisp.xtype(b) then
         return false
     end
-    local t=types.type(a)
-    if t==types.float then
+    local t=lisp.xtype(a)
+    if t==lisp.type.float then
         error('TODO')
-    elseif t==types.cons then
+    elseif t==lisp.type.cons then
         if kind=='no_quit' then
             error('TODO')
         else
@@ -361,9 +377,9 @@ local function internal_equal(a,b,kind,depth,ht)
             depth=depth+1
             goto tail_recursion
         end
-    elseif types.vectorlike_p(t) then
+    elseif t==lisp.type.vectorlike then
         error('TODO')
-    elseif t==types.str then
+    elseif t==lisp.type.string then
         error('TODO')
     end
     return false
@@ -376,7 +392,7 @@ Numbers are compared via `eql', so integers do not equal floats.
 \(Use `=' if you want integers and floats to be able to be equal.)
 Symbols must match exactly.]]}
 function F.equal.f(a,b)
-    return internal_equal(a,b,'plain',0,vars.Qnil) and vars.Qt or vars.Qnil
+    return internal_equal(a,b,'plain',0,{}) and vars.Qt or vars.Qnil
 end
 local function plist_put(plist,prop,val)
     local prev=vars.Qnil
@@ -394,7 +410,7 @@ local function plist_put(plist,prop,val)
             require'nelisp.signal'.xsignal(vars.Qcircular_list,plist)
         end
         prev=tail
-        tail=lisp.xcdr(tail) --[[@as nelisp.cons]]
+        tail=lisp.xcdr(tail)
         has_visited[tail]=true
         tail=lisp.xcdr(tail)
     end
@@ -402,7 +418,7 @@ local function plist_put(plist,prop,val)
     if lisp.nilp(prev) then
         return vars.F.cons(prop,vars.F.cons(val,plist))
     end
-    local newcell=vars.F.cons(prop,vars.F.cons(val,lisp.xcdr(lisp.xcdr(prev --[[@as nelisp.cons]]) --[[@as nelisp.cons]])))
+    local newcell=vars.F.cons(prop,vars.F.cons(val,lisp.xcdr(lisp.xcdr(prev))))
     vars.F.setcdr(lisp.xcdr(prev),newcell)
     return plist
 end
@@ -410,7 +426,8 @@ F.put={'put',3,3,0,[[Store SYMBOL's PROPNAME property with value VALUE.
 It can be retrieved with `(get SYMBOL PROPNAME)'.]]}
 function F.put.f(sym,propname,value)
     lisp.check_symbol(sym)
-    symbol.set_plist(sym,plist_put(symbol.get_plist(sym),propname,value))
+    lisp.set_symbol_plist(
+        sym,plist_put((sym --[[@as nelisp._symbol]]).plist,propname,value))
     return value
 end
 function M.plist_get(plist,prop)
@@ -421,13 +438,13 @@ function M.plist_get(plist,prop)
             break
         end
         if lisp.eq(lisp.xcar(tail),prop) then
-            return lisp.xcar(lisp.xcdr(tail) --[[@as nelisp.cons]])
+            return lisp.xcar(lisp.xcdr(tail))
         end
         if has_visited[tail] then
             require'nelisp.signal'.xsignal(vars.Qcircular_list,plist)
         end
         has_visited[tail]=true
-        tail=lisp.xcdr(tail) --[[@as nelisp.cons]]
+        tail=lisp.xcdr(tail)
         tail=lisp.xcdr(tail)
     end
     return vars.Qnil
@@ -436,11 +453,11 @@ F.get={'get',2,2,0,[[Return the value of SYMBOL's PROPNAME property.
 This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.]]}
 function F.get.f(sym,propname)
     lisp.check_symbol(sym)
-    local propval=M.plist_get(vars.F.cdr(vars.F.assq(symbol,vars.V.overriding_plist_environment)),propname)
+    local propval=M.plist_get(vars.F.cdr(vars.F.assq(sym,vars.V.overriding_plist_environment)),propname)
     if not lisp.nilp(propval) then
         return propval
     end
-    return M.plist_get(symbol.get_plist(sym),propname)
+    return M.plist_get((sym --[[@as nelisp._symbol]]).plist,propname)
 end
 F.featurep={'featurep',1,2,0,[[Return t if FEATURE is present in this Emacs.
 
@@ -479,6 +496,52 @@ function F.provide.f(feature,subfeatures)
         error('TODO')
     end
     return feature
+end
+---@param rehash_threshold number (float)
+---@param size number
+---@return number
+local function hash_index_size(rehash_threshold,size)
+    local n=math.floor(size/rehash_threshold)
+    n=n-n%2
+    while true do
+        if n>overflow.max then
+            signal.error('Hash table too large')
+        end
+        if n%3~=0 and n%5~=0 and n%7~=0 then
+            return n
+        end
+        n=n+2
+    end
+end
+---@param test nelisp.hash_table_test
+---@param size number
+---@param rehash_size number (float)
+---@param rehash_threshold number (float)
+---@param weak nelisp.obj
+---@param purecopy boolean
+local function make_hash_table(test,size,rehash_size,rehash_threshold,weak,purecopy)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    _=purecopy
+    ---@type nelisp._hash_table
+    local h={
+        test=test,
+        weak=weak,
+        rehash_threshold=rehash_threshold,
+        rehash_size=rehash_size,
+        count=0,
+        key_and_value=alloc.make_vector(size*2,vars.Qunique),
+        hash=alloc.make_vector(size,'nil'),
+        next=alloc.make_vector(size,lisp.make_fixnum(-1)),
+        index=alloc.make_vector(hash_index_size(rehash_threshold,size),lisp.make_fixnum(-1)),
+        mutable=true,
+        next_free=0
+    }
+    for i=0,size-2 do
+        lisp.aset(h.next,i,lisp.make_fixnum(i+1))
+    end
+    return lisp.make_vectorlike_ptr(h,lisp.pvec.hash_table)
 end
 F.make_hash_table={'make-hash-table',0,-2,0,[[Create and return a new hash table.
 
@@ -520,16 +583,44 @@ function F.make_hash_table.f(args)
     if not _G.nelisp_later then
         error('TODO')
     end
-    return hash_table.make(nil,nil)
+    ---@type nelisp.hash_table_test
+    local hashtest_eq={
+        name=vars.Qeq,
+        user_hash_function=0,
+        user_cmp_function=0,
+        cmpfn=0,
+        hashfn=function (a,_)
+            assert(not lisp.symbolwithposp(a),'TODO')
+            return lisp.xhash(a)
+        end,
+    }
+    return make_hash_table(hashtest_eq,10,1.5,0.8125,vars.Qnil,false)
+end
+---@param obj nelisp.obj
+---@return nelisp._hash_table
+local function check_hash_table(obj)
+    lisp.check_hash_table(obj)
+    return obj --[[@as nelisp._hash_table]]
+end
+---@param obj nelisp.obj
+---@param h nelisp._hash_table
+local function check_mutable_hash_table(obj,h)
+    if not h.mutable then
+        signal.signal_error('hash table test modifies table',obj)
+    end
 end
 F.puthash={'puthash',3,3,0,[[Associate KEY with VALUE in hash table TABLE.
 If KEY is already present in table, replace its current value with
 VALUE.  In any case, return VALUE.]]}
 function F.puthash.f(key,value,t)
-    if not _G.nelisp_later then
+    local h=check_hash_table(t)
+    check_mutable_hash_table(t,h)
+    local i,hash=hash_lookup(h,key)
+    if i>=0 then
         error('TODO')
+    else
+        hash_put(h,key,value,hash)
     end
-    hash_table.put(t,key,value)
     return value
 end
 
@@ -570,7 +661,7 @@ function F.concat.f(args)
     local dest_multibyte=false
     for _,arg in ipairs(args) do
         if lisp.stringp(arg) then
-            if str.is_multibyte(arg) then
+            if lisp.string_multibyte(arg) then
                 dest_multibyte=true
             end
         end
@@ -578,10 +669,10 @@ function F.concat.f(args)
     local strs={}
     for _,arg in ipairs(args) do
         if lisp.stringp(arg) then
-            if str.get_intervals(arg) then
+            if lisp.string_intervals(arg) then
                 error('TODO')
             end
-            if str.is_multibyte(arg)==dest_multibyte then
+            if lisp.string_multibyte(arg)==dest_multibyte then
                 table.insert(strs,lisp.sdata(arg))
             else
                 error('TODO')
@@ -596,7 +687,7 @@ function F.concat.f(args)
         end
     end
     local out_str=table.concat(strs)
-    return str.make(out_str,dest_multibyte)
+    return (dest_multibyte and error('TODO') or alloc.make_unibyte_string)(out_str)
 end
 F.copy_sequence={'copy-sequence',1,1,0,[[Return a copy of a list, vector, string, char-table or record.
 The elements of a list, vector or record are not copied; they are
@@ -612,7 +703,7 @@ function F.copy_sequence.f(arg)
         local prev=val
         local _,tail=lisp.for_each_tail(lisp.xcdr(arg),function (tail)
             local c=vars.F.cons(lisp.xcar(tail),vars.Qnil)
-            lisp.setcdr(prev,c)
+            lisp.xsetcdr(prev,c)
             prev=c
         end)
         lisp.check_list_end(tail,tail)
@@ -625,7 +716,7 @@ end
 local function validate_subarray(array,from,to,size)
     local f,t
     if lisp.fixnump(from) then
-        f=fixnum.tonumber(from)
+        f=lisp.fixnum(from)
         if f<0 then
             f=size+f
         end
@@ -635,7 +726,7 @@ local function validate_subarray(array,from,to,size)
         signal.wrong_type_argument(vars.Qintegerp,from)
     end
     if lisp.fixnump(to) then
-        t=fixnum.tonumber(to)
+        t=lisp.fixnum(to)
         if t<0 then
             t=size+t
         end
@@ -677,8 +768,8 @@ function F.substring.f(s,from,to)
     if lisp.stringp(s) then
         local from_byte=f~=0 and string_char_to_byte(s,f) or 0
         local to_byte=t==size and lisp.sbytes(s) or string_char_to_byte(s,t)
-        res=str.make(lisp.sdata(s):sub(from_byte+1,to_byte),str.is_multibyte(s))
-        textprop.copy_textprop(fixnum.make(f),fixnum.make(t),s,fixnum.zero,res,vars.Qnil)
+        res=alloc.make_specified_string(lisp.sdata(s):sub(from_byte+1,to_byte),to_byte-from_byte,lisp.string_multibyte(s))
+        textprop.copy_textprop(lisp.make_fixnum(f),lisp.make_fixnum(t),s,lisp.make_fixnum(0),res,vars.Qnil)
     else
         error('TODO')
     end
@@ -691,10 +782,10 @@ Symbols are also allowed; their print names are used instead.
 See also `string-equal-ignore-case'.]]}
 function F.string_equal.f(a,b)
     if lisp.symbolp(a) then
-        a=symbol.get_name(a)
+        a=lisp.symbol_name(a)
     end
     if lisp.symbolp(b) then
-        b=symbol.get_name(b)
+        b=lisp.symbol_name(b)
     end
     lisp.check_string(a)
     lisp.check_string(b)
@@ -742,42 +833,45 @@ function F.require.f(feature,filename,noerror)
 end
 
 function M.init()
-    vars.V.features=cons.make(vars.Qemacs,vars.Qnil)
+    vars.V.features=lisp.list(vars.Qemacs)
+    vars.F.make_var_non_special(vars.Qfeatures)
 end
 function M.init_syms()
-    vars.setsubr(F,'append')
-    vars.setsubr(F,'assq')
-    vars.setsubr(F,'member')
-    vars.setsubr(F,'memq')
-    vars.setsubr(F,'nthcdr')
-    vars.setsubr(F,'nth')
-    vars.setsubr(F,'mapcar')
-    vars.setsubr(F,'nreverse')
-    vars.setsubr(F,'reverse')
-    vars.setsubr(F,'nconc')
-    vars.setsubr(F,'length')
-    vars.setsubr(F,'equal')
-    vars.setsubr(F,'put')
-    vars.setsubr(F,'get')
-    vars.setsubr(F,'featurep')
-    vars.setsubr(F,'provide')
-    vars.setsubr(F,'make_hash_table')
-    vars.setsubr(F,'puthash')
-    vars.setsubr(F,'delq')
-    vars.setsubr(F,'concat')
-    vars.setsubr(F,'copy_sequence')
-    vars.setsubr(F,'substring')
-    vars.setsubr(F,'string_equal')
-    vars.setsubr(F,'require')
+    vars.defsubr(F,'append')
+    vars.defsubr(F,'assq')
+    vars.defsubr(F,'member')
+    vars.defsubr(F,'memq')
+    vars.defsubr(F,'nthcdr')
+    vars.defsubr(F,'nth')
+    vars.defsubr(F,'mapcar')
+    vars.defsubr(F,'nreverse')
+    vars.defsubr(F,'reverse')
+    vars.defsubr(F,'nconc')
+    vars.defsubr(F,'length')
+    vars.defsubr(F,'equal')
+    vars.defsubr(F,'put')
+    vars.defsubr(F,'get')
+    vars.defsubr(F,'featurep')
+    vars.defsubr(F,'provide')
+    vars.defsubr(F,'make_hash_table')
+    vars.defsubr(F,'puthash')
+    vars.defsubr(F,'delq')
+    vars.defsubr(F,'concat')
+    vars.defsubr(F,'copy_sequence')
+    vars.defsubr(F,'substring')
+    vars.defsubr(F,'string_equal')
+    vars.defsubr(F,'require')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
+    vars.defsym('Qfeatures','features')
 
   vars.defvar_lisp('overriding_plist_environment','overriding-plist-environment',[[An alist that overrides the plists of the symbols which it lists.
 Used by the byte-compiler to apply `define-symbol-prop' during
 compilation.]])
   vars.V.overriding_plist_environment=vars.Qnil
 
+    vars.defsym('Qhash_table_p','hash-table-p')
     vars.defsym('Qplistp','plistp')
     vars.defsym('Qprovide','provide')
     vars.defsym('Qrequire','require')

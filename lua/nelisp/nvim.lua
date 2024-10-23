@@ -1,95 +1,68 @@
 local vars=require'nelisp.vars'
-local str=require'nelisp.obj.str'
 local lisp=require'nelisp.lisp'
-local buffer=require'nelisp.obj.buffer'
+local alloc=require'nelisp.alloc'
 
----@class nelisp.buffer_obj_id: function
+---@class nelisp.vim.buffer:nelisp._buffer
+---@field bufid number
 
 local M={}
 
-local values=setmetatable({},{__mode='k'})
-local function _buf_set_var(id,key,value)
-    if not vim.b[id].nelisp_buflocal_id then
-        local new_id_object=function () end
-        vim.b[id].nelisp_buflocal_id=new_id_object
-        values[new_id_object]={}
+local ref_to_buf_obj=setmetatable({},{__mode='k'})
+---@param bufid number
+---@return nelisp.obj
+local function get_or_create_buf_obj(bufid)
+    if not vim.b[bufid].nelisp_reference then
+        vim.b[bufid].nelisp_reference=function() end
     end
-    local id_object=vim.b[id].nelisp_buflocal_id
-    if not values[id_object] then
-        values[id_object]={}
+    if ref_to_buf_obj[vim.b[bufid].nelisp_reference] then
+        return ref_to_buf_obj[vim.b[bufid].nelisp_reference]
     end
-    values[id_object][key]=value
+    ---@type nelisp.vim.buffer
+    local b={
+        bufid=bufid,
+    }
+    ref_to_buf_obj[vim.b[bufid].nelisp_reference]=b
+    return lisp.make_vectorlike_ptr(b,lisp.pvec.buffer)
 end
-local function _buf_get_var(id,key)
-    if not vim.b[id].nelisp_buflocal_id then
-        return nil
-    end
-    local id_object=vim.b[id].nelisp_buflocal_id
-    if not values[id_object] then
-        values[id_object]={}
-    end
-    return values[id_object][key]
-end
-
-local vimbuf_vals;vimbuf_vals=setmetatable({},{__index=function (_,vimbuf_id)
-    if type(vimbuf_id)=='string' then
-        return vimbuf_vals[0][vimbuf_id]
-    end
-    return setmetatable({},{__index=function (_,key)
-        return _buf_get_var(vimbuf_id,key)
-    end,__newindex=function (_,key,value)
-        _buf_set_var(vimbuf_id,key,value)
-    end})
-end})
-
-local function vimbuf_get_buf_obj(vimbuf_id)
-    if not vimbuf_vals[vimbuf_id].buf_obj then
-        vimbuf_vals[vimbuf_id].buf_obj=buffer.make(vimbuf_id)
-    end
-    return vimbuf_vals[vimbuf_id].buf_obj
-end
----@param buf nelisp.buffer
----@return number?
-local function buf_obj_get_vimbuf_id(buf)
-    if vim.api.nvim_buf_is_valid(buf[2]) then
-        return buf[2]
-    end
-end
----@param str_obj nelisp.str
----@return nelisp.buffer|nelisp.nil
-function M.get_buffer_by_name(str_obj)
-    local name=lisp.sdata(str_obj)
-    local vimbuf_id=vim.fn.bufnr(name)
-    if vimbuf_id==-1 then
+---@param name nelisp.obj
+---@return nelisp.obj
+function M.get_buffer_by_name(name)
+    local vname=lisp.sdata(name)
+    local bufid=vim.fn.bufnr(vname)
+    if bufid==-1 then
         return vars.Qnil
     end
-    return vimbuf_get_buf_obj(vimbuf_id)
+    return get_or_create_buf_obj(bufid)
 end
----@param str_obj nelisp.str
----@return nelisp.buffer
-function M.create_buffer(str_obj)
-    local name=lisp.sdata(str_obj)
-    local vimbuf_id=vim.api.nvim_create_buf(true,false)
-    vim.api.nvim_buf_set_name(vimbuf_id,name)
+---@param name nelisp.obj
+---@return nelisp.obj
+function M.create_buffer(name)
+    local vname=lisp.sdata(name)
+    local bufid=vim.api.nvim_create_buf(true,false)
+    vim.api.nvim_buf_set_name(bufid,vname)
     if not _G.nelisp_later then
-        error('TODO: what if str_obj is force unibyte? maybe set vim.b[id].nvim_buf_name_force_unibyte=true')
+        error('TODO: what if name is multibyte which looks like unibyte or vice versa?')
     end
-    return vimbuf_get_buf_obj(vimbuf_id)
+    return get_or_create_buf_obj(bufid)
 end
----@param buf nelisp.buffer
----@return nelisp.str|nelisp.nil
-function M.buffer_name(buf)
-    local vimbuf_id=buf_obj_get_vimbuf_id(buf)
-    if vimbuf_id==nil then return vars.Qnil end
-    local name=vim.api.nvim_buf_get_name(vimbuf_id)
-    return name=='' and vars.Qnil or str.make(name,'auto')
+---@param buffer nelisp._buffer
+---@return nelisp.obj
+function M.buffer_name(buffer)
+    ---@cast buffer nelisp.vim.buffer
+    local id=buffer.bufid
+    if not vim.api.nvim_buf_is_valid(id) then
+        return vars.Qnil
+    end
+    local name=vim.api.nvim_buf_get_name(id)
+    assert(name~='','TODO: what should be the name of a nameless buffers')
+    return alloc.make_string(name)
 end
----@param buf nelisp.buffer
-function M.set_current_buffer(buf)
+---@param buffer nelisp._buffer
+function M.set_current_buffer(buffer)
     if not _G.nelisp_later then
         error('TODO: what about unsetting buffer local variables, and other things?')
     end
-    local vimbuf_id=buf_obj_get_vimbuf_id(buf)
-    vim.api.nvim_set_current_buf(assert(vimbuf_id))
+    ---@cast buffer nelisp.vim.buffer
+    vim.api.nvim_set_current_buf(buffer.bufid)
 end
 return M

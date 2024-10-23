@@ -1,5 +1,5 @@
-local str=require'nelisp.obj.str'
 local b=require'nelisp.bytes'
+local alloc=require'nelisp.alloc'
 local M={}
 ---@param format string
 ---@param ap (string|number)[]
@@ -16,7 +16,7 @@ function M.doprnt(format,ap,format_end)
         assert(type(a)==t)
         return a
     end
-    local fmt=require'nelisp.lread'.make_readcharfun(str.make(format,false),0)
+    local fmt=require'nelisp.lread'.make_readcharfun(alloc.make_unibyte_string(format),0)
     local buf=require'nelisp.print'.make_printcharfun()
     local c=fmt.read()
     while c~=-1 do

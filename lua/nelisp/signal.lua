@@ -1,7 +1,7 @@
 local lisp=require'nelisp.lisp'
 local vars=require'nelisp.vars'
 local doprnt=require'nelisp.doprnt'
-local str=require'nelisp.obj.str'
+local alloc=require'nelisp.alloc'
 
 local function vformat_string(fmt,...)
     return doprnt.doprnt(fmt,{...},false)
@@ -14,7 +14,7 @@ end
 ---@param fmt string
 ---@param ... string|number
 function M.error(fmt,...)
-    M.xsignal(vars.Qerror,str.make(vformat_string(fmt,...),'auto'))
+    M.xsignal(vars.Qerror,alloc.make_string(vformat_string(fmt,...)))
 end
 function M.wrong_type_argument(predicate,x)
     M.xsignal(vars.Qwrong_type_argument,predicate,x)
@@ -27,7 +27,10 @@ function M.args_out_of_range(a1,a2,a3)
     end
 end
 function M.signal_error(s,arg)
-    error('TODO: err\n\n'..s..'\n\n'..vim.inspect(arg)..'\n\n')
+    if lisp.nilp(vars.F.proper_list_p(arg)) then
+        arg=lisp.list(arg)
+    end
+    lisp.xsignal(vars.Qerror,vars.F.cons(alloc.make_string(s),arg))
 end
 
 return M

@@ -1,6 +1,5 @@
 local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
-local fixnum=require'nelisp.obj.fixnum'
 local M={}
 
 local F={}
@@ -8,10 +7,10 @@ local function make_lisp_time(seconds,nanoseconds)
     if lisp.nilp(vars.V.current_time_list) then
         error('TODO')
     else
-        local hi_time=fixnum.make(bit.rshift(seconds,16))
-        local lo_time=fixnum.make(seconds%(bit.lshift(1,16)))
+        local hi_time=lisp.make_fixnum(bit.rshift(seconds,16))
+        local lo_time=lisp.make_fixnum(seconds%(bit.lshift(1,16)))
         assert(nanoseconds==0,'TODO')
-        return lisp.list(hi_time,lo_time,fixnum.zero,fixnum.zero)
+        return lisp.list(hi_time,lo_time,lisp.make_fixnum(0),lisp.make_fixnum(0))
     end
 end
 F.current_time={'current-time',0,0,0,[[Return the current time, as the number of seconds since 1970-01-01 00:00:00.
@@ -29,7 +28,7 @@ function F.current_time.f()
 end
 
 function M.init_syms()
-    vars.setsubr(F,'current_time')
+    vars.defsubr(F,'current_time')
 
     vars.defvar_bool('current_time_list','current-time-list',[[Whether `current-time' should return list or (TICKS . HZ) form.
 

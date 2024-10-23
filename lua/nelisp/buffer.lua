@@ -1,15 +1,16 @@
 local vars=require'nelisp.vars'
-local str=require'nelisp.obj.str'
 local lisp=require'nelisp.lisp'
 local nvim=require'nelisp.nvim'
 local signal=require'nelisp.signal'
+local alloc=require'nelisp.alloc'
 local M={}
 
 function M.init()
-    vars.F.get_buffer_create(str.make('*scratch*',false),vars.Qnil)
+    vars.F.get_buffer_create(alloc.make_unibyte_string('*scratch*'),vars.Qnil)
 end
----@param buffer nelisp.buffer
-function M.bufferlivep(buffer)
+---@param buffer nelisp._buffer
+---@return boolean
+function M.BUFFERLIVEP(buffer)
     return not lisp.nilp(nvim.buffer_name(buffer))
 end
 
@@ -43,10 +44,10 @@ function F.set_buffer.f(buf)
     if lisp.nilp(buffer) then
         nsberror(buf)
     end
-    if not M.bufferlivep(buffer) then
+    if not M.BUFFERLIVEP(buffer --[[@as nelisp._buffer]]) then
         signal.error('Selecting deleted buffer')
     end
-    nvim.set_current_buffer(buffer)
+    nvim.set_current_buffer(buffer --[[@as nelisp._buffer]])
     return buffer
 end
 F.get_buffer_create={'get-buffer-create',1,2,0,[[Return the buffer specified by BUFFER-OR-NAME, creating a new one if needed.
@@ -68,15 +69,15 @@ function F.get_buffer_create.f(buffer_or_name,inhibit_buffer_hooks)
     if not lisp.nilp(buffer) then
         return buffer
     end
-    if str.index1_neg(buffer_or_name,1)==-1 then
+    if lisp.schars(buffer_or_name)==0 then
         signal.error('Empty string for buffer name is not allowed')
     end
     return nvim.create_buffer(buffer_or_name)
 end
 
 function M.init_syms()
-    vars.setsubr(F,'get_buffer_create')
-    vars.setsubr(F,'get_buffer')
-    vars.setsubr(F,'set_buffer')
+    vars.defsubr(F,'get_buffer_create')
+    vars.defsubr(F,'get_buffer')
+    vars.defsubr(F,'set_buffer')
 end
 return M

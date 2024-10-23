@@ -3,7 +3,7 @@ local eval=require'nelisp.eval'
 local main_thread=require'nelisp.main_thread'
 local lisp=require'nelisp.lisp'
 local vars=require'nelisp.vars'
-local str=require'nelisp.obj.str'
+local alloc=require'nelisp.alloc'
 local M={}
 function M.init()
     require'nelisp.initer'
@@ -55,6 +55,6 @@ end
 ---@param path string
 ---@return nelisp.obj|nelisp.eval.prommise?
 function M.eval_file(path)
-    return M.eval(lisp.list(vars.Qload,str.make(path,'auto')))
+    return M.eval(lisp.list(vars.Qload,alloc.make_string(path)))
 end
 return M

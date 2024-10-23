@@ -35,7 +35,7 @@ local function cmd_error(d)
     if lisp.eq(sig,vars.Qvoid_function) then
         local cdr=lisp.xcdr(d)
         if lisp.consp(cdr) then
-            error('TODO: MAYBE need to implement: '..(lisp.xcar(cdr --[[@as nelisp.cons]])[2][2]))
+            error('TODO: MAYBE need to implement: '..lisp.sdata(lisp.symbol_name(lisp.xcar(cdr))))
         end
     end
     local readcharfun=print_.make_printcharfun()

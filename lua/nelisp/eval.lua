@@ -1,14 +1,12 @@
 local lisp=require'nelisp.lisp'
-local fixnum=require'nelisp.obj.fixnum'
 local vars=require'nelisp.vars'
 local specpdl=require'nelisp.specpdl'
-local symbol=require'nelisp.obj.symbol'
-local subr=require'nelisp.obj.subr'
 local signal=require'nelisp.signal'
-local str=require'nelisp.obj.str'
 local data=require'nelisp.data'
 local handler=require'nelisp.handler'
 local overflow=require'nelisp.overflow'
+local lread=require'nelisp.lread'
+local alloc=require'nelisp.alloc'
 local M={}
 
 local function funcall_lambda(fun,args)
@@ -21,13 +19,13 @@ local function funcall_lambda(fun,args)
                 signal.xsignal(vars.Qinvalid_function,fun)
             end
             fun=cdr
-            lexenv=lisp.xcar(fun --[[@as nelisp.cons]])
+            lexenv=lisp.xcar(fun)
         else
             lexenv=vars.Qnil
         end
         syms_left=lisp.xcdr(fun)
         if lisp.consp(syms_left) then
-            syms_left=lisp.xcar(syms_left --[[@as nelisp.cons]])
+            syms_left=lisp.xcar(syms_left)
         else
             signal.xsignal(vars.Qinvalid_function,fun)
         end
@@ -39,7 +37,6 @@ local function funcall_lambda(fun,args)
     local optional=false
     local previous_rest=false
     while lisp.consp(syms_left) do
-        ---@cast syms_left nelisp.cons
         local next_=lisp.xcar(syms_left)
         if not lisp.symbolp(next_) then
             signal.xsignal(vars.Qinvalid_function,fun)
@@ -64,7 +61,7 @@ local function funcall_lambda(fun,args)
                 arg=args[idx]
                 idx=idx+1
             elseif not optional then
-                signal.xsignal(vars.Qwrong_number_of_arguments,fun,fixnum.make(#args))
+                signal.xsignal(vars.Qwrong_number_of_arguments,fun,lisp.make_fixnum(#args))
             else
                 arg=vars.Qnil
             end
@@ -80,14 +77,14 @@ local function funcall_lambda(fun,args)
     if not lisp.nilp(syms_left) or previous_rest then
         signal.xsignal(vars.Qinvalid_function,fun)
     elseif idx<=#args then
-        signal.xsignal(vars.Qwrong_number_of_arguments,fun,fixnum.make(idx))
+        signal.xsignal(vars.Qwrong_number_of_arguments,fun,lisp.make_fixnum(idx))
     end
     if not lisp.eq(lexenv,vars.V.internal_interpreter_environment) then
         specpdl.bind(vars.Qinternal_interpreter_environment,lexenv)
     end
     local val
     if lisp.consp(fun) then
-        val=vars.F.progn(lisp.xcdr(lisp.xcdr(fun) --[[@as nelisp.cons]]))
+        val=vars.F.progn(lisp.xcdr(lisp.xcdr(fun)))
     else
         error('TODO')
     end
@@ -124,15 +121,13 @@ function M.eval_sub(form)
         return form
     end
 
-    ---@cast form nelisp.cons
-
     vars.lisp_eval_depth=vars.lisp_eval_depth+1
-    if vars.lisp_eval_depth>fixnum.tonumber(vars.V.max_lisp_eval_depth) then
-        if fixnum.tonumber(vars.V.max_lisp_eval_depth)<100 then
-            vars.V.max_lisp_eval_depth=fixnum.make(100)
+    if vars.lisp_eval_depth>lisp.fixnum(vars.V.max_lisp_eval_depth) then
+        if lisp.fixnum(vars.V.max_lisp_eval_depth)<100 then
+            vars.V.max_lisp_eval_depth=lisp.make_fixnum(100)
         end
-        if vars.lisp_eval_depth>fixnum.tonumber(vars.V.max_lisp_eval_depth) then
-            signal.xsignal(vars.Qexcessive_lisp_nesting,fixnum.make(vars.lisp_eval_depth))
+        if vars.lisp_eval_depth>lisp.fixnum(vars.V.max_lisp_eval_depth) then
+            signal.xsignal(vars.Qexcessive_lisp_nesting,lisp.make_fixnum(vars.lisp_eval_depth --[[@as number]]))
         end
     end
     local original_fun=lisp.xcar(form)
@@ -144,34 +139,32 @@ function M.eval_sub(form)
         error('TODO')
     end
     local fun=original_fun
-    ---@cast fun nelisp.symbol
     if (not lisp.symbolp(fun)) then
         error('TODO')
     elseif (not lisp.nilp(fun)) then
-        fun=symbol.get_func(fun)
+        fun=(fun --[[@as nelisp._symbol]]).fn
         if lisp.symbolp(fun) then
-            fun=data.indirect_function(fun --[[@as nelisp.symbol]])
+            fun=data.indirect_function(fun)
         end
     end
     if lisp.subrp(fun) and not lisp.subr_native_compiled_dynp(fun) then
         local args_left=original_args
         local numargs=lisp.list_length(args_left)
-        local t=subr.totable(fun --[[@as nelisp.subr]])
+        local t=(fun --[[@as nelisp._subr]])
         if numargs<t.minargs or (t.maxargs>=0 and numargs>t.maxargs) then
-            signal.xsignal(vars.Qwrong_number_of_arguments,original_fun,fixnum.make(numargs))
+            signal.xsignal(vars.Qwrong_number_of_arguments,original_fun,lisp.make_fixnum(numargs))
         elseif t.maxargs==-1 then
-            val=t.fun(args_left)
+            val=t.fn(args_left)
         elseif t.maxargs==-2 or t.maxargs>8 then
             local vals={}
             while (lisp.consp(args_left) and #vals<numargs) do
-                ---@cast args_left nelisp.cons
                 local arg=lisp.xcar(args_left)
                 args_left=lisp.xcdr(args_left)
                 table.insert(vals,M.eval_sub(arg))
             end
 
             specpdl.set_backtrace_args(count,vals)
-            val=t.fun(vals)
+            val=t.fn(vals)
         else
             local argvals={}
             for _=1,t.maxargs do
@@ -179,7 +172,7 @@ function M.eval_sub(form)
                 args_left=vars.F.cdr(args_left)
             end
             specpdl.set_backtrace_args(count,argvals)
-            val=t.fun(unpack(argvals))
+            val=t.fn(unpack(argvals))
         end
     elseif lisp.compiledp(fun) or lisp.subr_native_compiled_dynp(fun) or lisp.module_functionp(fun) then
         error('TODO')
@@ -189,7 +182,6 @@ function M.eval_sub(form)
         elseif not lisp.consp(fun) then
             signal.xsignal(vars.Qinvalid_function,original_fun)
         end
-        ---@cast fun nelisp.cons
         local funcar=lisp.xcar(fun)
         if not lisp.symbolp(funcar) then
             signal.xsignal(vars.Qinvalid_function,original_fun)
@@ -254,15 +246,14 @@ function F.setq.f(args)
         local sym=lisp.xcar(tail)
         tail=lisp.xcdr(tail)
         if not lisp.consp(tail) then
-            signal.xsignal(vars.Qwrong_type_argument,vars.Qsetq,fixnum.make(nargs+1))
-            ---@cast tail nelisp.cons
+            signal.xsignal(vars.Qwrong_type_argument,vars.Qsetq,lisp.make_fixnum(nargs+1))
         end
         local arg=lisp.xcar(tail)
         tail=lisp.xcdr(tail)
         val=M.eval_sub(arg)
         local lex_binding=lisp.symbolp(sym) and vars.F.assq(sym,vars.V.internal_interpreter_environment) or vars.Qnil
         if not lisp.nilp(lex_binding) then
-            lisp.setcdr(lex_binding,val)
+            lisp.xsetcdr(lex_binding,val)
         else
             vars.F.set(sym,val)
         end
@@ -284,7 +275,6 @@ function F.let.f(args)
     local temps={}
     local argnum=0
     while argnum<varlist_len and lisp.consp(varlist) do
-        ---@cast varlist nelisp.cons
         elt=lisp.xcar(varlist)
         varlist=lisp.xcdr(varlist)
         if lisp.symbolp(elt) then
@@ -300,13 +290,12 @@ function F.let.f(args)
     local lexenv=vars.V.internal_interpreter_environment
     argnum=0
     while argnum<varlist_len and lisp.consp(varlist) do
-        ---@cast varlist nelisp.cons
         elt=lisp.xcar(varlist)
         varlist=lisp.xcdr(varlist)
         local var=lisp.symbolp(elt) and elt or vars.F.car(elt)
         local tem=temps[argnum]
         argnum=argnum+1
-        if not lisp.nilp(lexenv) and lisp.symbolp(var) and not symbol.get_special(var --[[@as nelisp.symbol]])
+        if not lisp.nilp(lexenv) and lisp.symbolp(var) and (not (var --[[@as nelisp._symbol]]).declared_special)
             and lisp.nilp(vars.F.memq(var,vars.V.internal_interpreter_environment)) then
             lexenv=vars.F.cons(vars.F.cons(var,tem),lexenv)
         else
@@ -335,13 +324,13 @@ function F.letX.f(args)
             error('TODO')
         else
             var=vars.F.car(elt)
-            if not lisp.nilp(vars.F.cdr(lisp.xcdr(elt --[[@as nelisp.cons]]))) then
+            if not lisp.nilp(vars.F.cdr(lisp.xcdr(elt))) then
                 signal.signal_error("`let' bindings can have only one value-form",elt)
             end
-            val=M.eval_sub(vars.F.car(lisp.xcdr(elt --[[@as nelisp.cons]])))
+            val=M.eval_sub(vars.F.car(lisp.xcdr(elt)))
         end
         if not lisp.nilp(lexenv) and lisp.symbolp(var)
-            and not symbol.get_special(var)
+            and (not (var --[[@as nelisp._symbol]]).declared_special)
             and lisp.nilp(vars.F.memq(var,vars.V.internal_interpreter_environment)) then
             local newenv=vars.F.cons(vars.F.cons(var,val),vars.V.internal_interpreter_environment)
             if lisp.eq(vars.V.internal_interpreter_environment,lexenv) then
@@ -398,14 +387,14 @@ function F.defvar.f(args)
     local tail=lisp.xcdr(args)
     lisp.check_symbol(sym)
     if not lisp.nilp(tail) then
-        ---@cast tail nelisp.cons
-        if not lisp.nilp(lisp.xcdr(tail)) and not lisp.nilp(lisp.xcdr(lisp.xcdr(tail) --[[@as nelisp.cons]])) then
+        if not lisp.nilp(lisp.xcdr(tail)) and not lisp.nilp(lisp.xcdr(lisp.xcdr(tail))) then
             signal.error('Too many arguments')
         end
         local exp=lisp.xcar(tail)
         tail=lisp.xcdr(tail)
-        return defvar(sym,exp,lisp.xcar(tail --[[@as nelisp.cons]]),true)
-    elseif not lisp.nilp(vars.V.internal_interpreter_environment) and lisp.symbolp(sym) and not symbol.get_special(sym --[[@as nelisp.symbol]]) then
+        return defvar(sym,exp,lisp.xcar(tail),true)
+    elseif not lisp.nilp(vars.V.internal_interpreter_environment)
+        and lisp.symbolp(sym) and (not (sym --[[@as nelisp._symbol]]).declared_special) then
         vars.V.internal_interpreter_environment=vars.F.cons(sym,vars.V.internal_interpreter_environment)
         return sym
     else
@@ -424,33 +413,40 @@ function F.defvaralias.f(new_alias,base_variable,docstring)
     lisp.check_symbol(new_alias)
     lisp.check_symbol(base_variable)
     if lisp.symbolconstantp(new_alias) then
-        signal.error('Cannot make a constant an alias: %s',lisp.sdata(symbol.get_name(new_alias)))
+        signal.error('Cannot make a constant an alias: %s',lisp.sdata(lisp.symbol_name(new_alias)))
     end
-    local redirect=symbol.get_redirect(new_alias)
-    if redirect==symbol.redirect.localized then
-        signal.error("Don't know how to make a buffer-local variable an alias: %s",lisp.sdata(symbol.get_name(new_alias)))
+    local s=(new_alias --[[@as nelisp._symbol]])
+    if s.redirect==lisp.symbol_redirect.localized then
+        signal.error("Don't know how to make a buffer-local variable an alias: %s",lisp.sdata(lisp.symbol_name(new_alias)))
     end
     if lisp.nilp(vars.F.boundp(base_variable)) then
         data.set_internal(base_variable,data.find_symbol_value(new_alias),vars.Qnil,'BIND')
-    elseif not lisp.nilp(vars.F.fboundp(base_variable)) and not lisp.eq(data.find_symbol_value(new_alias),data.find_symbol_value(base_variable)) then
+    elseif not lisp.nilp(vars.F.fboundp(base_variable))
+        and not lisp.eq(data.find_symbol_value(new_alias) or vars.Qunique,data.find_symbol_value(base_variable) or vars.Qunique) then
         error('TODO')
     end
     for entry in specpdl.riter() do
         if entry.type>=specpdl.type.let and lisp.eq(new_alias,entry.symbol) then
-            signal.error("Don't know how to make a let-bound variable an alias: %s",lisp.sdata(symbol.get_name(new_alias)))
+            signal.error("Don't know how to make a let-bound variable an alias: %s",lisp.sdata(lisp.symbol_name(new_alias)))
         end
     end
-    if symbol.get_trapped_wire(new_alias)==symbol.trapped_wire.trapped_write then
+    if s.trapped_write==lisp.symbol_trapped_write.trapped then
         error('TODO')
     end
-    symbol.set_special(new_alias)
-    symbol.set_special(base_variable)
-    symbol.set_redirect(new_alias,symbol.redirect.varalias)
-    symbol.set_alias(new_alias,base_variable)
-    symbol.set_trapped_wire(new_alias,symbol.get_trapped_wire(base_variable))
+    s.declared_special=true
+    (base_variable --[[@as nelisp._symbol]]).declared_special=true
+    s.redirect=lisp.symbol_redirect.varalias
+    lisp.set_symbol_alias(s,(base_variable --[[@as nelisp._symbol]]))
+    s.trapped_write=(base_variable --[[@as nelisp._symbol]]).trapped_write
     lisp.loadhist_attach(new_alias)
     vars.F.put(new_alias,vars.Qvariable_documentation,docstring)
     return base_variable
+end
+F.make_var_non_special={'make_var_non_special',1,1,0,[[Internal function.]]}
+function F.make_var_non_special.f(sym)
+    lisp.check_symbol(sym)
+    ;(sym --[[@as nelisp._symbol]]).declared_special=false
+    return vars.Qnil
 end
 local function lexbound_p(sym)
     for i in specpdl.riter() do
@@ -470,10 +466,10 @@ F.internal__define_uninitialized_variable={'internal--define-uninitialized-varia
 This is like `defvar' and `defconst' but without affecting the variable's
 value.]]}
 function F.internal__define_uninitialized_variable.f(sym,doc)
-    if not symbol.get_special(sym) and lexbound_p(sym) then
-        signal.xsignal(vars.Qerror,str.make('Defining as dynamic an already lexical var','auto'),sym)
+    if (not (sym --[[@as nelisp._symbol]]).declared_special) and lexbound_p(sym) then
+        signal.xsignal(vars.Qerror,alloc.make_string('Defining as dynamic an already lexical var'),sym)
     end
-    symbol.set_special(sym)
+    (sym --[[@as nelisp._symbol]]).declared_special=true
     if not lisp.nilp(doc) then
         vars.F.put(sym,vars.Qvariable_documentation,doc)
     end
@@ -499,13 +495,13 @@ function F.defconst.f(args)
     local sym=lisp.xcar(args)
     lisp.check_symbol(sym)
     local docstring=vars.Qnil
-    if not lisp.nilp(lisp.xcdr(lisp.xcdr(args) --[[@as nelisp.cons]])) then
-        if not lisp.nilp(lisp.xcdr(lisp.xcdr(lisp.xcdr(args) --[[@as nelisp.cons]]) --[[@as nelisp.cons]])) then
+    if not lisp.nilp(lisp.xcdr(lisp.xcdr(args))) then
+        if not lisp.nilp(lisp.xcdr(lisp.xcdr(lisp.xcdr(args)))) then
             signal.error('Too many arguments')
         end
-        docstring=lisp.xcar(lisp.xcdr(lisp.xcdr(args) --[[@as nelisp.cons]]) --[[@as nelisp.cons]])
+        docstring=lisp.xcar(lisp.xcdr(lisp.xcdr(args)))
     end
-    local tem=M.eval_sub(lisp.xcar(lisp.xcdr(args) --[[@as nelisp.cons]]))
+    local tem=M.eval_sub(lisp.xcar(lisp.xcdr(args)))
     return vars.F.defconst_1(sym,tem,docstring)
 end
 F.defconst_1={'Fdefconst_1',2,3,0,[[Like `defconst' but as a function.
@@ -523,7 +519,6 @@ Returns the value of THEN or the value of the last of the ELSE's.
 THEN must be one expression, but ELSE... can be zero or more expressions.
 If COND yields nil, and there are no ELSE's, the value is nil.
 usage: (if COND THEN ELSE...)]]}
----@param args nelisp.cons
 function F.if_.f(args)
     local cond=M.eval_sub(lisp.xcar(args))
     if not lisp.nilp(cond) then
@@ -561,7 +556,6 @@ function F.cond.f(args)
         local clause=lisp.xcar(args)
         val=M.eval_sub(vars.F.car(clause))
         if not lisp.nilp(val) then
-            ---@cast clause nelisp.cons
             if not lisp.nilp(lisp.xcdr(clause)) then
                 val=vars.F.progn(lisp.xcdr(clause))
             end
@@ -578,7 +572,6 @@ usage: (or CONDITIONS...)]]}
 function F.or_.f(args)
     local val=vars.Qnil
     while lisp.consp(args) do
-        ---@cast args nelisp.cons
         local arg=lisp.xcar(args)
         args=lisp.xcdr(args)
         val=M.eval_sub(arg)
@@ -652,7 +645,7 @@ function F.eval.f(form,lexical)
 end
 local function funcall_subr(fun,args)
     local numargs=#args
-    local s=subr.totable(fun)
+    local s=(fun --[[@as nelisp._subr]])
     if numargs>=s.minargs then
         if numargs<=s.maxargs and s.maxargs<=8 then
             local a={}
@@ -663,21 +656,21 @@ local function funcall_subr(fun,args)
             else
                 a=args
             end
-            return s.fun(unpack(a))
-        elseif s.maxargs==-1 or s.maxargs>8 then
-            return s.fun(args)
+            return s.fn(unpack(a))
+        elseif s.maxargs==-2 or s.maxargs>8 then
+            return s.fn(args)
         end
     end
     if s.maxargs==-1 then
         signal.xsignal(vars.Qinvalid_function,fun)
     else
-        signal.xsignal(vars.Qwrong_number_of_arguments,fun,fixnum.make(numargs))
+        signal.xsignal(vars.Qwrong_number_of_arguments,fun,lisp.make_fixnum(numargs))
     end
 end
 local function funcall_general(fun,args)
     local original_fun=fun
     if lisp.symbolp(fun) and not lisp.nilp(fun) then
-        fun=symbol.get_func(fun)
+        fun=(fun --[[@as nelisp._symbol]]).fn
         if lisp.symbolp(fun) then
             fun=data.indirect_function(fun)
         end
@@ -709,12 +702,12 @@ Thus, (funcall \\='cons \\='x \\='y) returns (x . y).
 usage: (funcall FUNCTION &rest ARGUMENTS)]]}
 function F.funcall.f(args)
     vars.lisp_eval_depth=vars.lisp_eval_depth+1
-    if vars.lisp_eval_depth>fixnum.tonumber(vars.V.max_lisp_eval_depth) then
-        if fixnum.tonumber(vars.V.max_lisp_eval_depth)<100 then
-            vars.V.max_lisp_eval_depth=fixnum.make(100)
+    if vars.lisp_eval_depth>lisp.fixnum(vars.V.max_lisp_eval_depth) then
+        if lisp.fixnum(vars.V.max_lisp_eval_depth)<100 then
+            vars.V.max_lisp_eval_depth=lisp.make_fixnum(100)
         end
-        if vars.lisp_eval_depth>fixnum.tonumber(vars.V.max_lisp_eval_depth) then
-            signal.xsignal(vars.Qexcessive_lisp_nesting,fixnum.make(vars.lisp_eval_depth))
+        if vars.lisp_eval_depth>lisp.fixnum(vars.V.max_lisp_eval_depth) then
+            signal.xsignal(vars.Qexcessive_lisp_nesting,lisp.make_fixnum(vars.lisp_eval_depth))
         end
     end
     local fun_args={unpack(args,2)}
@@ -747,7 +740,7 @@ function F.apply.f(args)
     end
     numargs=numargs+#args-2
     if lisp.symbolp(fun) and not lisp.nilp(fun) then
-        fun=symbol.get_func(fun)
+        fun=(fun --[[@as nelisp._symbol]]).fn
         if lisp.symbolp(fun) then
             error('TODO')
         end
@@ -777,15 +770,15 @@ function F.function_.f(args)
         signal.xsignal(vars.Qwrong_number_of_arguments,vars.Qfunction,vars.F.length(args))
     end
     if not lisp.nilp(vars.V.internal_interpreter_environment)
-        and lisp.consp(quoted) and lisp.eq(lisp.xcar(quoted --[[@as nelisp.cons]]),vars.Qlambda)
+        and lisp.consp(quoted) and lisp.eq(lisp.xcar(quoted),vars.Qlambda)
     then
-        local cdr=lisp.xcdr(quoted --[[@as nelisp.cons]])
+        local cdr=lisp.xcdr(quoted)
         local tmp=cdr
         if lisp.consp(tmp) then
-            tmp=lisp.xcdr(tmp --[[@as nelisp.cons]])
+            tmp=lisp.xcdr(tmp)
             if lisp.consp(tmp) then
-                tmp=lisp.xcar(tmp --[[@as nelisp.cons]])
-                if lisp.consp(tmp) and lisp.eq(lisp.xcar(tmp --[[@as nelisp.cons]]),vars.QCdocumentation) then
+                tmp=lisp.xcar(tmp)
+                if lisp.consp(tmp) and lisp.eq(lisp.xcar(tmp),vars.QCdocumentation) then
                     error('TODO')
                 end
             end
@@ -820,7 +813,7 @@ this does nothing and returns nil.]]}
 function F.autoload.f(func,file,docstring,interactive,type_)
     lisp.check_symbol(func)
     lisp.check_string(file)
-    if not lisp.nilp(symbol.get_func(func)) and not lisp.autoloadp(symbol.get_func(func)) then
+    if not lisp.nilp((func --[[@as nelisp._symbol]]).fn) and not lisp.autoloadp((func --[[@as nelisp._symbol]]).fn) then
         return vars.Qnil
     end
     return vars.F.defalias(func,lisp.list(vars.Qautoload,file,docstring,interactive,type_),vars.Qnil)
@@ -898,14 +891,14 @@ See also the function `signal' for more info.
 usage: (condition-case VAR BODYFORM &rest HANDLERS)]]}
 function F.condition_case.f(args)
     local var=lisp.xcar(args)
-    local bodyform=lisp.xcar(lisp.xcdr(args) --[[@as nelisp.cons]])
-    local handlers=lisp.xcdr(lisp.xcdr(args) --[[@as nelisp.cons]])
+    local bodyform=lisp.xcar(lisp.xcdr(args))
+    local handlers=lisp.xcdr(lisp.xcdr(args))
     return handler.internal_lisp_condition_case(var,bodyform,handlers)
 end
 local function ensure_room(n)
     local sum=overflow.add(vars.lisp_eval_depth,n) or overflow.max
-    if sum>fixnum.tonumber(vars.V.max_lisp_eval_depth) then
-        vars.V.max_lisp_eval_depth=fixnum.make(sum)
+    if sum>lisp.fixnum(vars.V.max_lisp_eval_depth) then
+        vars.V.max_lisp_eval_depth=lisp.make_fixnum(sum)
     end
 end
 local function find_handler_clause(handlers,conditions)
@@ -1109,35 +1102,36 @@ function F.set_default_toplevel_value.f(sym,val)
 end
 
 function M.init_syms()
-    vars.setsubr(F,'setq')
-    vars.setsubr(F,'let')
-    vars.setsubr(F,'letX')
-    vars.setsubr(F,'defvar')
-    vars.setsubr(F,'defvaralias')
-    vars.setsubr(F,'internal__define_uninitialized_variable')
-    vars.setsubr(F,'defconst')
-    vars.setsubr(F,'defconst_1')
-    vars.setsubr(F,'if_')
-    vars.setsubr(F,'while_')
-    vars.setsubr(F,'cond')
-    vars.setsubr(F,'or_')
-    vars.setsubr(F,'and_')
-    vars.setsubr(F,'quote')
-    vars.setsubr(F,'progn')
-    vars.setsubr(F,'prog1')
-    vars.setsubr(F,'eval')
-    vars.setsubr(F,'funcall')
-    vars.setsubr(F,'apply')
-    vars.setsubr(F,'function_')
-    vars.setsubr(F,'autoload')
-    vars.setsubr(F,'throw')
-    vars.setsubr(F,'unwind_protect')
-    vars.setsubr(F,'condition_case')
-    vars.setsubr(F,'signal')
-    vars.setsubr(F,'run_hook_with_args')
-    vars.setsubr(F,'run_hooks')
-    vars.setsubr(F,'default_toplevel_value')
-    vars.setsubr(F,'set_default_toplevel_value')
+    vars.defsubr(F,'setq')
+    vars.defsubr(F,'let')
+    vars.defsubr(F,'letX')
+    vars.defsubr(F,'defvar')
+    vars.defsubr(F,'defvaralias')
+    vars.defsubr(F,'make_var_non_special')
+    vars.defsubr(F,'internal__define_uninitialized_variable')
+    vars.defsubr(F,'defconst')
+    vars.defsubr(F,'defconst_1')
+    vars.defsubr(F,'if_')
+    vars.defsubr(F,'while_')
+    vars.defsubr(F,'cond')
+    vars.defsubr(F,'or_')
+    vars.defsubr(F,'and_')
+    vars.defsubr(F,'quote')
+    vars.defsubr(F,'progn')
+    vars.defsubr(F,'prog1')
+    vars.defsubr(F,'eval')
+    vars.defsubr(F,'funcall')
+    vars.defsubr(F,'apply')
+    vars.defsubr(F,'function_')
+    vars.defsubr(F,'autoload')
+    vars.defsubr(F,'throw')
+    vars.defsubr(F,'unwind_protect')
+    vars.defsubr(F,'condition_case')
+    vars.defsubr(F,'signal')
+    vars.defsubr(F,'run_hook_with_args')
+    vars.defsubr(F,'run_hooks')
+    vars.defsubr(F,'default_toplevel_value')
+    vars.defsubr(F,'set_default_toplevel_value')
 
     vars.defvar_lisp('max_lisp_eval_depth','max-lisp-eval-depth',
         [[Limit on depth in `eval', `apply' and `funcall' before error.
@@ -1147,7 +1141,7 @@ function M.init_syms()
         You can safely make it considerably larger than its default value,
         if that proves inconveniently small.  However, if you increase it too far,
         Emacs could overflow the real C stack, and crash.]])
-    vars.V.max_lisp_eval_depth=fixnum.make(1600)
+    vars.V.max_lisp_eval_depth=lisp.make_fixnum(1600)
 
     vars.defvar_bool('debug_on_next_call','debug-on-next-call',
         [[Non-nil means enter debugger before next `eval', `apply' or `funcall'.]])
@@ -1173,7 +1167,7 @@ function M.init_syms()
     vars.defsym('QCsuccess',':success')
     vars.defsym('QCdocumentation',':documentation')
 
-    vars.run_hooks=str.make('run-hooks','auto')
+    vars.run_hooks=lread.intern_c_string('run-hooks')
 
     vars.defvar_lisp('internal_make_interpreted_closure_function','internal-make-interpreted-closure-function',
         [[Function to filter the env when constructing a closure.]])
