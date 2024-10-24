@@ -388,7 +388,8 @@ function F.define_key.f(keymap,key,def,remove)
             silly_event_symbol_error(c)
         end
         if lisp.fixnump(c) and bit.band(lisp.fixnum(c),meta_bit)>0 and not metized then
-            error('TODO')
+            c=vars.V.meta_prefix_char
+            metized=true
         else
             if lisp.fixnump(c) then
                 c=lisp.make_fixnum(bit.band(lisp.fixnum(c),bit.bnot(meta_bit)))
@@ -508,5 +509,9 @@ function M.init_syms()
     vars.defsym('Qevent_symbol_elements','event-symbol-elements')
     vars.defsym('Qmodifier_cache','modifier-cache')
     vars.defsym('Qevent_kind','event-kind')
+
+    vars.defvar_lisp('meta_prefix_char','meta-prefix-char',[[Meta-prefix character code.
+Meta-foo as command input turns into this character followed by foo.]])
+    vars.V.meta_prefix_char=lisp.make_fixnum(27)
 end
 return M
