@@ -75,10 +75,7 @@ end
 ---@param multibyte boolean
 function M.make_specified_string(data,nchars,multibyte)
     if multibyte then
-        if nchars<0 then
-            error('TODO')
-        end
-        error('TODO')
+        return M.make_multibyte_string(data,nchars<0 and -1 or nchars)
     end
     return M.make_unibyte_string(data)
 end
