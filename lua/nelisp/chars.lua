@@ -110,7 +110,11 @@ function M.charhexdigit(c)
         [bytes'E']=14,[bytes'F']=15,
     })[c] or -1
 end
-
-M.max_int=0x1fffffffffffff
-
+---@param s string
+---@return string
+function M.str_to_multibyte(s)
+    return (s:gsub('[\x80-\xff]',function(c)
+        return M.byte8string(string.byte(c))
+    end))
+end
 return M

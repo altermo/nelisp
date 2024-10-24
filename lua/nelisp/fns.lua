@@ -6,6 +6,7 @@ local textprop=require'nelisp.textprop'
 local alloc=require'nelisp.alloc'
 local overflow=require'nelisp.overflow'
 local chartab=require'nelisp.chartab'
+local chars=require'nelisp.chars'
 
 local M={}
 
@@ -889,10 +890,12 @@ function F.string_to_multibyte.f(s)
     if lisp.string_multibyte(s) then
         return s
     end
-    if not lisp.sdata(s):find('[\x80-\xff]') then
-        return alloc.make_multibyte_string(lisp.sdata(s),lisp.schars(s))
+    local nchars=lisp.schars(s)
+    local data=lisp.sdata(s)
+    if data:find('[\x80-\xff]') then
+        data=chars.str_to_multibyte(data)
     end
-    error('TODO')
+    return alloc.make_multibyte_string(data,nchars)
 end
 F.substring={'substring',1,3,0,[[Return a new string whose contents are a substring of STRING.
 The returned string consists of the characters between index FROM

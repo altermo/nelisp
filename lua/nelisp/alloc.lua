@@ -65,7 +65,7 @@ function M.make_multibyte_string(c,nchars)
     local s={}
     ---@cast s nelisp._string
     s[2]=c
-    s.size_chars=vim.str_byteindex(c,#c)
+    s.size_chars=vim.str_utfindex(c,#c)
     assert(nchars==s.size_chars or nchars==-1)
     s.intervals=nil
     return lisp.make_ptr(s,lisp.type.string)
