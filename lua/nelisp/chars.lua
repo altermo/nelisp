@@ -74,7 +74,7 @@ function M.stringcharandlength(s)
     assert(0xc0<=c and p1)
     local d=bit.lshift(c,6)+p1-(bit.lshift(0xc0,6)+0x80)
     if bit.band(c,0x20)==0 then
-        return 2,d+(c<0xc2 and 0x3fff00 or 0)
+        return 2,d+(c<0xc2 and 0x3fff80 or 0)
     end
     error('TODO')
     assert(p2)
