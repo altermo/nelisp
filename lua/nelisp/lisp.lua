@@ -432,6 +432,18 @@ end
 function M.check_string_car(x)
     M.check_type(M.stringp(M.xcar(x)),vars.Qstringp,M.xcar(x))
 end
+---@param x nelisp.obj
+---@param lo number
+---@param hi number
+---@return number
+function M.check_fixnum_range(x,lo,hi)
+    M.check_integer(x)
+    if lo<=M.fixnum(x) and M.fixnum(x)<=hi then
+        return M.fixnum(x)
+    end
+    require'nelisp.signal'.args_out_of_range(x,M.make_fixnum(lo),M.make_fixnum(hi))
+    error('unreachable')
+end
 
 
 --- ;; List functions (Cons functions)

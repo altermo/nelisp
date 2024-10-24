@@ -1,6 +1,19 @@
 local bytes=require'nelisp.bytes'
 local signal=require'nelisp.signal'
+local lisp=require'nelisp.lisp'
+local vars=require'nelisp.vars'
 local M={}
+
+local function charvalidp(c)
+    return 0<=c and c<=bytes.MAX_CHAR
+end
+function M.characterp(x)
+    return lisp.fixnump(x) and charvalidp(lisp.fixnum(x))
+end
+---@param x nelisp.obj
+function M.check_character(x)
+    lisp.check_type(M.characterp(x),vars.Qcharacterp,x)
+end
 
 ---@overload fun(c:number):boolean
 function M.charbyte8p(c) return bytes.MAX_5_BYTE_CHAR<c end
@@ -116,5 +129,9 @@ function M.str_to_multibyte(s)
     return (s:gsub('[\x80-\xff]',function(c)
         return M.byte8string(string.byte(c))
     end))
+end
+
+function M.init_syms()
+    vars.defsym('Qcharacterp','character')
 end
 return M

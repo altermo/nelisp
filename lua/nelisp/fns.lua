@@ -314,7 +314,7 @@ end
 ---@param key nelisp.obj
 ---@return number
 ---@return number
-local function hash_lookup(h,key)
+function M.hash_lookup(h,key)
     local hash_code=h.test.hashfn(key,h)
     assert(type(hash_code)=='number')
     local i=hash_index(h,hash_code%lisp.asize(h.index))
@@ -340,7 +340,7 @@ end
 ---@param val nelisp.obj
 ---@param hash number
 ---@return number
-local function hash_put(h,key,val,hash)
+function M.hash_put(h,key,val,hash)
     maybe_resize_hash_table(h)
     h.count=h.count+1
     local i=h.next_free
@@ -755,11 +755,11 @@ VALUE.  In any case, return VALUE.]]}
 function F.puthash.f(key,value,t)
     local h=check_hash_table(t)
     check_mutable_hash_table(t,h)
-    local i,hash=hash_lookup(h,key)
+    local i,hash=M.hash_lookup(h,key)
     if i>=0 then
         lisp.aset(h.key_and_value,2*i+1,value)
     else
-        hash_put(h,key,value,hash)
+        M.hash_put(h,key,value,hash)
     end
     return value
 end
@@ -767,8 +767,8 @@ F.gethash={'gethash',2,3,0,[[Look up KEY in TABLE and return its associated valu
 If KEY is not found, return DFLT which defaults to nil.]]}
 function F.gethash.f(key,table,dflt)
     local h=check_hash_table(table)
-    local i=hash_lookup(h,key)
-    return i>=0 and lisp.aref(h.key_and_value,2*i+1)==key or dflt
+    local i=M.hash_lookup(h,key)
+    return i>=0 and lisp.aref(h.key_and_value,2*i+1) or dflt
 end
 
 F.delq={'delq',2,2,0,[[Delete members of LIST which are `eq' to ELT, and return the result.

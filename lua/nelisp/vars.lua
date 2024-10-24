@@ -8,6 +8,16 @@
 ---@field V table<string,nelisp.obj>
 ---@field modifier_symbols (0|nelisp.obj)[]
 ---@field lisp_eval_depth number
+---@field charset_ascii number
+---@field charset_iso_8859_1 number
+---@field charset_unicode number
+---@field charset_emacs number
+---@field charset_eight_bit number
+---@field charset_table nelisp.charset[]
+---@field iso_charset_table number[][][]
+---@field emacs_mule_charset number[]
+---@field emacs_mule_bytes number[]
+---@field charset_ordered_list_tick number
 ---@field [string] nelisp.obj
 local vars={}
 
