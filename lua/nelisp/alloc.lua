@@ -59,12 +59,16 @@ function M.make_unibyte_string(c)
     return lisp.make_ptr(s,lisp.type.string)
 end
 ---@param c string
+---@param nchars number|-1
 ---@return nelisp.obj
-function M.make_multibyte_string(c)
-    if not _G.nelisp_later then
-        error('TODO')
-    end
-    return M.make_unibyte_string(c)
+function M.make_multibyte_string(c,nchars)
+    local s={}
+    ---@cast s nelisp._string
+    s[2]=c
+    s.size_chars=vim.str_byteindex(c,#c)
+    assert(nchars==s.size_chars or nchars==-1)
+    s.intervals=nil
+    return lisp.make_ptr(s,lisp.type.string)
 end
 ---@param data string
 ---@param nchars number|-1

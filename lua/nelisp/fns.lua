@@ -874,6 +874,26 @@ local function string_char_to_byte(s,idx)
     end
     error('TODO')
 end
+F.string_to_multibyte={'string-to-multibyte',1,1,0,[[Return a multibyte string with the same individual chars as STRING.
+If STRING is multibyte, the result is STRING itself.
+Otherwise it is a newly created string, with no text properties.
+
+If STRING is unibyte and contains an 8-bit byte, it is converted to
+the corresponding multibyte character of charset `eight-bit'.
+
+This differs from `string-as-multibyte' by converting each byte of a correct
+utf-8 sequence to an eight-bit character, not just bytes that don't form a
+correct sequence.]]}
+function F.string_to_multibyte.f(s)
+    lisp.check_string(s)
+    if lisp.string_multibyte(s) then
+        return s
+    end
+    if not lisp.sdata(s):find('[\x80-\xff]') then
+        return alloc.make_multibyte_string(lisp.sdata(s),lisp.schars(s))
+    end
+    error('TODO')
+end
 F.substring={'substring',1,3,0,[[Return a new string whose contents are a substring of STRING.
 The returned string consists of the characters between index FROM
 \(inclusive) and index TO (exclusive) of STRING.  FROM and TO are
@@ -983,6 +1003,7 @@ function M.init_syms()
     vars.defsubr(F,'delq')
     vars.defsubr(F,'concat')
     vars.defsubr(F,'copy_sequence')
+    vars.defsubr(F,'string_to_multibyte')
     vars.defsubr(F,'substring')
     vars.defsubr(F,'string_equal')
     vars.defsubr(F,'require')

@@ -137,7 +137,7 @@ local function apply_modifiers_uncached(modifiers,base)
             table.insert(new_mods,v[2]..'-')
         end
     end
-    local new_name=alloc.make_multibyte_string(table.concat(new_mods)..base)
+    local new_name=alloc.make_multibyte_string(table.concat(new_mods)..base,-1)
     return vars.F.intern(new_name,vars.Qnil)
 end
 local function apply_modifiers(modifiers,base)
