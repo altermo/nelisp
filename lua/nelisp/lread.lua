@@ -937,9 +937,11 @@ local function openp(path,s,suffixes,storep,predicate,newer,no_native)
                 if lisp.fixnatp(predicate) then
                     error('TODO')
                 else
-                    fd=io.open(pfn,'r+')
-                    if not fd then
+                    local info=vim.uv.fs_stat(pfn)
+                    if not info or info.type=='directory' then
                         fd=-1
+                    else
+                        fd=io.open(pfn,'r') or -1
                     end
                 end
                 if fd~=-1 then
