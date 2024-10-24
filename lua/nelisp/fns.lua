@@ -471,6 +471,22 @@ function F.put.f(sym,propname,value)
         sym,plist_put((sym --[[@as nelisp._symbol]]).plist,propname,value))
     return value
 end
+F.plist_put={'plist-put',3,4,0,[[Change value in PLIST of PROP to VAL.
+PLIST is a property list, which is a list of the form
+\(PROP1 VALUE1 PROP2 VALUE2 ...).
+
+The comparison with PROP is done using PREDICATE, which defaults to `eq'.
+
+If PROP is already a property on the list, its value is set to VAL,
+otherwise the new PROP VAL pair is added.  The new plist is returned;
+use `(setq x (plist-put x prop val))' to be sure to use the new value.
+The PLIST is modified by side effects.]]}
+function F.plist_put.f(plist,prop,val,predicate)
+    if lisp.nilp(predicate) then
+        return plist_put(plist,prop,val)
+    end
+    error('TODO')
+end
 function M.plist_get(plist,prop)
     local tail=plist
     local has_visited={}
@@ -998,6 +1014,7 @@ function M.init_syms()
     vars.defsubr(F,'length')
     vars.defsubr(F,'equal')
     vars.defsubr(F,'put')
+    vars.defsubr(F,'plist_put')
     vars.defsubr(F,'get')
     vars.defsubr(F,'featurep')
     vars.defsubr(F,'provide')
