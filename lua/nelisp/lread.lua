@@ -432,7 +432,7 @@ function M.string_to_number(s,base)
     if not _G.nelisp_later then
         error('TODO: create own implementation of number parser')
     end
-    local num=tonumber(s,base)
+    local num=tonumber(s=='' and '0' or s,base)
     if not num then return nil,false end
     if num==math.huge or num==-math.huge or math.floor(num)~=num or num==tonumber('nan') then
         return alloc.make_float(num),false
