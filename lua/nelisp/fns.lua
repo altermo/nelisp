@@ -356,7 +356,7 @@ local function hash_put(h,key,val,hash)
 end
 ---@param a nelisp.obj
 ---@param b nelisp.obj
----@param kind 'plain'|'no_quit'
+---@param kind 'plain'|'no_quit'|'including_properties'
 ---@param depth number
 ---@param ht table
 local function internal_equal(a,b,kind,depth,ht)
@@ -418,7 +418,9 @@ local function internal_equal(a,b,kind,depth,ht)
     elseif t==lisp.type.vectorlike then
         error('TODO')
     elseif t==lisp.type.string then
-        error('TODO')
+        return lisp.schars(a)==lisp.schars(b)
+            and lisp.sdata(a)==lisp.sdata(b)
+            and (kind~='including_properties' or error('TODO'))
     end
     return false
 end
