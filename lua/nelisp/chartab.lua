@@ -200,6 +200,25 @@ function M.set_extra(ctable,idx,val)
 end
 
 local F={}
+F.char_table_extra_slot={'char-table-extra-slot',2,2,0,[[Return the value of CHAR-TABLE's extra-slot number N.]]}
+function F.char_table_extra_slot.f(ctable,n)
+    lisp.check_chartable(ctable)
+    lisp.check_fixnum(n)
+    if lisp.fixnum(n)<0 or lisp.fixnum(n)>=chartable_extra_slots(ctable) then
+        signal.args_out_of_range(ctable,n)
+    end
+    return lisp.aref((ctable --[[@as nelisp._char_table]]).extras,lisp.fixnum(n))
+end
+F.set_char_table_extra_slot={'set-char-table-extra-slot',3,3,0,[[Set CHAR-TABLE's extra-slot number N to VALUE.]]}
+function F.set_char_table_extra_slot.f(ctable,n,value)
+    lisp.check_chartable(ctable)
+    lisp.check_fixnum(n)
+    if lisp.fixnum(n)<0 or lisp.fixnum(n)>=chartable_extra_slots(ctable) then
+        signal.args_out_of_range(ctable,n)
+    end
+    lisp.aset((ctable --[[@as nelisp._char_table]]).extras,lisp.fixnum(n),value)
+    return value
+end
 F.make_char_table={'make-char-table',1,2,0,[[Return a newly created char-table, with purpose PURPOSE.
 Each element is initialized to INIT, which defaults to nil.
 
@@ -237,5 +256,7 @@ function M.init_syms()
     vars.defsym('Qchar_code_property_table','char-code-property-table')
 
     vars.defsubr(F,'make_char_table')
+    vars.defsubr(F,'char_table_extra_slot')
+    vars.defsubr(F,'set_char_table_extra_slot')
 end
 return M
