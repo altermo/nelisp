@@ -37,6 +37,7 @@ require'nelisp.keymap'.init()
 require'nelisp.emacs'.init()
 require'nelisp.data'.init()
 require'nelisp.casetab'.init()
+require'nelisp.charset'.init()
 
 if not _G.nelisp_later then
     local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,2)

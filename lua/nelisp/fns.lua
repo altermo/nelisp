@@ -763,6 +763,13 @@ function F.puthash.f(key,value,t)
     end
     return value
 end
+F.gethash={'gethash',2,3,0,[[Look up KEY in TABLE and return its associated value.
+If KEY is not found, return DFLT which defaults to nil.]]}
+function F.gethash.f(key,table,dflt)
+    local h=check_hash_table(table)
+    local i=hash_lookup(h,key)
+    return i>=0 and lisp.aref(h.key_and_value,2*i+1)==key or dflt
+end
 
 F.delq={'delq',2,2,0,[[Delete members of LIST which are `eq' to ELT, and return the result.
 More precisely, this function skips any members `eq' to ELT at the
@@ -1020,6 +1027,7 @@ function M.init_syms()
     vars.defsubr(F,'provide')
     vars.defsubr(F,'make_hash_table')
     vars.defsubr(F,'puthash')
+    vars.defsubr(F,'gethash')
     vars.defsubr(F,'delq')
     vars.defsubr(F,'concat')
     vars.defsubr(F,'copy_sequence')

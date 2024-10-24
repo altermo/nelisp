@@ -39,9 +39,18 @@ function F.set_charset_plist.f(charset,plist)
     lisp.aset(attrs,idx.charset_plist,plist)
     return plist
 end
+F.charset_plist={'charset-plist',1,1,0,[[Return the property list of CHARSET.]]}
+function F.charset_plist.f(charset)
+    local attr=check_charset_get_attr(charset)
+    return lisp.aref(attr,idx.charset_plist)
+end
 
+function M.init()
+    vars.charset_hash_table=vars.F.make_hash_table({vars.QCtest,vars.Qeq})
+end
 function M.init_syms()
     vars.defsubr(F,'set_charset_plist')
+    vars.defsubr(F,'charset_plist')
 
     vars.defsym('Qemacs','emacs')
 end
