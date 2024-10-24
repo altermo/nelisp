@@ -46,7 +46,7 @@ end
 function M.strasunibyte(s)
     local out=''
     local p=1
-    while p<#s do
+    while p<=#s do
         local c=string.byte(s:sub(p,p))
         local len=M.bytesbycharhead(c)
         if M.charbyte8headp(c) then
