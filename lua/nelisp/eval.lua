@@ -215,7 +215,7 @@ function M.eval_sub(form)
     if specpdl.backtrace_debug_on_exit(count) then
         error('TODO')
     end
-    return specpdl.unbind_to(specpdl.index()-1,assert(val))
+    return specpdl.unbind_to(specpdl.index()-1,assert(val,'DEV: function didn\'t return a value'))
 end
 function M.init_once()
     vars.run_hooks=vars.Qnil
