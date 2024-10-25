@@ -634,6 +634,8 @@ F.atom={'atom',1,1,0,[[Return t if OBJECT is not a cons cell.  This includes nil
 function F.atom.f(a) return lisp.consp(a) and vars.Qnil or vars.Qt end
 F.consp={'consp',1,1,0,[[Return t if OBJECT is a cons cell.]]}
 function F.consp.f(a) return lisp.consp(a) and vars.Qt or vars.Qnil end
+F.integerp={'integerp',1,1,0,[[Return t if OBJECT is an integer.]]}
+function F.integerp.f(a) return lisp.integerp(a) and vars.Qt or vars.Qnil end
 F.functionp={'functionp',1,1,0,[[Return t if OBJECT is a function.
 
 An object is a function if it is callable via `funcall'; this includes
@@ -711,6 +713,7 @@ function M.init_syms()
     vars.defsubr(F,'vectorp')
     vars.defsubr(F,'atom')
     vars.defsubr(F,'consp')
+    vars.defsubr(F,'integerp')
     vars.defsubr(F,'functionp')
     vars.defsubr(F,'hash_table_p')
 
