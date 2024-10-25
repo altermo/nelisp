@@ -127,6 +127,22 @@ function F.indirect_function.f(obj,_)
     end
     return result
 end
+F.fmakunbound={'fmakunbound',1,1,0,[[Make SYMBOL's function definition be void.
+Return SYMBOL.
+
+If a function definition is void, trying to call a function by that
+name will cause a `void-function' error.  For more details, see Info
+node `(elisp) Function Cells'.
+
+See also `makunbound'.]]}
+function F.fmakunbound.f(sym)
+    lisp.check_symbol(sym)
+    if lisp.nilp(sym) or lisp.eq(sym,vars.Qt) then
+        signal.xsignal(vars.Qsetting_constant,sym)
+    end
+    lisp.set_symbol_function(sym,vars.Qnil)
+    return sym
+end
 F.aref={'aref',2,2,0,[[Return the element of ARRAY at index IDX.
 ARRAY may be a vector, a string, a char-table, a bool-vector, a record,
 or a byte-code object.  IDX starts at 0.]]}
@@ -691,6 +707,7 @@ function M.init_syms()
     vars.defsubr(F,'symbol_name')
     vars.defsubr(F,'bare_symbol')
     vars.defsubr(F,'indirect_function')
+    vars.defsubr(F,'fmakunbound')
     vars.defsubr(F,'aref')
     vars.defsubr(F,'aset')
     vars.defsubr(F,'car')
