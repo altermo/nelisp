@@ -156,6 +156,79 @@ local function styled_format(args,message)
     end
     return val
 end
+F.format={'format',1,-2,0,[[Format a string out of a format-string and arguments.
+The first argument is a format control string.
+The other arguments are substituted into it to make the result, a string.
+
+The format control string may contain %-sequences meaning to substitute
+the next available argument, or the argument explicitly specified:
+
+%s means produce a string argument.  Actually, produces any object with `princ'.
+%d means produce as signed number in decimal.
+%o means produce a number in octal.
+%x means produce a number in hex.
+%X is like %x, but uses upper case.
+%e means produce a number in exponential notation.
+%f means produce a number in decimal-point notation.
+%g means produce a number in exponential notation if the exponent would be
+   less than -4 or greater than or equal to the precision (default: 6);
+   otherwise it produces in decimal-point notation.
+%c means produce a number as a single character.
+%S means produce any object as an s-expression (using `prin1').
+
+The argument used for %d, %o, %x, %e, %f, %g or %c must be a number.
+%o, %x, and %X treat arguments as unsigned if `binary-as-unsigned' is t
+  (this is experimental; email 32252@debbugs.gnu.org if you need it).
+Use %% to put a single % into the output.
+
+A %-sequence other than %% may contain optional field number, flag,
+width, and precision specifiers, as follows:
+
+  %<field><flags><width><precision>character
+
+where field is [0-9]+ followed by a literal dollar "$", flags is
+[+ #0-]+, width is [0-9]+, and precision is a literal period "."
+followed by [0-9]+.
+
+If a %-sequence is numbered with a field with positive value N, the
+Nth argument is substituted instead of the next one.  A format can
+contain either numbered or unnumbered %-sequences but not both, except
+that %% can be mixed with numbered %-sequences.
+
+The + flag character inserts a + before any nonnegative number, while a
+space inserts a space before any nonnegative number; these flags
+affect only numeric %-sequences, and the + flag takes precedence.
+The - and 0 flags affect the width specifier, as described below.
+
+The # flag means to use an alternate display form for %o, %x, %X, %e,
+%f, and %g sequences: for %o, it ensures that the result begins with
+\"0\"; for %x and %X, it prefixes nonzero results with \"0x\" or \"0X\";
+for %e and %f, it causes a decimal point to be included even if the
+precision is zero; for %g, it causes a decimal point to be
+included even if the precision is zero, and also forces trailing
+zeros after the decimal point to be left in place.
+
+The width specifier supplies a lower limit for the length of the
+produced representation.  The padding, if any, normally goes on the
+left, but it goes on the right if the - flag is present.  The padding
+character is normally a space, but it is 0 if the 0 flag is present.
+The 0 flag is ignored if the - flag is present, or the format sequence
+is something other than %d, %o, %x, %e, %f, and %g.
+
+For %e and %f sequences, the number after the "." in the precision
+specifier says how many decimal places to show; if zero, the decimal
+point itself is omitted.  For %g, the precision specifies how many
+significant digits to produce; zero or omitted are treated as 1.
+For %s and %S, the precision specifier truncates the string to the
+given width.
+
+Text properties, if any, are copied from the format-string to the
+produced text.
+
+usage: (format STRING &rest OBJECTS)]]}
+function F.format.f(args)
+    return styled_format(args,false)
+end
 F.format_message={'format-message',1,-2,0,[[Format a string out of a format-string and arguments.
 The first argument is a format control string.
 The other arguments are substituted into it to make the result, a string.
@@ -210,6 +283,7 @@ function F.system_name.f()
 end
 
 function M.init_syms()
+    vars.defsubr(F,'format')
     vars.defsubr(F,'format_message')
     vars.defsubr(F,'message')
     vars.defsubr(F,'system_name')
