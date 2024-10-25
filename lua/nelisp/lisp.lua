@@ -351,11 +351,6 @@ function M.eq(x,y)
     return x==y
 end
 
-local function wrong_type_argument(predicate,x)
-    _={predicate,x}
-    --TODO
-    error('No error handling yet, error: wrong_type_argument}')
-end
 ---@param x nelisp.obj
 function M.loadhist_attach(x)
     if not _G.nelisp_later then
@@ -383,7 +378,7 @@ end
 ---@param x nelisp.obj
 function M.check_type(ok,predicate,x)
     if not ok then
-        wrong_type_argument(predicate,x)
+        require'nelisp.signal'.wrong_type_argument(predicate,x)
     end
 end
 ---@overload fun(x:nelisp.obj)
