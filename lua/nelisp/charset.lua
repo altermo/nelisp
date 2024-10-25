@@ -81,6 +81,9 @@ local F={}
 local function charset_symbol_attributes(sym)
     return vars.F.gethash(sym,vars.charset_hash_table,vars.Qnil)
 end
+local function charset_attributes(charset)
+    return lisp.aref((vars.charset_hash_table --[[@as nelisp._hash_table]]).key_and_value,charset.hash_index*2+1)
+end
 ---@param name nelisp.obj
 ---@param dimension number
 ---@param code_space_chars string
@@ -145,6 +148,19 @@ local function charset_fast_map_set(c,fast_map)
         fast_map[bit.rshift(c,10)]=bit.bor(fast_map[bit.rshift(c,10)],bit.lshift(1,bit.band(bit.rshift(c,7),7)))
     else
         fast_map[bit.rshift(c,15)]=bit.bor(fast_map[bit.rshift(c,15)+62],bit.lshift(1,bit.band(bit.rshift(c,12),7)))
+    end
+end
+---@param charset nelisp.charset
+---@param control_flag number
+local function load_charset(charset,control_flag)
+    local map
+    if charset.method==charset_method.map then
+        map=lisp.aref(charset_attributes(charset),charset_idx.map)
+    else
+        error('TODO')
+    end
+    if not _G.nelisp_later then
+        error('TODO')
     end
 end
 F.define_charset_internal={'define-charset-internal',charset_arg.max,-2,0,[[For internal use only.
@@ -322,7 +338,9 @@ function F.define_charset_internal.f(args)
             charset.ascii_compatible_p=true
         end
     elseif not lisp.nilp(args[charset_arg.map]) then
-        error('TODO')
+        val=args[charset_arg.map]
+        lisp.aset(attrs,charset_idx.map,val)
+        charset.method=charset_method.map
     elseif not lisp.nilp(args[charset_arg.subset]) then
         error('TODO')
     elseif not lisp.nilp(args[charset_arg.superset]) then
@@ -357,7 +375,8 @@ function F.define_charset_internal.f(args)
     vars.charset_table[id]=charset
 
     if charset.method==charset_method.map then
-        error('TODO')
+        load_charset(charset,0)
+        vars.charset_table[id]=charset
     end
 
     if charset.iso_final>=0 then
