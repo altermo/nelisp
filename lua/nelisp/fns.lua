@@ -43,8 +43,13 @@ function M.concat_to_string(args)
             else
                 error('TODO')
             end
-        else
+        elseif lisp.vectorp(arg) then
             error('TODO')
+        elseif lisp.nilp(arg) then
+        elseif lisp.consp(arg) then
+            error('TODO')
+        else
+            signal.wrong_type_argument(vars.Qsequencep,arg)
         end
     end
     return dest_multibyte and error('TODO') or alloc.make_unibyte_string(buf.out())
@@ -822,36 +827,7 @@ Values of the `composition' property of the result are not guaranteed
 to be `eq'.
 usage: (concat &rest SEQUENCES)]]}
 function F.concat.f(args)
-    local dest_multibyte=false
-    for _,arg in ipairs(args) do
-        if lisp.stringp(arg) then
-            if lisp.string_multibyte(arg) then
-                dest_multibyte=true
-            end
-        end
-    end
-    local strs={}
-    for _,arg in ipairs(args) do
-        if lisp.stringp(arg) then
-            if lisp.string_intervals(arg) then
-                error('TODO')
-            end
-            if lisp.string_multibyte(arg)==dest_multibyte then
-                table.insert(strs,lisp.sdata(arg))
-            else
-                error('TODO')
-            end
-        elseif lisp.vectorp(arg) then
-            error('TODO')
-        elseif lisp.nilp(arg) then
-        elseif lisp.consp(arg) then
-            error('TODO')
-        else
-            signal.wrong_type_argument(vars.Qsequencep,arg)
-        end
-    end
-    local out_str=table.concat(strs)
-    return (dest_multibyte and error('TODO') or alloc.make_unibyte_string)(out_str)
+    return M.concat_to_string(args)
 end
 F.copy_sequence={'copy-sequence',1,1,0,[[Return a copy of a list, vector, string, char-table or record.
 The elements of a list, vector or record are not copied; they are
