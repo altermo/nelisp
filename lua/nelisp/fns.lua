@@ -54,6 +54,36 @@ function M.concat_to_string(args)
     end
     return dest_multibyte and error('TODO') or alloc.make_unibyte_string(buf.out())
 end
+local function concat_to_vector(args)
+    local result_len=0
+    for _,arg in ipairs(args) do
+        if not (lisp.vectorp(arg) or lisp.consp(arg) or lisp.nilp(arg) or lisp.stringp(arg)
+        or lisp.boolvectorp(arg) or lisp.compiledp(arg)) then
+            signal.wrong_type_argument(vars.Qsequencep,arg)
+        end
+        result_len=result_len+lisp.fixnum(vars.F.length(arg))
+    end
+    local result=alloc.make_vector(result_len,'nil')
+    local dst=0
+    for _,arg in ipairs(args) do
+        if lisp.vectorp(arg) then
+            for i=0,lisp.asize(arg)-1 do
+                lisp.aset(result,dst,lisp.aref(arg,i))
+                dst=dst+1
+            end
+        elseif lisp.consp(arg) then
+            error('TODO')
+        elseif lisp.nilp(arg) then
+        elseif lisp.stringp(arg) then
+            error('TODO')
+        elseif lisp.boolvectorp(arg) then
+            error('TODO')
+        else
+            error('TODO')
+        end
+    end
+    return result
+end
 
 local F={}
 local function concat_to_list(args)
@@ -829,6 +859,13 @@ usage: (concat &rest SEQUENCES)]]}
 function F.concat.f(args)
     return M.concat_to_string(args)
 end
+F.vconcat={'vconcat',0,-2,0,[[Concatenate all the arguments and make the result a vector.
+The result is a vector whose elements are the elements of all the arguments.
+Each argument may be a list, vector or string.
+usage: (vconcat &rest SEQUENCES)]]}
+function F.vconcat.f(args)
+    return concat_to_vector(args)
+end
 F.copy_sequence={'copy-sequence',1,1,0,[[Return a copy of a list, vector, string, char-table or record.
 The elements of a list, vector or record are not copied; they are
 shared with the original.  See Info node `(elisp) Sequence Functions'
@@ -1024,6 +1061,7 @@ function M.init_syms()
     vars.defsubr(F,'gethash')
     vars.defsubr(F,'delq')
     vars.defsubr(F,'concat')
+    vars.defsubr(F,'vconcat')
     vars.defsubr(F,'copy_sequence')
     vars.defsubr(F,'string_to_multibyte')
     vars.defsubr(F,'substring')
