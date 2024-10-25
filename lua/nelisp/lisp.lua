@@ -293,7 +293,7 @@ function M.numberp(x) return M.integerp(x) or M.floatp(x) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.fixnatp(x) return M.fixnump(x) and 0<=M.fixnum(x) end
 ---@overload fun(x:nelisp.obj):boolean
-function M.arrayp(x) return M.vectorp(x) or M.stringp(x) or M.chartablep(x) or M.bool_vectorp(x) end
+function M.arrayp(x) return M.vectorp(x) or M.stringp(x) or M.chartablep(x) or M.boolvectorp(x) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.symbolconstantp(x) return (x --[[@as nelisp._symbol]]).trapped_write==M.symbol_trapped_write.nowrite end
 ---@overload fun(x:nelisp.obj):boolean
@@ -340,6 +340,8 @@ function M.recordp(x) return M.pseudovectorp(x,M.pvec.record) end
 function M.markerp(x) return M.pseudovectorp(x,M.pvec.marker) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.subchartablep(x) return M.pseudovectorp(x,M.pvec.sub_char_table) end
+---@overload fun(x:nelisp.obj):boolean
+function M.boolvectorp(x) return M.pseudovectorp(x,M.pvec.bool_vector) end
 
 --- ;; Other
 ---@param x nelisp.obj

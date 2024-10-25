@@ -109,8 +109,28 @@ local function concat_to_list(args)
                 lisp.xsetcdr(last,head)
             end
             last=prev
+        elseif lisp.nilp(arg) then
+        elseif lisp.vectorp(arg) or lisp.stringp(arg) or lisp.boolvectorp(arg) or lisp.compiledp(arg) then
+            local arglen=lisp.fixnum(vars.F.length(arg))
+            for idx=0,arglen-1 do
+                local elt
+                if lisp.stringp(arg) then
+                    error('TODO')
+                elseif lisp.boolvectorp(arg) then
+                    error('TODO')
+                else
+                    return lisp.aref(arg,idx)
+                end
+                local node=vars.F.cons(elt,vars.Qnil)
+                if lisp.nilp(result) then
+                    result=node
+                else
+                    lisp.xsetcdr(last,node)
+                end
+                last=node
+            end
         else
-            error('TODO')
+            signal.wrong_type_argument(vars.Qsequencep,arg)
         end
     end
     if result==vars.Qnil then
