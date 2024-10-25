@@ -589,6 +589,11 @@ end
 function M.xfloat_init(f,n)
     (f --[[@as nelisp._float]])[2]=n
 end
+---@param f nelisp.obj
+---@return number (float)
+function M.xfloat_data(f)
+    return (f --[[@as nelisp._float]])[2]
+end
 
 
 --- ;; hashtable

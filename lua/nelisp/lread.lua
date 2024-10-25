@@ -28,24 +28,13 @@ function M.obarray_check(obarray)
     end
     return obarray
 end
----@param s string
-local function hash_string(s)
-    if not _G.nelisp_later then
-        error('TODO: placeholder hash algorithm')
-    end
-    local hash=0
-    for i=1,#s do
-        hash=(hash*33+s:byte(i))%0x7fffffff
-    end
-    return hash
-end
 ---@param obarray nelisp.obj
 ---@param name string
 ---@return nelisp.obj|number
 function M.lookup(obarray,name)
     obarray=M.obarray_check(obarray)
     local obsize=lisp.asize(obarray)
-    local hash=hash_string(name) % obsize
+    local hash=fns.hash_string(name) % obsize
     local bucket=assert(lisp.aref(obarray,hash))
     if bucket==lisp.make_fixnum(0) then
     elseif not lisp.symbolp(bucket) then

@@ -10,10 +10,40 @@ local chars=require'nelisp.chars'
 
 local M={}
 
----@param obj nelisp.obj
+---@param str string
 ---@return number
-local function sxhash(obj)
-    error('TODO')
+function M.hash_string(str)
+    if not _G.nelisp_later then
+        error('TODO: placeholder hash algorithm')
+    end
+    local hash=0
+    for i=1,#str do
+        hash=(hash*33+str:byte(i))%0x7fffffff
+    end
+    return hash
+end
+---@param obj nelisp.obj
+---@param _depth number?
+---@return number
+local function sxhash(obj,_depth)
+    local depth=_depth or 0
+    if depth>3 then return 0 end
+    local typ=lisp.xtype(obj)
+    if typ==lisp.type.int0 then
+        return lisp.fixnum(obj)
+    elseif typ==lisp.type.symbol then
+        return lisp.xhash(obj)
+    elseif typ==lisp.type.string then
+        return M.hash_string(lisp.sdata(obj))
+    elseif typ==lisp.type.vectorlike then
+        error('TODO')
+    elseif typ==lisp.type.cons then
+        error('TODO')
+    elseif typ==lisp.type.float then
+        error('TODO')
+    else
+        error('unreachable')
+    end
 end
 function M.concat_to_string(args)
     local dest_multibyte=false
@@ -782,11 +812,17 @@ function F.make_hash_table.f(args)
     local rehash_size
     if rehash_size_arg==false then
         rehash_size=1.5-1
+    elseif lisp.fixnump(rehash_size_arg) and 0<lisp.fixnum(rehash_size_arg) then
+        rehash_size=-lisp.fixnum(rehash_size_arg)
+    elseif lisp.floatp(rehash_size_arg) and 0<lisp.xfloat_data(rehash_size_arg)-1 then
+        rehash_size=lisp.xfloat_data(rehash_size_arg)-1
     else
-        error('TODO')
+        signal.signal_error('Invalid hash table rehash size',rehash_size_arg)
     end
-    local rehash_threshold_arg=get_key_arg(vars.QCrehash_threshold,args,used)
-    local rehash_threshold=rehash_threshold_arg==false and 0.8125 or error('TODO')
+    local rehash_threshold_arg=get_key_arg(vars.QCrehash_threshold,args,used) --[[@as nelisp.obj]]
+    local rehash_threshold=rehash_threshold_arg==false and 0.8125
+        or not lisp.floatp(rehash_threshold_arg) and 0
+        or lisp.xfloat_data(rehash_threshold_arg)
     if not (0<rehash_threshold and rehash_threshold<=1) then
         signal.signal_error("Invalid hash table rehash threshold",rehash_threshold_arg)
     end
