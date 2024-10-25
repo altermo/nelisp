@@ -4,10 +4,24 @@ local print_=require'nelisp.print'
 local b=require'nelisp.bytes'
 local signal=require'nelisp.signal'
 local alloc=require'nelisp.alloc'
+local overflow=require'nelisp.overflow'
+local chars=require'nelisp.chars'
 
 local M={}
 
 local F={}
+local function str2num(idx,s)
+    ---@type number?
+    local n=0
+    while string.char(lisp.sref(s,idx)):match('%d') do
+        n=overflow.add(overflow.mul(n,10),lisp.sref(s,idx)-b'0')
+        if n==nil then
+            n=overflow.max
+        end
+        idx=idx+1
+    end
+    return n,idx
+end
 local function styled_format(args,message)
     lisp.check_string(args[1])
     local formatlen=lisp.sbytes(args[1])
@@ -32,8 +46,11 @@ local function styled_format(args,message)
             local c=lisp.sref(args[1],idx)
             local num=0
             local num_end
-            if string.match('%d',string.char(c)) then
-                error('TODO')
+            if string.char(c):match('%d') then
+                num,num_end=str2num(idx,args[1])
+                if lisp.sref(args[1],num_end)==b'$' then
+                    error('TODO')
+                end
             end
             local flags={}
             idx=idx-1
@@ -49,10 +66,11 @@ local function styled_format(args,message)
             end
             if not flags.plus then flags.space=nil end
             if not flags.minus then flags.zero=nil end
-            num=0
+            num,num_end=str2num(idx,args[1])
             local field_width=num
-            local precision_given=num_end==b'.'
+            local precision_given=lisp.sref(args[1],num_end)==b'.'
             local precision=precision_given and error('TODO') or math.huge
+            idx=num_end
             if idx>=formatlen then
                 signal.error('Format string ends in middle of format specifier')
             end
@@ -131,8 +149,55 @@ local function styled_format(args,message)
                 if lisp.string_intervals(args[1]) then
                     error('TODO')
                 end
+            elseif not (c==b'c' or c==b'd' or float_conversion or c==b'i' or c==b'o' or c==b'x' or c==b'X') then
+                if multibyte_format then
+                    signal.error('Invalid format operation %%%c',chars.stringcharandlength(lisp.sdata(args[1]):sub(idx)))
+                elseif c<=127 then
+                    signal.error('Invalid format operation %%%c',c)
+                else
+                    signal.error('Invalid format operation char #o%03o',c)
+                end
+            elseif not (lisp.fixnump(arg) or ((lisp.bignump(arg) or lisp.floatp(arg)) and c~=b'c')) then
+                signal.error("Format specifier doesn't match argument type")
             else
-                error('TODO')
+                if c==b'd' or c==b'i' then
+                    flags.sharp=false
+                end
+                local p
+                local convspec='%'
+                convspec=convspec..(flags.plus and '+' or '')
+                convspec=convspec..(flags.space and ' ' or '')
+                convspec=convspec..(flags.sharp and '#' or '')
+                local prec=-1
+                if precision_given then
+                    prec=math.min(precision,16382)
+                end
+                if field_width then
+                    convspec=convspec..field_width
+                end
+                convspec=convspec..'.*'
+                if not (float_conversion or c==b'c') then
+                    convspec=convspec..'l'
+                    flags.zero=not precision_given and flags.zero
+                end
+                convspec=convspec..string.char(c)
+                if float_conversion then
+                    error('TODO')
+                elseif c==b'd' or c==b'i' then
+                    if lisp.fixnump(arg) then
+                        local x=lisp.fixnum(arg)
+                        ---@diagnostic disable-next-line: redundant-parameter
+                        p=vim.fn.printf(convspec,prec,x)
+                    else
+                        error('TODO')
+                    end
+                else
+                    error('TODO')
+                end
+                if not _G.nelisp_later then
+                    error('TODO')
+                end
+                buf.write(p)
             end
         else
             if format_char==b'`' or format_char==b'\'' then
