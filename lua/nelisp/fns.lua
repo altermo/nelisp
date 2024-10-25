@@ -506,6 +506,21 @@ function M.plist_get(plist,prop)
     end
     return vars.Qnil
 end
+F.plist_get={'plist-get',2,3,0,[[Extract a value from a property list.
+PLIST is a property list, which is a list of the form
+\(PROP1 VALUE1 PROP2 VALUE2...).
+
+This function returns the value corresponding to the given PROP, or
+nil if PROP is not one of the properties on the list.  The comparison
+with PROP is done using PREDICATE, which defaults to `eq'.
+
+This function doesn't signal an error if PLIST is invalid.]]}
+function F.plist_get.f(plist,prop,predicate)
+    if lisp.nilp(predicate) then
+        return M.plist_get(plist,prop)
+    end
+    error('TODO')
+end
 F.get={'get',2,2,0,[[Return the value of SYMBOL's PROPNAME property.
 This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.]]}
 function F.get.f(sym,propname)
@@ -1020,8 +1035,9 @@ function M.init_syms()
     vars.defsubr(F,'nconc')
     vars.defsubr(F,'length')
     vars.defsubr(F,'equal')
-    vars.defsubr(F,'put')
     vars.defsubr(F,'plist_put')
+    vars.defsubr(F,'put')
+    vars.defsubr(F,'plist_get')
     vars.defsubr(F,'get')
     vars.defsubr(F,'featurep')
     vars.defsubr(F,'provide')
