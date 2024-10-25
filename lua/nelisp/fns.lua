@@ -298,6 +298,8 @@ function F.length.f(sequence)
         val=0
     elseif lisp.stringp(sequence) then
         val=lisp.schars(sequence)
+    elseif lisp.vectorp(sequence) then
+        val=lisp.asize(sequence)
     else
         error('TODO')
         signal.wrong_type_argument(vars.Qsequencep,sequence)
