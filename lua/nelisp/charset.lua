@@ -462,10 +462,18 @@ function M.init()
     vars.charset_emacs=define_charset_internal(vars.Qemacs,3,'\x00\xFF\x00\xFF\x00\x3F\0',0,b.MAX_5_BYTE_CHAR,-1,0,-1,true,true,0)
     vars.charset_eight_bit=define_charset_internal(vars.Qeight_bit,1,'\x80\xFF\0\0\0\0\0',128,255,-1,0,-1,false,true,b.MAX_5_BYTE_CHAR+1)
 end
+F.define_charset_alias={'define-charset-alias',2,2,0,[[Define ALIAS as an alias for charset CHARSET.]]}
+function F.define_charset_alias.f(alias,charset)
+    local attrs=check_charset_get_attr(charset)
+    vars.F.puthash(alias,attrs,vars.charset_hash_table)
+    vars.V.charset_list=vars.F.cons(alias,vars.V.charset_list)
+    return vars.Qnil
+end
 function M.init_syms()
     vars.defsubr(F,'set_charset_plist')
     vars.defsubr(F,'charset_plist')
     vars.defsubr(F,'define_charset_internal')
+    vars.defsubr(F,'define_charset_alias')
 
     vars.defsym('Qemacs','emacs')
     vars.defsym('Qiso_8859_1','iso-8859-1')
