@@ -348,8 +348,16 @@ local function arith_driver(code,args)
                 break
             end
         end
-        for _,v in ipairs(args) do
-            if type(v)=='number' then
+        for k,v in ipairs(args) do
+            if k==1 then
+                if type(v)=='number' then
+                    acc=v
+                elseif lisp.fixnump(v) then
+                    acc=lisp.fixnum(v)
+                else
+                    error('TODO')
+                end
+            elseif type(v)=='number' then
                 acc=over(acc,v)
             elseif lisp.bignump(v) then
                 error('TODO')
@@ -489,6 +497,18 @@ function F.quo.f(args)
         error('TODO')
     end
     return arith_driver('/',args)
+end
+F.minus={'-',0,-2,0,[[Negate number or subtract numbers or markers and return the result.
+With one arg, negates it.  With more than one arg,
+subtracts all but the first from the first.
+usage: (- &optional NUMBER-OR-MARKER &rest MORE-NUMBERS-OR-MARKERS)]]}
+function F.minus.f(args)
+    if #args==0 then
+        return lisp.make_fixnum(0)
+    elseif #args==1 then
+        error('TODO')
+    end
+    return arith_driver('-',args)
 end
 F.lss={'<',1,-2,0,[[Return t if each arg (a number or marker), is less than the next arg.
 usage: (< NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
@@ -689,6 +709,7 @@ function M.init_syms()
     vars.defsubr(F,'add1')
     vars.defsubr(F,'sub1')
     vars.defsubr(F,'quo')
+    vars.defsubr(F,'minus')
     vars.defsubr(F,'logior')
     vars.defsubr(F,'lss')
     vars.defsubr(F,'leq')
