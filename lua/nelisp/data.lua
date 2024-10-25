@@ -334,52 +334,60 @@ F.set_default.f=function (sym,val)
     M.set_default_internal(sym,val,'SET')
     return val
 end
----@param code '+'|'-'|'or'
+---@param code '+'|'-'|'or'|'/'
 ---@param args (number|nelisp.obj)[]
 local function arith_driver(code,args)
+    local function call(over,float)
+        ---@type number|nil
+        local acc=0
+        local is_float=false
+        for _,v in ipairs(args) do
+            if type(v)~='number' and lisp.floatp(v) then
+                is_float=true
+                over=float
+                break
+            end
+        end
+        for _,v in ipairs(args) do
+            if type(v)=='number' then
+                acc=over(acc,v)
+            elseif lisp.bignump(v) then
+                error('TODO')
+            elseif lisp.fixnump(v) then
+                acc=over(acc,lisp.fixnum(v))
+            elseif lisp.floatp(v) then
+                assert(is_float)
+                error('TODO')
+            else
+                error('TODO')
+            end
+            if acc==nil then
+                error('TODO')
+            end
+        end
+        if is_float then
+            error('TODO')
+        end
+        return lisp.make_fixnum(acc)
+    end
     if not _G.nelisp_later then
         error('TODO: args may contain markers')
     end
     if code=='+' then
-        ---@type number|nil
-        local acc=0
-        for _,v in ipairs(args) do
-            if type(v)=='number' then
-                acc=overflow.add(acc,v)
-            elseif lisp.bignump(v) then
-                error('TODO')
-            elseif lisp.floatp(v) then
-                error('TODO')
-            elseif lisp.fixnump(v) then
-                acc=overflow.add(acc,lisp.fixnum(v))
-            else
-                error('unreachable')
-            end
-        end
-        if acc==nil then
-            error('TODO')
-        end
-        return lisp.make_fixnum(acc)
+        return call(overflow.add,function (a,b) return a+b end)
     elseif code=='-' then
-        ---@type number|nil
-        local acc=0
-        for _,v in ipairs(args) do
-            if type(v)=='number' then
-                acc=overflow.sub(acc,v)
-            elseif lisp.bignump(v) then
-                error('TODO')
-            elseif lisp.floatp(v) then
-                error('TODO')
-            elseif lisp.fixnump(v) then
-                acc=overflow.sub(acc,lisp.fixnum(v))
-            else
-                error('unreachable')
+        return call(overflow.sub,function (a,b) return a-b end)
+    elseif code=='/' then
+        local fn=function (a,b)
+            if b==0 then
+                signal.xsignal(vars.Qarith_error)
             end
+            if a==overflow.min and b==-1 then
+                return nil
+            end
+            return a/b
         end
-        if acc==nil then
-            error('TODO')
-        end
-        return lisp.make_fixnum(acc)
+        return call(fn,function (a,b) return a/b end)
     elseif code=='or' then
         if not _G.nelisp_later then
             error('TODO: bit can only do numbers up to 32 bit, fixnum is 52 bit')
@@ -470,6 +478,17 @@ function F.sub1.f(num)
     else
         error('TODO')
     end
+end
+F.quo={'/',1,-2,0,[[Divide number by divisors and return the result.
+With two or more arguments, return first argument divided by the rest.
+With one argument, return 1 divided by the argument.
+The arguments must be numbers or markers.
+usage: (/ NUMBER &rest DIVISORS)]]}
+function F.quo.f(args)
+    if #args==1 then
+        error('TODO')
+    end
+    return arith_driver('/',args)
 end
 F.lss={'<',1,-2,0,[[Return t if each arg (a number or marker), is less than the next arg.
 usage: (< NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
@@ -667,6 +686,7 @@ function M.init_syms()
 
     vars.defsubr(F,'add1')
     vars.defsubr(F,'sub1')
+    vars.defsubr(F,'quo')
     vars.defsubr(F,'logior')
     vars.defsubr(F,'lss')
     vars.defsubr(F,'leq')
