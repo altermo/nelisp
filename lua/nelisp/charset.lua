@@ -163,6 +163,20 @@ local function load_charset(charset,control_flag)
         error('TODO')
     end
 end
+local function check_charset_get_id(x)
+    if not lisp.symbolp(x) then
+        signal.wrong_type_argument(vars.Qcharsetp,x)
+    end
+    local idx=fns.hash_lookup((vars.charset_hash_table --[[@as nelisp._hash_table]]),x)
+    if idx<0 then
+        signal.wrong_type_argument(vars.Qcharsetp,x)
+    end
+    return lisp.fixnum(lisp.aref(lisp.aref((vars.charset_hash_table --[[@as nelisp._hash_table]]).key_and_value,idx*2+1),charset_idx.id))
+end
+local function check_charset_get_charset(charset)
+    local cid=check_charset_get_id(charset)
+    return vars.charset_table[cid]
+end
 F.define_charset_internal={'define-charset-internal',charset_arg.max,-2,0,[[For internal use only.
 usage: (define-charset-internal ...)]]}
 function F.define_charset_internal.f(args)
@@ -342,7 +356,24 @@ function F.define_charset_internal.f(args)
         lisp.aset(attrs,charset_idx.map,val)
         charset.method=charset_method.map
     elseif not lisp.nilp(args[charset_arg.subset]) then
-        error('TODO')
+        val=args[charset_arg.subset]
+        local parent=vars.F.car(val)
+        local parent_charset=check_charset_get_charset(parent)
+        local parent_min_code=vars.F.nth(lisp.make_fixnum(1),val)
+        lisp.check_fixnat(parent_min_code)
+        local parent_max_code=vars.F.nth(lisp.make_fixnum(2),val)
+        lisp.check_fixnat(parent_max_code)
+        local parent_code_offset=vars.F.nth(lisp.make_fixnum(3),val)
+        lisp.check_fixnum(parent_code_offset)
+        lisp.aset(attrs,charset_idx.subset,
+            vars.F.vector({lisp.make_fixnum(parent_charset.id),
+                parent_min_code,parent_max_code,parent_code_offset}))
+        charset.method=charset_method.subset
+        for i=0,#parent_charset.fast_map-1 do
+            charset.fast_map[i]=parent_charset.fast_map[i]
+        end
+        charset.min_code=parent_charset.min_code
+        charset.max_code=parent_charset.max_code
     elseif not lisp.nilp(args[charset_arg.superset]) then
         error('TODO')
     else
