@@ -132,6 +132,9 @@ M.pvec={
     ---@field min_char number
 
     compiled=34,
+    ---@class nelisp._compiled: nelisp._normal_vector
+    ---@field contents table<nelisp.compiled_idx,nelisp.obj|nil>
+
     record=35,
     font=36,
 }
@@ -599,4 +602,14 @@ end
 ---@field cmpfn (fun(a:nelisp.obj,b:nelisp.obj,h:nelisp._hash_table):boolean)|0
 ---@field hashfn fun(a:nelisp.obj,h:nelisp._hash_table):number
 
+--- ;; compiled
+--- @enum nelisp.compiled_idx
+M.compiled_idx={
+    arglist=1,
+    bytecode=2,
+    constants=3,
+    stack_depth=4,
+    doc_string=5,
+    interactive=6,
+}
 return M

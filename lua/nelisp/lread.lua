@@ -619,32 +619,36 @@ local function skip_lazy_string(readcharfun)
 end
 ---@return nelisp.obj
 local function bytecode_from_list(elems,readcharfun)
-    error('TODO')
-    --local cidx=compiled.idx
-    --local size=#elems
-    --if not (size>=cidx.stack_depth and size<=cidx.interactive
-    --    and (lisp.fixnump(elems[cidx.arglist]) or
-    --    lisp.consp(elems[cidx.arglist]) or
-    --    lisp.nilp(elems[cidx.arglist]))
-    --    and lisp.fixnatp(elems[cidx.stack_depth])) then
-    --    invalid_syntax('Invalid byte-code object',readcharfun)
-    --end
-    --if vars.V.load_force_doc_strings
-    --    and lisp.nilp(elems[cidx.constants])
-    --    and lisp.stringp(elems[cidx.bytecode]) then
-    --    error('TODO')
-    --end
-    --if not ((lisp.stringp(elems[cidx.bytecode]) and
-    --    lisp.vectorp(elems[cidx.constants]))
-    --    or lisp.consp(elems[cidx.bytecode])) then
-    --    invalid_syntax('Invalid byte-code object',readcharfun)
-    --end
-    --if lisp.stringp(elems[cidx.bytecode]) then
-    --    if lisp.string_intervals(elems[cidx.bytecode]) then
-    --        error('TODO')
-    --    end
-    --end
-    --return compiled.make(elems)
+    local cidx=lisp.compiled_idx
+    local size=#elems
+    if not (size>=cidx.stack_depth and size<=cidx.interactive
+        and (lisp.fixnump(elems[cidx.arglist]) or
+        lisp.consp(elems[cidx.arglist]) or
+        lisp.nilp(elems[cidx.arglist]))
+        and lisp.fixnatp(elems[cidx.stack_depth])) then
+        invalid_syntax('Invalid byte-code object',readcharfun)
+    end
+    if vars.V.load_force_doc_strings
+        and lisp.nilp(elems[cidx.constants])
+        and lisp.stringp(elems[cidx.bytecode]) then
+        error('TODO')
+    end
+    if not ((lisp.stringp(elems[cidx.bytecode]) and
+        lisp.vectorp(elems[cidx.constants]))
+        or lisp.consp(elems[cidx.bytecode])) then
+        invalid_syntax('Invalid byte-code object',readcharfun)
+    end
+    if lisp.stringp(elems[cidx.bytecode]) then
+        if lisp.string_intervals(elems[cidx.bytecode]) then
+            error('TODO')
+        end
+    end
+    ---@type nelisp._compiled
+    local vec={
+        size=size,
+        contents=elems,
+    }
+    return lisp.make_vectorlike_ptr(vec,lisp.pvec.compiled)
 end
 ---@param readcharfun nelisp.lread.readcharfun
 ---@param locate_syms boolean
