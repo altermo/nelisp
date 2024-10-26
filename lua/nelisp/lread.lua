@@ -628,8 +628,8 @@ local function bytecode_from_list(elems,readcharfun)
         invalid_syntax('Invalid byte-code object',readcharfun)
     end
     if lisp.stringp(elems[cidx.bytecode]) then
-        if lisp.string_intervals(elems[cidx.bytecode]) then
-            error('TODO')
+        if lisp.string_multibyte(elems[cidx.bytecode]) then
+            elems[cidx.bytecode]=vars.F.string_as_unibyte(elems[cidx.bytecode])
         end
     end
     ---@type nelisp._compiled
