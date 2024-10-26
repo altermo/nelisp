@@ -27,6 +27,7 @@ require'nelisp.timefns'.init_syms()
 require'nelisp.callint'.init_syms()
 require'nelisp.casetab'.init_syms()
 require'nelisp.chars'.init_syms()
+require'nelisp.bytecode'.init_syms()
 
 vars.commit_qsymbols()
 

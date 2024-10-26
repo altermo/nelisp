@@ -133,7 +133,7 @@ M.pvec={
 
     compiled=34,
     ---@class nelisp._compiled: nelisp._normal_vector
-    ---@field contents table<nelisp.compiled_idx,nelisp.obj|nil>
+    ---@field contents nelisp.obj[]
 
     record=35,
     font=36,

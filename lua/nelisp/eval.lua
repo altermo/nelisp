@@ -9,6 +9,12 @@ local lread=require'nelisp.lread'
 local alloc=require'nelisp.alloc'
 local M={}
 
+local function fetch_and_exec_byte_code(fun,args_template,args)
+    if lisp.consp((fun --[[@as nelisp._compiled]]).contents[lisp.compiled_idx.bytecode]) then
+        error('TODO')
+    end
+    require'nelisp.bytecode'.exec_byte_code(fun,args_template,args)
+end
 local function funcall_lambda(fun,args)
     local lexenv,syms_left
     local count=specpdl.index()
@@ -29,8 +35,12 @@ local function funcall_lambda(fun,args)
         else
             signal.xsignal(vars.Qinvalid_function,fun)
         end
-    else
-        error('TODO')
+    elseif lisp.compiledp(fun) then
+        syms_left=(fun --[[@as nelisp._compiled]]).contents[lisp.compiled_idx.arglist]
+        if lisp.fixnump(syms_left) then
+            return fetch_and_exec_byte_code(fun,lisp.fixnum(syms_left),args)
+        end
+        lexenv=vars.Qnil
     end
     local idx=1
     local rest=false
@@ -175,7 +185,7 @@ function M.eval_sub(form)
             val=t.fn(unpack(argvals))
         end
     elseif lisp.compiledp(fun) or lisp.subr_native_compiled_dynp(fun) or lisp.module_functionp(fun) then
-        error('TODO')
+        return apply_lambda(fun,original_args,count)
     else
         if lisp.nilp(fun) then
             signal.xsignal(vars.Qvoid_function,original_fun)
@@ -643,7 +653,7 @@ function F.eval.f(form,lexical)
         (lisp.consp(lexical) or lisp.nilp(lexical)) and lexical or lisp.list(vars.Qt))
     return specpdl.unbind_to(count,M.eval_sub(form))
 end
-local function funcall_subr(fun,args)
+function M.funcall_subr(fun,args)
     local numargs=#args
     local s=(fun --[[@as nelisp._subr]])
     if numargs>=s.minargs then
@@ -667,7 +677,7 @@ local function funcall_subr(fun,args)
         signal.xsignal(vars.Qwrong_number_of_arguments,fun,lisp.make_fixnum(numargs))
     end
 end
-local function funcall_general(fun,args)
+function M.funcall_general(fun,args)
     local original_fun=fun
     if lisp.symbolp(fun) and not lisp.nilp(fun) then
         fun=(fun --[[@as nelisp._symbol]]).fn
@@ -676,7 +686,7 @@ local function funcall_general(fun,args)
         end
     end
     if lisp.subrp(fun) and not lisp.subr_native_compiled_dynp(fun) then
-        return funcall_subr(fun,args)
+        return M.funcall_subr(fun,args)
     elseif lisp.compiledp(fun) or lisp.subr_native_compiled_dynp(fun) or lisp.module_functionp(fun) then
         error('TODO')
     end
@@ -715,7 +725,7 @@ function F.funcall.f(args)
     if not lisp.nilp(vars.V.debug_on_next_call) then
         error('TODO')
     end
-    local val=funcall_general(args[1],fun_args)
+    local val=M.funcall_general(args[1],fun_args)
     vars.lisp_eval_depth=vars.lisp_eval_depth-1
     if specpdl.backtrace_debug_on_exit(count) then
         error('TODO')

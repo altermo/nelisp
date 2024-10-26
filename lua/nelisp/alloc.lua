@@ -159,6 +159,36 @@ function F.vector.f(args)
     end
     return vec
 end
+F.make_byte_code={'make-byte-code',4,-2,0,[[Create a byte-code object with specified arguments as elements.
+The arguments should be the ARGLIST, bytecode-string BYTE-CODE, constant
+vector CONSTANTS, maximum stack size DEPTH, (optional) DOCSTRING,
+and (optional) INTERACTIVE-SPEC.
+The first four arguments are required; at most six have any
+significance.
+The ARGLIST can be either like the one of `lambda', in which case the arguments
+will be dynamically bound before executing the byte code, or it can be an
+integer of the form NNNNNNNRMMMMMMM where the 7bit MMMMMMM specifies the
+minimum number of arguments, the 7-bit NNNNNNN specifies the maximum number
+of arguments (ignoring &rest) and the R bit specifies whether there is a &rest
+argument to catch the left-over arguments.  If such an integer is used, the
+arguments will not be dynamically bound but will be instead pushed on the
+stack before executing the byte-code.
+usage: (make-byte-code ARGLIST BYTE-CODE CONSTANTS DEPTH &optional DOCSTRING INTERACTIVE-SPEC &rest ELEMENTS)]]}
+function F.make_byte_code.f(args)
+    local cidx=lisp.compiled_idx
+    if not ((lisp.fixnump(args[cidx.arglist])
+        or lisp.consp(args[cidx.arglist])
+        or lisp.nilp(args[cidx.arglist]))
+        and lisp.stringp(args[cidx.bytecode])
+        and not lisp.string_multibyte(args[cidx.bytecode])
+        and lisp.vectorp(args[cidx.constants])
+        and lisp.fixnatp(args[cidx.stack_depth])
+    ) then
+        require'nelisp.signal'.error('Invalid byte-code object')
+    end
+    local val=vars.F.vector(args) --[[@as nelisp._normal_vector]]
+    return lisp.make_vectorlike_ptr(val,lisp.pvec.compiled)
+end
 
 function M.init_syms()
     vars.defsubr(F,'list')
@@ -167,6 +197,7 @@ function M.init_syms()
     vars.defsubr(F,'make_vector')
     vars.defsubr(F,'make_symbol')
     vars.defsubr(F,'vector')
+    vars.defsubr(F,'make_byte_code')
 
     vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end
