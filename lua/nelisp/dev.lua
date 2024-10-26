@@ -42,7 +42,15 @@ end
 local F={}
 F.Xprint={'!print',1,1,0,[[internal function]]}
 function F.Xprint.f(x)
-    print(inspect(x))
+    if type(lisp.xtype(x))=='table' then
+        for k,v in ipairs(x) do
+            print(k..' : '..inspect(v))
+        end
+    elseif #x==0 then
+        print('(!print): empty table')
+    else
+        print(inspect(x))
+    end
     return vars.Qt
 end
 F.Xbacktrace={'!backtrace',0,0,0,[[internal function]]}
