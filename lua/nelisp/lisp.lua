@@ -528,7 +528,7 @@ function M.sref(x,idx)
     if #p[2]==idx then
         return 0
     end
-    return string.byte((x --[[@as nelisp._string]])[2]:sub(idx+1,idx+1))
+    return string.byte((x --[[@as nelisp._string]])[2],idx+1)
 end
 ---@param x nelisp.obj
 ---@return boolean
