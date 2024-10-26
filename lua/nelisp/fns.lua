@@ -1006,6 +1006,19 @@ function F.string_to_multibyte.f(s)
     end
     return alloc.make_multibyte_string(data,nchars)
 end
+F.string_as_unibyte={'string-as-unibyte',1,1,0,[[Return a unibyte string with the same individual bytes as STRING.
+If STRING is unibyte, the result is STRING itself.
+Otherwise it is a newly created string, with no text properties.
+If STRING is multibyte and contains a character of charset
+`eight-bit', it is converted to the corresponding single byte.]]}
+function F.string_as_unibyte.f(s)
+    lisp.check_string(s)
+    if lisp.string_multibyte(s) then
+        local bytes=chars.strasunibyte(lisp.sdata(s))
+        s=alloc.make_unibyte_string(bytes)
+    end
+    return s
+end
 F.substring={'substring',1,3,0,[[Return a new string whose contents are a substring of STRING.
 The returned string consists of the characters between index FROM
 \(inclusive) and index TO (exclusive) of STRING.  FROM and TO are
@@ -1120,6 +1133,7 @@ function M.init_syms()
     vars.defsubr(F,'vconcat')
     vars.defsubr(F,'copy_sequence')
     vars.defsubr(F,'string_to_multibyte')
+    vars.defsubr(F,'string_as_unibyte')
     vars.defsubr(F,'substring')
     vars.defsubr(F,'string_equal')
     vars.defsubr(F,'require')
