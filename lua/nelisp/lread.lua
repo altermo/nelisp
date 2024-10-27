@@ -1022,6 +1022,11 @@ Return t if the file exists and loads successfully.]]}
 function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     if not _G.nelisp_later then
         error('TODO')
+    else
+        local f=_G.nelisp_fast_path[lisp.sdata(file)]
+        if f and vim.fn.filereadable(f)==1 then
+            file=alloc.make_unibyte_string(f)
+        end
     end
     local count=specpdl.index()
     lisp.check_string(file)

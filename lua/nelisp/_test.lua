@@ -1,6 +1,9 @@
 local home=vim.env.HOME
 _G.nelisp_emacs=home..'/.nelisp/emacs'
 _G.nelisp_root=home..'/.nelisp/nelisp'
+_G.nelisp_fast_path={
+    subr='/usr/share/emacs/29.4/lisp/subr.elc',
+}
 
 if not vim.tbl_contains(vim.opt.runtimepath:get(),_G.nelisp_root) then
     vim.opt.runtimepath:append(_G.nelisp_root)
@@ -29,5 +32,3 @@ vim.schedule(function ()
 end)
 
 api.eval_file(_G.nelisp_emacs..'/lisp/loadup.el')
---api.eval_file(home..'/.nelisp/elc/emacs-lisp/byte-run.elc')
---api.eval_file(home..'/.nelisp/elc/subr.elc')
