@@ -149,6 +149,7 @@ end
 ---@field read fun():number
 ---@field unread fun(c:number?)
 ---@field obj nelisp.obj
+---@field read_object_map table<number,nelisp.obj>
 
 ---@param obj nelisp.obj
 ---@param idx number?
@@ -161,6 +162,7 @@ function M.make_readcharfun(obj,idx,end_)
         ---@type nelisp.lread.readcharfun
         assert(not lisp.string_multibyte(obj),'TODO')
         local len=lisp.sbytes(obj)
+        ---@type nelisp.lread.readcharfun
         readcharfun={
             ismultibyte=lisp.string_multibyte(obj),
             obj=obj,
@@ -174,7 +176,8 @@ function M.make_readcharfun(obj,idx,end_)
             end,
             unread=function()
                 readcharfun.idx=readcharfun.idx-1
-            end
+            end,
+            read_object_map={},
         }
         return readcharfun
     end
@@ -738,6 +741,44 @@ function M.read0(readcharfun,locate_syms)
             goto read_obj
         elseif ch==b'$' then
             obj=vars.V.load_file_name
+        elseif ch>=b'0' and ch<=b'9' then
+            local n=ch-b'0'
+            while true do
+                c=readcharfun.read()
+                if c<b'0' or c>b'9' then
+                    break
+                end
+                n=overflow.add(overflow.mul(n,10),c-b'0')
+                if n==nil then
+                    invalid_syntax('#',readcharfun)
+                    error('unreachable')
+                end
+            end
+            if c==b'r' or c==b'R' then
+                error('TODO')
+            elseif not lisp.nilp(vars.V.read_circle) then
+                if c==b'=' then
+                    local placeholder=vars.F.cons(vars.Qnil,vars.Qnil)
+                    readcharfun.read_object_map[n]=placeholder
+                    table.insert(stack,{
+                        t='numbered',
+                        number=n,
+                        placeholder=placeholder,
+                    })
+                    goto read_obj
+                elseif c==b'#' then
+                    obj=readcharfun.read_object_map[n]
+                    if not obj then
+                        invalid_syntax('#',readcharfun)
+                    end
+                else
+                    invalid_syntax('#',readcharfun)
+                    error('unreachable')
+                end
+            else
+                invalid_syntax('#',readcharfun)
+                error('unreachable')
+            end
         else
             error('TODO')
         end
@@ -821,8 +862,15 @@ function M.read0(readcharfun,locate_syms)
             if not lisp.nilp(vars.V.load_force_doc_strings) then
                 error('TODO')
             end
-        elseif t.t=='byte_code' then
-            error('TODO')
+        elseif t.t=='numbered' then
+            table.remove(stack)
+            local placeholder=t.placeholder
+            if lisp.consp(obj) then
+                error('TODO')
+            else
+                vars.F.lread__substitute_object_in_subtree(obj,placeholder,vars.Qt)
+                readcharfun.read_object_map[t.number]=obj
+            end
         else
             error('TODO')
         end
@@ -1135,6 +1183,45 @@ function F.read_from_string.f(s,start,end_)
     local val=M.read0(iter,false)
     return vars.F.cons(val,lisp.make_fixnum(iter.idx))
 end
+local function substitute_object_recurse(subst,subtree)
+    if lisp.eq(subst[2],subtree) then
+        return subst[1]
+    end
+    if lisp.symbolp(subtree) or lisp.numberp(subtree)
+        or (lisp.stringp(subtree) and not lisp.string_intervals(subtree)) then
+        return subtree
+    end
+    if subst[4][subtree] then
+        return subtree
+    end
+    if lisp.eq(subst[3],vars.Qt) or error('TODO') then
+        assert(not lisp.symbolwithposp(subtree))
+        subst[4][subtree]=true
+    end
+    local typ=lisp.xtype(subtree)
+    if typ==lisp.type.vectorlike then
+        error('TODO')
+    elseif typ==lisp.type.cons then
+        lisp.xsetcar(subtree,substitute_object_recurse(subst,lisp.xcar(subtree)))
+        lisp.xsetcdr(subtree,substitute_object_recurse(subst,lisp.xcdr(subtree)))
+        return subtree
+    elseif typ==lisp.type.string then
+        error('TODO')
+    else
+        return subtree
+    end
+end
+F.lread__substitute_object_in_subtree={'lread--substitute-object-in-subtree',3,3,0,[[In OBJECT, replace every occurrence of PLACEHOLDER with OBJECT.
+COMPLETED is a hash table of objects that might be circular, or is t
+if any object might be circular.]]}
+function F.lread__substitute_object_in_subtree.f(object,placeholder,completed)
+    local subst={object,placeholder,completed,{}}
+    local check_object=substitute_object_recurse(subst,object)
+    if not lisp.eq(check_object,object) then
+        signal.error('Unexpected mutation error in reader')
+    end
+    return vars.Qnil
+end
 
 function M.init()
     if not _G.nelisp_later then
@@ -1157,6 +1244,7 @@ function M.init_syms()
     vars.defsubr(F,'get_load_suffixes')
     vars.defsubr(F,'intern')
     vars.defsubr(F,'read_from_string')
+    vars.defsubr(F,'lread__substitute_object_in_subtree')
 
     vars.defvar_lisp('obarray','obarray',[[Symbol table for use by `intern' and `read'.
 It is a vector whose length ought to be prime for best results.
@@ -1274,5 +1362,8 @@ the .eln filename.]])
     vars.defvar_lisp('current_load_list','current-load-list',[[Used for internal purposes by `load'.]])
     vars.V.current_load_list=vars.Qnil
     has_inited_syms=true
+
+    vars.defvar_lisp('read_circle','read-circle',[[Non-nil means read recursive structures using #N= and #N# syntax.]])
+    vars.V.read_circle=vars.Qt
 end
 return M
