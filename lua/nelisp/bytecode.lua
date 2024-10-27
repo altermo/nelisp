@@ -345,9 +345,26 @@ function M.exec_byte_code(fun,args_template,args)
             specpdl.unbind_to(specpdl.index()-1,nil)
             set_top(val)
             goto next
+        elseif op==ins.listp then
+            set_top((lisp.consp(top()) or lisp.nilp(top())) and vars.Qt or vars.Qnil)
+            goto next
         elseif op==ins.eq then
             local v1=pop()
             set_top(lisp.eq(top(),v1) and vars.Qt or vars.Qnil)
+            goto next
+        elseif op==ins.car then
+            if lisp.consp(top()) then
+                set_top(lisp.xcar(top()))
+            elseif not lisp.nilp(top()) then
+                signal.wrong_type_argument(vars.Qlistp,top())
+            end
+            goto next
+        elseif op==ins.cdr then
+            if lisp.consp(top()) then
+                set_top(lisp.xcdr(top()))
+            elseif not lisp.nilp(top()) then
+                signal.wrong_type_argument(vars.Qlistp,top())
+            end
             goto next
         elseif op==ins.cons then
             local v1=pop()
@@ -371,6 +388,12 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.symbol_function then
             set_top(vars.F.symbol_function(top()))
             goto next
+        elseif op==ins.aset then
+            local newelt=pop()
+            local idxval=pop()
+            local arrayval=top()
+            set_top(vars.F.aset(arrayval,idxval,newelt))
+            goto next
         elseif op==ins.set then
             local v1=pop()
             set_top(vars.F.set(top(),v1))
@@ -379,9 +402,21 @@ function M.exec_byte_code(fun,args_template,args)
             local v1=pop()
             set_top(vars.F.fset(top(),v1))
             goto next
-        elseif op==ins.listN then
-            op=fetch()
-            set_top(lisp.list(top(),unpack(discard_get(op-1))))
+        elseif op==ins.get then
+            local v1=pop()
+            set_top(vars.F.get(v1,top()))
+            goto next
+        elseif op==ins.add1 then
+            set_top(vars.F.add1(top()))
+            goto next
+        elseif op==ins.eqlsign then
+            local v2=pop()
+            local v1=top()
+            if lisp.fixnump(v1) and lisp.fixnump(v2) then
+                set_top(v1==v2 and vars.Qt or vars.Qnil)
+            else
+                error('TODO')
+            end
             goto next
         elseif op==ins['goto'] then
             op=fetch2()
@@ -432,8 +467,20 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.dup then
             push(top())
             goto next
+        elseif op==ins.member then
+            local v1=pop()
+            set_top(vars.F.member(top(),v1))
+            goto next
+        elseif op==ins.assq then
+            local v1=pop()
+            set_top(vars.F.assq(top(),v1))
+            goto next
         elseif op==ins.numberp then
             set_top(lisp.numberp(top()) and vars.Qt or vars.Qnil)
+            goto next
+        elseif op==ins.listN then
+            op=fetch()
+            set_top(lisp.list(top(),unpack(discard_get(op-1))))
             goto next
         elseif op==ins.stack_set then
             stack[#stack-fetch()]=pop()
@@ -441,7 +488,8 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.discardN then
             op=fetch()
             if bit.band(op,0x80)~=0 then
-                error('TODO')
+                op=bit.band(op,0x7f)
+                stack[#stack-op]=top()
             end
             discard(op)
             goto next
