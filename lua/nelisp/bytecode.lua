@@ -264,7 +264,6 @@ function M.exec_byte_code(fun,args_template,args)
         end
     end
 
-
     while true do
         local op
         local function op_branch()
@@ -391,7 +390,7 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.gotoifnil then
             local v1=pop()
             op=fetch2()
-            if not lisp.nilp(v1) then
+            if lisp.nilp(v1) then
                 op_branch()
             end
             goto next
@@ -403,7 +402,7 @@ function M.exec_byte_code(fun,args_template,args)
             goto next
         elseif op==ins.gotoifnilelsepop then
             op=fetch2()
-            if not lisp.nilp(top()) then
+            if lisp.nilp(top()) then
                 op_branch()
                 goto next
             end
@@ -437,7 +436,7 @@ function M.exec_byte_code(fun,args_template,args)
             set_top(lisp.numberp(top()) and vars.Qt or vars.Qnil)
             goto next
         elseif op==ins.stack_set then
-            stack[#stack-fetch()]=top()
+            stack[#stack-fetch()]=pop()
             goto next
         elseif op==ins.discardN then
             op=fetch()
