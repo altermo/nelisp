@@ -222,6 +222,12 @@ F.car_safe={'car-safe',1,1,0,[[Return the car of OBJECT if it is a cons cell, or
 function F.car_safe.f(obj)
     return lisp.consp(obj) and lisp.xcar(obj) or vars.Qnil
 end
+F.setcar={'setcar',2,2,0,[[Set the car of CELL to be NEWCAR.  Returns NEWCAR.]]}
+function F.setcar.f(cell,newcar)
+    lisp.check_cons(cell)
+    lisp.xsetcar(cell,newcar)
+    return newcar
+end
 F.cdr={'cdr',1,1,0,[[Return the cdr of LIST.  If LIST is nil, return nil.
 Error if LIST is not nil and not a cons cell.  See also `cdr-safe'.
 
@@ -235,6 +241,10 @@ function F.cdr.f(list)
     else
         signal.wrong_type_argument(vars.Qlistp,list)
     end
+end
+F.cdr_safe={'cdr-safe',1,1,0,[[Return the cdr of OBJECT if it is a cons cell, or else nil.]]}
+function F.cdr_safe.f(obj)
+    return lisp.consp(obj) and lisp.xcdr(obj) or vars.Qnil
 end
 F.setcdr={'setcdr',2,2,0,[[Set the cdr of CELL to be NEWCDR.  Returns NEWCDR.]]}
 function F.setcdr.f(cell,newcdr)
@@ -712,7 +722,9 @@ function M.init_syms()
     vars.defsubr(F,'aset')
     vars.defsubr(F,'car')
     vars.defsubr(F,'car_safe')
+    vars.defsubr(F,'setcar')
     vars.defsubr(F,'cdr')
+    vars.defsubr(F,'cdr_safe')
     vars.defsubr(F,'setcdr')
 
     vars.defsubr(F,'fset')
