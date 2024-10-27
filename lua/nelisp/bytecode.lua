@@ -290,9 +290,9 @@ function M.exec_byte_code(fun,args_template,args)
             goto next
         elseif op>=ins.varref and op<=ins.varref7 then
             if op==ins.varref6 then
-                error('TODO')
+                op=fetch()
             elseif op==ins.varref7 then
-                error('TODO')
+                op=fetch2()
             else
                 op=op-ins.varref
             end
@@ -302,9 +302,9 @@ function M.exec_byte_code(fun,args_template,args)
             goto next
         elseif op>=ins.varbind and op<=ins.varbind7 then
             if op==ins.varbind6 then
-                error('TODO')
+                op=fetch()
             elseif op==ins.varbind7 then
-                error('TODO')
+                op=fetch2()
             else
                 op=op-ins.varbind
             end
@@ -312,9 +312,9 @@ function M.exec_byte_code(fun,args_template,args)
             goto next
         elseif op>=ins.call and op<=ins.call7 then
             if op==ins.call6 then
-                error('TODO')
+                op=fetch()
             elseif op==ins.call7 then
-                error('TODO')
+                op=fetch2()
             else
                 op=op-ins.call
             end
