@@ -406,7 +406,8 @@ function M.exec_byte_code(fun,args_template,args)
             set_top(vars.F.cons(top(),v1))
             goto next
         elseif op>=ins.list1 and op<=ins.list4 then
-            set_top(lisp.list(top(),unpack(discard_get(op-ins.list1))))
+            local d=discard_get(op-ins.list1)
+            set_top(lisp.list(top(),unpack(d)))
             goto next
         elseif op==ins.length then
             set_top(vars.F.length(top()))
