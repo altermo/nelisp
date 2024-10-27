@@ -353,6 +353,9 @@ function M.exec_byte_code(fun,args_template,args)
             specpdl.unbind_to(specpdl.index()-1,nil)
             set_top(val)
             goto next
+        elseif op==ins.stringp then
+            set_top(lisp.stringp(top()) and vars.Qt or vars.Qnil)
+            goto next
         elseif op==ins.listp then
             set_top((lisp.consp(top()) or lisp.nilp(top())) and vars.Qt or vars.Qnil)
             goto next
@@ -381,11 +384,23 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op>=ins.list1 and op<=ins.list4 then
             set_top(lisp.list(top(),unpack(discard_get(op-ins.list1))))
             goto next
+        elseif op==ins.length then
+            set_top(vars.F.length(top()))
+            goto next
         elseif op==ins.lss then
             local v2=pop()
             local v1=top()
             if lisp.fixnump(v1) and lisp.fixnump(v2) then
                 set_top(lisp.fixnum(v1)<lisp.fixnum(v2) and vars.Qt or vars.Qnil)
+            else
+                error('TODO')
+            end
+            goto next
+        elseif op==ins.geq then
+            local v2=pop()
+            local v1=top()
+            if lisp.fixnump(v1) and lisp.fixnump(v2) then
+                set_top(lisp.fixnum(v1)>=lisp.fixnum(v2) and vars.Qt or vars.Qnil)
             else
                 error('TODO')
             end
@@ -413,6 +428,11 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.get then
             local v1=pop()
             set_top(vars.F.get(v1,top()))
+            goto next
+        elseif op==ins.substring then
+            local v2=pop()
+            local v1=pop()
+            set_top(vars.F.substring(top(),v1,v2))
             goto next
         elseif op==ins.add1 then
             set_top(vars.F.add1(top()))
@@ -474,6 +494,10 @@ function M.exec_byte_code(fun,args_template,args)
             goto next
         elseif op==ins.dup then
             push(top())
+            goto next
+        elseif op==ins.stringeqlsign then
+            local v1=pop()
+            set_top(vars.F.string_equal(top(),v1))
             goto next
         elseif op==ins.member then
             local v1=pop()
