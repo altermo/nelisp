@@ -219,8 +219,15 @@ function M.print_obj(obj,escapeflag,printcharfun)
                 end
                 obj=lisp.xcar(next_)
             else
-                error('TODO')
+                printcharfun.write(' . ')
+                obj=next_
+                e.t='rbrac'
             end
+        elseif e.t=='rbrac' then
+            printcharfun.write(')')
+            table.remove(stack)
+            printcharfun.print_depth=printcharfun.print_depth-1
+            goto next_obj
         else
             error('TODO')
         end
