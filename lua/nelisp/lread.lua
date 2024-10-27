@@ -298,7 +298,7 @@ function M.read_escape(readcharfun)
         end
     elseif string.char(c):match'[0-7]' then
         local i=c-b'0'
-        for _=1,3 do
+        for _=1,2 do
             c=readcharfun.read()
             if string.char(c):match'[0-7]' then
                 i=i*8+c-b'0'
