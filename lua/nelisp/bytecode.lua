@@ -495,6 +495,16 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.dup then
             push(top())
             goto next
+        elseif op==ins.unwind_protect then
+            local handler=pop()
+            specpdl.record_unwind_protect(function ()
+                if lisp.functionp(handler) then
+                    vars.F.funcall({handler})
+                else
+                    vars.F.progn(handler)
+                end
+            end)
+            goto next
         elseif op==ins.stringeqlsign then
             local v1=pop()
             set_top(vars.F.string_equal(top(),v1))
