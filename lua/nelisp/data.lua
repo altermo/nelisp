@@ -784,6 +784,7 @@ function M.init_syms()
     vars.defsym('Qchartablep','chartablep')
     vars.defsym('Qvectorp','vectorp')
     vars.defsym('Qnumber_or_marker_p','number-or-markerp')
+    vars.defsym('Qbyte_code_function_p','byte-code-function-p')
 
     vars.defsym('QCtest',':test')
     vars.defsym('QCsize',':size')

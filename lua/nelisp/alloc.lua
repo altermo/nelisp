@@ -189,6 +189,33 @@ function F.make_byte_code.f(args)
     local val=vars.F.vector(args) --[[@as nelisp._normal_vector]]
     return lisp.make_vectorlike_ptr(val,lisp.pvec.compiled)
 end
+F.make_closure={'make-closure',1,-2,0,[[Create a byte-code closure from PROTOTYPE and CLOSURE-VARS.
+Return a copy of PROTOTYPE, a byte-code object, with CLOSURE-VARS
+replacing the elements in the beginning of the constant-vector.
+usage: (make-closure PROTOTYPE &rest CLOSURE-VARS)]]}
+function F.make_closure.f(args)
+    local protofn=args[1]
+    lisp.check_type(lisp.compiledp(protofn),vars.Qbyte_code_function_p,protofn)
+    local protovec=(protofn --[[@as nelisp._compiled]]).contents
+    local proto_constvec=protovec[lisp.compiled_idx.constants]
+    local constsize=lisp.asize(proto_constvec)
+    local nvars=#args-1
+    if nvars>constsize then
+        require'nelisp.signal'.error('Closure vars do not fit in constvec')
+    end
+    local constvec=M.make_vector(constsize,'nil')
+    for i=0,constsize-1 do
+        lisp.aset(constvec,i,args[i+2] or lisp.aref(proto_constvec,i))
+    end
+    local protosize=lisp.asize(protofn)
+    local v=M.make_vector(protosize,'nil')
+    ;(v --[[@as nelisp._vectorlike]]).header=(protofn --[[@as nelisp._vectorlike]]).header
+    for i=0,protosize-1 do
+        lisp.aset(v,i,lisp.aref(protofn,i))
+    end
+    (v --[[@as nelisp._compiled]]).contents[lisp.compiled_idx.constants]=constvec
+    return v
+end
 
 function M.init_syms()
     vars.defsubr(F,'list')
@@ -198,6 +225,7 @@ function M.init_syms()
     vars.defsubr(F,'make_symbol')
     vars.defsubr(F,'vector')
     vars.defsubr(F,'make_byte_code')
+    vars.defsubr(F,'make_closure')
 
     vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end
