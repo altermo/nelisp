@@ -3,6 +3,8 @@ local signal=require'nelisp.signal'
 local vars=require'nelisp.vars'
 local specpdl=require'nelisp.specpdl'
 local eval=require'nelisp.eval'
+local fns=require'nelisp.fns'
+local data=require'nelisp.data'
 
 local ins={
     stack_ref=0,
@@ -300,6 +302,18 @@ function M.exec_byte_code(fun,args_template,args)
             local v2=vars.F.symbol_value(v1)
             push(v2)
             goto next
+        elseif op>=ins.varset and op<=ins.varset7 then
+            if op==ins.varset6 then
+                op=fetch()
+            elseif op==ins.varset7 then
+                op=fetch2()
+            else
+                op=op-ins.varset
+            end
+            local sym=vectorp[op+1]
+            local val=pop()
+            data.set_internal(sym,val,vars.Qnil,'SET')
+            goto next
         elseif op>=ins.varbind and op<=ins.varbind7 then
             if op==ins.varbind6 then
                 op=fetch()
@@ -389,6 +403,13 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.eq then
             local v1=pop()
             set_top(lisp.eq(top(),v1) and vars.Qt or vars.Qnil)
+            goto next
+        elseif op==ins.memq then
+            local v1=pop()
+            set_top(vars.F.memq(top(),v1))
+            goto next
+        elseif op==ins['not'] then
+            set_top(lisp.nilp(top()) and vars.Qt or vars.Qnil)
             goto next
         elseif op==ins.car then
             if lisp.consp(top()) then
@@ -563,6 +584,16 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.nreverse then
             set_top(vars.F.nreverse(top()))
             goto next
+        elseif op==ins.car_safe then
+            set_top(vars.F.car_safe(top()))
+            goto next
+        elseif op==ins.cdr_safe then
+            set_top(vars.F.cdr_safe(top()))
+            goto next
+        elseif op==ins.nconc then
+            local a=discard_get(2)
+            push(vars.F.nconc(a))
+            goto next
         elseif op==ins.numberp then
             set_top(lisp.numberp(top()) and vars.Qt or vars.Qnil)
             goto next
@@ -580,6 +611,17 @@ function M.exec_byte_code(fun,args_template,args)
                 stack[#stack-op]=top()
             end
             discard(op)
+            goto next
+        elseif op==ins.switch then
+            local jmp_table=pop()
+            local v1=pop()
+            local h=(jmp_table --[[@as nelisp._hash_table]])
+            local i=fns.hash_lookup(h,v1)
+            if i>=0 then
+                local val=lisp.aref(h.key_and_value,2*i+1)
+                op=lisp.fixnum(val)
+                op_branch()
+            end
             goto next
         elseif op>=ins.constant then
             push(vectorp[op-ins.constant+1])
