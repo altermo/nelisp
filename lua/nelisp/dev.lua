@@ -5,11 +5,9 @@ local print_=require'nelisp.print'
 local M={}
 
 local function convert_from_lua(x)
-    local fixnum=require'nelisp.obj.fixnum'
-    local cons=require'nelisp.obj.cons'
-    local str=require'nelisp.obj.str'
+    local alloc=require'nelisp.alloc'
     if type(x)=='number' then
-        return fixnum.make(x)
+        return lisp.make_fixnum(x)
     elseif type(x)=='nil' then
         return vars.Qnil
     elseif type(x)=='boolean' then
@@ -18,13 +16,9 @@ local function convert_from_lua(x)
         if not vim.islist(x) then
             error('Non list tables can\'t be converted')
         end
-        local ret=vars.Qnil
-        for _,v in ipairs(x) do
-            ret=cons.make(convert_from_lua(v) --[[TODO: infinite recursion]],ret)
-        end
-        return ret
+        return lisp.list(unpack(vim.tbl_map(convert_from_lua,x)))
     elseif type(x)=='string' then
-        return str.make(x,'auto')
+        return alloc.make_string(x)
     elseif type(x)=='function' then
         error('Conversion from type not supported: '..type(x))
         error('TODO')
