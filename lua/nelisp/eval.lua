@@ -9,11 +9,12 @@ local lread=require'nelisp.lread'
 local alloc=require'nelisp.alloc'
 local M={}
 
+---@return nelisp.obj
 local function fetch_and_exec_byte_code(fun,args_template,args)
     if lisp.consp((fun --[[@as nelisp._compiled]]).contents[lisp.compiled_idx.bytecode]) then
         error('TODO')
     end
-    require'nelisp.bytecode'.exec_byte_code(fun,args_template,args)
+    return require'nelisp.bytecode'.exec_byte_code(fun,args_template,args)
 end
 local function funcall_lambda(fun,args)
     local lexenv,syms_left
