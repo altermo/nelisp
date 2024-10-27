@@ -688,7 +688,7 @@ function M.funcall_general(fun,args)
     if lisp.subrp(fun) and not lisp.subr_native_compiled_dynp(fun) then
         return M.funcall_subr(fun,args)
     elseif lisp.compiledp(fun) or lisp.subr_native_compiled_dynp(fun) or lisp.module_functionp(fun) then
-        error('TODO')
+        return funcall_lambda(fun,args)
     end
     if lisp.nilp(fun) then
         signal.xsignal(vars.Qvoid_function,original_fun)
