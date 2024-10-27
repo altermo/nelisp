@@ -299,6 +299,16 @@ function M.exec_byte_code(fun,args_template,args)
             local v2=vars.F.symbol_value(v1)
             push(v2)
             goto next
+        elseif op>=ins.varbind and op<=ins.varbind7 then
+            if op==ins.varbind6 then
+                error('TODO')
+            elseif op==ins.varbind7 then
+                error('TODO')
+            else
+                op=op-ins.varbind
+            end
+            specpdl.bind(vectorp[op+1],pop())
+            goto next
         elseif op>=ins.call and op<=ins.call7 then
             if op==ins.call6 then
                 error('TODO')
@@ -352,6 +362,16 @@ function M.exec_byte_code(fun,args_template,args)
             end
             specpdl.unbind_to(specpdl.index()-1,nil)
             set_top(val)
+            goto next
+        elseif op>=ins.unbind and op<=ins.unbind7 then
+            if op==ins.unbind6 then
+                error('TODO')
+            elseif op==ins.unbind7 then
+                error('TODO')
+            else
+                op=op-ins.unbind
+            end
+            specpdl.unbind_to(specpdl.index()-op,nil)
             goto next
         elseif op==ins.stringp then
             set_top(lisp.stringp(top()) and vars.Qt or vars.Qnil)
@@ -505,6 +525,9 @@ function M.exec_byte_code(fun,args_template,args)
                 end
             end)
             goto next
+        elseif op==ins.match_end then
+            set_top(vars.F.match_end(top()))
+            goto next
         elseif op==ins.stringeqlsign then
             local v1=pop()
             set_top(vars.F.string_equal(top(),v1))
@@ -516,6 +539,9 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.assq then
             local v1=pop()
             set_top(vars.F.assq(top(),v1))
+            goto next
+        elseif op==ins.nreverse then
+            set_top(vars.F.nreverse(top()))
             goto next
         elseif op==ins.numberp then
             set_top(lisp.numberp(top()) and vars.Qt or vars.Qnil)
