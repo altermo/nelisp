@@ -176,6 +176,14 @@ local ins={
 }
 
 local M={}
+local rev_ins={}
+for k,v in pairs(ins) do
+    rev_ins[v]=k
+end
+local function debug_print(stack,op)
+    vars.F.Xprint(stack)
+    print(vim.inspect(op<=ins.constant and rev_ins[op] or 'constant0'..op-ins.constant))
+end
 
 ---@param fun nelisp.obj
 ---@param args_template number
