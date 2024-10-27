@@ -377,6 +377,9 @@ function M.exec_byte_code(fun,args_template,args)
         elseif op==ins.symbolp then
             set_top(lisp.symbolp(top()) and vars.Qt or vars.Qnil)
             goto next
+        elseif op==ins.consp then
+            set_top(lisp.consp(top()) and vars.Qt or vars.Qnil)
+            goto next
         elseif op==ins.stringp then
             set_top(lisp.stringp(top()) and vars.Qt or vars.Qnil)
             goto next
@@ -411,6 +414,15 @@ function M.exec_byte_code(fun,args_template,args)
             goto next
         elseif op==ins.length then
             set_top(vars.F.length(top()))
+            goto next
+        elseif op==ins.gtr then
+            local v2=pop()
+            local v1=top()
+            if lisp.fixnump(v1) and lisp.fixnump(v2) then
+                set_top(lisp.fixnum(v1)>lisp.fixnum(v2) and vars.Qt or vars.Qnil)
+            else
+                error('TODO')
+            end
             goto next
         elseif op==ins.lss then
             local v2=pop()
@@ -529,6 +541,9 @@ function M.exec_byte_code(fun,args_template,args)
                     vars.F.progn(handler)
                 end
             end)
+            goto next
+        elseif op==ins.match_beginning then
+            set_top(vars.F.match_beginning(top()))
             goto next
         elseif op==ins.match_end then
             set_top(vars.F.match_end(top()))
