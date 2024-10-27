@@ -374,6 +374,9 @@ function M.exec_byte_code(fun,args_template,args)
             end
             specpdl.unbind_to(specpdl.index()-op,nil)
             goto next
+        elseif op==ins.symbolp then
+            set_top(lisp.symbolp(top()) and vars.Qt or vars.Qnil)
+            goto next
         elseif op==ins.stringp then
             set_top(lisp.stringp(top()) and vars.Qt or vars.Qnil)
             goto next
