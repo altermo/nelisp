@@ -529,6 +529,14 @@ function M.exec_byte_code(fun,args_template,args)
             end
             discard(1)
             goto next
+        elseif op==ins.gotoifnonnilelsepop then
+            op=fetch2()
+            if not lisp.nilp(top()) then
+                op_branch()
+                goto next
+            end
+            discard(1)
+            goto next
         elseif op==ins['return'] then
             local saved_top=bc[#bc].saved_top
             if saved_top then
