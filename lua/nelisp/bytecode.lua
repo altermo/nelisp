@@ -5,6 +5,7 @@ local specpdl=require'nelisp.specpdl'
 local eval=require'nelisp.eval'
 local fns=require'nelisp.fns'
 local data=require'nelisp.data'
+local handler=require'nelisp.handler'
 
 local ins={
     stack_ref=0,
@@ -206,6 +207,7 @@ function M.exec_byte_code(fun,args_template,args)
         table.insert(stack,x)
     end
     local function discard(n)
+        if n==0 then return end
         local tem={}
         table.move(stack,1,#stack-n,1,tem)
         stack=tem
@@ -229,416 +231,444 @@ function M.exec_byte_code(fun,args_template,args)
         return assert(table.remove(stack))
     end
 
-    ::setup_frame::
-    local tfun=(fun --[[@as nelisp._compiled]]).contents --[[@as (nelisp.obj[])]]
-    assert(not lisp.string_multibyte(bytestr))
-    local vector=tfun[cidx.constants]
-    local vectorp=(vector --[[@as nelisp._compiled]]).contents --[[@as (nelisp.obj[])]]
+    local function setup_frame()
+        local tfun=(fun --[[@as nelisp._compiled]]).contents --[[@as (nelisp.obj[])]]
+        assert(not lisp.string_multibyte(bytestr))
+        local vector=tfun[cidx.constants]
+        local vectorp=(vector --[[@as nelisp._compiled]]).contents --[[@as (nelisp.obj[])]]
 
-    local bytestr_data=lisp.sdata(bytestr)
-    table.insert(bc,{
-        vectorp=vectorp,
-        bytestr_data=bytestr_data,
-        saved_top=stack,
-        saved_pc=pc,
-    })
+        local bytestr_data=lisp.sdata(bytestr)
+        table.insert(bc,{
+            vectorp=vectorp,
+            bytestr_data=bytestr_data,
+            saved_top=stack,
+            saved_pc=pc,
+        })
 
-    stack={}
-    local function fetch()
-        pc=pc+1
-        return assert(string.byte(bytestr_data,pc))
-    end
-    local function fetch2()
-        local o=fetch()
-        return o+bit.lshift(fetch(),8)
-    end
-    pc=0
-
-    local rest=bit.band(args_template,128)~=0
-    local mandatory=bit.band(args_template,127)
-    local nonreset=bit.rshift(args_template,8)
-    local nargs=#args
-    if not (mandatory<=nargs and (rest or nargs<=nonreset)) then
-        vars.F.signal(vars.Qwrong_number_of_arguments,lisp.list(
-            vars.F.cons(lisp.make_fixnum(mandatory),lisp.make_fixnum(nonreset)),
-            lisp.make_fixnum(nargs)))
-    end
-    local pushedargs=math.min(nonreset,nargs)
-    for _=1,pushedargs do
-        push(table.remove(args,1))
-    end
-    if nonreset<nargs then
-        push(vars.F.list(args))
-    else
-        for _=nargs-(rest and 1 or 0),nonreset-1 do
-            push(vars.Qnil)
+        stack={}
+        local function fetch()
+            pc=pc+1
+            return assert(string.byte(bytestr_data,pc))
         end
-    end
-
-    while true do
-        local op
-        local function op_branch()
-            pc=op
+        local function fetch2()
+            local o=fetch()
+            return o+bit.lshift(fetch(),8)
         end
-        ::next::
-        op=fetch()
-        if op>=ins.stack_ref1 and op<=ins.stack_ref5 then
-            local v1=stack[#stack-op+ins.stack_ref]
-            push(v1)
-            goto next
-        elseif op==ins.stack_ref6 then
-            local v1=stack[#stack-fetch()]
-            push(v1)
-            goto next
-        elseif op>=ins.varref and op<=ins.varref7 then
-            if op==ins.varref6 then
-                op=fetch()
-            elseif op==ins.varref7 then
-                op=fetch2()
-            else
-                op=op-ins.varref
-            end
-            local v1=vectorp[op+1]
-            local v2=vars.F.symbol_value(v1)
-            push(v2)
-            goto next
-        elseif op>=ins.varset and op<=ins.varset7 then
-            if op==ins.varset6 then
-                op=fetch()
-            elseif op==ins.varset7 then
-                op=fetch2()
-            else
-                op=op-ins.varset
-            end
-            local sym=vectorp[op+1]
-            local val=pop()
-            data.set_internal(sym,val,vars.Qnil,'SET')
-            goto next
-        elseif op>=ins.varbind and op<=ins.varbind7 then
-            if op==ins.varbind6 then
-                op=fetch()
-            elseif op==ins.varbind7 then
-                op=fetch2()
-            else
-                op=op-ins.varbind
-            end
-            specpdl.bind(vectorp[op+1],pop())
-            goto next
-        elseif op>=ins.call and op<=ins.call7 then
-            if op==ins.call6 then
-                op=fetch()
-            elseif op==ins.call7 then
-                op=fetch2()
-            else
-                op=op-ins.call
-            end
-            vars.lisp_eval_depth=vars.lisp_eval_depth+1
-            if vars.lisp_eval_depth>lisp.fixnum(vars.V.max_lisp_eval_depth) then
-                if lisp.fixnum(vars.V.max_lisp_eval_depth)<100 then
-                    vars.V.max_lisp_eval_depth=lisp.make_fixnum(100)
-                end
-                if vars.lisp_eval_depth>lisp.fixnum(vars.V.max_lisp_eval_depth) then
-                    signal.error("Lisp nesting exceeds `max-lisp-eval-depth'")
-                end
-            end
+        pc=0
 
-            local call_args=discard_get(op)
-            local call_fun=top()
-            local count1=specpdl.record_in_backtrace(call_fun,call_args,op)
-            if not lisp.nilp(vars.V.debug_on_next_call) then
-                error('TODO')
-            end
-            local original_fun=call_fun
-            if lisp.symbolp(call_fun) then
-                call_fun=call_fun.fn
-            end
-            if lisp.compiledp(call_fun) then
-                local template=(call_fun --[[@as nelisp._compiled]]).contents[cidx.arglist]
-                if lisp.fixnump(template) then
-                    local bytecode=(call_fun --[[@as nelisp._compiled]]).contents[cidx.bytecode]
-                    if not lisp.consp(bytecode) then
-                        fun=call_fun
-                        bytestr=bytecode
-                        args_template=lisp.fixnum(template)
-                        args=call_args
-                        goto setup_frame
-                    end
-                end
-            end
-            local val
-            if lisp.subrp(call_fun) and not lisp.subr_native_compiled_dynp(call_fun) then
-                val=eval.funcall_subr(call_fun,call_args)
-            else
-                val=eval.funcall_general(original_fun,call_args)
-            end
-            vars.lisp_eval_depth=vars.lisp_eval_depth-1
-            if specpdl.backtrace_debug_on_exit(specpdl.index()-1) then
-                error('TODO')
-            end
-            specpdl.unbind_to(specpdl.index()-1,nil)
-            set_top(val)
-            goto next
-        elseif op>=ins.unbind and op<=ins.unbind7 then
-            if op==ins.unbind6 then
-                error('TODO')
-            elseif op==ins.unbind7 then
-                error('TODO')
-            else
-                op=op-ins.unbind
-            end
-            specpdl.unbind_to(specpdl.index()-op,nil)
-            goto next
-        elseif op==ins.symbolp then
-            set_top(lisp.symbolp(top()) and vars.Qt or vars.Qnil)
-            goto next
-        elseif op==ins.consp then
-            set_top(lisp.consp(top()) and vars.Qt or vars.Qnil)
-            goto next
-        elseif op==ins.stringp then
-            set_top(lisp.stringp(top()) and vars.Qt or vars.Qnil)
-            goto next
-        elseif op==ins.listp then
-            set_top((lisp.consp(top()) or lisp.nilp(top())) and vars.Qt or vars.Qnil)
-            goto next
-        elseif op==ins.eq then
-            local v1=pop()
-            set_top(lisp.eq(top(),v1) and vars.Qt or vars.Qnil)
-            goto next
-        elseif op==ins.memq then
-            local v1=pop()
-            set_top(vars.F.memq(top(),v1))
-            goto next
-        elseif op==ins['not'] then
-            set_top(lisp.nilp(top()) and vars.Qt or vars.Qnil)
-            goto next
-        elseif op==ins.car then
-            if lisp.consp(top()) then
-                set_top(lisp.xcar(top()))
-            elseif not lisp.nilp(top()) then
-                signal.wrong_type_argument(vars.Qlistp,top())
-            end
-            goto next
-        elseif op==ins.cdr then
-            if lisp.consp(top()) then
-                set_top(lisp.xcdr(top()))
-            elseif not lisp.nilp(top()) then
-                signal.wrong_type_argument(vars.Qlistp,top())
-            end
-            goto next
-        elseif op==ins.cons then
-            local v1=pop()
-            set_top(vars.F.cons(top(),v1))
-            goto next
-        elseif op>=ins.list1 and op<=ins.list4 then
-            local d=discard_get(op-ins.list1)
-            set_top(lisp.list(top(),unpack(d)))
-            goto next
-        elseif op==ins.length then
-            set_top(vars.F.length(top()))
-            goto next
-        elseif op==ins.gtr then
-            local v2=pop()
-            local v1=top()
-            if lisp.fixnump(v1) and lisp.fixnump(v2) then
-                set_top(lisp.fixnum(v1)>lisp.fixnum(v2) and vars.Qt or vars.Qnil)
-            else
-                error('TODO')
-            end
-            goto next
-        elseif op==ins.lss then
-            local v2=pop()
-            local v1=top()
-            if lisp.fixnump(v1) and lisp.fixnump(v2) then
-                set_top(lisp.fixnum(v1)<lisp.fixnum(v2) and vars.Qt or vars.Qnil)
-            else
-                error('TODO')
-            end
-            goto next
-        elseif op==ins.geq then
-            local v2=pop()
-            local v1=top()
-            if lisp.fixnump(v1) and lisp.fixnump(v2) then
-                set_top(lisp.fixnum(v1)>=lisp.fixnum(v2) and vars.Qt or vars.Qnil)
-            else
-                error('TODO')
-            end
-            goto next
-        elseif op==ins.symbol_value then
-            set_top(vars.F.symbol_value(top()))
-            goto next
-        elseif op==ins.symbol_function then
-            set_top(vars.F.symbol_function(top()))
-            goto next
-        elseif op==ins.aset then
-            local newelt=pop()
-            local idxval=pop()
-            local arrayval=top()
-            set_top(vars.F.aset(arrayval,idxval,newelt))
-            goto next
-        elseif op==ins.set then
-            local v1=pop()
-            set_top(vars.F.set(top(),v1))
-            goto next
-        elseif op==ins.fset then
-            local v1=pop()
-            set_top(vars.F.fset(top(),v1))
-            goto next
-        elseif op==ins.get then
-            local v1=pop()
-            set_top(vars.F.get(v1,top()))
-            goto next
-        elseif op==ins.substring then
-            local v2=pop()
-            local v1=pop()
-            set_top(vars.F.substring(top(),v1,v2))
-            goto next
-        elseif op==ins.add1 then
-            set_top(vars.F.add1(top()))
-            goto next
-        elseif op==ins.eqlsign then
-            local v2=pop()
-            local v1=top()
-            if lisp.fixnump(v1) and lisp.fixnump(v2) then
-                set_top(v1==v2 and vars.Qt or vars.Qnil)
-            else
-                error('TODO')
-            end
-            goto next
-        elseif op==ins['goto'] then
-            op=fetch2()
-            op_branch()
-            goto next
-        elseif op==ins.gotoifnil then
-            local v1=pop()
-            op=fetch2()
-            if lisp.nilp(v1) then
-                op_branch()
-            end
-            goto next
-        elseif op==ins.gotoifnonnil then
-            op=fetch2()
-            if not lisp.nilp(pop()) then
-                op_branch()
-            end
-            goto next
-        elseif op==ins.gotoifnilelsepop then
-            op=fetch2()
-            if lisp.nilp(top()) then
-                op_branch()
-                goto next
-            end
-            discard(1)
-            goto next
-        elseif op==ins.gotoifnonnilelsepop then
-            op=fetch2()
-            if not lisp.nilp(top()) then
-                op_branch()
-                goto next
-            end
-            discard(1)
-            goto next
-        elseif op==ins['return'] then
-            local saved_top=bc[#bc].saved_top
-            if saved_top then
-                local val=top()
-                vars.lisp_eval_depth=vars.lisp_eval_depth-1
-                if specpdl.backtrace_debug_on_exit(specpdl.index()-1) then
-                    error('TODO')
-                end
-                specpdl.unbind_to(specpdl.index()-1,nil)
-                stack=saved_top
-                pc=table.remove(bc).saved_pc
-                local fp=bc[#bc]
-                vectorp=fp.vectorp
-                bytestr_data=fp.bytestr_data
-                set_top(val)
-                goto next
-            end
-            return top()
-        elseif op==ins.discard then
-            discard(1)
-            goto next
-        elseif op==ins.dup then
-            push(top())
-            goto next
-        elseif op==ins.unwind_protect then
-            local handler=pop()
-            specpdl.record_unwind_protect(function ()
-                if lisp.functionp(handler) then
-                    vars.F.funcall({handler})
-                else
-                    vars.F.progn(handler)
-                end
-            end)
-            goto next
-        elseif op==ins.match_beginning then
-            set_top(vars.F.match_beginning(top()))
-            goto next
-        elseif op==ins.match_end then
-            set_top(vars.F.match_end(top()))
-            goto next
-        elseif op==ins.stringeqlsign then
-            local v1=pop()
-            set_top(vars.F.string_equal(top(),v1))
-            goto next
-        elseif op==ins.member then
-            local v1=pop()
-            set_top(vars.F.member(top(),v1))
-            goto next
-        elseif op==ins.assq then
-            local v1=pop()
-            set_top(vars.F.assq(top(),v1))
-            goto next
-        elseif op==ins.nreverse then
-            set_top(vars.F.nreverse(top()))
-            goto next
-        elseif op==ins.car_safe then
-            set_top(vars.F.car_safe(top()))
-            goto next
-        elseif op==ins.cdr_safe then
-            set_top(vars.F.cdr_safe(top()))
-            goto next
-        elseif op==ins.nconc then
-            local a=discard_get(2)
-            push(vars.F.nconc(a))
-            goto next
-        elseif op==ins.numberp then
-            set_top(lisp.numberp(top()) and vars.Qt or vars.Qnil)
-            goto next
-        elseif op==ins.listN then
-            op=fetch()
-            set_top(lisp.list(top(),unpack(discard_get(op-1))))
-            goto next
-        elseif op==ins.stack_set then
-            stack[#stack-fetch()]=pop()
-            goto next
-        elseif op==ins.discardN then
-            op=fetch()
-            if bit.band(op,0x80)~=0 then
-                op=bit.band(op,0x7f)
-                stack[#stack-op]=top()
-            end
-            discard(op)
-            goto next
-        elseif op==ins.switch then
-            local jmp_table=pop()
-            local v1=pop()
-            local h=(jmp_table --[[@as nelisp._hash_table]])
-            local i=fns.hash_lookup(h,v1)
-            if i>=0 then
-                local val=lisp.aref(h.key_and_value,2*i+1)
-                op=lisp.fixnum(val)
-                op_branch()
-            end
-            goto next
-        elseif op>=ins.constant then
-            push(vectorp[op-ins.constant+1])
-            goto next
+        local rest=bit.band(args_template,128)~=0
+        local mandatory=bit.band(args_template,127)
+        local nonreset=bit.rshift(args_template,8)
+        local nargs=#args
+        if not (mandatory<=nargs and (rest or nargs<=nonreset)) then
+            vars.F.signal(vars.Qwrong_number_of_arguments,lisp.list(
+                vars.F.cons(lisp.make_fixnum(mandatory),lisp.make_fixnum(nonreset)),
+                lisp.make_fixnum(nargs)))
+        end
+        local pushedargs=math.min(nonreset,nargs)
+        for _=1,pushedargs do
+            push(table.remove(args,1))
+        end
+        if nonreset<nargs then
+            push(vars.F.list(args))
         else
-            error('TODO: byte-code '..op)
+            for _=nargs-(rest and 1 or 0),nonreset-1 do
+                push(vars.Qnil)
+            end
         end
-        error('unreachable')
+
+        while true do
+            local op
+            local function op_branch()
+                pc=op
+            end
+            local function next_()
+                ::next::
+                op=fetch()
+                if op>=ins.stack_ref1 and op<=ins.stack_ref5 then
+                    local v1=stack[#stack-op+ins.stack_ref]
+                    push(v1)
+                    goto next
+                elseif op==ins.stack_ref6 then
+                    local v1=stack[#stack-fetch()]
+                    push(v1)
+                    goto next
+                elseif op>=ins.varref and op<=ins.varref7 then
+                    if op==ins.varref6 then
+                        op=fetch()
+                    elseif op==ins.varref7 then
+                        op=fetch2()
+                    else
+                        op=op-ins.varref
+                    end
+                    local v1=vectorp[op+1]
+                    local v2=vars.F.symbol_value(v1)
+                    push(v2)
+                    goto next
+                elseif op>=ins.varset and op<=ins.varset7 then
+                    if op==ins.varset6 then
+                        op=fetch()
+                    elseif op==ins.varset7 then
+                        op=fetch2()
+                    else
+                        op=op-ins.varset
+                    end
+                    local sym=vectorp[op+1]
+                    local val=pop()
+                    data.set_internal(sym,val,vars.Qnil,'SET')
+                    goto next
+                elseif op>=ins.varbind and op<=ins.varbind7 then
+                    if op==ins.varbind6 then
+                        op=fetch()
+                    elseif op==ins.varbind7 then
+                        op=fetch2()
+                    else
+                        op=op-ins.varbind
+                    end
+                    specpdl.bind(vectorp[op+1],pop())
+                    goto next
+                elseif op>=ins.call and op<=ins.call7 then
+                    if op==ins.call6 then
+                        op=fetch()
+                    elseif op==ins.call7 then
+                        op=fetch2()
+                    else
+                        op=op-ins.call
+                    end
+                    vars.lisp_eval_depth=vars.lisp_eval_depth+1
+                    if vars.lisp_eval_depth>lisp.fixnum(vars.V.max_lisp_eval_depth) then
+                        if lisp.fixnum(vars.V.max_lisp_eval_depth)<100 then
+                            vars.V.max_lisp_eval_depth=lisp.make_fixnum(100)
+                        end
+                        if vars.lisp_eval_depth>lisp.fixnum(vars.V.max_lisp_eval_depth) then
+                            signal.error("Lisp nesting exceeds `max-lisp-eval-depth'")
+                        end
+                    end
+
+                    local call_args=discard_get(op)
+                    local call_fun=top()
+                    local count1=specpdl.record_in_backtrace(call_fun,call_args,op)
+                    if not lisp.nilp(vars.V.debug_on_next_call) then
+                        error('TODO')
+                    end
+                    local original_fun=call_fun
+                    if lisp.symbolp(call_fun) then
+                        call_fun=call_fun.fn
+                    end
+                    if lisp.compiledp(call_fun) then
+                        local template=(call_fun --[[@as nelisp._compiled]]).contents[cidx.arglist]
+                        if lisp.fixnump(template) then
+                            local bytecode=(call_fun --[[@as nelisp._compiled]]).contents[cidx.bytecode]
+                            if not lisp.consp(bytecode) then
+                                fun=call_fun
+                                bytestr=bytecode
+                                args_template=lisp.fixnum(template)
+                                args=call_args
+                                assert(setup_frame()==nil)
+                                goto next
+                            end
+                        end
+                    end
+                    local val
+                    if lisp.subrp(call_fun) and not lisp.subr_native_compiled_dynp(call_fun) then
+                        val=eval.funcall_subr(call_fun,call_args)
+                    else
+                        val=eval.funcall_general(original_fun,call_args)
+                    end
+                    vars.lisp_eval_depth=vars.lisp_eval_depth-1
+                    if specpdl.backtrace_debug_on_exit(specpdl.index()-1) then
+                        error('TODO')
+                    end
+                    specpdl.unbind_to(specpdl.index()-1,nil)
+                    set_top(val)
+                    goto next
+                elseif op>=ins.unbind and op<=ins.unbind7 then
+                    if op==ins.unbind6 then
+                        error('TODO')
+                    elseif op==ins.unbind7 then
+                        error('TODO')
+                    else
+                        op=op-ins.unbind
+                    end
+                    specpdl.unbind_to(specpdl.index()-op,nil)
+                    goto next
+                elseif op==ins.pophandler then
+                    return false
+                elseif op==ins.pushconditioncase then
+                    local typ='CONDITION_CASE'
+                    local tag_ch_val=pop()
+                    local bytecode_dest=fetch2()
+                    local bytecode_top=#stack
+                    local noerr,msg=handler.with_handler(tag_ch_val,typ,function ()
+                        return assert(next_()==false)
+                    end)
+                    if noerr then
+                        goto next
+                    else
+                        discard(#stack-bytecode_top)
+                        op=bytecode_dest
+                        bytestr_data=bc[#bc].bytestr_data
+                        vectorp=bc[#bc].vectorp
+                        pc=0
+                        push(msg.val)
+                        op_branch()
+                        goto next
+                    end
+                elseif op==ins.symbolp then
+                    set_top(lisp.symbolp(top()) and vars.Qt or vars.Qnil)
+                    goto next
+                elseif op==ins.consp then
+                    set_top(lisp.consp(top()) and vars.Qt or vars.Qnil)
+                    goto next
+                elseif op==ins.stringp then
+                    set_top(lisp.stringp(top()) and vars.Qt or vars.Qnil)
+                    goto next
+                elseif op==ins.listp then
+                    set_top((lisp.consp(top()) or lisp.nilp(top())) and vars.Qt or vars.Qnil)
+                    goto next
+                elseif op==ins.eq then
+                    local v1=pop()
+                    set_top(lisp.eq(top(),v1) and vars.Qt or vars.Qnil)
+                    goto next
+                elseif op==ins.memq then
+                    local v1=pop()
+                    set_top(vars.F.memq(top(),v1))
+                    goto next
+                elseif op==ins['not'] then
+                    set_top(lisp.nilp(top()) and vars.Qt or vars.Qnil)
+                    goto next
+                elseif op==ins.car then
+                    if lisp.consp(top()) then
+                        set_top(lisp.xcar(top()))
+                    elseif not lisp.nilp(top()) then
+                        signal.wrong_type_argument(vars.Qlistp,top())
+                    end
+                    goto next
+                elseif op==ins.cdr then
+                    if lisp.consp(top()) then
+                        set_top(lisp.xcdr(top()))
+                    elseif not lisp.nilp(top()) then
+                        signal.wrong_type_argument(vars.Qlistp,top())
+                    end
+                    goto next
+                elseif op==ins.cons then
+                    local v1=pop()
+                    set_top(vars.F.cons(top(),v1))
+                    goto next
+                elseif op>=ins.list1 and op<=ins.list4 then
+                    local d=discard_get(op-ins.list1)
+                    set_top(lisp.list(top(),unpack(d)))
+                    goto next
+                elseif op==ins.length then
+                    set_top(vars.F.length(top()))
+                    goto next
+                elseif op==ins.gtr then
+                    local v2=pop()
+                    local v1=top()
+                    if lisp.fixnump(v1) and lisp.fixnump(v2) then
+                        set_top(lisp.fixnum(v1)>lisp.fixnum(v2) and vars.Qt or vars.Qnil)
+                    else
+                        error('TODO')
+                    end
+                    goto next
+                elseif op==ins.lss then
+                    local v2=pop()
+                    local v1=top()
+                    if lisp.fixnump(v1) and lisp.fixnump(v2) then
+                        set_top(lisp.fixnum(v1)<lisp.fixnum(v2) and vars.Qt or vars.Qnil)
+                    else
+                        error('TODO')
+                    end
+                    goto next
+                elseif op==ins.geq then
+                    local v2=pop()
+                    local v1=top()
+                    if lisp.fixnump(v1) and lisp.fixnump(v2) then
+                        set_top(lisp.fixnum(v1)>=lisp.fixnum(v2) and vars.Qt or vars.Qnil)
+                    else
+                        error('TODO')
+                    end
+                    goto next
+                elseif op==ins.symbol_value then
+                    set_top(vars.F.symbol_value(top()))
+                    goto next
+                elseif op==ins.symbol_function then
+                    set_top(vars.F.symbol_function(top()))
+                    goto next
+                elseif op==ins.aset then
+                    local newelt=pop()
+                    local idxval=pop()
+                    local arrayval=top()
+                    set_top(vars.F.aset(arrayval,idxval,newelt))
+                    goto next
+                elseif op==ins.set then
+                    local v1=pop()
+                    set_top(vars.F.set(top(),v1))
+                    goto next
+                elseif op==ins.fset then
+                    local v1=pop()
+                    set_top(vars.F.fset(top(),v1))
+                    goto next
+                elseif op==ins.get then
+                    local v1=pop()
+                    set_top(vars.F.get(v1,top()))
+                    goto next
+                elseif op==ins.substring then
+                    local v2=pop()
+                    local v1=pop()
+                    set_top(vars.F.substring(top(),v1,v2))
+                    goto next
+                elseif op==ins.add1 then
+                    set_top(vars.F.add1(top()))
+                    goto next
+                elseif op==ins.eqlsign then
+                    local v2=pop()
+                    local v1=top()
+                    if lisp.fixnump(v1) and lisp.fixnump(v2) then
+                        set_top(v1==v2 and vars.Qt or vars.Qnil)
+                    else
+                        error('TODO')
+                    end
+                    goto next
+                elseif op==ins['goto'] then
+                    op=fetch2()
+                    op_branch()
+                    goto next
+                elseif op==ins.gotoifnil then
+                    local v1=pop()
+                    op=fetch2()
+                    if lisp.nilp(v1) then
+                        op_branch()
+                    end
+                    goto next
+                elseif op==ins.gotoifnonnil then
+                    op=fetch2()
+                    if not lisp.nilp(pop()) then
+                        op_branch()
+                    end
+                    goto next
+                elseif op==ins.gotoifnilelsepop then
+                    op=fetch2()
+                    if lisp.nilp(top()) then
+                        op_branch()
+                        goto next
+                    end
+                    discard(1)
+                    goto next
+                elseif op==ins.gotoifnonnilelsepop then
+                    op=fetch2()
+                    if not lisp.nilp(top()) then
+                        op_branch()
+                        goto next
+                    end
+                    discard(1)
+                    goto next
+                elseif op==ins['return'] then
+                    local saved_top=bc[#bc].saved_top
+                    if saved_top then
+                        local val=top()
+                        vars.lisp_eval_depth=vars.lisp_eval_depth-1
+                        if specpdl.backtrace_debug_on_exit(specpdl.index()-1) then
+                            error('TODO')
+                        end
+                        specpdl.unbind_to(specpdl.index()-1,nil)
+                        stack=saved_top
+                        pc=table.remove(bc).saved_pc
+                        local fp=bc[#bc]
+                        vectorp=fp.vectorp
+                        bytestr_data=fp.bytestr_data
+                        set_top(val)
+                        return nil
+                    end
+                    return top()
+                elseif op==ins.discard then
+                    discard(1)
+                    goto next
+                elseif op==ins.dup then
+                    push(top())
+                    goto next
+                elseif op==ins.unwind_protect then
+                    local handler=pop()
+                    specpdl.record_unwind_protect(function ()
+                        if lisp.functionp(handler) then
+                            vars.F.funcall({handler})
+                        else
+                            vars.F.progn(handler)
+                        end
+                    end)
+                    goto next
+                elseif op==ins.match_beginning then
+                    set_top(vars.F.match_beginning(top()))
+                    goto next
+                elseif op==ins.match_end then
+                    set_top(vars.F.match_end(top()))
+                    goto next
+                elseif op==ins.stringeqlsign then
+                    local v1=pop()
+                    set_top(vars.F.string_equal(top(),v1))
+                    goto next
+                elseif op==ins.member then
+                    local v1=pop()
+                    set_top(vars.F.member(top(),v1))
+                    goto next
+                elseif op==ins.assq then
+                    local v1=pop()
+                    set_top(vars.F.assq(top(),v1))
+                    goto next
+                elseif op==ins.nreverse then
+                    set_top(vars.F.nreverse(top()))
+                    goto next
+                elseif op==ins.car_safe then
+                    set_top(vars.F.car_safe(top()))
+                    goto next
+                elseif op==ins.cdr_safe then
+                    set_top(vars.F.cdr_safe(top()))
+                    goto next
+                elseif op==ins.nconc then
+                    local a=discard_get(2)
+                    push(vars.F.nconc(a))
+                    goto next
+                elseif op==ins.numberp then
+                    set_top(lisp.numberp(top()) and vars.Qt or vars.Qnil)
+                    goto next
+                elseif op==ins.listN then
+                    op=fetch()
+                    set_top(lisp.list(top(),unpack(discard_get(op-1))))
+                    goto next
+                elseif op==ins.stack_set then
+                    stack[#stack-fetch()]=pop()
+                    goto next
+                elseif op==ins.discardN then
+                    op=fetch()
+                    if bit.band(op,0x80)~=0 then
+                        op=bit.band(op,0x7f)
+                        stack[#stack-op]=top()
+                    end
+                    discard(op)
+                    goto next
+                elseif op==ins.switch then
+                    local jmp_table=pop()
+                    local v1=pop()
+                    local h=(jmp_table --[[@as nelisp._hash_table]])
+                    local i=fns.hash_lookup(h,v1)
+                    if i>=0 then
+                        local val=lisp.aref(h.key_and_value,2*i+1)
+                        op=lisp.fixnum(val)
+                        op_branch()
+                    end
+                    goto next
+                elseif op>=ins.constant then
+                    push(vectorp[op-ins.constant+1])
+                    goto next
+                else
+                    error('TODO: byte-code '..op)
+                end
+                error('unreachable')
+            end
+            return next_()
+        end
     end
+    return assert(setup_frame()) --[[@as nelisp.obj]]
 end
 local F={}
 F.byte_code={'byte-code',3,3,0,[[Function used internally in byte-compiled code.
