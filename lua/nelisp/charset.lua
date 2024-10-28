@@ -5,6 +5,7 @@ local b=require'nelisp.bytes'
 local alloc=require'nelisp.alloc'
 local lread=require'nelisp.lread'
 local fns=require'nelisp.fns'
+local overflow=require'nelisp.overflow'
 
 ---@enum nelisp.charset_method
 local charset_method={
@@ -18,8 +19,8 @@ local charset_method={
 ---@field id number
 ---@field hash_index number
 ---@field dimension number
----@field code_space number[] (0-indexed)
----@field code_space_mask string
+---@field code_space number[][15] (0-indexed)
+---@field code_space_mask number[][256] (0-indexed)
 ---@field code_linear_p boolean
 ---@field iso_chars_96 boolean
 ---@field ascii_compatible_p boolean
@@ -36,7 +37,7 @@ local charset_method={
 ---@field min_char number
 ---@field max_char number
 ---@field invalid_code number
----@field fast_map number[] (0-indexed)
+---@field fast_map number[][190] (0-indexed)
 ---@field code_offset number
 
 ---@enum
@@ -141,7 +142,20 @@ local function define_charset_internal(name,dimension,code_space_chars,min_code,
     return lisp.fixnum(lisp.aref(charset_symbol_attributes(name),charset_idx.id))
 end
 local function code_point_to_index(charset,code)
-    return charset.code_linear_p and (code-charset.min_code) or (error('TODO') or -math.huge)
+    return charset.code_linear_p and (code-charset.min_code) or (
+        (bit.band(charset.code_space_mask[bit.rshift(code,24)],0x8)>0
+        and bit.band(charset.code_space_mask[bit.band(bit.rshift(code,16),0xff)],0x4)>0
+        and bit.band(charset.code_space_mask[bit.band(bit.rshift(code,8),0xff)],0x2)>0
+        and bit.band(charset.code_space_mask[bit.band(code,0xff)],0x1)>0) and (
+        ((bit.rshift(code,24)-charset.code_space[12])
+            *charset.code_space[11])
+        +(bit.band(bit.rshift(code,16),0xff)-charset.code_space[8]
+            *charset.code_space[7])
+        +(bit.band(bit.rshift(code,8),0xff)-charset.code_space[4]
+            *charset.code_space[3])
+        +(bit.band(code,0xff)-charset.code_space[0])
+        -charset.char_index_offset
+    ) or -1)
 end
 local function charset_fast_map_set(c,fast_map)
     if c<0x10000 then
@@ -161,6 +175,9 @@ local function load_charset(charset,control_flag)
     end
     if not _G.nelisp_later then
         error('TODO')
+    else
+        charset.min_char=0
+        charset.max_char=0
     end
 end
 local function check_charset_get_id(x)
@@ -229,7 +246,15 @@ function F.define_charset_internal.f(args)
     or charset.code_space[10]==256)))))
 
     if not charset.code_linear_p then
-        error('TODO')
+        charset.code_space_mask={}
+        for i=0,255 do
+            charset.code_space_mask[i]=0
+        end
+        for i=0,3 do
+            for j=charset.code_space[i*4],charset.code_space[i*4+1] do
+                charset.code_space_mask[j]=bit.bor(charset.code_space_mask[j],bit.lshift(1,i))
+            end
+        end
     end
 
     charset.iso_chars_96=charset.code_space[2]==96
@@ -372,10 +397,39 @@ function F.define_charset_internal.f(args)
         for i=0,#parent_charset.fast_map-1 do
             charset.fast_map[i]=parent_charset.fast_map[i]
         end
-        charset.min_code=parent_charset.min_code
-        charset.max_code=parent_charset.max_code
+        charset.min_char=parent_charset.min_char
+        charset.max_char=parent_charset.max_char
     elseif not lisp.nilp(args[charset_arg.superset]) then
-        error('TODO')
+        val=args[charset_arg.superset]
+        charset.method=charset_method.superset
+        val=vars.F.copy_sequence(val)
+        charset.min_char=b.MAX_CHAR
+        charset.max_char=0
+        while not lisp.nilp(val) do
+            local this_id,offset
+            local elt=vars.F.car(val)
+            if lisp.consp(elt) then
+                local car_part=lisp.xcar(elt)
+                local cdr_part=lisp.xcdr(elt)
+                this_id=check_charset_get_id(car_part)
+                offset=lisp.check_fixnum_range(cdr_part,overflow.min,overflow.max)
+            else
+                this_id=check_charset_get_id(elt)
+                offset=0
+            end
+            lisp.xsetcar(val,vars.F.cons(lisp.make_fixnum(this_id),lisp.make_fixnum(offset)))
+            local this_charset=assert(vars.charset_table[this_id])
+            if charset.min_char>this_charset.min_char then
+                charset.min_char=this_charset.min_char
+            end
+            if charset.max_char<this_charset.max_char then
+                charset.max_char=this_charset.max_char
+            end
+            for i=0,189 do
+                charset.fast_map[i]=bit.bor(charset.fast_map[i],this_charset.fast_map[i])
+            end
+            val=vars.F.cdr(val)
+        end
     else
         signal.error('None of :code-offset, :map, :parents are specified')
     end
@@ -416,13 +470,13 @@ function F.define_charset_internal.f(args)
             vars.iso_2022_charset_list=vars.F.nconc({vars.iso_2022_charset_list,lisp.list(lisp.make_fixnum(id))})
         end
         if vars.iso_charset_table[1][0][b'J']==id then
-            error('TODO')
+            vars.charset_jisx0201_roman=id
         elseif vars.iso_charset_table[2][0][b'@']==id then
-            error('TODO')
+            vars.charset_jisx0208_1978=id
         elseif vars.iso_charset_table[2][0][b'B']==id then
-            error('TODO')
+            vars.charset_jisx0208=id
         elseif vars.iso_charset_table[2][0][b'C']==id then
-            error('TODO')
+            vars.charset_ksc5601=id
         end
     end
 
@@ -502,6 +556,10 @@ function M.init()
     vars.iso_2022_charset_list=vars.Qnil
     vars.emacs_mule_charset_list=vars.Qnil
     vars.charset_ordered_list=vars.Qnil
+    vars.charset_jisx0201_roman=-1
+    vars.charset_jisx0208_1978=-1
+    vars.charset_jisx0208=-1
+    vars.charset_ksc5601=-1
     for i=0,2 do
         vars.iso_charset_table[i]={[0]={},[1]={}}
     end

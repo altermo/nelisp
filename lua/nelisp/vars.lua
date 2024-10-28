@@ -18,6 +18,10 @@
 ---@field emacs_mule_charset number[]
 ---@field emacs_mule_bytes number[]
 ---@field charset_ordered_list_tick number
+---@field charset_jisx0201_roman number
+---@field charset_jisx0208_1978 number
+---@field charset_jisx0208 number
+---@field charset_ksc5601 number
 ---@field [string] nelisp.obj
 local vars={}
 
