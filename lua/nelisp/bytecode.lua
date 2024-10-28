@@ -414,6 +414,11 @@ function M.exec_byte_code(fun,args_template,args)
                         op_branch()
                         goto next
                     end
+                elseif op==ins.nth then
+                    local v2=pop()
+                    local v1=top()
+                    set_top(vars.F.nth(v1,v2))
+                    goto next
                 elseif op==ins.symbolp then
                     set_top(lisp.symbolp(top()) and vars.Qt or vars.Qnil)
                     goto next
