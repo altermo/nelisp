@@ -416,10 +416,70 @@ function M.hash_lookup(h,key)
     end
     return i,hash_code
 end
+local function larger_vecalloc(vec,nitems_max)
+    local old_size=lisp.asize(vec)
+    local v=alloc.make_vector(nitems_max,'nil')
+    for i=0,old_size-1 do
+        lisp.aset(v,i,lisp.aref(vec,i))
+    end
+    return v
+end
+---@param rehash_threshold number (float)
+---@param size number
+---@return number
+local function hash_index_size(rehash_threshold,size)
+    local n=math.floor(size/rehash_threshold)
+    n=n-n%2
+    while true do
+        if n>overflow.max then
+            signal.error('Hash table too large')
+        end
+        if n%3~=0 and n%5~=0 and n%7~=0 then
+            return n
+        end
+        n=n+2
+    end
+end
 ---@param h nelisp._hash_table
 local function maybe_resize_hash_table(h)
-    if h.next_free<0 then
-        error('TODO')
+    if not (h.next_free<0) then
+        return
+    end
+    local old_size=lisp.asize(h.next)
+    local new_size
+    local rehash_size=h.rehash_size
+    if rehash_size<0 then
+        new_size=overflow.sub(old_size,rehash_size) or overflow.max
+    else
+        new_size=overflow.mul(old_size,rehash_size+1) or overflow.max
+    end
+    if new_size<=old_size then
+        new_size=old_size+1
+    end
+    local next_=larger_vecalloc(h.next,math.floor(new_size))
+    local next_size=lisp.asize(next_)
+    for i=old_size,next_size-2 do
+        lisp.aset(next_,i,lisp.make_fixnum(i+1))
+    end
+    lisp.aset(next_,next_size-1,lisp.make_fixnum(-1))
+    local key_and_value=larger_vecalloc(h.key_and_value,next_size*2)
+    for i=2*old_size,2*next_size-1 do
+        lisp.aset(key_and_value,i,vars.Qunique)
+    end
+    local hash=larger_vecalloc(h.hash,next_size)
+    local index_size=hash_index_size(h.rehash_threshold,next_size)
+    h.index=alloc.make_vector(index_size,lisp.make_fixnum(-1))
+    h.key_and_value=key_and_value
+    h.hash=hash
+    h.next=next_
+    h.next_free=old_size
+    for i=0,old_size-1 do
+        if not lisp.nilp(lisp.aref(h.hash,i)) then
+            local hash_code=lisp.fixnum(lisp.aref(h.hash,i))
+            local start_of_bucket=hash_code%lisp.asize(h.index)
+            lisp.aset(h.next,i,lisp.aref(h.index,start_of_bucket))
+            lisp.aset(h.index,start_of_bucket,lisp.make_fixnum(i))
+        end
     end
 end
 ---@param h nelisp._hash_table
@@ -436,7 +496,7 @@ function M.hash_put(h,key,val,hash)
     h.next_free=lisp.fixnum(lisp.aref(h.next,i))
     lisp.aset(h.key_and_value,i*2,key)
     lisp.aset(h.key_and_value,i*2+1,val)
-    lisp.aset(h.hash,i,val)
+    lisp.aset(h.hash,i,lisp.make_fixnum(hash))
     local start_of_bucket=hash%lisp.asize(h.index)
     lisp.aset(h.next,i,lisp.aref(h.index,start_of_bucket))
     lisp.aset(h.index,start_of_bucket,lisp.make_fixnum(i))
@@ -655,22 +715,6 @@ function F.provide.f(feature,subfeatures)
         error('TODO')
     end
     return feature
-end
----@param rehash_threshold number (float)
----@param size number
----@return number
-local function hash_index_size(rehash_threshold,size)
-    local n=math.floor(size/rehash_threshold)
-    n=n-n%2
-    while true do
-        if n>overflow.max then
-            signal.error('Hash table too large')
-        end
-        if n%3~=0 and n%5~=0 and n%7~=0 then
-            return n
-        end
-        n=n+2
-    end
 end
 ---@param test nelisp.hash_table_test
 ---@param size number
