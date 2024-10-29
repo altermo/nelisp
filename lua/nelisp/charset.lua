@@ -148,11 +148,11 @@ local function code_point_to_index(charset,code)
         and bit.band(charset.code_space_mask[bit.band(bit.rshift(code,8),0xff)],0x2)>0
         and bit.band(charset.code_space_mask[bit.band(code,0xff)],0x1)>0) and (
         ((bit.rshift(code,24)-charset.code_space[12])
-            *charset.code_space[11])
-        +(bit.band(bit.rshift(code,16),0xff)-charset.code_space[8]
-            *charset.code_space[7])
-        +(bit.band(bit.rshift(code,8),0xff)-charset.code_space[4]
-            *charset.code_space[3])
+        *charset.code_space[11])
+        +((bit.band(bit.rshift(code,16),0xff)-charset.code_space[8])
+        *charset.code_space[7])
+        +((bit.band(bit.rshift(code,8),0xff)-charset.code_space[4])
+        *charset.code_space[3])
         +(bit.band(code,0xff)-charset.code_space[0])
         -charset.char_index_offset
     ) or -1)
@@ -193,6 +193,33 @@ end
 local function check_charset_get_charset(charset)
     local cid=check_charset_get_id(charset)
     return vars.charset_table[cid]
+end
+local function cons_to_unsigned(obj)
+    local val
+    if lisp.fixnatp(obj) then
+        val=lisp.fixnum(obj)
+    elseif lisp.consp(obj) and lisp.fixnump(lisp.xcar(obj)) then
+        local top=lisp.fixnum(lisp.xcar(obj))
+        local rest=lisp.xcdr(obj)
+        if lisp.consp(rest) then
+            error('TODO')
+        elseif overflow.min<=top and top<=overflow.max then
+            if lisp.consp(rest) then
+                error('TODO')
+            end
+            if lisp.fixnatp(rest) and lisp.fixnum(rest)<=0xffff then
+                val=tonumber(bit.tohex(bit.bor(bit.lshift(top,16),lisp.fixnum(rest))),16)
+            end
+        else
+            error('TODO')
+        end
+    else
+        error('TODO')
+    end
+    if not val or val>0xffffffff then
+        signal.error('Not an in-range integer, integral float, or cons of integers')
+    end
+    return val
 end
 F.define_charset_internal={'define-charset-internal',charset_arg.max,-2,0,[[For internal use only.
 usage: (define-charset-internal ...)]]}
@@ -271,9 +298,7 @@ function F.define_charset_internal.f(args)
 
     val=args[charset_arg.min_code]
     if not lisp.nilp(val) then
-        lisp.check_fixnat(val)
-        local code=lisp.fixnum(val)
-        assert(code<=0xffffffff)
+        local code=cons_to_unsigned(val)
         if (code<charset.min_code or code>charset.max_code) then
             signal.args_out_of_range(lisp.make_fixnum(charset.min_code),lisp.make_fixnum(charset.max_code),val)
         end
@@ -283,9 +308,7 @@ function F.define_charset_internal.f(args)
 
     val=args[charset_arg.max_code]
     if not lisp.nilp(val) then
-        lisp.check_fixnat(val)
-        local code=lisp.fixnum(val)
-        assert(code<=0xffffffff)
+        local code=cons_to_unsigned(val)
         if (code<charset.min_code or code>charset.max_code) then
             signal.args_out_of_range(lisp.make_fixnum(charset.min_code),lisp.make_fixnum(charset.max_code),val)
         end
@@ -306,9 +329,7 @@ function F.define_charset_internal.f(args)
             end
         end
     else
-        lisp.check_fixnat(val)
-        assert(lisp.fixnum(val)<=0xffffffff)
-        charset.invalid_code=lisp.fixnum(val)
+        charset.invalid_code=cons_to_unsigned(val)
     end
 
     val=args[charset_arg.iso_final]
