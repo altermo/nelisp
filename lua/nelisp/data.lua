@@ -793,6 +793,10 @@ function M.init_syms()
     vars.defsym('QCrehash_threshold',':rehash-threshold')
     vars.defsym('QCweakness',':weakness')
 
+    vars.defsym('Qcurve','curve')
+    vars.defsym('Qstraight','straight')
+    vars.defsym('Qgrave','grave')
+
     vars.Qunique=alloc.make_symbol(alloc.make_pure_c_string'unbound')
 end
 return M

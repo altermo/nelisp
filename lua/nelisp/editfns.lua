@@ -32,6 +32,7 @@ local function styled_format(args,message)
     local multibyte=multibyte_format
     local fmt_props=not not lisp.string_intervals(args[1])
     local arg_intervals=false
+    local quoting_style=message and vars.F.text_quoting_style() or vars.Qnil
     local n=0
     for i=2,#args do
         if multibyte then break end
@@ -200,9 +201,9 @@ local function styled_format(args,message)
                 buf.write(p)
             end
         else
-            if format_char==b'`' or format_char==b'\'' then
+            if (format_char==b'`' or format_char==b'\'') and lisp.eq(quoting_style,vars.Qcurve) then
                 error('TODO')
-            elseif format_char==b'`' then
+            elseif format_char==b'`' and lisp.eq(quoting_style,vars.Qstraight) then
                 error('TODO')
             else
                 if multibyte_format then
