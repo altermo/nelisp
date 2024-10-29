@@ -524,6 +524,16 @@ function F.quo.f(args)
     end
     return arith_driver('/',args)
 end
+F.plus={'+',0,-2,0,[[Return sum of any number of arguments, which are numbers or markers.
+usage: (+ &rest NUMBERS-OR-MARKERS)]]}
+function F.plus.f(args)
+    if #args==0 then
+        return lisp.make_fixnum(0)
+    elseif #args==1 then
+        return args[1]
+    end
+    return arith_driver('+',args)
+end
 F.minus={'-',0,-2,0,[[Negate number or subtract numbers or markers and return the result.
 With one arg, negates it.  With more than one arg,
 subtracts all but the first from the first.
@@ -738,6 +748,7 @@ function M.init_syms()
     vars.defsubr(F,'add1')
     vars.defsubr(F,'sub1')
     vars.defsubr(F,'quo')
+    vars.defsubr(F,'plus')
     vars.defsubr(F,'minus')
     vars.defsubr(F,'logior')
     vars.defsubr(F,'lss')
