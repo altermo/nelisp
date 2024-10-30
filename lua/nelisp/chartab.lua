@@ -198,6 +198,76 @@ function M.set_extra(ctable,idx,val)
     assert(0<=idx and idx<chartable_extra_slots(ctable --[[@as nelisp._char_table]]))
     lisp.aset((ctable --[[@as nelisp._char_table]]).extras,idx,val)
 end
+local function sub_char_table_set_range(ctable,from,to,val,is_uniprop)
+    local tbl=(ctable --[[@as nelisp._sub_char_table]])
+    local depth=tbl.depth
+    local min_char=tbl.min_char
+    local chars_in_block=chartab_chars[depth+1]
+    local lim=chartab_size[depth+1]
+    if from<min_char then
+        from=min_char
+    end
+    local i=chartab_idx(from,depth,min_char)
+    local c=min_char+chars_in_block*i
+    while i<lim do
+        if c>to then
+            break
+        end
+        if from<=c and c+chars_in_block-1<=to then
+            tbl.contents[i+1]=val
+        else
+            local sub=tbl.contents[i+1] or vars.Qnil
+            if not lisp.subchartablep(sub) then
+                if is_uniprop then
+                    error('TODO')
+                else
+                    sub=make_subchartable(depth+1,c,sub)
+                    tbl.contents[i+1]=sub
+                end
+            end
+            sub_char_table_set_range(sub,from,to,val,is_uniprop)
+        end
+
+        i=i+1
+        c=c+chars_in_block
+    end
+end
+---@param ctable nelisp.obj
+---@param from number
+---@param to number
+---@param val nelisp.obj
+function M.set_range(ctable,from,to,val)
+    local tbl=(ctable --[[@as nelisp._char_table]])
+    if from==to then
+        M.set(ctable,from,val)
+        return
+    end
+    local is_uniprop=uniproptablep(ctable)
+    local lim=chartab_idx(to,0,0)
+
+    local i=chartab_idx(from,0,0)
+    local c=i*chartab_chars[1]
+    while i<=lim do
+        if c>to then
+            break
+        end
+        if from<=c and c+chartab_chars[1]-1<=to then
+            set_char_table_contents(ctable,i,val)
+        else
+            local sub=tbl.contents[i+1] or vars.Qnil
+            if not lisp.subchartablep(sub) then
+                sub=make_subchartable(1,i*chartab_chars[1],sub)
+                set_char_table_contents(ctable,i,sub)
+            end
+            sub_char_table_set_range(sub,from,to,val,is_uniprop)
+        end
+        i=i+1
+        c=c+chartab_chars[1]
+    end
+    if chars.asciicharp(from) then
+        tbl.ascii=char_table_ascii(ctable)
+    end
+end
 
 local F={}
 F.char_table_extra_slot={'char-table-extra-slot',2,2,0,[[Return the value of CHAR-TABLE's extra-slot number N.]]}

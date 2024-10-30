@@ -6,6 +6,7 @@ local alloc=require'nelisp.alloc'
 local lread=require'nelisp.lread'
 local fns=require'nelisp.fns'
 local overflow=require'nelisp.overflow'
+local chartab=require'nelisp.chartab'
 
 ---@enum nelisp.charset_method
 local charset_method={
@@ -558,7 +559,51 @@ function F.charset_plist.f(charset)
     local attr=check_charset_get_attr(charset)
     return lisp.aref(attr,charset_idx.plist)
 end
+F.define_charset_alias={'define-charset-alias',2,2,0,[[Define ALIAS as an alias for charset CHARSET.]]}
+function F.define_charset_alias.f(alias,charset)
+    local attrs=check_charset_get_attr(charset)
+    vars.F.puthash(alias,attrs,vars.charset_hash_table)
+    vars.V.charset_list=vars.F.cons(alias,vars.V.charset_list)
+    return vars.Qnil
+end
+F.unify_charset={'unify-charset',1,3,0,[[Unify characters of CHARSET with Unicode.
+This means reading the relevant file and installing the table defined
+by CHARSET's `:unify-map' property.
 
+Optional second arg UNIFY-MAP is a file name string or a vector.  It has
+the same meaning as the `:unify-map' attribute in the function
+`define-charset' (which see).
+
+Optional third argument DEUNIFY, if non-nil, means to de-unify CHARSET.]]}
+function F.unify_charset.f(charset,unify_map,deunify)
+    local id=check_charset_get_id(charset)
+    local cs=vars.charset_table[id]
+    local attrs=charset_attributes(cs)
+    if not lisp.nilp(deunify) and not cs.unified_p then
+        return vars.Qnil
+    elseif lisp.nilp(deunify) and cs.unified_p and not lisp.nilp(lisp.aref(attrs,charset_idx.deunifier)) then
+        return vars.Qnil
+    end
+    cs.unified_p=false
+    if lisp.nilp(deunify) then
+        if cs.method~=charset_method.offset or cs.code_offset<0x110000 then
+            signal.error("Can't unify charset: %s",lisp.sdata(lisp.symbol_name(charset)))
+        end
+        if lisp.nilp(unify_map) then
+            unify_map=lisp.aref(attrs,charset_idx.unify_map)
+        else
+            error('TODO')
+        end
+        if lisp.nilp(vars.char_unify_table) then
+            vars.char_unify_table=vars.F.make_char_table(vars.Qnil,vars.Qnil)
+        end
+        chartab.set_range(vars.char_unify_table,cs.min_code,cs.max_code,charset)
+        cs.unified_p=true
+    else
+        error('TODO')
+    end
+    return vars.Qnil
+end
 function M.init()
     vars.charset_hash_table=vars.F.make_hash_table({vars.QCtest,vars.Qeq})
     vars.charset_table={}
@@ -577,6 +622,7 @@ function M.init()
     vars.iso_2022_charset_list=vars.Qnil
     vars.emacs_mule_charset_list=vars.Qnil
     vars.charset_ordered_list=vars.Qnil
+    vars.char_unify_table=vars.Qnil
     vars.charset_jisx0201_roman=-1
     vars.charset_jisx0208_1978=-1
     vars.charset_jisx0208=-1
@@ -591,18 +637,12 @@ function M.init()
     vars.charset_emacs=define_charset_internal(vars.Qemacs,3,'\x00\xFF\x00\xFF\x00\x3F\0',0,b.MAX_5_BYTE_CHAR,-1,0,-1,true,true,0)
     vars.charset_eight_bit=define_charset_internal(vars.Qeight_bit,1,'\x80\xFF\0\0\0\0\0',128,255,-1,0,-1,false,true,b.MAX_5_BYTE_CHAR+1)
 end
-F.define_charset_alias={'define-charset-alias',2,2,0,[[Define ALIAS as an alias for charset CHARSET.]]}
-function F.define_charset_alias.f(alias,charset)
-    local attrs=check_charset_get_attr(charset)
-    vars.F.puthash(alias,attrs,vars.charset_hash_table)
-    vars.V.charset_list=vars.F.cons(alias,vars.V.charset_list)
-    return vars.Qnil
-end
 function M.init_syms()
     vars.defsubr(F,'set_charset_plist')
     vars.defsubr(F,'charset_plist')
     vars.defsubr(F,'define_charset_internal')
     vars.defsubr(F,'define_charset_alias')
+    vars.defsubr(F,'unify_charset')
 
     vars.defsym('Qemacs','emacs')
     vars.defsym('Qiso_8859_1','iso-8859-1')
