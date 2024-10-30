@@ -494,6 +494,11 @@ function M.exec_byte_code(fun,args_template,args)
                         error('TODO')
                     end
                     goto next
+                elseif op==ins.diff then
+                    local v2=pop()
+                    local v1=top()
+                    set_top(vars.F.minus({v1,v2}))
+                    goto next
                 elseif op==ins.symbol_value then
                     set_top(vars.F.symbol_value(top()))
                     goto next
@@ -623,6 +628,20 @@ function M.exec_byte_code(fun,args_template,args)
                 elseif op==ins.nreverse then
                     set_top(vars.F.nreverse(top()))
                     goto next
+            elseif op==ins.setcar then
+                    local newval=pop()
+                    local cell=top()
+                    lisp.check_cons(cell)
+                    lisp.xsetcar(cell,newval)
+                    set_top(newval)
+                    goto next
+                elseif op==ins.setcdr then
+                    local newval=pop()
+                    local cell=top()
+                    lisp.check_cons(cell)
+                    lisp.xsetcdr(cell,newval)
+                    set_top(newval)
+                    goto next
                 elseif op==ins.car_safe then
                     set_top(vars.F.car_safe(top()))
                     goto next
@@ -633,8 +652,16 @@ function M.exec_byte_code(fun,args_template,args)
                     local a=discard_get(2)
                     push(vars.F.nconc(a))
                     goto next
+                elseif op==ins.quo then
+                    local v2=pop()
+                    local v1=top()
+                    set_top(vars.F.quo({v1,v2}))
+                    goto next
                 elseif op==ins.numberp then
                     set_top(lisp.numberp(top()) and vars.Qt or vars.Qnil)
+                    goto next
+                elseif op==ins.integerp then
+                    set_top(lisp.integerp(top()) and vars.Qt or vars.Qnil)
                     goto next
                 elseif op==ins.listN then
                     op=fetch()
