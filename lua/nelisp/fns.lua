@@ -10,6 +10,9 @@ local chars=require'nelisp.chars'
 
 local M={}
 
+local function hash_combine(a,b)
+    return math.abs(bit.tobit(a*33+b))
+end
 ---@param str string
 ---@return number
 function M.hash_string(str)
@@ -18,7 +21,7 @@ function M.hash_string(str)
     end
     local hash=0
     for i=1,#str do
-        hash=(hash*33+str:byte(i))%0x7fffffff
+        hash=hash_combine(hash,str:byte(i))
     end
     return hash
 end
@@ -26,6 +29,9 @@ end
 ---@param _depth number?
 ---@return number
 local function sxhash(obj,_depth)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
     local depth=_depth or 0
     if depth>3 then return 0 end
     local typ=lisp.xtype(obj)
@@ -38,7 +44,17 @@ local function sxhash(obj,_depth)
     elseif typ==lisp.type.vectorlike then
         error('TODO')
     elseif typ==lisp.type.cons then
-        error('TODO')
+        local hash=0
+        local i=0
+        while lisp.consp(obj) and i<7 do
+            hash=hash_combine(hash,sxhash(lisp.xcar(obj),depth+1))
+            obj=lisp.xcdr(obj)
+            i=i+1
+        end
+        if not lisp.nilp(obj) then
+            hash=hash_combine(hash,sxhash(obj,depth+1))
+        end
+        return hash
     elseif typ==lisp.type.float then
         error('TODO')
     else
