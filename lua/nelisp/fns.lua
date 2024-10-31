@@ -104,7 +104,7 @@ local function concat_to_vector(args)
     local result_len=0
     for _,arg in ipairs(args) do
         if not (lisp.vectorp(arg) or lisp.consp(arg) or lisp.nilp(arg) or lisp.stringp(arg)
-        or lisp.boolvectorp(arg) or lisp.compiledp(arg)) then
+            or lisp.boolvectorp(arg) or lisp.compiledp(arg)) then
             signal.wrong_type_argument(vars.Qsequencep,arg)
         end
         result_len=result_len+lisp.fixnum(vars.F.length(arg))
@@ -210,6 +210,31 @@ function F.assq.f(key,alist)
     local ret,tail=lisp.for_each_tail(alist,function (tail)
         if lisp.consp(lisp.xcar(tail)) and lisp.eq(lisp.xcar(lisp.xcar(tail)),key) then
             return lisp.xcar(tail)
+        end
+    end)
+    if ret then return ret end
+    lisp.check_list_end(tail,alist)
+    return vars.Qnil
+end
+F.assoc={'assoc',2,3,0,[[Return non-nil if KEY is equal to the car of an element of ALIST.
+The value is actually the first element of ALIST whose car equals KEY.
+
+Equality is defined by the function TESTFN, defaulting to `equal'.
+TESTFN is called with 2 arguments: a car of an alist element and KEY.]]}
+function F.assoc.f(key,alist,testfn)
+    if (lisp.symbolp(key) or lisp.fixnump(key)) and lisp.nilp(testfn) then
+        return vars.F.assq(key,alist)
+    end
+    local ret,tail=lisp.for_each_tail(alist,function (tail)
+        local car=lisp.xcar(tail)
+        if lisp.consp(car) then
+            if lisp.nilp(testfn) and (lisp.eq(lisp.xcar(car),key)
+                or not lisp.nilp(vars.F.equal(lisp.xcar(car),key))) then
+                return car
+            elseif not lisp.nilp(testfn) and
+                not lisp.nilp(vars.F.funcall({testfn,lisp.xcar(car),key})) then
+                return car
+            end
         end
     end)
     if ret then return ret end
@@ -881,8 +906,8 @@ function F.make_hash_table.f(args)
     end
     local rehash_threshold_arg=get_key_arg(vars.QCrehash_threshold,args,used) --[[@as nelisp.obj]]
     local rehash_threshold=rehash_threshold_arg==false and 0.8125
-        or not lisp.floatp(rehash_threshold_arg) and 0
-        or lisp.xfloat_data(rehash_threshold_arg)
+    or not lisp.floatp(rehash_threshold_arg) and 0
+    or lisp.xfloat_data(rehash_threshold_arg)
     if not (0<rehash_threshold and rehash_threshold<=1) then
         signal.signal_error("Invalid hash table rehash threshold",rehash_threshold_arg)
     end
@@ -1169,6 +1194,7 @@ end
 function M.init_syms()
     vars.defsubr(F,'append')
     vars.defsubr(F,'assq')
+    vars.defsubr(F,'assoc')
     vars.defsubr(F,'member')
     vars.defsubr(F,'memq')
     vars.defsubr(F,'nthcdr')
