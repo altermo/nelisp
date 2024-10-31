@@ -41,7 +41,7 @@ local charset_method={
 ---@field fast_map number[][190] (0-indexed)
 ---@field code_offset number
 
----@enum
+---@enum nelisp.charset_idx
 local charset_idx={
     id=0,
     name=1,
@@ -55,7 +55,7 @@ local charset_idx={
     deunifier=9,
     max=10
 }
----@enum
+---@enum nelisp.charset_arg
 local charset_arg={
     name=1,
     dimension=2,
@@ -132,7 +132,7 @@ local function define_charset_internal(name,dimension,code_space_chars,min_code,
         lread.intern_c_string(':code-space'),
         args[charset_arg.code_space],
         lread.intern_c_string(':iso-final-char'),
-        args[charset_arg.iso_final_char],
+        args[charset_arg.iso_final],
         lread.intern_c_string(':emacs-mule-id'),
         args[charset_arg.emacs_mule_id],
         vars.QCascii_compatible_p,
