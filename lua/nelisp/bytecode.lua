@@ -204,7 +204,7 @@ function M.exec_byte_code(fun,args_template,args)
     local pc
     local bytestr=(fun --[[@as nelisp._compiled]]).contents[cidx.bytecode]
     local function push(x)
-        table.insert(stack,x)
+        table.insert(stack,assert(x))
     end
     local function discard(n)
         if n==0 then return end
@@ -301,7 +301,7 @@ function M.exec_byte_code(fun,args_template,args)
                     else
                         op=op-ins.varref
                     end
-                    local v1=vectorp[op+1]
+                    local v1=vectorp[op+1] or vars.Qnil
                     local v2=vars.F.symbol_value(v1)
                     push(v2)
                     goto next
@@ -313,7 +313,7 @@ function M.exec_byte_code(fun,args_template,args)
                     else
                         op=op-ins.varset
                     end
-                    local sym=vectorp[op+1]
+                    local sym=vectorp[op+1] or vars.Qnil
                     local val=pop()
                     data.set_internal(sym,val,vars.Qnil,'SET')
                     goto next
@@ -325,7 +325,7 @@ function M.exec_byte_code(fun,args_template,args)
                     else
                         op=op-ins.varbind
                     end
-                    specpdl.bind(vectorp[op+1],pop())
+                    specpdl.bind(vectorp[op+1] or vars.Qnil,pop())
                     goto next
                 elseif op>=ins.call and op<=ins.call7 then
                     if op==ins.call6 then
@@ -541,7 +541,7 @@ function M.exec_byte_code(fun,args_template,args)
                     end
                     goto next
                 elseif op==ins.constant2 then
-                    push(vectorp[fetch2()+1])
+                    push(vectorp[fetch2()+1] or vars.Qnil)
                     goto next
                 elseif op==ins['goto'] then
                     op=fetch2()
@@ -693,7 +693,7 @@ function M.exec_byte_code(fun,args_template,args)
                     end
                     goto next
                 elseif op>=ins.constant then
-                    push(vectorp[op-ins.constant+1])
+                    push(vectorp[op-ins.constant+1] or vars.Qnil)
                     goto next
                 else
                     error('TODO: byte-code '..op)
