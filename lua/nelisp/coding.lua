@@ -140,8 +140,18 @@ function M.encode_file_name(s)
 end
 
 local F={}
+local function coding_system_spec(coding_system_symbol)
+    return vars.F.gethash(coding_system_symbol,vars.coding_system_hash_table,vars.Qnil)
+end
 local function coding_system_id(coding_system_symbol)
     return fns.hash_lookup((vars.coding_system_hash_table --[[@as nelisp._hash_table]]),coding_system_symbol)
+end
+local function check_coding_system_get_spec(x)
+    local spec=coding_system_spec(x)
+    if lisp.nilp(spec) then
+        error('TODO')
+    end
+    return spec
 end
 local function check_coding_system_get_id(x)
     local id=coding_system_id(x)
@@ -453,6 +463,33 @@ function F.define_coding_system_internal.f(args)
 
     return vars.Qnil
 end
+F.define_coding_system_alias={'define-coding-system-alias',2,2,0,[[Define ALIAS as an alias for CODING-SYSTEM.]]}
+function F.define_coding_system_alias.f(alias,coding_system)
+    lisp.check_symbol(alias)
+    local spec=check_coding_system_get_spec(coding_system)
+    local aliases=lisp.aref(spec,1)
+    while not lisp.nilp(lisp.xcdr(aliases)) do
+        aliases=lisp.xcdr(aliases)
+    end
+    lisp.xsetcdr(aliases,lisp.list(alias))
+
+    local eol_type=lisp.aref(spec,2)
+    if lisp.vectorp(eol_type) then
+        local subsidiaries=make_subsidiaries(alias)
+        for i=0,2 do
+            vars.F.define_coding_system_alias(lisp.aref(subsidiaries,i),lisp.aref(eol_type,i))
+        end
+    end
+
+    vars.F.puthash(alias,spec,vars.coding_system_hash_table)
+    vars.V.coding_system_list=vars.F.cons(alias,vars.V.coding_system_list)
+    local val=vars.F.assoc(vars.F.symbol_name(alias),vars.V.coding_system_alist,vars.Qnil)
+    if lisp.nilp(val) then
+        vars.V.coding_system_alist=vars.F.cons(vars.F.cons(
+            vars.F.symbol_name(alias),vars.Qnil),vars.V.coding_system_alist)
+    end
+    return vars.Qnil
+end
 
 function M.init()
     for i=0,coding_category.max-1 do
@@ -607,5 +644,6 @@ such conversion.]])
     vars.V.inhibit_eol_conversion=vars.Qnil
 
     vars.defsubr(F,'define_coding_system_internal')
+    vars.defsubr(F,'define_coding_system_alias')
 end
 return M
