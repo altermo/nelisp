@@ -432,6 +432,17 @@ function F.length.f(sequence)
     end
     return lisp.make_fixnum(val)
 end
+F.safe_length={'safe-length',1,1,0,[[Return the length of a list, but avoid error or infinite loop.
+This function never gets an error.  If LIST is not really a list,
+it returns 0.  If LIST is circular, it returns an integer that is at
+least the number of distinct elements.]]}
+function F.safe_length.f(list)
+    local len=0
+    lisp.for_each_tail_safe(list,function ()
+        len=len+1
+    end)
+    return len
+end
 ---@param h nelisp._hash_table
 ---@param idx number
 ---@return number
@@ -1204,6 +1215,7 @@ function M.init_syms()
     vars.defsubr(F,'reverse')
     vars.defsubr(F,'nconc')
     vars.defsubr(F,'length')
+    vars.defsubr(F,'safe_length')
     vars.defsubr(F,'equal')
     vars.defsubr(F,'plist_put')
     vars.defsubr(F,'put')
