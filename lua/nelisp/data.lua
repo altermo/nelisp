@@ -362,6 +362,7 @@ F.set_default.f=function (sym,val)
 end
 ---@param code '+'|'-'|'or'|'/'
 ---@param args (number|nelisp.obj)[]
+---@return nelisp.obj
 local function arith_driver(code,args)
     local function call(over,float)
         ---@type number|nil
@@ -441,7 +442,7 @@ local function arith_driver(code,args)
                 error('unreachable')
             end
         end
-        return acc
+        return lisp.make_fixnum(acc)
     else
         error('TODO')
     end
