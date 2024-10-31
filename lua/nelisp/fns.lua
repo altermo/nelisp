@@ -441,7 +441,7 @@ function F.safe_length.f(list)
     lisp.for_each_tail_safe(list,function ()
         len=len+1
     end)
-    return len
+    return lisp.make_fixnum(len)
 end
 ---@param h nelisp._hash_table
 ---@param idx number
