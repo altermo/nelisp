@@ -77,6 +77,11 @@ function M.strasunibyte(s)
 end
 ---@param s string
 ---@return number
+function M.stringchar(s)
+    return (M.stringcharandlength(s))
+end
+---@param s string
+---@return number
 ---@return number
 function M.stringcharandlength(s)
     local c,p1,p2,p3,p4=string.byte(s,1,5)

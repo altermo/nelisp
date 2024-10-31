@@ -78,13 +78,17 @@ local charset_arg={
 }
 
 local M={}
-
 local F={}
 local function charset_symbol_attributes(sym)
     return vars.F.gethash(sym,vars.charset_hash_table,vars.Qnil)
 end
 local function charset_attributes(charset)
     return lisp.aref((vars.charset_hash_table --[[@as nelisp._hash_table]]).key_and_value,charset.hash_index*2+1)
+end
+---@param cs nelisp.charset
+---@return nelisp.obj
+function M.charset_name(cs)
+    return lisp.aref(charset_attributes(cs),charset_idx.name)
 end
 ---@param name nelisp.obj
 ---@param dimension number
@@ -191,7 +195,7 @@ local function check_charset_get_id(x)
     end
     return lisp.fixnum(lisp.aref(lisp.aref((vars.charset_hash_table --[[@as nelisp._hash_table]]).key_and_value,idx*2+1),charset_idx.id))
 end
-local function check_charset_get_charset(charset)
+function M.check_charset_get_charset(charset)
     local cid=check_charset_get_id(charset)
     return vars.charset_table[cid]
 end
@@ -405,7 +409,7 @@ function F.define_charset_internal.f(args)
     elseif not lisp.nilp(args[charset_arg.subset]) then
         val=args[charset_arg.subset]
         local parent=vars.F.car(val)
-        local parent_charset=check_charset_get_charset(parent)
+        local parent_charset=M.check_charset_get_charset(parent)
         local parent_min_code=vars.F.nth(lisp.make_fixnum(1),val)
         lisp.check_fixnat(parent_min_code)
         local parent_max_code=vars.F.nth(lisp.make_fixnum(2),val)

@@ -29,6 +29,7 @@ require'nelisp.casetab'.init_syms()
 require'nelisp.chars'.init_syms()
 require'nelisp.bytecode'.init_syms()
 require'nelisp.casefiddle'.init_syms()
+require'nelisp.coding'.init_syms()
 
 vars.commit_qsymbols()
 
@@ -41,6 +42,7 @@ require'nelisp.emacs'.init()
 require'nelisp.data'.init()
 require'nelisp.casetab'.init()
 require'nelisp.charset'.init()
+require'nelisp.coding'.init()
 
 if not _G.nelisp_later then
     local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,2)

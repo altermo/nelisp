@@ -4,7 +4,6 @@ local b=require'nelisp.bytes'
 local vars=require'nelisp.vars'
 local signal=require'nelisp.signal'
 local fns=require'nelisp.fns'
-local coding=require'nelisp.coding'
 local specpdl=require'nelisp.specpdl'
 local overflow=require'nelisp.overflow'
 local alloc=require'nelisp.alloc'
@@ -116,6 +115,17 @@ function M.intern_c_string(name)
     local tem=M.lookup(obarray,name)
     if type(tem)=='number' then
         local s=alloc.make_string(name)
+        tem=M.intern_drive(s,obarray,tem)
+    end
+    return tem
+end
+---@param name string
+---@return nelisp.obj
+function M.intern(name)
+    local obarray=M.obarray_check(vars.V.obarray)
+    local tem=M.lookup(obarray,name)
+    if type(tem)=='number' then
+        local s=alloc.make_unibyte_string(name)
         tem=M.intern_drive(s,obarray,tem)
     end
     return tem
@@ -973,7 +983,7 @@ local function openp(path,s,suffixes,storep,predicate,newer,no_native)
                 error('TODO')
             else
                 local fd
-                local encoded_fn=coding.encode_file_name(fstr)
+                local encoded_fn=require'nelisp.coding'.encode_file_name(fstr)
                 local pfn=lisp.sdata(encoded_fn)
                 if lisp.fixnatp(predicate) then
                     error('TODO')
