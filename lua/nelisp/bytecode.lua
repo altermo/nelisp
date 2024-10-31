@@ -540,6 +540,9 @@ function M.exec_byte_code(fun,args_template,args)
                         error('TODO')
                     end
                     goto next
+                elseif op==ins.constant2 then
+                    push(vectorp[fetch2()+1])
+                    goto next
                 elseif op==ins['goto'] then
                     op=fetch2()
                     op_branch()
