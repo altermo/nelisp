@@ -453,7 +453,7 @@ function F.defvaralias.f(new_alias,base_variable,docstring)
     vars.F.put(new_alias,vars.Qvariable_documentation,docstring)
     return base_variable
 end
-F.make_var_non_special={'make_var_non_special',1,1,0,[[Internal function.]]}
+F.make_var_non_special={'internal-make-var-non-special',1,1,0,[[Internal function.]]}
 function F.make_var_non_special.f(sym)
     lisp.check_symbol(sym)
     ;(sym --[[@as nelisp._symbol]]).declared_special=false
