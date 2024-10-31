@@ -337,6 +337,17 @@ function F.mapcar.f(func,sequence)
     local nmapped=mapcar1(leni,args,func,sequence)
     return vars.F.list({unpack(args,1,nmapped)})
 end
+F.mapc={'mapc',2,2,0,[[Apply FUNCTION to each element of SEQUENCE for side effects only.
+Unlike `mapcar', don't accumulate the results.  Return SEQUENCE.
+SEQUENCE may be a list, a vector, a bool-vector, or a string.]]}
+function F.mapc.f(func,sequence)
+    local leni=lisp.fixnum(vars.F.length(sequence))
+    if lisp.chartablep(sequence) then
+        signal.wrong_type_argument(vars.Qlistp,sequence)
+    end
+    mapcar1(leni,nil,func,sequence)
+    return sequence
+end
 F.nreverse={'nreverse',1,1,0,[[Reverse order of items in a list, vector or string SEQ.
 If SEQ is a list, it should be nil-terminated.
 This function may destructively modify SEQ to produce the value.]]}
@@ -1211,6 +1222,7 @@ function M.init_syms()
     vars.defsubr(F,'nthcdr')
     vars.defsubr(F,'nth')
     vars.defsubr(F,'mapcar')
+    vars.defsubr(F,'mapc')
     vars.defsubr(F,'nreverse')
     vars.defsubr(F,'reverse')
     vars.defsubr(F,'nconc')
