@@ -360,7 +360,7 @@ F.set_default.f=function (sym,val)
     M.set_default_internal(sym,val,'SET')
     return val
 end
----@param code '+'|'-'|'or'|'/'
+---@param code '+'|'-'|'or'|'/'|'*'
 ---@param args (number|nelisp.obj)[]
 ---@return nelisp.obj
 local function arith_driver(code,args)
@@ -412,6 +412,8 @@ local function arith_driver(code,args)
         return call(overflow.add,function (a,b) return a+b end)
     elseif code=='-' then
         return call(overflow.sub,function (a,b) return a-b end)
+    elseif code=='*' then
+        return call(overflow.mul,function (a,b) return a*b end)
     elseif code=='/' then
         local fn=function (a,b)
             if b==0 then
@@ -524,6 +526,14 @@ function F.quo.f(args)
         error('TODO')
     end
     return arith_driver('/',args)
+end
+F.times={'*',0,-2,0,[[Return product of any number of arguments, which are numbers or markers.
+usage: (* &rest NUMBERS-OR-MARKERS)]]}
+function F.times.f(args)
+    if #args==0 then
+        return lisp.make_fixnum(1)
+    end
+    return arith_driver('*',args)
 end
 F.plus={'+',0,-2,0,[[Return sum of any number of arguments, which are numbers or markers.
 usage: (+ &rest NUMBERS-OR-MARKERS)]]}
@@ -749,6 +759,7 @@ function M.init_syms()
     vars.defsubr(F,'add1')
     vars.defsubr(F,'sub1')
     vars.defsubr(F,'quo')
+    vars.defsubr(F,'times')
     vars.defsubr(F,'plus')
     vars.defsubr(F,'minus')
     vars.defsubr(F,'logior')
