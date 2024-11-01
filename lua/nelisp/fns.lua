@@ -1050,6 +1050,12 @@ function F.copy_sequence.f(arg)
         return val
     elseif lisp.chartablep(arg) then
         return chartab.copy_char_table(arg)
+    elseif lisp.vectorp(arg) then
+        local vec=alloc.make_vector(lisp.asize(arg),'nil')
+        for i=1,lisp.asize(arg) do
+            (vec --[[@as nelisp._normal_vector]]).contents[i]=(arg --[[@as nelisp._normal_vector]]).contents[i]
+        end
+        return vec
     else
         error('TODO')
         signal.wrong_type_argument(vars.Qsequencep,arg)
