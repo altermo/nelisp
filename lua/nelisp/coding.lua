@@ -27,6 +27,7 @@ local charset=require'nelisp.charset'
 ---@field encoder fun(c:nelisp.coding_system):boolean
 ---@field spec_undecided nelisp.coding_undecided_spec?
 ---@field spec_emacs_mule nelisp.coding_emacs_mule_spec?
+---@field spec_utf_8_bom nelisp.coding_utf_bom_type?
 ---@class nelisp.coding_undecided_spec
 ---@field inhibit_nbd number
 ---@field inhibit_ied number
@@ -64,6 +65,11 @@ local coding_arg_undecided={
     inhibit_iso_escape_detection=coding_arg.max+2,
     prefer_utf_8=coding_arg.max+3,
     max=coding_arg.max+3,
+}
+---@enum nelisp.coding_arg_utf_8
+local coding_arg_utf_8={
+    bom=coding_arg.max+1,
+    max=coding_arg.max+1,
 }
 ---@enum nelisp.coding_attr
 local coding_attr={
@@ -146,11 +152,17 @@ local coding_composition_state={
 }
 ---@enum nelisp.coding_composition_method
 local coding_composition_method={
-  relative=0,
-  with_rule=1,
-  with_altchars=2,
-  with_rule_altchars=3,
-  no=4,
+    relative=0,
+    with_rule=1,
+    with_altchars=2,
+    with_rule_altchars=3,
+    no=4,
+}
+---@enum nelisp.coding_utf_bom_type
+local coding_utf_bom_type={
+    detect=0,
+    without=1,
+    with=2,
 }
 
 ---@type table<nelisp.coding_category,nelisp.coding_system>
@@ -185,6 +197,11 @@ local function check_coding_system_get_id(x)
         error('TODO')
     end
     return id
+end
+local function check_coding_system(x)
+    if coding_system_id(x)<0 then
+        error('TODO')
+    end
 end
 local function coding_id_name(id)
     return lisp.aref((vars.coding_system_hash_table --[[@as nelisp._hash_table]]).key_and_value,id*2)
@@ -255,10 +272,20 @@ local function setup_coding_system(coding_system,coding)
     elseif lisp.eq(coding_type,vars.Qcharset) then
         coding.detector=detect_coding_charset
         coding.decoder=decode_coding_charset
-            coding.encoder=encode_coding_charset
+        coding.encoder=encode_coding_charset
         coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_decoding,coding_mask.require_encoding)
     elseif lisp.eq(coding_type,vars.Qutf_8) then
-        error('TODO')
+        val=lisp.aref(attrs,coding_attr.utf_bom)
+        coding.spec_utf_8_bom=(lisp.consp(val) and coding_utf_bom_type.detect)
+        or (lisp.eq(val,vars.Qt) and coding_utf_bom_type.with)
+        or coding_utf_bom_type.without
+        coding.detector=detect_coding_utf_8
+        coding.decoder=decode_coding_utf_8
+        coding.encoder=encode_coding_utf_8
+        coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_decoding,coding_mask.require_encoding)
+        if coding.spec_utf_8_bom==coding_utf_bom_type.detect then
+            coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_detection)
+        end
     elseif lisp.eq(coding_type,vars.Qutf_16) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qccl) then
@@ -466,7 +493,26 @@ function F.define_coding_system_internal.f(args)
         category=coding_category.raw_text
         lisp.aset(attrs,coding_attr.ascii_compat,vars.Qt)
     elseif lisp.eq(coding_type,vars.Qutf_8) then
-        error('TODO')
+        if #args<coding_arg_utf_8.max then
+            vars.F.signal(vars.Qwrong_number_of_arguments,vars.F.cons(
+                lread.intern('define-coding-system-internal'),
+                lisp.make_fixnum(#args)))
+        end
+        local bom=args[coding_arg_utf_8.bom]
+        if not lisp.nilp(bom) and not lisp.eq(bom,vars.Qt) then
+            lisp.check_cons(bom)
+            val=lisp.xcar(bom)
+            check_coding_system(val)
+            val=lisp.xcdr(bom)
+            check_coding_system(val)
+        end
+        lisp.aset(attrs,coding_attr.utf_bom,bom)
+        if lisp.nilp(bom) then
+            lisp.aset(attrs,coding_attr.ascii_compat,vars.Qt)
+        end
+        category=(lisp.consp(bom) and coding_category.utf_8_auto) or
+        (lisp.nilp(bom) and coding_category.utf_8_nosig) or
+        coding_category.utf_8_sig
     elseif lisp.eq(coding_type,vars.Qundecided) then
         if #args<coding_arg_undecided.max then
             vars.F.signal(vars.Qwrong_number_of_arguments,vars.F.cons(
