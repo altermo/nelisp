@@ -557,6 +557,31 @@ function F.minus.f(args)
     end
     return arith_driver('-',args)
 end
+F.ash={'ash',2,2,0,[[Return integer VALUE with its bits shifted left by COUNT bit positions.
+If COUNT is negative, shift VALUE to the right instead.
+VALUE and COUNT must be integers.
+Mathematically, the return value is VALUE multiplied by 2 to the
+power of COUNT, rounded down.  If the result is non-zero, its sign
+is the same as that of VALUE.
+In terms of bits, when COUNT is positive, the function moves
+the bits of VALUE to the left, adding zero bits on the right; when
+COUNT is negative, it moves the bits of VALUE to the right,
+discarding bits.]]}
+function F.ash.f(value,count)
+    lisp.check_integer(value)
+    lisp.check_integer(count)
+    if not lisp.fixnump(count) then
+        error('TODO')
+    end
+    if lisp.fixnum(count)<=0 then
+        error('TODO')
+    end
+    local res=overflow.mul_2exp(lisp.fixnum(value),lisp.fixnum(count))
+    if res==nil then
+        error('TODO')
+    end
+    return lisp.make_fixnum(res)
+end
 F.lss={'<',1,-2,0,[[Return t if each arg (a number or marker), is less than the next arg.
 usage: (< NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
 function F.lss.f(args)
@@ -763,6 +788,7 @@ function M.init_syms()
     vars.defsubr(F,'plus')
     vars.defsubr(F,'minus')
     vars.defsubr(F,'logior')
+    vars.defsubr(F,'ash')
     vars.defsubr(F,'lss')
     vars.defsubr(F,'leq')
     vars.defsubr(F,'gtr')
