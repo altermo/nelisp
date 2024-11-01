@@ -216,7 +216,7 @@ local function setup_coding_system(coding_system,coding)
         coding.detector=0
         coding.decoder=decode_coding_raw_text
         coding.encoder=encode_coding_raw_text
-        coding.common_flags=bit.bor(coding_mask.require_decoding,coding_mask.require_detection)
+        coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_detection)
         coding.spec_undecided={} --[[@as unknown]]
         coding.spec_undecided.inhibit_nbd=encode_inhibit_flag(
             lisp.aref(attrs,coding_attr.undecided_inhibit_null_byte_detection))
@@ -227,7 +227,10 @@ local function setup_coding_system(coding_system,coding)
     elseif lisp.eq(coding_type,vars.Qiso_2022) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qcharset) then
-        error('TODO')
+        coding.detector=detect_coding_charset
+        coding.decoder=decode_coding_charset
+            coding.encoder=encode_coding_charset
+        coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_decoding,coding_mask.require_encoding)
     elseif lisp.eq(coding_type,vars.Qutf_8) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qutf_16) then
@@ -369,7 +372,36 @@ function F.define_coding_system_internal.f(args)
 
     local category
     if lisp.eq(coding_type,vars.Qcharset) then
-        error('TODO')
+        val=alloc.make_vector(256,'nil')
+        tail=charset_list
+        while lisp.consp(tail) do
+            local cs=vars.charset_table[lisp.fixnum(lisp.xcar(tail))]
+            local dim=cs.dimension
+            local idx=(dim-1)*4
+            if cs.ascii_compatible_p then
+                lisp.aset(attrs,coding_attr.ascii_compat,vars.Qt)
+            end
+            for i=cs.code_space[idx],cs.code_space[idx+1] do
+                local tmp=lisp.aref(val,i)
+                local dim2
+                if lisp.nilp(tmp) then
+                    tmp=lisp.xcar(tail)
+                elseif lisp.fixnatp(tmp) then
+                    dim2=vars.charset_table[lisp.fixnum(tmp)].dimension
+                    if dim<dim2 then
+                        tmp=lisp.list(lisp.xcar(tail),tmp)
+                    else
+                        tmp=lisp.list(tmp,lisp.xcar(tail))
+                    end
+                else
+                    error('TODO')
+                end
+                lisp.aset(val,i,tmp)
+            end
+            tail=lisp.xcdr(tail)
+        end
+        lisp.aset(attrs,coding_attr.charset_valids,val)
+        category=coding_category.charset
     elseif lisp.eq(coding_type,vars.Qccl) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qutf_16) then
