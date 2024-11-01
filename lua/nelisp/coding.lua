@@ -28,6 +28,7 @@ local charset=require'nelisp.charset'
 ---@field spec_undecided nelisp.coding_undecided_spec?
 ---@field spec_emacs_mule nelisp.coding_emacs_mule_spec?
 ---@field spec_utf_8_bom nelisp.coding_utf_bom_type?
+---@field spec_utf_16 nelisp.coding_utf_16_spec
 ---@class nelisp.coding_undecided_spec
 ---@field inhibit_nbd number
 ---@field inhibit_ied number
@@ -41,6 +42,10 @@ local charset=require'nelisp.charset'
 ---@field nchars number
 ---@field ncomps number
 ---@field carryover number[]
+---@class nelisp.coding_utf_16_spec
+---@field bom nelisp.coding_utf_bom_type
+---@field endian nelisp.coding_utf_16_endian_type
+---@field surrogate number
 
 ---@enum nelisp.coding_arg
 local coding_arg={
@@ -70,6 +75,12 @@ local coding_arg_undecided={
 local coding_arg_utf_8={
     bom=coding_arg.max+1,
     max=coding_arg.max+1,
+}
+---@enum nelisp.coding_arg_utf_16
+local coding_arg_utf_16={
+    bom=coding_arg.max+1,
+    endian=coding_arg.max+2,
+    max=coding_arg.max+2,
 }
 ---@enum nelisp.coding_attr
 local coding_attr={
@@ -163,6 +174,11 @@ local coding_utf_bom_type={
     detect=0,
     without=1,
     with=2,
+}
+---@enum nelisp.coding_utf_16_endian_type
+local coding_utf_16_endian_type={
+    big=0,
+    little=1,
 }
 
 ---@type table<nelisp.coding_category,nelisp.coding_system>
@@ -287,7 +303,22 @@ local function setup_coding_system(coding_system,coding)
             coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_detection)
         end
     elseif lisp.eq(coding_type,vars.Qutf_16) then
-        error('TODO')
+        val=lisp.aref(attrs,coding_attr.utf_bom)
+        coding.spec_utf_16={} --[[@as unknown]]
+        coding.spec_utf_16.bom=(lisp.consp(val) and coding_utf_bom_type.detect)
+        or (lisp.eq(val,vars.Qt) and coding_utf_bom_type.with)
+        or coding_utf_bom_type.without
+        val=lisp.aref(attrs,coding_attr.utf_16_endian)
+        coding.spec_utf_16.endian=(lisp.eq(val,vars.Qbig) and coding_utf_16_endian_type.big)
+        or coding_utf_16_endian_type.little
+        coding.spec_utf_16.surrogate=0
+        coding.detector=detect_coding_utf_16
+        coding.decoder=decode_coding_utf_16
+        coding.encoder=encode_coding_utf_16
+        coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_decoding,coding_mask.require_encoding)
+        if coding.spec_utf_16.bom==coding_utf_bom_type.detect then
+            coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_detection)
+        end
     elseif lisp.eq(coding_type,vars.Qccl) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qemacs_mule) then
@@ -476,7 +507,36 @@ function F.define_coding_system_internal.f(args)
     elseif lisp.eq(coding_type,vars.Qccl) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qutf_16) then
-        error('TODO')
+        lisp.aset(attrs,coding_attr.ascii_compat,vars.Qnil)
+        if #args<coding_arg_utf_16.max then
+            vars.F.signal(vars.Qwrong_number_of_arguments,vars.F.cons(
+                lread.intern('define-coding-system-internal'),
+                lisp.make_fixnum(#args)))
+        end
+        local bom=args[coding_arg_utf_16.bom]
+        if not lisp.nilp(bom) and not lisp.eq(bom,vars.Qt) then
+            lisp.check_cons(bom)
+            val=lisp.xcar(bom)
+            check_coding_system(val)
+            val=lisp.xcdr(bom)
+            check_coding_system(val)
+        end
+        lisp.aset(attrs,coding_attr.utf_bom,bom)
+        local endian=args[coding_arg_utf_16.endian]
+        lisp.check_symbol(endian)
+        if lisp.nilp(endian) then
+            endian=vars.Qbig
+        elseif not lisp.eq(endian,vars.Qbig) and not lisp.eq(endian,vars.Qlittle) then
+            signal.error('Invalid endian: %s',lisp.sdata(lisp.symbol_name(endian)))
+        end
+        lisp.aset(attrs,coding_attr.utf_16_endian,endian)
+        category=(lisp.consp(bom) and coding_category.utf_16_auto)
+            or (lisp.nilp(bom) and (lisp.eq(endian,vars.Qbig)
+                and coding_category.utf_16_be_nosig
+                or coding_category.utf_16_le_nosig))
+            or (lisp.eq(endian,vars.Qbig)
+                and coding_category.utf_16_be
+                or coding_category.utf_16_le)
     elseif lisp.eq(coding_type,vars.Qiso_2022) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qemacs_mule) then
@@ -738,6 +798,8 @@ function M.init_syms()
 
     vars.defsym('Qno_conversion','no-conversion')
     vars.defsym('Qundecided','undecided')
+    vars.defsym('Qbig','big')
+    vars.defsym('Qlittle','little')
 
     vars.defsym('Qraw_text','raw-text')
     vars.defsym('Qiso_2022','iso-2022')
