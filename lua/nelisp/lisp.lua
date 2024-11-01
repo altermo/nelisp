@@ -284,6 +284,10 @@ function M.functionp(x)
     end
     return false
 end
+---@overload fun(lo:number,x:nelisp.obj,hi:number):boolean
+function M.ranged_fixnump(lo,x,hi)
+    return M.fixnump(x) and lo<=M.fixnum(x) and M.fixnum(x)<=hi
+end
 ---@overload fun(x:nelisp.obj):boolean
 function M.subr_native_compiled_dynp(_) return false end
 ---@overload fun(x:nelisp.obj):boolean

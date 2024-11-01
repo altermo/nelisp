@@ -26,10 +26,20 @@ local charset=require'nelisp.charset'
 ---@field decoder fun(c:nelisp.coding_system)
 ---@field encoder fun(c:nelisp.coding_system):boolean
 ---@field spec_undecided nelisp.coding_undecided_spec?
+---@field spec_emacs_mule nelisp.coding_emacs_mule_spec?
 ---@class nelisp.coding_undecided_spec
 ---@field inhibit_nbd number
 ---@field inhibit_ied number
 ---@field prefer_utf_8 boolean
+---@class nelisp.coding_emacs_mule_spec: nelisp.coding_composition_status
+---@class nelisp.coding_composition_status
+---@field state nelisp.coding_composition_state
+---@field method nelisp.coding_composition_method
+---@field old_form boolean
+---@field length number
+---@field nchars number
+---@field ncomps number
+---@field carryover number[]
 
 ---@enum nelisp.coding_arg
 local coding_arg={
@@ -125,6 +135,22 @@ local coding_mask={
     require_encoding=0x0800,
     require_detection=0x1000,
     reset_at_bol=0x2000,
+}
+---@enum nelisp.coding_composition_state
+local coding_composition_state={
+    no=0,
+    char=1,
+    rule=2,
+    component_char=3,
+    component_rule=4,
+}
+---@enum nelisp.coding_composition_method
+local coding_composition_method={
+  relative=0,
+  with_rule=1,
+  with_altchars=2,
+  with_rule_altchars=3,
+  no=4,
 }
 
 ---@type table<nelisp.coding_category,nelisp.coding_system>
@@ -238,7 +264,17 @@ local function setup_coding_system(coding_system,coding)
     elseif lisp.eq(coding_type,vars.Qccl) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qemacs_mule) then
-        error('TODO')
+        coding.detector=detect_coding_emacs_mule
+        coding.decoder=decode_coding_emacs_mule
+        coding.encoder=encode_coding_emacs_mule
+        coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_decoding,coding_mask.require_encoding)
+        if not lisp.nilp(lisp.aref(attrs,coding_attr.emacs_mule_full)) and
+            not lisp.eq(lisp.aref(attrs,coding_attr.charset_list),vars.emacs_mule_charset_list) then
+            error('TODO')
+        end
+        coding.spec_emacs_mule={} --[[@as unknown]]
+        coding.spec_emacs_mule.state=coding_composition_state.no
+        coding.spec_emacs_mule.method=coding_composition_method.no
     elseif lisp.eq(coding_type,vars.Qshift_jis) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qbig5) then
@@ -295,12 +331,20 @@ function F.define_coding_system_internal.f(args)
         if lisp.eq(charset_list,vars.Qiso_2022) then
             error('TODO')
         elseif lisp.eq(charset_list,vars.Qemacs_mule) then
-            error('TODO')
+            if not lisp.eq(coding_type,vars.Qemacs_mule) then
+                signal.error('Invalid charset-list')
+            end
+            charset_list=vars.emacs_mule_charset_list
         end
         local tail=charset_list
         while lisp.consp(tail) do
-            rawget(_G,'error')('TODO')
-            break
+            if not lisp.ranged_fixnump(0,lisp.xcar(tail),0x7fffffff-1) then
+                signal.error('Invalid charset-list')
+            end
+            if max_charset_id<lisp.fixnum(lisp.xcar(tail)) then
+                max_charset_id=lisp.fixnum(lisp.xcar(tail))
+            end
+            tail=lisp.xcdr(tail)
         end
     else
         charset_list=vars.F.copy_sequence(charset_list)
@@ -409,7 +453,11 @@ function F.define_coding_system_internal.f(args)
     elseif lisp.eq(coding_type,vars.Qiso_2022) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qemacs_mule) then
-        error('TODO')
+        if lisp.eq(args[coding_arg.charset_list],vars.Qemacs_mule) then
+            lisp.aset(attrs,coding_attr.emacs_mule_full,vars.Qt)
+        end
+        lisp.aset(attrs,coding_attr.ascii_compat,vars.Qt)
+        category=coding_category.emacs_mule
     elseif lisp.eq(coding_type,vars.Qshift_jis) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qbig5) then
