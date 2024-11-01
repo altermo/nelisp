@@ -608,6 +608,13 @@ function F.unify_charset.f(charset,unify_map,deunify)
     end
     return vars.Qnil
 end
+local function charsetp(obj)
+    return fns.hash_lookup((vars.charset_hash_table --[[@as nelisp._hash_table]]),obj)>=0
+end
+F.charsetp={'charsetp',1,1,0,[[Return non-nil if and only if OBJECT is a charset.]]}
+function F.charsetp.f(obj)
+    return charsetp(obj) and vars.Qt or vars.Qnil
+end
 function M.init()
     vars.charset_hash_table=vars.F.make_hash_table({vars.QCtest,vars.Qeq})
     vars.charset_table={}
@@ -647,6 +654,7 @@ function M.init_syms()
     vars.defsubr(F,'define_charset_internal')
     vars.defsubr(F,'define_charset_alias')
     vars.defsubr(F,'unify_charset')
+    vars.defsubr(F,'charsetp')
 
     vars.defsym('Qemacs','emacs')
     vars.defsym('Qiso_8859_1','iso-8859-1')
