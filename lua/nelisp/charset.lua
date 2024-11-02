@@ -477,7 +477,7 @@ function F.define_charset_internal.f(args)
         error('TODO')
     else
         charset.hash_index=fns.hash_put(hash_table,args[charset_arg.name],attrs,hash_code)
-        id=#vars.charset_table
+        id=#vars.charset_table+1
         new_definition_p=true
     end
 
