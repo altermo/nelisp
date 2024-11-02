@@ -534,7 +534,9 @@ function F.define_charset_internal.f(args)
             elseif lisp.nilp(tail) then
                 vars.charset_ordered_list=vars.F.nconc({vars.charset_ordered_list,lisp.list(lisp.make_fixnum(id))})
             else
-                error('TODO')
+                val=vars.F.cons(lisp.xcar(tail),lisp.xcdr(tail))
+                lisp.xsetcdr(tail,val)
+                lisp.xsetcar(tail,lisp.make_fixnum(id))
             end
         end
         vars.charset_ordered_list_tick=vars.charset_ordered_list_tick+1
