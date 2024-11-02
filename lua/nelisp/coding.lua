@@ -310,7 +310,7 @@ local function setup_iso_safe_charsets(attrs)
     tail=charset_list
     while lisp.consp(tail) do
         local id=lisp.xcar(tail)
-        local cs=vars.charset_table[id]
+        local cs=vars.charset_table[lisp.fixnum(id)]
         local reg=vars.F.cdr(vars.F.assq(id,request))
         if not lisp.nilp(reg) then
             safe_charsets[lisp.fixnum(id)+1]=string.char(lisp.fixnum(reg))
