@@ -574,6 +574,9 @@ function F.ash.f(value,count)
         error('TODO')
     end
     if lisp.fixnum(count)<=0 then
+        if lisp.fixnum(count)==0 then
+            return value
+        end
         error('TODO')
     end
     local res=overflow.mul_2exp(lisp.fixnum(value),lisp.fixnum(count))
