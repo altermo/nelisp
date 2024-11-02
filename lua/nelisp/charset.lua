@@ -185,7 +185,7 @@ local function load_charset(charset,control_flag)
         charset.max_char=0
     end
 end
-local function check_charset_get_id(x)
+function M.check_charset_get_id(x)
     if not lisp.symbolp(x) then
         signal.wrong_type_argument(vars.Qcharsetp,x)
     end
@@ -196,7 +196,7 @@ local function check_charset_get_id(x)
     return lisp.fixnum(lisp.aref(lisp.aref((vars.charset_hash_table --[[@as nelisp._hash_table]]).key_and_value,idx*2+1),charset_idx.id))
 end
 function M.check_charset_get_charset(charset)
-    local cid=check_charset_get_id(charset)
+    local cid=M.check_charset_get_id(charset)
     return vars.charset_table[cid]
 end
 local function cons_to_unsigned(obj)
@@ -437,10 +437,10 @@ function F.define_charset_internal.f(args)
             if lisp.consp(elt) then
                 local car_part=lisp.xcar(elt)
                 local cdr_part=lisp.xcdr(elt)
-                this_id=check_charset_get_id(car_part)
+                this_id=M.check_charset_get_id(car_part)
                 offset=lisp.check_fixnum_range(cdr_part,overflow.min,overflow.max)
             else
-                this_id=check_charset_get_id(elt)
+                this_id=M.check_charset_get_id(elt)
                 offset=0
             end
             lisp.xsetcar(val,vars.F.cons(lisp.make_fixnum(this_id),lisp.make_fixnum(offset)))
@@ -580,7 +580,7 @@ the same meaning as the `:unify-map' attribute in the function
 
 Optional third argument DEUNIFY, if non-nil, means to de-unify CHARSET.]]}
 function F.unify_charset.f(charset,unify_map,deunify)
-    local id=check_charset_get_id(charset)
+    local id=M.check_charset_get_id(charset)
     local cs=vars.charset_table[id]
     local attrs=charset_attributes(cs)
     if not lisp.nilp(deunify) and not cs.unified_p then

@@ -29,6 +29,7 @@ local charset=require'nelisp.charset'
 ---@field spec_emacs_mule nelisp.coding_emacs_mule_spec?
 ---@field spec_utf_8_bom nelisp.coding_utf_bom_type?
 ---@field spec_utf_16 nelisp.coding_utf_16_spec
+---@field spec_iso_2022 nelisp.coding_iso_2022_spec
 ---@class nelisp.coding_undecided_spec
 ---@field inhibit_nbd number
 ---@field inhibit_ied number
@@ -46,6 +47,15 @@ local charset=require'nelisp.charset'
 ---@field bom nelisp.coding_utf_bom_type
 ---@field endian nelisp.coding_utf_16_endian_type
 ---@field surrogate number
+---@class nelisp.coding_iso_2022_spec
+---@field flags number
+---@field current_invocation number[] (0-indexed)
+---@field current_designation number[] (0-indexed)
+---@field ctext_extended_segment_len number
+---@field single_shifting boolean
+---@field bol boolean
+---@field embedded_utf_8 boolean
+---@field cmp_status nelisp.coding_composition_status
 
 ---@enum nelisp.coding_arg
 local coding_arg={
@@ -81,6 +91,14 @@ local coding_arg_utf_16={
     bom=coding_arg.max+1,
     endian=coding_arg.max+2,
     max=coding_arg.max+2,
+}
+---@enum nelisp.coding_arg_iso_2022
+local coding_arg_iso_2022={
+    initial=coding_arg.max+1,
+    reg_usage=coding_arg.max+2,
+    request=coding_arg.max+3,
+    flags=coding_arg.max+4,
+    max=coding_arg.max+4,
 }
 ---@enum nelisp.coding_attr
 local coding_attr={
@@ -180,6 +198,33 @@ local coding_utf_16_endian_type={
     big=0,
     little=1,
 }
+local coding_iso_flag={
+    long_form=0x0001,
+    reset_at_eol=0x0002,
+    reset_at_cntl=0x0004,
+    seven_bits=0x0008,
+    locking_shift=0x0010,
+    single_shift=0x0020,
+    designation=0x0040,
+    revision=0x0080,
+    direction=0x0100,
+    init_at_bol=0x0200,
+    designate_at_bol=0x0400,
+    safe=0x0800,
+    latin_extra=0x1000,
+    composition=0x2000,
+    use_roman=0x8000,
+    use_oldjis=0x10000,
+    level_4=0x20000,
+    full_support=0x100000,
+}
+local coding_mode={
+    last_block=0x01,
+    selective_display=0x02,
+    direction=0x04,
+    fixed_destination=0x08,
+    safe_encoding=0x10,
+}
 
 ---@type table<nelisp.coding_category,nelisp.coding_system>
 ---(0-indexed)
@@ -234,6 +279,57 @@ end
 local function encode_inhibit_flag(flag)
     return (lisp.nilp(flag) and -1) or (lisp.eq(flag,vars.Qt) and 1) or 0
 end
+local function setup_iso_safe_charsets(attrs)
+    local flags=lisp.fixnum(lisp.aref(attrs,coding_attr.iso_flags))
+    local charset_list=lisp.aref(attrs,coding_attr.charset_list)
+    if bit.band(flags,coding_iso_flag.full_support)>0 and not lisp.eq(charset_list,vars.iso_2022_charset_list) then
+        charset_list=vars.iso_2022_charset_list
+        lisp.aset(attrs,coding_attr.charset_list,charset_list)
+        lisp.aset(attrs,coding_attr.safe_charsets,vars.Qnil)
+    end
+    if lisp.stringp(lisp.aref(attrs,coding_attr.safe_charsets)) then
+        return
+    end
+    local max_charset_id=0
+    local tail=charset_list
+    while lisp.consp(tail) do
+        local id=lisp.fixnum(lisp.xcar(tail))
+        if id>max_charset_id then
+            max_charset_id=id
+        end
+        tail=lisp.xcdr(tail)
+    end
+    local safe_charsets={}
+    for i=1,max_charset_id+1 do
+        safe_charsets[i]='\xff'
+    end
+    local request=lisp.aref(attrs,coding_attr.iso_request)
+    local reg_usage=lisp.aref(attrs,coding_attr.iso_usage)
+    local reg94=lisp.fixnum(lisp.xcar(reg_usage))
+    local reg96=lisp.fixnum(lisp.xcdr(reg_usage))
+    tail=charset_list
+    while lisp.consp(tail) do
+        local id=lisp.xcar(tail)
+        local cs=vars.charset_table[id]
+        local reg=vars.F.cdr(vars.F.assq(id,request))
+        if not lisp.nilp(reg) then
+            safe_charsets[lisp.fixnum(id)+1]=string.char(lisp.fixnum(reg))
+        elseif cs.iso_chars_96 then
+            if reg96<4 then
+                safe_charsets[lisp.fixnum(id)+1]=string.char(reg96)
+            end
+        else
+            if reg94<4 then
+                safe_charsets[lisp.fixnum(id)+1]=string.char(reg94)
+            end
+        end
+        tail=lisp.xcdr(tail)
+    end
+    lisp.aset(attrs,coding_attr.safe_charsets,alloc.make_unibyte_string(table.concat(safe_charsets)))
+end
+local function coding_iso_initial(coding,reg)
+    return lisp.fixnum(lisp.aref(lisp.aref(coding_id_attrs(coding.id),coding_attr.iso_initial),reg))
+end
 ---@param coding_system nelisp.obj
 ---@param coding nelisp.coding_system
 local function setup_coding_system(coding_system,coding)
@@ -284,7 +380,44 @@ local function setup_coding_system(coding_system,coding)
         coding.spec_undecided.prefer_utf_8=not lisp.nilp(
             lisp.aref(attrs,coding_attr.undecided_prefer_utf_8))
     elseif lisp.eq(coding_type,vars.Qiso_2022) then
-        error('TODO')
+        local flags=lisp.fixnum(lisp.aref(attrs,coding_attr.iso_flags))
+        coding.spec_iso_2022={
+            current_invocation={},
+            current_designation={},
+            cmp_status={},
+        } --[[@as unknown]]
+        coding.spec_iso_2022.current_invocation[0]=0
+        coding.spec_iso_2022.current_invocation[1]=bit.band(flags,coding_iso_flag.seven_bits)>0 and -1 or 0
+        for i=0,3 do
+            coding.spec_iso_2022.current_designation[i]=coding_iso_initial(coding,i)
+        end
+        coding.spec_iso_2022.single_shifting=false
+        coding.spec_iso_2022.bol=true
+        coding.detector=detect_coding_iso_2022
+        coding.decoder=decode_coding_iso_2022
+        coding.encoder=encode_coding_iso_2022
+        if bit.band(flags,coding_iso_flag.safe)>0 then
+            coding.mode=bit.bor(coding.mode,coding_mode.safe_encoding)
+        end
+        coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_decoding,
+            coding_mask.require_encoding,coding_mask.require_flushing)
+        if bit.band(flags,coding_iso_flag.composition)>0 then
+            coding.common_flags=bit.bor(coding.common_flags,coding_mask.annotate_composition)
+        end
+        if bit.band(flags,coding_iso_flag.designation)>0 then
+            coding.common_flags=bit.bor(coding.common_flags,coding_mask.annotate_charset)
+        end
+        if bit.band(flags,coding_iso_flag.full_support)>0 then
+            setup_iso_safe_charsets(attrs)
+            val=lisp.aref(attrs,coding_attr.safe_charsets)
+            coding.max_charset_id=lisp.schars(val)-1
+            coding.safe_charsets=lisp.sdata(val)
+        end
+        coding.spec_iso_2022.flags=flags
+        coding.spec_iso_2022.cmp_status.state=coding_composition_state.no
+        coding.spec_iso_2022.cmp_status.method=coding_composition_method.no
+        coding.spec_iso_2022.ctext_extended_segment_len=0
+        coding.spec_iso_2022.embedded_utf_8=false
     elseif lisp.eq(coding_type,vars.Qcharset) then
         coding.detector=detect_coding_charset
         coding.decoder=decode_coding_charset
@@ -387,7 +520,10 @@ function F.define_coding_system_internal.f(args)
     local charset_list=args[coding_arg.charset_list]
     if lisp.symbolp(charset_list) then
         if lisp.eq(charset_list,vars.Qiso_2022) then
-            error('TODO')
+            if not lisp.eq(coding_type,vars.Qiso_2022) then
+                signal.error('Invalid charset-list')
+            end
+            charset_list=vars.iso_2022_charset_list
         elseif lisp.eq(charset_list,vars.Qemacs_mule) then
             if not lisp.eq(coding_type,vars.Qemacs_mule) then
                 signal.error('Invalid charset-list')
@@ -531,14 +667,74 @@ function F.define_coding_system_internal.f(args)
         end
         lisp.aset(attrs,coding_attr.utf_16_endian,endian)
         category=(lisp.consp(bom) and coding_category.utf_16_auto)
-            or (lisp.nilp(bom) and (lisp.eq(endian,vars.Qbig)
-                and coding_category.utf_16_be_nosig
-                or coding_category.utf_16_le_nosig))
-            or (lisp.eq(endian,vars.Qbig)
-                and coding_category.utf_16_be
-                or coding_category.utf_16_le)
+        or (lisp.nilp(bom) and (lisp.eq(endian,vars.Qbig)
+        and coding_category.utf_16_be_nosig
+        or coding_category.utf_16_le_nosig))
+        or (lisp.eq(endian,vars.Qbig)
+        and coding_category.utf_16_be
+        or coding_category.utf_16_le)
     elseif lisp.eq(coding_type,vars.Qiso_2022) then
-        error('TODO')
+        if #args<coding_arg_iso_2022.max then
+            vars.F.signal(vars.Qwrong_number_of_arguments,vars.F.cons(
+                lread.intern('define-coding-system-internal'),
+                lisp.make_fixnum(#args)))
+        end
+        local initial=vars.F.copy_sequence(args[coding_arg_iso_2022.initial])
+        lisp.check_vector(initial)
+        for i=0,3 do
+            val=lisp.aref(initial,i)
+            if not lisp.nilp(val) then
+                local cs=charset.check_charset_get_charset(val)
+                lisp.aset(initial,i,lisp.make_fixnum(cs.id))
+                if i==0 and cs.ascii_compatible_p then
+                    lisp.aset(attrs,coding_attr.ascii_compat,vars.Qt)
+                end
+            else
+                lisp.aset(initial,i,lisp.make_fixnum(-1))
+            end
+        end
+        local reg_usage=args[coding_arg_iso_2022.reg_usage]
+        lisp.check_cons(reg_usage)
+        lisp.check_fixnum(lisp.xcar(reg_usage))
+        lisp.check_fixnum(lisp.xcdr(reg_usage))
+        local request=vars.F.copy_sequence(args[coding_arg_iso_2022.request])
+        tail=request
+        while lisp.consp(tail) do
+            val=lisp.xcar(tail)
+            lisp.check_cons(val)
+            local id=charset.check_charset_get_id(lisp.xcar(val))
+            lisp.check_fixnum_range(lisp.xcdr(val),0,3)
+            lisp.xsetcar(val,lisp.make_fixnum(id))
+            tail=lisp.xcdr(tail)
+        end
+        local flags=args[coding_arg_iso_2022.flags]
+        lisp.check_fixnat(flags)
+        local i=bit.bor(lisp.fixnum(flags),0x7fffffff)
+        if lisp.eq(args[coding_arg.charset_list],vars.Qiso_2022) then
+            i=bit.bor(i,coding_iso_flag.full_support)
+        end
+        flags=lisp.make_fixnum(i)
+        lisp.aset(attrs,coding_attr.iso_initial,initial)
+        lisp.aset(attrs,coding_attr.iso_usage,reg_usage)
+        lisp.aset(attrs,coding_attr.iso_request,request)
+        lisp.aset(attrs,coding_attr.iso_flags,flags)
+        setup_iso_safe_charsets(attrs)
+        if bit.band(i,coding_iso_flag.seven_bits)>0 then
+            category=(bit.band(i,bit.bor(coding_iso_flag.locking_shift,coding_iso_flag.single_shift))>0
+            and coding_category.iso_7_else)
+            or (lisp.eq(args[coding_arg.charset_list],vars.Qiso_2022) and coding_category.iso_7)
+            or coding_category.iso_7_tight
+        else
+            local id=lisp.fixnum(lisp.aref(initial,1))
+            category=((bit.band(i,coding_iso_flag.locking_shift)>0
+            or lisp.eq(args[coding_arg.charset_list],vars.Qiso_2022)
+            or id<0) and coding_category.iso_8_else)
+            or vars.charset_table[id].dimension==1 and coding_category.iso_8_1
+            or coding_category.iso_8_2
+        end
+        if category~=coding_category.iso_8_1 and category~=coding_category.iso_8_2 then
+            lisp.aset(attrs,coding_attr.ascii_compat,vars.Qnil)
+        end
     elseif lisp.eq(coding_type,vars.Qemacs_mule) then
         if lisp.eq(args[coding_arg.charset_list],vars.Qemacs_mule) then
             lisp.aset(attrs,coding_attr.emacs_mule_full,vars.Qt)
