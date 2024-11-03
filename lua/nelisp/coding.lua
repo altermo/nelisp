@@ -1153,6 +1153,17 @@ See info node `Coding Systems' and info node `Text and Binary' concerning
 such conversion.]])
     vars.V.inhibit_eol_conversion=vars.Qnil
 
+    vars.defvar_lisp('latin_extra_code_table','latin-extra-code-table',[[
+Table of extra Latin codes in the range 128..159 (inclusive).
+This is a vector of length 256.
+If Nth element is non-nil, the existence of code N in a file
+\(or output of subprocess) doesn't prevent it to be detected as
+a coding system of ISO 2022 variant which has a flag
+`accept-latin-extra-code' t (e.g. iso-latin-1) on reading a file
+or reading output of a subprocess.
+Only 128th through 159th elements have a meaning.]])
+    vars.V.latin_extra_code_table=alloc.make_vector(256,'nil')
+
     vars.defsubr(F,'define_coding_system_internal')
     vars.defsubr(F,'define_coding_system_alias')
     vars.defsubr(F,'coding_system_put')
