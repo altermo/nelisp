@@ -136,7 +136,20 @@ function M.str_to_multibyte(s)
     end))
 end
 
+local F={}
+F.max_char={'max-char',0,1,0,[[Return the maximum character code.
+If UNICODE is non-nil, return the maximum character code defined
+by the Unicode Standard.]]}
+function F.max_char.f(unicode)
+    if lisp.nilp(unicode) then
+        return lisp.make_fixnum(bytes.MAX_CHAR)
+    end
+    return lisp.make_fixnum(bytes.MAX_UNICODE_CHAR)
+end
+
 function M.init_syms()
+    vars.defsubr(F,'max_char')
+
     vars.defsym('Qcharacterp','character')
 end
 return M
