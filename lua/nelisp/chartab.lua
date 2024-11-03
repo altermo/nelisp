@@ -319,7 +319,27 @@ function F.make_char_table.f(purpose,init)
     vector.parent=vars.Qnil
     vector.purpose=purpose
     return lisp.make_vectorlike_ptr(vector,lisp.pvec.char_table)
-
+end
+F.set_char_table_range={'set-char-table-range',3,3,0,[[Set the value in CHAR-TABLE for a range of characters RANGE to VALUE.
+RANGE should be t (for all characters), nil (for the default value),
+a cons of character codes (for characters in the range),
+or a character code.  Return VALUE.]]}
+function F.set_char_table_range.f(ctable,range,value)
+    lisp.check_chartable(ctable)
+    if lisp.eq(range,vars.Qt) then
+        error('TODO')
+    elseif lisp.nilp(range) then
+        error('TODO')
+    elseif chars.characterp(range) then
+        M.set(ctable,lisp.fixnum(range),value)
+    elseif lisp.consp(range) then
+        chars.check_character(lisp.xcar(range))
+        chars.check_character(lisp.xcdr(range))
+        M.set_range(ctable,lisp.fixnum(lisp.xcar(range)),lisp.fixnum(lisp.xcdr(range)),value)
+    else
+        signal.error("Invalid RANGE argument to `set-char-table-range'")
+    end
+    return value
 end
 
 function M.init_syms()
@@ -328,5 +348,6 @@ function M.init_syms()
     vars.defsubr(F,'make_char_table')
     vars.defsubr(F,'char_table_extra_slot')
     vars.defsubr(F,'set_char_table_extra_slot')
+    vars.defsubr(F,'set_char_table_range')
 end
 return M
