@@ -645,7 +645,7 @@ Symbols must match exactly.]]}
 function F.equal.f(a,b)
     return internal_equal(a,b,'plain',0,{}) and vars.Qt or vars.Qnil
 end
-local function plist_put(plist,prop,val)
+function M.plist_put(plist,prop,val)
     local prev=vars.Qnil
     local tail=plist
     local has_visited={}
@@ -678,7 +678,7 @@ It can be retrieved with `(get SYMBOL PROPNAME)'.]]}
 function F.put.f(sym,propname,value)
     lisp.check_symbol(sym)
     lisp.set_symbol_plist(
-        sym,plist_put((sym --[[@as nelisp._symbol]]).plist,propname,value))
+        sym,M.plist_put((sym --[[@as nelisp._symbol]]).plist,propname,value))
     return value
 end
 F.plist_put={'plist-put',3,4,0,[[Change value in PLIST of PROP to VAL.
@@ -693,7 +693,7 @@ use `(setq x (plist-put x prop val))' to be sure to use the new value.
 The PLIST is modified by side effects.]]}
 function F.plist_put.f(plist,prop,val,predicate)
     if lisp.nilp(predicate) then
-        return plist_put(plist,prop,val)
+        return M.plist_put(plist,prop,val)
     end
     error('TODO')
 end

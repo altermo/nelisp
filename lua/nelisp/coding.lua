@@ -872,6 +872,40 @@ function F.define_coding_system_alias.f(alias,coding_system)
     end
     return vars.Qnil
 end
+F.coding_system_put={'coding-system-put',3,3,0,[[Change value of CODING-SYSTEM's property PROP to VAL.
+
+The following properties, if set by this function, override the values
+of the corresponding attributes set by `define-coding-system':
+
+  `:mnemonic', `:default-char', `:ascii-compatible-p'
+  `:decode-translation-table', `:encode-translation-table',
+  `:post-read-conversion', `:pre-write-conversion'
+
+See `define-coding-system' for the description of these properties.
+See `coding-system-get' and `coding-system-plist' for accessing the
+property list of a coding-system.]]}
+function F.coding_system_put.f(coding_system,prop,val)
+    local spec=check_coding_system_get_spec(coding_system)
+    local attrs=lisp.aref(spec,0)
+    if lisp.eq(prop,vars.QCmnemonic) then
+        error('TODO')
+    elseif lisp.eq(prop,vars.QCdefault_char) then
+        error('TODO')
+    elseif lisp.eq(prop,vars.QCdecode_translation_table) then
+        error('TODO')
+    elseif lisp.eq(prop,vars.QCencode_translation_table) then
+        error('TODO')
+    elseif lisp.eq(prop,vars.QCpost_read_conversion) then
+        error('TODO')
+    elseif lisp.eq(prop,vars.QCpre_write_conversion) then
+        error('TODO')
+    elseif lisp.eq(prop,vars.QCascii_compatible_p) then
+        lisp.aset(attrs,coding_attr.ascii_compat,val)
+    end
+    lisp.aset(attrs,coding_attr.plist,fns.plist_put(
+        lisp.aref(attrs,coding_attr.plist),prop,val))
+    return val
+end
 
 function M.init()
     for i=0,coding_category.max-1 do
@@ -987,6 +1021,10 @@ function M.init_syms()
     vars.defsym('QCcategory',':category')
     vars.defsym('QCmnemonic',':mnemonic')
     vars.defsym('QCdefault_char',':default-char')
+    vars.defsym('QCdecode_translation_table',':decode-translation-table')
+    vars.defsym('QCencode_translation_table',':encode-translation-table')
+    vars.defsym('QCpost_read_conversion',':post-read-conversion')
+    vars.defsym('QCpre_write_conversion',':pre-write-conversion')
 
     vars.defsym('Qunix','unix')
     vars.defsym('Qdos','dos')
@@ -1029,5 +1067,6 @@ such conversion.]])
 
     vars.defsubr(F,'define_coding_system_internal')
     vars.defsubr(F,'define_coding_system_alias')
+    vars.defsubr(F,'coding_system_put')
 end
 return M
