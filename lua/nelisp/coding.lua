@@ -906,6 +906,42 @@ function F.coding_system_put.f(coding_system,prop,val)
         lisp.aref(attrs,coding_attr.plist),prop,val))
     return val
 end
+F.coding_system_p={'coding-system-p',1,1,0,[[Return t if OBJECT is nil or a coding-system.
+See the documentation of `define-coding-system' for information
+about coding-system objects.]]}
+function F.coding_system_p.f(obj)
+    if lisp.nilp(obj) or coding_system_id(obj)>=0 then
+        return vars.Qt
+    end
+    if not lisp.symbolp(obj) or lisp.nilp(vars.F.get(obj,vars.Qcoding_system_define_form)) then
+        return vars.Qnil
+    end
+    return vars.Qt
+end
+F.check_coding_system={'check-coding-system',1,1,0,[[Check validity of CODING-SYSTEM.
+If valid, return CODING-SYSTEM, else signal a `coding-system-error' error.
+It is valid if it is nil or a symbol defined as a coding system by the
+function `define-coding-system'.]]}
+function F.check_coding_system.f(coding_system)
+    local define_form=vars.F.get(coding_system,vars.Qcoding_system_define_form)
+    if not lisp.nilp(define_form) then
+        error('TODO')
+    end
+    if not lisp.nilp(vars.F.coding_system_p(coding_system)) then
+        return coding_system
+    end
+    signal.xsignal(vars.Qcoding_system_error,coding_system)
+end
+F.set_safe_terminal_coding_system_internal={'set-safe-terminal-coding-system-internal',1,1,0,[[Internal use only.]]}
+function F.set_safe_terminal_coding_system_internal.f(coding_system)
+    lisp.check_symbol(coding_system)
+    setup_coding_system(vars.F.check_coding_system(coding_system),vars.safe_terminal_coding)
+    vars.safe_terminal_coding.common_flags=bit.band(
+        vars.safe_terminal_coding.common_flags,bit.bnot(coding_mask.annotate_composition))
+    vars.safe_terminal_coding.src_multibyte=true
+    vars.safe_terminal_coding.dst_multibyte=false
+    return vars.Qnil
+end
 
 function M.init()
     for i=0,coding_category.max-1 do
@@ -1013,6 +1049,9 @@ function M.init()
     args[coding_arg_undecided.inhibit_iso_escape_detection]=lisp.make_fixnum(0)
     vars.F.define_coding_system_internal(args)
 
+    vars.safe_terminal_coding={} --[[@as unknown]]
+    setup_coding_system(vars.Qno_conversion,vars.safe_terminal_coding)
+
     for i=0,coding_category.max-1 do
         vars.F.set(lisp.aref(vars.coding_category_table,i),vars.Qno_conversion)
     end
@@ -1045,6 +1084,8 @@ function M.init_syms()
     vars.defsym('Qshift_jis','shift-jis')
     vars.defsym('Qbig5','big5')
 
+    vars.defsym('Qcoding_system_define_form','coding-system-define-form')
+
     vars.defvar_lisp('coding_system_list','coding-system-list',[[List of coding systems.
 
 Do not alter the value of this variable manually.  This variable should be
@@ -1068,5 +1109,8 @@ such conversion.]])
     vars.defsubr(F,'define_coding_system_internal')
     vars.defsubr(F,'define_coding_system_alias')
     vars.defsubr(F,'coding_system_put')
+    vars.defsubr(F,'coding_system_p')
+    vars.defsubr(F,'check_coding_system')
+    vars.defsubr(F,'set_safe_terminal_coding_system_internal')
 end
 return M

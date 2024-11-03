@@ -22,6 +22,7 @@
 ---@field charset_jisx0208_1978 number
 ---@field charset_jisx0208 number
 ---@field charset_ksc5601 number
+---@field safe_terminal_coding nelisp.coding_system
 ---@field [string] nelisp.obj
 local vars={}
 
