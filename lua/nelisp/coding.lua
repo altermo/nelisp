@@ -229,6 +229,9 @@ local coding_mode={
 ---@type table<nelisp.coding_category,nelisp.coding_system>
 ---(0-indexed)
 local coding_categories={}
+---@type nelisp.coding_category[]
+---(0-indexed)
+local coding_priorities={}
 
 local M={}
 function M.encode_file_name(s)
@@ -942,10 +945,54 @@ function F.set_safe_terminal_coding_system_internal.f(coding_system)
     vars.safe_terminal_coding.dst_multibyte=false
     return vars.Qnil
 end
+F.set_coding_system_priority={'set-coding-system-priority',0,-2,0,[[Assign higher priority to the coding systems given as arguments.
+If multiple coding systems belong to the same category,
+all but the first one are ignored.
+
+usage: (set-coding-system-priority &rest coding-systems)]]}
+function F.set_coding_system_priority.f(args)
+    local changed={}
+    local priorities={}
+    local j=0
+    for i=1,#args do
+        local spec=check_coding_system_get_spec(args[i])
+        local attr=lisp.aref(spec,0)
+        local category=lisp.fixnum(lisp.aref(attr,coding_attr.category))
+        if changed[category] then
+            goto continue
+        end
+        changed[category]=true
+        priorities[j]=category
+        j=j+1
+        if coding_categories[category].id>=0 and
+            not lisp.eq(args[i],coding_id_name(coding_categories[category].id)) then
+            setup_coding_system(args[i],coding_categories[category])
+        end
+        vars.F.set(lisp.aref(vars.coding_category_table,category),args[i])
+        ::continue::
+    end
+    local k=0
+    for i=j,coding_category.max-1 do
+        while k<coding_category.max and changed[coding_priorities[k]] do
+            k=k+1
+        end
+        assert(k<coding_category.max)
+        priorities[i]=coding_priorities[k]
+        k=k+1
+    end
+    coding_priorities=priorities
+    vars.V.coding_system_list=vars.Qnil
+    for i=coding_category.max-1,0,-1 do
+        vars.V.coding_system_list=vars.F.cons(lisp.aref(
+            vars.coding_category_table,priorities[i]),vars.V.coding_system_list)
+    end
+    return vars.Qnil
+end
 
 function M.init()
     for i=0,coding_category.max-1 do
         coding_categories[i]={id=-1} --[[@as unknown]]
+        coding_priorities[i]=i
     end
 
     vars.coding_system_hash_table=vars.F.make_hash_table(vars.QCtest,vars.Qeq)
@@ -1112,5 +1159,6 @@ such conversion.]])
     vars.defsubr(F,'coding_system_p')
     vars.defsubr(F,'check_coding_system')
     vars.defsubr(F,'set_safe_terminal_coding_system_internal')
+    vars.defsubr(F,'set_coding_system_priority')
 end
 return M
