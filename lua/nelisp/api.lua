@@ -54,7 +54,7 @@ function M.eval(form)
 end
 ---@param path string
 ---@return nelisp.obj|nelisp.eval.prommise?
-function M.eval_file(path)
+function M.load(path)
     return M.eval(lisp.list(vars.Qload,alloc.make_string(path)))
 end
 return M

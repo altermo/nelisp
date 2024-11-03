@@ -28,4 +28,4 @@ vim.schedule(function ()
     vim.api.nvim_set_current_tabpage(t)
 end)
 
-api.eval_file(_G.nelisp_emacs..'/lisp/loadup.el')
+api.load(_G.nelisp_emacs..'/lisp/loadup.el')
