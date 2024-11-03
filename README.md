@@ -9,6 +9,9 @@ Run in bash:
 mkdir -p ~/.nelisp
 git clone https://github.com/emacs-mirror/emacs --depth 1 --branch emacs-29.4 ~/.nelisp/emacs
 git clone https://github.com/altermo/nelisp ~/.nelisp/nelisp
+# Build .elc files
+cd ~/.nelisp/emacs
+make
 ```
 ### The `_test.lua` file
 This file does the following things (this might be outdated):
