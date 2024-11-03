@@ -1,13 +1,6 @@
 local home=vim.env.HOME
 _G.nelisp_emacs=home..'/.nelisp/emacs'
 _G.nelisp_root=home..'/.nelisp/nelisp'
-_G.nelisp_fast_path={
-    ['emacs-lisp/byte-run']='/usr/share/emacs/29.4/lisp/emacs-lisp/byte-run.elc',
-    subr='/usr/share/emacs/29.4/lisp/subr.elc',
-    keymap='/usr/share/emacs/29.4/lisp/keymap.elc',
-    custom='/usr/share/emacs/29.4/lisp/custom.elc',
-    version='/usr/share/emacs/29.4/lisp/version.elc',
-}
 
 if not vim.tbl_contains(vim.opt.runtimepath:get(),_G.nelisp_root) then
     vim.opt.runtimepath:append(_G.nelisp_root)
