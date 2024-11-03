@@ -499,11 +499,21 @@ function M.exec_byte_code(fun,args_template,args)
                     local v1=top()
                     set_top(vars.F.minus({v1,v2}))
                     goto next
+                elseif op==ins.plus then
+                    local v2=pop()
+                    local v1=top()
+                    set_top(vars.F.plus({v1,v2}))
+                    goto next
                 elseif op==ins.symbol_value then
                     set_top(vars.F.symbol_value(top()))
                     goto next
                 elseif op==ins.symbol_function then
                     set_top(vars.F.symbol_function(top()))
+                    goto next
+                elseif op==ins.aref then
+                    local idxval=pop()
+                    local arrayval=top()
+                    set_top(vars.F.aref(arrayval,idxval))
                     goto next
                 elseif op==ins.aset then
                     local newelt=pop()
