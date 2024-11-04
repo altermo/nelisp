@@ -1056,6 +1056,15 @@ function F.copy_sequence.f(arg)
             (vec --[[@as nelisp._normal_vector]]).contents[i]=(arg --[[@as nelisp._normal_vector]]).contents[i]
         end
         return vec
+    elseif lisp.stringp(arg) then
+        local val=lisp.string_multibyte(arg)
+        and alloc.make_multibyte_string(lisp.sdata(arg),lisp.schars(arg))
+        or alloc.make_unibyte_string(lisp.sdata(arg))
+        local vis=lisp.string_intervals(arg)
+        if vis then
+            error('TODO')
+        end
+        return val
     else
         error('TODO')
         signal.wrong_type_argument(vars.Qsequencep,arg)
