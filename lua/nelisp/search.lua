@@ -311,7 +311,10 @@ function F.match_data.f(integers,reuse,reseat)
         error('TODO')
     end
     if search_regs.parens_overflow then
-        error('Try to get position of match with more than 10 parens (vim only supports max 10)')
+        if not _G.nelisp_later then
+            error('TODO')
+        end
+        return lisp.list(alloc.make_string('Error: Try to get position of match with more parens than max(5)'))
     end
     if lisp.nilp(last_search_thing) then
         return vars.Qnil
