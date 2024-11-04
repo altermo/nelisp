@@ -1,3 +1,4 @@
+local specpdl=require'nelisp.specpdl'
 local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
 
@@ -216,6 +217,32 @@ function F.make_closure.f(args)
     (v --[[@as nelisp._compiled]]).contents[lisp.compiled_idx.constants]=constvec
     return v
 end
+F.garbage_collect={'garbage-collect',0,0,'',[[Reclaim storage for Lisp objects no longer needed.
+Garbage collection happens automatically if you cons more than
+`gc-cons-threshold' bytes of Lisp data since previous garbage collection.
+`garbage-collect' normally returns a list with info on amount of space in use,
+where each entry has the form (NAME SIZE USED FREE), where:
+- NAME is a symbol describing the kind of objects this entry represents,
+- SIZE is the number of bytes used by each one,
+- USED is the number of those objects that were found live in the heap,
+- FREE is the number of those objects that are not live but that Emacs
+  keeps around for future allocations (maybe because it does not know how
+  to return them to the OS).
+
+However, if there was overflow in pure space, and Emacs was dumped
+using the \"unexec\" method, `garbage-collect' returns nil, because
+real GC can't be done.
+
+Note that calling this function does not guarantee that absolutely all
+unreachable objects will be garbage-collected.  Emacs uses a
+mark-and-sweep garbage collector, but is conservative when it comes to
+collecting objects in some circumstances.
+
+For further details, see Info node `(elisp)Garbage Collection'.]]}
+function F.garbage_collect.f()
+    collectgarbage()
+    return vars.Qnil
+end
 
 function M.init_syms()
     vars.defsubr(F,'list')
@@ -226,6 +253,7 @@ function M.init_syms()
     vars.defsubr(F,'vector')
     vars.defsubr(F,'make_byte_code')
     vars.defsubr(F,'make_closure')
+    vars.defsubr(F,'garbage_collect')
 
     vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end
