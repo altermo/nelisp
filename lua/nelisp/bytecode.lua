@@ -394,8 +394,8 @@ function M.exec_byte_code(fun,args_template,args)
                     goto next
                 elseif op==ins.pophandler then
                     return false
-                elseif op==ins.pushconditioncase then
-                    local typ='CONDITION_CASE'
+                elseif op==ins.pushconditioncase or op==ins.pushcatch then
+                    local typ=op==ins.pushcatch and 'CATCHER' or 'CONDITION_CASE'
                     local tag_ch_val=pop()
                     local bytecode_dest=fetch2()
                     local bytecode_top=#stack
