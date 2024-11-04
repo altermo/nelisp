@@ -95,7 +95,7 @@ local function eregex_to_vimregex(s)
             elseif c==b'B' then
                 error('TODO')
             elseif c==b'`' then
-                error('TODO')
+                out_buf.write('\\^')
             elseif c==b"'" then
                 error('TODO')
             elseif string.char(c):match('[1-9]') then
@@ -110,7 +110,7 @@ local function eregex_to_vimregex(s)
                 goto normal_char
             end
             data.start_match=true
-            out_buf.write('\\^')
+            out_buf.write('\\%(\\^\\|\\n\\@<=\\)')
         elseif c==b' ' then
             error('TODO')
         elseif c==b'$' then
