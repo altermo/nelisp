@@ -639,6 +639,10 @@ function M.exec_byte_code(fun,args_template,args)
                     local v1=pop()
                     set_top(vars.F.string_equal(top(),v1))
                     goto next
+                elseif op==ins.equal then
+                    local v1=pop()
+                    set_top(vars.F.equal(top(),v1))
+                    goto next
                 elseif op==ins.nthcdr then
                     local v1=pop()
                     set_top(vars.F.nthcdr(top(),v1))
