@@ -485,6 +485,15 @@ function M.exec_byte_code(fun,args_template,args)
                         error('TODO')
                     end
                     goto next
+                elseif op==ins.leq then
+                    local v2=pop()
+                    local v1=top()
+                    if lisp.fixnump(v1) and lisp.fixnump(v2) then
+                        set_top(lisp.fixnum(v1)<=lisp.fixnum(v2) and vars.Qt or vars.Qnil)
+                    else
+                        error('TODO')
+                    end
+                    goto next
                 elseif op==ins.geq then
                     local v2=pop()
                     local v1=top()
