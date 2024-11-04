@@ -474,6 +474,16 @@ function F.set_keymap_parent.f(keymap,parent)
         prev=list
     end
 end
+F.keymapp={'keymapp',1,1,0,[[Return t if OBJECT is a keymap.
+
+A keymap is a list (keymap . ALIST),
+or a symbol whose function definition is itself a keymap.
+ALIST elements look like (CHAR . DEFN) or (SYMBOL . DEFN);
+a vector of densely packed bindings for small character codes
+is also allowed as an element.]]}
+function F.keymapp.f(obj)
+    return keymapp(obj) and vars.Qt or vars.Qnil
+end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,lisp.make_fixnum(0))
@@ -500,6 +510,7 @@ function M.init_syms()
     vars.defsubr(F,'make_sparse_keymap')
     vars.defsubr(F,'use_global_map')
     vars.defsubr(F,'set_keymap_parent')
+    vars.defsubr(F,'keymapp')
 
     vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
 
