@@ -6,6 +6,9 @@ local M={}
 ---@class nelisp.obj
 ---@field [1] nelisp.type
 
+---@class nelisp.ptr
+---@field [1] nelisp.obj
+
 ---@param a nelisp.obj
 ---@return nelisp.type
 function M.xtype(a)
@@ -543,6 +546,11 @@ end
 ---@return nelisp.intervals?
 function M.string_intervals(x)
     return (x --[[@as nelisp._string]]).intervals
+end
+---@param x nelisp.obj
+---@param intervals nelisp.intervals?
+function M.set_string_intervals(x,intervals)
+    (x --[[@as nelisp._string]]).intervals=intervals
 end
 
 

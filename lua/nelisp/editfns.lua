@@ -347,12 +347,33 @@ function F.system_name.f()
     end
     return vars.V.system_name
 end
+F.propertize={'propertize',1,-2,0,[[Return a copy of STRING with text properties added.
+First argument is the string to copy.
+Remaining arguments form a sequence of PROPERTY VALUE pairs for text
+properties to add to the result.
+
+See Info node `(elisp) Text Properties' for more information.
+usage: (propertize STRING &rest PROPERTIES)]]}
+function F.propertize.f(args)
+    if #args%2==0 then
+        signal.xsignal(vars.Qwrong_number_of_arguments,vars.Qpropertize,lisp.make_fixnum(#args))
+    end
+    local properties=vars.Qnil
+    lisp.check_string(args[1])
+    local str=vars.F.copy_sequence(args[1])
+    for i=2,#args,2 do
+        properties=vars.F.cons(args[i],vars.F.cons(args[i+1],properties))
+    end
+    vars.F.add_text_properties(lisp.make_fixnum(0),lisp.make_fixnum(lisp.schars(str)),properties,str)
+    return str
+end
 
 function M.init_syms()
     vars.defsubr(F,'format')
     vars.defsubr(F,'format_message')
     vars.defsubr(F,'message')
     vars.defsubr(F,'system_name')
+    vars.defsubr(F,'propertize')
 
     vars.defvar_lisp('system_name','system-name',[[The host name of the machine Emacs is running on.]])
     vars.V.system_name=vars.Qnil

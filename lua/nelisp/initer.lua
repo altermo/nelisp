@@ -30,6 +30,7 @@ require'nelisp.chars'.init_syms()
 require'nelisp.bytecode'.init_syms()
 require'nelisp.casefiddle'.init_syms()
 require'nelisp.coding'.init_syms()
+require'nelisp.textprop'.init_syms()
 
 vars.commit_qsymbols()
 
