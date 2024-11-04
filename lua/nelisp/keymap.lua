@@ -5,6 +5,9 @@ local b=require'nelisp.bytes'
 local data=require'nelisp.data'
 local fns=require'nelisp.fns'
 local alloc=require'nelisp.alloc'
+
+local current_global_map
+
 local M={}
 local modifiers_t={
     up=1,
@@ -201,7 +204,7 @@ local function store_in_keymap(keymap,idx,def,remove)
                 vars.F.aset(elt,idx,sdef)
                 return def
             end
-            error('TODO')
+            insertion_point=tail
         elseif lisp.consp(elt) then
             if lisp.eq(vars.Qkeymap,lisp.xcar(elt)) then
                 error('TODO')
@@ -431,6 +434,7 @@ end
 F.use_global_map={'use-global-map',1,1,0,[[Select KEYMAP as the global keymap.]]}
 function F.use_global_map.f(keymap)
     keymap=get_keymap(keymap,true,true)
+    current_global_map=keymap
     if not _G.nelisp_later then
         error('TODO')
     end
@@ -484,6 +488,10 @@ is also allowed as an element.]]}
 function F.keymapp.f(obj)
     return keymapp(obj) and vars.Qt or vars.Qnil
 end
+F.current_global_map={'current-global-map',0,0,0,[[Return the current global keymap.]]}
+function F.current_global_map.f()
+    return current_global_map
+end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,lisp.make_fixnum(0))
@@ -502,6 +510,7 @@ function M.init()
     end
 
     vars.V.minibuffer_local_map=vars.F.make_sparse_keymap(vars.Qnil)
+    current_global_map=vars.Qnil
 end
 
 function M.init_syms()
@@ -511,10 +520,12 @@ function M.init_syms()
     vars.defsubr(F,'use_global_map')
     vars.defsubr(F,'set_keymap_parent')
     vars.defsubr(F,'keymapp')
+    vars.defsubr(F,'current_global_map')
 
     vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
 
     vars.defsym('Qkeymap','keymap')
+    vars.defsym('Qkeymapp','keymapp')
     vars.defsym('Qmenu_item','menu-item')
     vars.defsym('Qevent_symbol_element_mask','event-symbol-element-mask')
     vars.defsym('Qevent_symbol_elements','event-symbol-elements')
