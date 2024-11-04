@@ -12,6 +12,12 @@ local function at_endline_loc_p(...)
     end
     return false
 end
+local function at_begline_loc_p(...)
+    if not _G.nelisp_later then
+        error('TODO')
+    end
+    return false
+end
 local search_regs={start={},end_={}}
 local last_search_thing=vars.Qnil
 ---@param s nelisp.obj
@@ -55,23 +61,22 @@ local function eregex_to_vimregex(s)
                 depth=depth+1
                 if not _G.nelisp_later then
                     error('TODO')
-                elseif parens==4 then
+                elseif parens==4 or parens_overflow then
                     out_buf.write('\\%(')
                     parens_overflow=true
                 else
-                    do
+                    if depth==1 then
                         parens=parens+1
                         out_buf.write('\\)')
                         data.sub_patterns=(data.sub_patterns or 0)+1
+                    else
+                        parens_overflow=true
                     end
                     out_buf.write('\\(')
                 end
             elseif c==b')' then
                 if depth==0 then
                     signal_err('Unmatched ) or \\)')
-                end
-                if depth>1 then
-                    error('TODO')
                 end
                 depth=depth-1
                 out_buf.write('\\)')
@@ -115,7 +120,7 @@ local function eregex_to_vimregex(s)
                 out_buf.write(c)
             end
         elseif c==b'^' then
-            if not (in_buf.idx==0 or at_endline_loc_p(in_buf,in_buf.idx)) then
+            if not (in_buf.idx==0 or at_begline_loc_p(in_buf,in_buf.idx)) then
                 goto normal_char
             end
             data.start_match=true
@@ -124,8 +129,12 @@ local function eregex_to_vimregex(s)
             if lisp.nilp(vars.V.search_spaces_regexp) then
                 goto normal_char
             end
+            out_buf.write('\\%(\\$\\|\\n\\@=\\)')
             error('TODO')
         elseif c==b'$' then
+            if in_buf.read()==-1 or at_endline_loc_p(in_buf,in_buf.idx) then
+                goto normal_char
+            end
             error('TODO')
         elseif c==b'+' or c==b'*' or c==b'?' then
             if not _G.nelisp_later then
@@ -134,7 +143,7 @@ local function eregex_to_vimregex(s)
             out_buf.write('\\')
             out_buf.write(c)
         elseif c==b'.' then
-            error('TODO')
+            out_buf.write('\\.')
         elseif c==b'[' then
             out_buf.write('\\[')
             local p=print_.make_printcharfun()
@@ -314,7 +323,7 @@ function F.match_data.f(integers,reuse,reseat)
         if not _G.nelisp_later then
             error('TODO')
         end
-        return lisp.list(alloc.make_string('Error: Try to get position of match with more parens than max(5)'))
+        return lisp.list(alloc.make_string('Error: match parens can\'t be converted to position'))
     end
     if lisp.nilp(last_search_thing) then
         return vars.Qnil
