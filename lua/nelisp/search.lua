@@ -17,6 +17,7 @@ local last_search_thing=vars.Qnil
 ---@param s nelisp.obj
 ---@return string
 ---@return table
+---@return boolean
 local function eregex_to_vimregex(s)
     local signal_err=function (msg)
         signal.xsignal(vars.Qinvalid_regexp,alloc.make_string(msg))
@@ -28,6 +29,7 @@ local function eregex_to_vimregex(s)
     local in_buf=lread.make_readcharfun(s,0)
     local out_buf=print_.make_printcharfun()
     local parens=0 --vim doesn't have a way to get the position of a sub-match, so this is the current workaround
+    local parens_overflow=false --vim only supports max 10 parens
     local depth=0
     while true do
         local c=in_buf.read()
@@ -51,12 +53,19 @@ local function eregex_to_vimregex(s)
                     end
                 end
                 depth=depth+1
-                do
-                    parens=parens+1
-                    out_buf.write('\\)')
-                    data.sub_patterns=(data.sub_patterns or 0)+1
+                if not _G.nelisp_later then
+                    error('TODO')
+                elseif parens==4 then
+                    out_buf.write('\\%(')
+                    parens_overflow=true
+                else
+                    do
+                        parens=parens+1
+                        out_buf.write('\\)')
+                        data.sub_patterns=(data.sub_patterns or 0)+1
+                    end
+                    out_buf.write('\\(')
                 end
-                out_buf.write('\\(')
             elseif c==b')' then
                 if depth==0 then
                     signal_err('Unmatched ) or \\)')
@@ -182,7 +191,8 @@ local function eregex_to_vimregex(s)
         out_buf.write(c)
         ::continue::
     end
-    return '\\V'..('\\('):rep(parens)..out_buf.out(),data
+    assert(parens<=4)
+    return '\\V'..('\\('):rep(parens)..out_buf.out(),data,parens_overflow
 end
 
 local F={}
@@ -208,7 +218,7 @@ local function string_match_1(regexp,s,start,posix,modify_data)
             pos_bytes=pos
         end
     end
-    local vregex,data=eregex_to_vimregex(regexp)
+    local vregex,data,parens_overflow=eregex_to_vimregex(regexp)
     if data.start_match and pos_bytes>0 then
         return vars.Qnil
     end
@@ -222,6 +232,7 @@ local function string_match_1(regexp,s,start,posix,modify_data)
     search_regs={
         start={pat_start},
         end_={pat_end},
+        parens_overflow=parens_overflow,
     }
     if data.sub_patterns then
         local idx=2
@@ -298,6 +309,9 @@ Return value is undefined if the last search failed.]]}
 function F.match_data.f(integers,reuse,reseat)
     if not lisp.nilp(reseat) then
         error('TODO')
+    end
+    if search_regs.parens_overflow then
+        error('Try to get position of match with more than 10 parens (vim only supports max 10)')
     end
     if lisp.nilp(last_search_thing) then
         return vars.Qnil
