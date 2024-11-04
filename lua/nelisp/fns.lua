@@ -121,7 +121,14 @@ local function concat_to_vector(args)
             error('TODO')
         elseif lisp.nilp(arg) then
         elseif lisp.stringp(arg) then
-            error('TODO')
+            if lisp.string_multibyte(arg) then
+                error('TODO')
+            else
+                for i=0,lisp.schars(arg)-1 do
+                    lisp.aset(result,dst,lisp.make_fixnum(lisp.sref(arg,i)))
+                    dst=dst+1
+                end
+            end
         elseif lisp.boolvectorp(arg) then
             error('TODO')
         else
