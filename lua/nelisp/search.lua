@@ -97,7 +97,7 @@ local function eregex_to_vimregex(s)
             elseif c==b'`' then
                 out_buf.write('\\^')
             elseif c==b"'" then
-                error('TODO')
+                out_buf.write('\\$')
             elseif string.char(c):match('[1-9]') then
                 error('TODO')
             elseif c==b'\\' then
@@ -112,6 +112,9 @@ local function eregex_to_vimregex(s)
             data.start_match=true
             out_buf.write('\\%(\\^\\|\\n\\@<=\\)')
         elseif c==b' ' then
+            if lisp.nilp(vars.V.search_spaces_regexp) then
+                goto normal_char
+            end
             error('TODO')
         elseif c==b'$' then
             error('TODO')
@@ -412,5 +415,14 @@ function M.init_syms()
     vars.defsubr(F,'set_match_data')
     vars.defsubr(F,'match_beginning')
     vars.defsubr(F,'match_end')
+
+    vars.defvar_lisp('search_spaces_regexp','search-spaces-regexp',[[Regexp to substitute for bunches of spaces in regexp search.
+Some commands use this for user-specified regexps.
+Spaces that occur inside character classes or repetition operators
+or other such regexp constructs are not replaced with this.
+A value of nil (which is the normal value) means treat spaces
+literally.  Note that a value with capturing groups can change the
+numbering of existing capture groups in unexpected ways.]])
+    vars.V.search_spaces_regexp=vars.Qnil
 end
 return M
