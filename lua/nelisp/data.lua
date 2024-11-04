@@ -710,6 +710,14 @@ function F.keywordp.f(a)
     end
     return vars.Qnil
 end
+F.multibyte_string_p={'multibyte-string-p',1,1,0,[[Return t if OBJECT is a multibyte string.
+Return nil if OBJECT is either a unibyte string, or not a string.]]}
+function F.multibyte_string_p.f(a)
+    if lisp.stringp(a) and lisp.string_multibyte(a) then
+        return vars.Qt
+    end
+    return vars.Qnil
+end
 F.stringp={'stringp',1,1,0,[[Return t if OBJECT is a string.]]}
 function F.stringp.f(a) return lisp.stringp(a) and vars.Qt or vars.Qnil end
 F.null={'null',1,1,0,[[Return t if OBJECT is nil, and return nil otherwise.]]}
@@ -806,6 +814,7 @@ function M.init_syms()
     vars.defsubr(F,'boundp')
     vars.defsubr(F,'fboundp')
     vars.defsubr(F,'keywordp')
+    vars.defsubr(F,'multibyte_string_p')
     vars.defsubr(F,'stringp')
     vars.defsubr(F,'null')
     vars.defsubr(F,'numberp')
