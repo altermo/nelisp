@@ -231,8 +231,11 @@ local function string_match_1(regexp,s,start,posix,modify_data)
             local sub_start=#list[idx]
             local sub_end=#list[idx+sub_patterns]+sub_start
             if list[idx+sub_patterns]=='' then
-                table.insert(search_regs.start,vars.Qnil)
-                table.insert(search_regs.end_,vars.Qnil)
+                if not _G.nelisp_later then
+                    error('TODO: empty matches are trimmed')
+                end
+                table.insert(search_regs.start,-1)
+                table.insert(search_regs.end_,-1)
             else
                 table.insert(search_regs.start,sub_start)
                 table.insert(search_regs.end_,sub_end)
@@ -300,20 +303,21 @@ function F.match_data.f(integers,reuse,reseat)
         return vars.Qnil
     end
     local data={}
-    if #search_regs.start~=1 then
-        error('TODO')
-    else
-        if lisp.eq(last_search_thing,vars.Qt) then
-            if search_regs.start[1]==-1 then
-                data[1]=vars.Qnil
-                data[2]=vars.Qnil
-            else
-                data[1]=lisp.make_fixnum(search_regs.start[1])
-                data[2]=lisp.make_fixnum(search_regs.end_[1])
+    for i=1,#search_regs.start do
+        local start=search_regs.start[i]
+        if start>=0 then
+            if lisp.bufferp(last_search_thing) then
+                error('TODO')
             end
+            data[2*i-1]=lisp.make_fixnum(start)
+            data[2*i]=lisp.make_fixnum(search_regs.end_[i])
         else
-            error('TODO')
+            data[i*2-1]=vars.Qnil
+            data[i*2]=vars.Qnil
         end
+    end
+    if lisp.bufferp(last_search_thing) then
+        error('TODO')
     end
     if not lisp.consp(reuse) then
         reuse=vars.F.list(data)
