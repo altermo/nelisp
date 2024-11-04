@@ -770,7 +770,7 @@ function F.provide.f(feature,subfeatures)
         vars.V.features=vars.F.cons(feature,vars.V.features)
     end
     if not lisp.nilp(subfeatures) then
-        error('TODO')
+        vars.F.put(feature,vars.Qsubfeatures,subfeatures)
     end
     lisp.loadhist_attach(vars.F.cons(vars.Qprovide,feature))
     tem=vars.F.assq(feature,vars.V.after_load_alist)
@@ -1266,6 +1266,7 @@ function M.init_syms()
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
     vars.defsym('Qfeatures','features')
+    vars.defsym('Qsubfeatures','subfeatures')
 
     vars.defvar_lisp('overriding_plist_environment','overriding-plist-environment',[[An alist that overrides the plists of the symbols which it lists.
 Used by the byte-compiler to apply `define-symbol-prop' during
