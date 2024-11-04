@@ -169,10 +169,11 @@ function M.print_obj(obj,escapeflag,printcharfun)
             })
             goto next_obj
         end
-        printcharfun.write('#<EMACS BUG: INVALID DATATYPE ')
-        printcharfun.write(('(PVEC 0x%x)'):format(ptyp))
+        printcharfun.write(('#<No print for (PVEC 0x%x)>'):format(ptyp))
+        --printcharfun.write('#<EMACS BUG: INVALID DATATYPE ')
+        --printcharfun.write(('(PVEC 0x%x)'):format(ptyp))
         --printcharfun.write(' Save your buffers immediately and please report this bug>')
-        printcharfun.write(' Save your buffers immediately>')
+        --printcharfun.write(' Save your buffers immediately>')
     else
         printcharfun.write('#<EMACS BUG: INVALID DATATYPE ')
         printcharfun.write(('(0x%x)'):format(typ))
