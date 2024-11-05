@@ -767,6 +767,8 @@ F.hash_table_p={'hash-table-p',1,1,0,[[Return t if OBJ is a Lisp hash table obje
 function F.hash_table_p.f(a) return lisp.hashtablep(a) and vars.Qt or vars.Qnil end
 F.subrp={'subrp',1,1,0,[[Return t if OBJECT is a built-in function.]]}
 function F.subrp.f(a) return lisp.subrp(a) and vars.Qt or vars.Qnil end
+F.byte_code_function_p={'byte-code-function-p',1,1,0,[[Return t if OBJECT is a byte-compiled function object.]]}
+function F.byte_code_function_p.f(a) return lisp.compiledp(a) and vars.Qt or vars.Qnil end
 
 function M.init()
     local error_tail=alloc.cons(vars.Qerror,vars.Qnil)
@@ -849,6 +851,7 @@ function M.init_syms()
     vars.defsubr(F,'functionp')
     vars.defsubr(F,'hash_table_p')
     vars.defsubr(F,'subrp')
+    vars.defsubr(F,'byte_code_function_p')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')
