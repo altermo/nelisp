@@ -1234,6 +1234,10 @@ function F.require.f(feature,filename,noerror)
     end
     return feature
 end
+F.secure_hash_algorithms={'secure-hash-algorithms',0,0,0,[[Return a list of all the supported `secure-hash' algorithms.]]}
+function F.secure_hash_algorithms.f()
+    return lisp.list(vars.Qmd5,vars.Qsha1,vars.Qsha224,vars.Qsha256,vars.Qsha384,vars.Qsha512)
+end
 
 function M.init()
     vars.V.features=lisp.list(vars.Qemacs)
@@ -1273,6 +1277,7 @@ function M.init_syms()
     vars.defsubr(F,'substring')
     vars.defsubr(F,'string_equal')
     vars.defsubr(F,'require')
+    vars.defsubr(F,'secure_hash_algorithms')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
@@ -1296,5 +1301,12 @@ compilation.]])
     vars.defsym('Qvalue','value')
     vars.defsym('Qkey_or_value','key-or-value')
     vars.defsym('Qkey_and_value','key-and-value')
+
+    vars.defsym('Qmd5','md5')
+    vars.defsym('Qsha1','sha1')
+    vars.defsym('Qsha224','sha224')
+    vars.defsym('Qsha256','sha256')
+    vars.defsym('Qsha384','sha384')
+    vars.defsym('Qsha512','sha512')
 end
 return M
