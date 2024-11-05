@@ -5,6 +5,7 @@ local b=require'nelisp.bytes'
 local data=require'nelisp.data'
 local fns=require'nelisp.fns'
 local alloc=require'nelisp.alloc'
+local chartab=require'nelisp.chartab'
 
 local current_global_map
 
@@ -557,6 +558,72 @@ function F.lookup_key.f(keymap,key,accept_default)
     end
     error('TODO')
 end
+local function map_keymap_call(key,val,fun)
+    vars.F.funcall({fun,key,val})
+end
+local function map_keymap_item(fun,args,key,val)
+    if lisp.eq(val,vars.Qt) then
+        val=vars.Qnil
+    end
+    fun(key,val,args)
+end
+local function map_keymap_internal(map,fun,args)
+    local tail=(lisp.consp(map) and lisp.eq(vars.Qkeymap,lisp.xcar(map))) and lisp.xcdr(map) or map
+    while lisp.consp(tail) and not lisp.eq(vars.Qkeymap,lisp.xcar(tail)) do
+        local binding=lisp.xcar(tail)
+        if keymapp(binding) then
+            break
+        elseif lisp.consp(binding) then
+            map_keymap_item(fun,args,lisp.xcar(binding),lisp.xcdr(binding))
+        elseif lisp.vectorp(binding) then
+            for c=0,lisp.asize(binding)-1 do
+                map_keymap_item(fun,args,lisp.make_fixnum(c),lisp.aref(binding,c))
+            end
+        elseif lisp.chartablep(binding) then
+            chartab.map_char_table(function (key,val)
+                if lisp.nilp(val) then return end
+                if lisp.consp(key) then
+                    key=vars.F.cons(lisp.xcar(key),lisp.xcdr(key))
+                end
+                map_keymap_item(fun,args,key,val)
+            end,vars.Qnil,binding)
+        end
+        tail=lisp.xcdr(tail)
+    end
+    return tail
+end
+local function map_keymap(map,fun,args,autoload)
+    map=get_keymap(map,true,autoload)
+    while lisp.consp(map) do
+        if keymapp(lisp.xcar(map)) then
+            map_keymap(lisp.xcar(map),fun,args,autoload)
+            map=lisp.xcdr(map)
+        else
+            map=map_keymap_internal(map,fun,args)
+        end
+        if not lisp.consp(map) then
+            map=get_keymap(map,false,autoload)
+        end
+    end
+end
+F.map_keymap={'map-keymap',2,3,0,[[Call FUNCTION once for each event binding in KEYMAP.
+FUNCTION is called with two arguments: the event that is bound, and
+the definition it is bound to.  The event may be a character range.
+
+If KEYMAP has a parent, the parent's bindings are included as well.
+This works recursively: if the parent has itself a parent, then the
+grandparent's bindings are also included and so on.
+
+For more information, see Info node `(elisp) Keymaps'.
+
+usage: (map-keymap FUNCTION KEYMAP)]]}
+function F.map_keymap.f(function_,keymap,sorf_first)
+    if not lisp.nilp(sorf_first) then
+        error('TODO')
+    end
+    map_keymap(keymap,map_keymap_call,function_,true)
+    return vars.Qnil
+end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,lisp.make_fixnum(0))
@@ -587,6 +654,7 @@ function M.init_syms()
     vars.defsubr(F,'keymapp')
     vars.defsubr(F,'current_global_map')
     vars.defsubr(F,'lookup_key')
+    vars.defsubr(F,'map_keymap')
 
     vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
 

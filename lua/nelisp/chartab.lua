@@ -3,6 +3,7 @@ local lisp=require'nelisp.lisp'
 local signal=require'nelisp.signal'
 local alloc=require'nelisp.alloc'
 local chars=require'nelisp.chars'
+local bytes=require'nelisp.bytes'
 
 local M={}
 local CHARTAB_SIZE_BITS_0=6
@@ -266,6 +267,108 @@ function M.set_range(ctable,from,to,val)
     end
     if chars.asciicharp(from) then
         tbl.ascii=char_table_ascii(ctable)
+    end
+end
+local function uniprop_get_decoder_if(tbl)
+    return uniproptablep(tbl) and error('TODO') or nil
+end
+local function map_sub_char_table(c_fun,fun,ctable,val,range,top)
+    local from=lisp.fixnum(lisp.xcar(range))
+    local to=lisp.fixnum(lisp.xcdr(range))
+    local is_uniprop=uniproptablep(top)
+    local decoder=uniprop_get_decoder_if(top)
+    local depth,min_char,max_char
+    if lisp.subchartablep(ctable) then
+        local tbl=(ctable --[[@as nelisp._sub_char_table]])
+        depth=tbl.depth
+        min_char=tbl.min_char
+        max_char=min_char+chartab_chars[depth]-1
+    else
+        depth=0
+        min_char=0
+        max_char=bytes.MAX_CHAR
+    end
+    local chars_in_block=chartab_chars[depth+1]
+    if to<max_char then
+        max_char=to
+    end
+    local i
+    if from<=min_char then
+        i=0
+    else
+        i=math.floor((from-min_char)/chars_in_block)
+    end
+    local c=min_char+chars_in_block*i
+    while c<=max_char do
+        local this=lisp.aref(ctable,i)
+        local nextc=c+chars_in_block
+        if is_uniprop then
+            error('TODO')
+        end
+        if lisp.subchartablep(this) then
+            if to>=nextc then
+                lisp.xsetcdr(range,lisp.make_fixnum(nextc-1))
+            end
+            val=map_sub_char_table(c_fun,fun,this,val,range,top)
+        elseif lisp.nilp(this) then
+            this=(top --[[@as nelisp._char_table]]).default
+        end
+        if not lisp.subchartablep(this) and not lisp.eq(val,this) then
+            local different_value=true
+            if lisp.nilp(val) and not lisp.nilp((top--[[@as nelisp._char_table]]).parent) then
+                error('TODO')
+            end
+            if not lisp.nilp(val) and different_value then
+                lisp.xsetcdr(range,lisp.make_fixnum(c-1))
+                if lisp.eq(lisp.xcar(range),lisp.xcdr(range)) then
+                    if c_fun then
+                        c_fun(lisp.xcar(range),val)
+                    else
+                        error('TODO')
+                    end
+                else
+                    if c_fun then
+                        c_fun(range,val)
+                    else
+                        error('TODO')
+                    end
+                end
+            end
+            val=this
+            from=c
+            lisp.xsetcar(range,lisp.make_fixnum(c))
+        end
+        lisp.xsetcdr(range,lisp.make_fixnum(to))
+        i=i+1
+        c=c+chars_in_block
+    end
+    return val
+end
+---@param c_fun fun(key:nelisp.obj,val:nelisp.obj)
+function M.map_char_table(c_fun,fun,ctable)
+    local decoder=uniprop_get_decoder_if(ctable)
+    local range=vars.F.cons(lisp.make_fixnum(0),lisp.make_fixnum(bytes.MAX_CHAR))
+    local val=(ctable --[[@as nelisp._char_table]]).ascii
+    if lisp.subchartablep(val) then
+        val=lisp.aref(val,0)
+    end
+    val=map_sub_char_table(c_fun,fun,ctable,val,range,ctable)
+    while lisp.nilp(val) and not lisp.nilp((ctable --[[@as nelisp._char_table]]).parent) do
+        error('TODO')
+    end
+    if lisp.nilp(val) then return end
+    if lisp.eq(lisp.xcar(range),lisp.xcdr(range)) then
+        if c_fun then
+            c_fun(lisp.xcar(range),val)
+        else
+            error('TODO')
+        end
+    else
+        if c_fun then
+            c_fun(range,val)
+        else
+            error('TODO')
+        end
     end
 end
 
