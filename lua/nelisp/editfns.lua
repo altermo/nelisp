@@ -367,6 +367,14 @@ function F.propertize.f(args)
     vars.F.add_text_properties(lisp.make_fixnum(0),lisp.make_fixnum(lisp.schars(str)),properties,str)
     return str
 end
+F.char_to_string={'char-to-string',1,1,0,[[Convert arg CHAR to a string containing that character.
+usage: (char-to-string CHAR)]]}
+function F.char_to_string.f(char)
+    chars.check_character(char)
+    local c=lisp.fixnum(char)
+    local str=chars.charstring(c)
+    return alloc.make_string_from_bytes(str,1)
+end
 
 function M.init_syms()
     vars.defsubr(F,'format')
@@ -374,6 +382,7 @@ function M.init_syms()
     vars.defsubr(F,'message')
     vars.defsubr(F,'system_name')
     vars.defsubr(F,'propertize')
+    vars.defsubr(F,'char_to_string')
 
     vars.defvar_lisp('system_name','system-name',[[The host name of the machine Emacs is running on.]])
     vars.V.system_name=vars.Qnil

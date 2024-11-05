@@ -80,6 +80,15 @@ function M.make_specified_string(data,nchars,multibyte)
     end
     return M.make_unibyte_string(data)
 end
+---@param data string
+---@param nchars number
+---@return nelisp.obj
+function M.make_string_from_bytes(data,nchars)
+    if #data==nchars then
+        return M.make_unibyte_string(data)
+    end
+    return M.make_multibyte_string(data,nchars)
+end
 
 ---@param sym nelisp.obj
 ---@param name nelisp.obj
