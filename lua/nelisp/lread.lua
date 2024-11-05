@@ -1213,6 +1213,7 @@ function F.read.f(stream)
         error('TODO')
     end
 end
+---@return nelisp.obj
 local function substitute_object_recurse(subst,subtree)
     if lisp.eq(subst[2],subtree) then
         return subst[1]
@@ -1230,7 +1231,15 @@ local function substitute_object_recurse(subst,subtree)
     end
     local typ=lisp.xtype(subtree)
     if typ==lisp.type.vectorlike then
-        error('TODO')
+        local ptyp=lisp.pseudovector_type(subtree)
+        if ptyp==lisp.pvec.normal_vector then
+            for i=0,lisp.asize(subtree)-1 do
+                lisp.aset(subtree,i,substitute_object_recurse(subst,lisp.aref(subtree,i)))
+            end
+            return subtree
+        else
+            error('TODO')
+        end
     elseif typ==lisp.type.cons then
         lisp.xsetcar(subtree,substitute_object_recurse(subst,lisp.xcar(subtree)))
         lisp.xsetcdr(subtree,substitute_object_recurse(subst,lisp.xcdr(subtree)))
