@@ -1183,10 +1183,35 @@ a substring of STRING from which to read;  they default to 0 and
 the end of STRING.]]}
 function F.read_from_string.f(s,start,end_)
     assert(lisp.nilp(start) and lisp.nilp(end_),'TODO')
+    if not _G.nelisp_later then
+        error('TODO')
+    end
     lisp.check_string(s)
     local iter=M.make_readcharfun(s)
     local val=M.read0(iter,false)
     return vars.F.cons(val,lisp.make_fixnum(iter.idx))
+end
+F.read={'read',0,1,0,[[Read one Lisp expression as text from STREAM, return as Lisp object.
+If STREAM is nil, use the value of `standard-input' (which see).
+STREAM or the value of `standard-input' may be:
+ a buffer (read from point and advance it)
+ a marker (read from where it points and advance it)
+ a function (call it with no arguments for each character,
+     call it with a char as argument to push a char back)
+ a string (takes text from string, starting at the beginning)
+ t (read text line using minibuffer and use it, or read from
+    standard input in batch mode).]]}
+function F.read.f(stream)
+    if lisp.nilp(stream) then
+        error('TODO')
+    end
+    if not _G.nelisp_later then
+        error('TODO')
+    elseif lisp.stringp(stream) then
+        return lisp.xcar(vars.F.read_from_string(stream,vars.Qnil,vars.Qnil))
+    else
+        error('TODO')
+    end
 end
 local function substitute_object_recurse(subst,subtree)
     if lisp.eq(subst[2],subtree) then
@@ -1249,6 +1274,7 @@ function M.init_syms()
     vars.defsubr(F,'get_load_suffixes')
     vars.defsubr(F,'intern')
     vars.defsubr(F,'read_from_string')
+    vars.defsubr(F,'read')
     vars.defsubr(F,'lread__substitute_object_in_subtree')
 
     vars.defvar_lisp('obarray','obarray',[[Symbol table for use by `intern' and `read'.
