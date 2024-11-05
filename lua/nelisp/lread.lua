@@ -897,9 +897,12 @@ function M.full_read_lua_string(s)
     if not _G.nelisp_later then
         --local readcharfun=M.make_readcharfun(str.make(s,(s:match('[\x80-\xff]') and true or false)))
         error('TODO')
+        error('TODO: remove jit.on and jit.off')
     end
     local readcharfun=M.make_readcharfun(alloc.make_string(s))
     local ret={}
+    --We turn off JIT in _test.lua, but this function runs faster with it on
+    jit.on()
     while true do
         local c=readcharfun.read()
         if c==b';' then
@@ -921,6 +924,7 @@ function M.full_read_lua_string(s)
         table.insert(ret,M.read0(readcharfun,false))
         ::read_next::
     end
+    jit.off()
     return ret
 end
 
