@@ -104,5 +104,26 @@ function M.init_syms()
     vars.defsubr(F,'file_directory_p')
 
     vars.defsym('Qfile_exists_p','file-exists-p')
+
+    vars.defvar_lisp('file_name_handler_alist','file-name-handler-alist',[[Alist of elements (REGEXP . HANDLER) for file names handled specially.
+If a file name matches REGEXP, all I/O on that file is done by calling
+HANDLER.  If a file name matches more than one handler, the handler
+whose match starts last in the file name gets precedence.  The
+function `find-file-name-handler' checks this list for a handler for
+its argument.
+
+HANDLER should be a function.  The first argument given to it is the
+name of the I/O primitive to be handled; the remaining arguments are
+the arguments that were passed to that primitive.  For example, if you
+do (file-exists-p FILENAME) and FILENAME is handled by HANDLER, then
+HANDLER is called like this:
+
+  (funcall HANDLER \\='file-exists-p FILENAME)
+
+Note that HANDLER must be able to handle all I/O primitives; if it has
+nothing special to do for a primitive, it should reinvoke the
+primitive to handle the operation \"the usual way\".
+See Info node `(elisp)Magic File Names' for more details.]])
+    vars.V.file_name_handler_alist=vars.Qnil
 end
 return M
