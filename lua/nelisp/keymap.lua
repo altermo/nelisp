@@ -385,10 +385,12 @@ local function parse_solitary_modifier(sym)
     elseif c==b'M' then
         error('TODO')
     elseif c==b'm' then
-        error('TODO')
+        if multi_letter_mod(b.CHAR_META,'meta') then return r end
     elseif c==b'S' then
         error('TODO')
     elseif c==b's' then
+        if multi_letter_mod(b.CHAR_SHIFT,'shift') then return r end
+        if multi_letter_mod(b.CHAR_SUPER,'super') then return r end
         error('TODO')
     elseif c==b'd' then
         error('TODO')
@@ -463,7 +465,7 @@ function F.event_convert_list.f(event_desc)
             return lisp.make_fixnum(bit.bor(modifiers,lisp.fixnum(base)))
         end
     elseif lisp.symbolp(base) then
-        error('TODO')
+        return apply_modifiers(modifiers,base)
     else
         signal.error('Invalid base event')
     end
@@ -514,8 +516,16 @@ function F.define_key.f(keymap,key,def,remove)
         return vars.Qnil
     end
     local meta_bit=(lisp.vectorp(key) or (lisp.stringp(key) and lisp.string_multibyte(key))) and b.CHAR_META or 0x80
-    if lisp.vectorp(def) then
-        error('TODO')
+    if lisp.vectorp(def) and lisp.asize(def)>0 and lisp.consp(lisp.aref(def,0)) then
+        local tmp=alloc.make_vector(lisp.asize(def),'nil')
+        for i=lisp.asize(def)-1,0,-1 do
+            local defi=lisp.aref(def,i)
+            if lisp.consp(defi) and lucid_event_type_list_p(defi) then
+                defi=vars.F.event_convert_list(defi)
+            end
+            lisp.aset(tmp,i,defi)
+        end
+        def=tmp
     end
     key=possibly_translate_key_sequence(key)
     local idx=0
