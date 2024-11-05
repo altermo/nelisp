@@ -718,6 +718,11 @@ function F.multibyte_string_p.f(a)
     end
     return vars.Qnil
 end
+F.natnump={'natnump',1,1,0,[[Return t if OBJECT is a nonnegative integer.]]}
+function F.natnump.f(a)
+    if lisp.bignump(a) then error('TODO') end
+    return (lisp.fixnump(a) and lisp.fixnum(a)>=0) and vars.Qt or vars.Qnil
+end
 F.stringp={'stringp',1,1,0,[[Return t if OBJECT is a string.]]}
 function F.stringp.f(a) return lisp.stringp(a) and vars.Qt or vars.Qnil end
 F.null={'null',1,1,0,[[Return t if OBJECT is nil, and return nil otherwise.]]}
@@ -815,6 +820,7 @@ function M.init_syms()
     vars.defsubr(F,'fboundp')
     vars.defsubr(F,'keywordp')
     vars.defsubr(F,'multibyte_string_p')
+    vars.defsubr(F,'natnump')
     vars.defsubr(F,'stringp')
     vars.defsubr(F,'null')
     vars.defsubr(F,'numberp')
