@@ -481,8 +481,11 @@ function M.for_each_tail(x,fn,safe)
     end
     return nil,x
 end
+---@generic T: nelisp.obj|boolean
 ---@param x nelisp.obj
----@param fn fun(x:nelisp.obj):'continue'|'break'|nelisp.obj?
+---@param fn fun(x:nelisp.obj):'continue'|'break'|T|nil
+---@return T
+---@return nelisp.obj
 function M.for_each_tail_safe(x,fn)
     return M.for_each_tail(x,fn,true)
 end

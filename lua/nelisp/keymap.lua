@@ -6,6 +6,7 @@ local data=require'nelisp.data'
 local fns=require'nelisp.fns'
 local alloc=require'nelisp.alloc'
 local chartab=require'nelisp.chartab'
+local chars=require'nelisp.chars'
 
 local current_global_map
 
@@ -331,6 +332,142 @@ local function define_as_prefix(keymap,c)
     store_in_keymap(keymap,c,cmd,false)
     return cmd
 end
+local function lucid_event_type_list_p(obj)
+    if not lisp.consp(obj) then
+        return false
+    end
+    local car=lisp.xcar(obj)
+    if lisp.eq(car,vars.Qhelp_echo)
+        or lisp.eq(car,vars.Qvertical_line)
+        or lisp.eq(car,vars.Qmode_line)
+        or lisp.eq(car,vars.Qtab_line)
+        or lisp.eq(car,vars.Qheader_line) then
+        return false
+    end
+    local tail=obj
+    local ret=lisp.for_each_tail_safe(obj,function (o)
+        local elt=lisp.xcar(o)
+        if not (lisp.fixnump(elt) or lisp.symbolp(elt)) then
+            return false
+        end
+        tail=lisp.xcdr(o)
+    end)
+    if ret~=nil then return ret end
+    return lisp.nilp(tail)
+end
+local function parse_solitary_modifier(sym)
+    if not lisp.symbolp(sym) then
+        return 0
+    end
+    local name=lisp.symbol_name(sym)
+    local c=lisp.sref(name,0)
+    local r
+    local function multi_letter_mod(bit,mname)
+        if lisp.sdata(name)==mname then
+            r=bit
+            return true
+        end
+    end
+    if c==b'A' then
+        error('TODO')
+    elseif c==b'a' then
+        error('TODO')
+    elseif c==b'C' then
+        error('TODO')
+    elseif c==b'c' then
+        if multi_letter_mod(b.CHAR_CTL,'ctrl') then return r end
+        if multi_letter_mod(b.CHAR_CTL,'control') then return r end
+        error('TODO')
+    elseif c==b'H' then
+        error('TODO')
+    elseif c==b'h' then
+        error('TODO')
+    elseif c==b'M' then
+        error('TODO')
+    elseif c==b'm' then
+        error('TODO')
+    elseif c==b'S' then
+        error('TODO')
+    elseif c==b's' then
+        error('TODO')
+    elseif c==b'd' then
+        error('TODO')
+    elseif c==b't' then
+        error('TODO')
+    elseif c==b'u' then
+        error('TODO')
+    end
+    return 0
+end
+---@param c number
+---@return number
+local function make_ctrl_char(c)
+    if not chars.asciicharp(c) then
+        return bit.bor(c,b.CHAR_CTL)
+    end
+    local upper=bit.band(c,bit.bnot(127))
+    c=bit.band(c,127)
+    if c>=64 and c<96 then
+        local oc=c
+        c=bit.band(c,bit.bnot(96))
+        if oc>=b'A' and oc<=b'Z' then
+            c=bit.bor(c,b.CHAR_SHIFT)
+        end
+    elseif c>=b'a' and c<=b'z' then
+        c=bit.band(c,bit.bnot(96))
+    elseif c>=b' ' then
+        c=bit.bor(c,b.CHAR_CTL)
+    end
+    c=bit.bor(c,bit.band(upper,bit.bnot(b.CHAR_CTL)))
+    return c
+end
+F.event_convert_list={'event-convert-list',1,1,0,[[Convert the event description list EVENT-DESC to an event type.
+EVENT-DESC should contain one base event type (a character or symbol)
+and zero or more modifier names (control, meta, hyper, super, shift, alt,
+drag, down, double or triple).  The base must be last.
+
+The return value is an event type (a character or symbol) which has
+essentially the same base event type and all the specified modifiers.
+(Some compatibility base types, like symbols that represent a
+character, are not returned verbatim.)]]}
+function F.event_convert_list.f(event_desc)
+    local base=vars.Qnil
+    local modifiers=0
+    lisp.for_each_tail_safe(event_desc,function (tail)
+        local elt=lisp.xcar(tail)
+        local this=0
+        if lisp.symbolp(elt) and lisp.consp(lisp.xcdr(tail)) then
+            this=parse_solitary_modifier(elt)
+        end
+        if this~=0 then
+            modifiers=bit.bor(modifiers,this)
+        elseif not lisp.nilp(base) then
+            signal.error('Two bases given in one event')
+        else
+            base=elt
+        end
+    end)
+    if lisp.symbolp(base) and lisp.schars(lisp.symbol_name(base))==1 then
+        error('TODO')
+    end
+    if lisp.fixnump(base) then
+        if bit.band(modifiers,b.CHAR_SHIFT)>0 and
+            lisp.fixnum(base)>=b'a' and lisp.fixnum(base)<=b'z' then
+            base=lisp.make_fixnum(lisp.fixnum(base)-(b'a'-b'A'))
+            modifiers=bit.band(modifiers,bit.bnot(b.CHAR_SHIFT))
+        end
+        if bit.band(modifiers,b.CHAR_CTL)>0 then
+            return lisp.make_fixnum(bit.bor(bit.band(modifiers,bit.bnot(b.CHAR_CTL)),
+                make_ctrl_char(lisp.fixnum(base))))
+        else
+            return lisp.make_fixnum(bit.bor(modifiers,lisp.fixnum(base)))
+        end
+    elseif lisp.symbolp(base) then
+        error('TODO')
+    else
+        signal.error('Invalid base event')
+    end
+end
 F.define_key={'define-key',3,4,0,[[In KEYMAP, define key sequence KEY as DEF.
 This is a legacy function; see `keymap-set' for the recommended
 function to use instead.
@@ -386,7 +523,11 @@ function F.define_key.f(keymap,key,def,remove)
     while true do
         local c=vars.F.aref(key,lisp.make_fixnum(idx))
         if lisp.consp(c) then
-            error('TODO')
+            if lucid_event_type_list_p(c) then
+                c=vars.F.event_convert_list(c)
+            elseif chars.characterp(lisp.xcar(c)) then
+                chars.check_character(lisp.xcdr(c))
+            end
         end
         if lisp.symbolp(c) then
             silly_event_symbol_error(c)
@@ -492,12 +633,6 @@ end
 F.current_global_map={'current-global-map',0,0,0,[[Return the current global keymap.]]}
 function F.current_global_map.f()
     return current_global_map
-end
-local function lucid_event_type_list_p(obj)
-    if not lisp.consp(obj) then
-        return false
-    end
-    error('TODO')
 end
 local function lookup_key_1(keymap,key,accept_default)
     local t_ok=not lisp.nilp(accept_default)
@@ -647,6 +782,7 @@ end
 
 function M.init_syms()
     vars.defsubr(F,'make_keymap')
+    vars.defsubr(F,'event_convert_list')
     vars.defsubr(F,'define_key')
     vars.defsubr(F,'make_sparse_keymap')
     vars.defsubr(F,'use_global_map')
@@ -665,6 +801,12 @@ function M.init_syms()
     vars.defsym('Qevent_symbol_elements','event-symbol-elements')
     vars.defsym('Qmodifier_cache','modifier-cache')
     vars.defsym('Qevent_kind','event-kind')
+
+    vars.defsym('Qhelp_echo','help-echo')
+    vars.defsym('Qvertical_line','vertical-line')
+    vars.defsym('Qmode_line','mode-line')
+    vars.defsym('Qtab_line','tab-line')
+    vars.defsym('Qheader_line','header-line')
 
     vars.defvar_lisp('meta_prefix_char','meta-prefix-char',[[Meta-prefix character code.
 Meta-foo as command input turns into this character followed by foo.]])
