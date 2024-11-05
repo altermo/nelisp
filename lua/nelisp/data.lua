@@ -765,6 +765,9 @@ returned in rare cases.]]}
 function F.functionp.f(a) return lisp.functionp(a) and vars.Qt or vars.Qnil end
 F.hash_table_p={'hash-table-p',1,1,0,[[Return t if OBJ is a Lisp hash table object.]]}
 function F.hash_table_p.f(a) return lisp.hashtablep(a) and vars.Qt or vars.Qnil end
+F.subrp={'subrp',1,1,0,[[Return t if OBJECT is a built-in function.]]}
+function F.subrp.f(a) return lisp.subrp(a) and vars.Qt or vars.Qnil end
+
 function M.init()
     local error_tail=alloc.cons(vars.Qerror,vars.Qnil)
     vars.F.put(vars.Qerror,vars.Qerror_conditions,error_tail)
@@ -845,6 +848,7 @@ function M.init_syms()
     vars.defsubr(F,'integerp')
     vars.defsubr(F,'functionp')
     vars.defsubr(F,'hash_table_p')
+    vars.defsubr(F,'subrp')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')
