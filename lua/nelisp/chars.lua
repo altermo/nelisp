@@ -146,9 +146,18 @@ function F.max_char.f(unicode)
     end
     return lisp.make_fixnum(bytes.MAX_UNICODE_CHAR)
 end
+F.characterp={'characterp',1,2,0,[[Return non-nil if OBJECT is a character.
+In Emacs Lisp, characters are represented by character codes, which
+are non-negative integers.  The function `max-char' returns the
+maximum character code.
+usage: (characterp OBJECT)]]}
+function F.characterp.f(obj,_)
+    return M.characterp(obj) and vars.Qt or vars.Qnil
+end
 
 function M.init_syms()
     vars.defsubr(F,'max_char')
+    vars.defsubr(F,'characterp')
 
     vars.defsym('Qcharacterp','character')
 end
