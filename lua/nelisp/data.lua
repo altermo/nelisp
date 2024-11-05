@@ -360,7 +360,7 @@ F.set_default.f=function (sym,val)
     M.set_default_internal(sym,val,'SET')
     return val
 end
----@param code '+'|'-'|'or'|'/'|'*'
+---@param code '+'|'-'|'or'|'/'|'*'|'and'
 ---@param args (number|nelisp.obj)[]
 ---@return nelisp.obj
 local function arith_driver(code,args)
@@ -425,21 +425,22 @@ local function arith_driver(code,args)
             return a/b
         end
         return call(fn,function (a,b) return a/b end)
-    elseif code=='or' then
+    elseif code=='or' or code=='and' then
         if not _G.nelisp_later then
             error('TODO: bit can only do numbers up to 32 bit, fixnum is 52 bit')
             error('TODO: a number being negative is treated as it having infinite ones at the left side')
         end
+        local f=(code=='and' and bit.band) or (code=='or' and bit.bor) or error('TODO')
         local acc=0
         for _,v in ipairs(args) do
             if type(v)=='number' then
-                acc=bit.bor(acc,v)
+                acc=f(acc,v)
             elseif lisp.bignump(v) then
                 error('TODO')
             elseif lisp.floatp(v) then
                 error('TODO')
             elseif lisp.fixnump(v) then
-                acc=bit.bor(acc,lisp.fixnum(v))
+                acc=f(acc,lisp.fixnum(v))
             else
                 error('unreachable')
             end
@@ -627,6 +628,16 @@ function F.logior.f(args)
     local a=lisp.check_number_coerce_marker(args[1])
     return #args==1 and a or arith_driver('or',args)
 end
+F.logand={'logand',0,-2,0,[[Return bitwise-and of all the arguments.
+Arguments may be integers, or markers converted to integers.
+usage: (logand &rest INTS-OR-MARKERS)]]}
+function F.logand.f(args)
+    if #args==0 then
+        return lisp.make_fixnum(-1)
+    end
+    local a=lisp.check_number_coerce_marker(args[1])
+    return #args==1 and a or arith_driver('and',args)
+end
 F.eqlsign={'=',1,-2,0,[[Return t if args, all numbers or markers, are equal.
 usage: (= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
 function F.eqlsign.f(args)
@@ -804,6 +815,7 @@ function M.init_syms()
     vars.defsubr(F,'plus')
     vars.defsubr(F,'minus')
     vars.defsubr(F,'logior')
+    vars.defsubr(F,'logand')
     vars.defsubr(F,'ash')
     vars.defsubr(F,'lss')
     vars.defsubr(F,'leq')
