@@ -28,4 +28,6 @@ vim.schedule(function ()
     vim.api.nvim_set_current_tabpage(t)
 end)
 
+if jit.status() then vim.schedule(jit.on) end
+jit.off() --luajit makes the code slower (why?)
 api.load(_G.nelisp_emacs..'/lisp/loadup.el')
