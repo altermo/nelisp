@@ -789,6 +789,7 @@ function M.init()
     vars.V.minibuffer_local_map=vars.F.make_sparse_keymap(vars.Qnil)
     vars.V.function_key_map=vars.F.make_sparse_keymap(vars.Qnil)
     current_global_map=vars.Qnil
+    vars.V.special_event_map=lisp.list(vars.Qkeymap)
 end
 
 function M.init_syms()
@@ -828,5 +829,7 @@ definition will take precedence.]])
     vars.defvar_lisp('meta_prefix_char','meta-prefix-char',[[Meta-prefix character code.
 Meta-foo as command input turns into this character followed by foo.]])
     vars.V.meta_prefix_char=lisp.make_fixnum(27)
+
+    vars.defvar_lisp('special_event_map','special-event-map',[[Keymap defining bindings for special events to execute at low level.]])
 end
 return M
