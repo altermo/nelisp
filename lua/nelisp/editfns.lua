@@ -94,7 +94,13 @@ local function styled_format(args,message)
                 end
                 c=b's'
             elseif c==b'c' then
-                error('TODO')
+                if lisp.fixnump(arg) and not chars.asciicharp(lisp.fixnum(arg)) then
+                    error('TODO')
+                end
+                if not lisp.eq(arg,args[n+1]) then
+                    c=b's'
+                end
+                flags.zero=false
             end
             if lisp.symbolp(arg) then
                 arg=lisp.symbol_name(arg)
@@ -184,6 +190,8 @@ local function styled_format(args,message)
                 convspec=convspec..string.char(c)
                 if float_conversion then
                     error('TODO')
+                elseif c==b'c' then
+                    p=string.char(lisp.fixnum(arg))
                 elseif c==b'd' or c==b'i' then
                     if lisp.fixnump(arg) then
                         local x=lisp.fixnum(arg)
