@@ -118,7 +118,11 @@ local function concat_to_vector(args)
                 dst=dst+1
             end
         elseif lisp.consp(arg) then
-            error('TODO')
+            while not lisp.nilp(arg) do
+                lisp.aset(result,dst,lisp.xcar(arg))
+                dst=dst+1
+                arg=lisp.xcdr(arg)
+            end
         elseif lisp.nilp(arg) then
         elseif lisp.stringp(arg) then
             if lisp.string_multibyte(arg) then
