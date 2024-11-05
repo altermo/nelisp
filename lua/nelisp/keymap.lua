@@ -777,6 +777,7 @@ function M.init()
     end
 
     vars.V.minibuffer_local_map=vars.F.make_sparse_keymap(vars.Qnil)
+    vars.V.function_key_map=vars.F.make_sparse_keymap(vars.Qnil)
     current_global_map=vars.Qnil
 end
 
@@ -793,6 +794,12 @@ function M.init_syms()
     vars.defsubr(F,'map_keymap')
 
     vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
+
+    vars.defvar_lisp('function_key_map','function-key-map',[[The parent keymap of all `local-function-key-map' instances.
+Function key definitions that apply to all terminal devices should go
+here.  If a mapping is defined in both the current
+`local-function-key-map' binding and this variable, then the local
+definition will take precedence.]])
 
     vars.defsym('Qkeymap','keymap')
     vars.defsym('Qkeymapp','keymapp')
