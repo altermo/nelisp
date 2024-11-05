@@ -65,7 +65,7 @@ M.pvec={
     normal_vector=0,
     ---@class nelisp._normal_vector: nelisp._pvec
     ---@field size number?
-    ---@field contents table<number,nelisp.obj|nil>
+    ---@field contents table<number,nelisp.obj|nil> (1-indexed)
 
     _free=1,
     bignum=2,
@@ -136,7 +136,7 @@ M.pvec={
 
     compiled=34,
     ---@class nelisp._compiled: nelisp._normal_vector
-    ---@field contents nelisp.obj[]
+    ---@field contents nelisp.obj[] --(1-indexed)
 
     record=35,
     font=36,

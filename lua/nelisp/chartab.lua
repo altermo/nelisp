@@ -9,17 +9,17 @@ local CHARTAB_SIZE_BITS_0=6
 local CHARTAB_SIZE_BITS_1=4
 local CHARTAB_SIZE_BITS_2=5
 local CHARTAB_SIZE_BITS_3=7
-local chartab_bits={
+local chartab_bits={ --(1-indexed)
     (CHARTAB_SIZE_BITS_1+CHARTAB_SIZE_BITS_2+CHARTAB_SIZE_BITS_3),
     (CHARTAB_SIZE_BITS_2+CHARTAB_SIZE_BITS_3),
     (CHARTAB_SIZE_BITS_3),
     0}
-local chartab_chars={
+local chartab_chars={ --(1-indexed)
     bit.lshift(1,chartab_bits[1]),
     bit.lshift(1,chartab_bits[2]),
     bit.lshift(1,chartab_bits[3]),
     bit.lshift(1,chartab_bits[4])}
-local chartab_size={
+local chartab_size={ --(1-indexed)
     bit.lshift(1,CHARTAB_SIZE_BITS_0),
     bit.lshift(1,CHARTAB_SIZE_BITS_1),
     bit.lshift(1,CHARTAB_SIZE_BITS_2),
