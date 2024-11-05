@@ -81,7 +81,7 @@ local function eregex_to_vimregex(s)
                 depth=depth-1
                 out_buf.write('\\)')
             elseif c==b'|' then
-                error('TODO')
+                out_buf.write('\\|')
             elseif c==b'{' then
                 error('TODO')
             elseif c==b'=' then
