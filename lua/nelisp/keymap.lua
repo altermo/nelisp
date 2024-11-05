@@ -492,6 +492,71 @@ F.current_global_map={'current-global-map',0,0,0,[[Return the current global key
 function F.current_global_map.f()
     return current_global_map
 end
+local function lucid_event_type_list_p(obj)
+    if not lisp.consp(obj) then
+        return false
+    end
+    error('TODO')
+end
+local function lookup_key_1(keymap,key,accept_default)
+    local t_ok=not lisp.nilp(accept_default)
+    if not lisp.consp(keymap) and not lisp.nilp(keymap) then
+        keymap=get_keymap(keymap,true,true)
+    end
+    local length=lisp.check_vector_or_string(key)
+    if length==0 then
+        return keymap
+    end
+    key=possibly_translate_key_sequence(key)
+    local idx=0
+    while true do
+        local c=vars.F.aref(key,lisp.make_fixnum(idx))
+        idx=idx+1
+        if lisp.consp(c) and lucid_event_type_list_p(c) then
+            error('TODO')
+        end
+        if lisp.stringp(key) and bit.band(lisp.fixnum(c),0x80)>0 and not lisp.string_multibyte(key) then
+            error('TODO')
+        end
+        if not lisp.fixnump(c) and not lisp.symbolp(c) and not lisp.consp(c) and not lisp.stringp(c) then
+            error('TODO')
+        end
+        local cmd=access_keymap(keymap,c,t_ok,false,true)
+        if idx==length then
+            return cmd
+        end
+        keymap=get_keymap(cmd,false,true)
+        if not lisp.consp(keymap) then
+            return lisp.make_fixnum(idx)
+        end
+    end
+end
+F.lookup_key={'lookup-key',2,3,0,[[Look up key sequence KEY in KEYMAP.  Return the definition.
+This is a legacy function; see `keymap-lookup' for the recommended
+function to use instead.
+
+A value of nil means undefined.  See doc of `define-key'
+for kinds of definitions.
+
+A number as value means KEY is "too long";
+that is, characters or symbols in it except for the last one
+fail to be a valid sequence of prefix characters in KEYMAP.
+The number is how many characters at the front of KEY
+it takes to reach a non-prefix key.
+KEYMAP can also be a list of keymaps.
+
+Normally, `lookup-key' ignores bindings for t, which act as default
+bindings, used when nothing else in the keymap applies; this makes it
+usable as a general function for probing keymaps.  However, if the
+third optional argument ACCEPT-DEFAULT is non-nil, `lookup-key' will
+recognize the default bindings, just as `read-key-sequence' does.]]}
+function F.lookup_key.f(keymap,key,accept_default)
+    local found=lookup_key_1(keymap,key,accept_default)
+    if not lisp.nilp(found) and not lisp.numberp(found) then
+        return found
+    end
+    error('TODO')
+end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,lisp.make_fixnum(0))
@@ -521,6 +586,7 @@ function M.init_syms()
     vars.defsubr(F,'set_keymap_parent')
     vars.defsubr(F,'keymapp')
     vars.defsubr(F,'current_global_map')
+    vars.defsubr(F,'lookup_key')
 
     vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
 
