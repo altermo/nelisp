@@ -901,8 +901,12 @@ function M.full_read_lua_string(s)
     end
     local readcharfun=M.make_readcharfun(alloc.make_string(s))
     local ret={}
-    --We turn off JIT in _test.lua, but this function runs faster with it on
-    jit.on()
+    local jit_on
+    if _G.nelisp_optimize_jit then
+        jit_on=jit.status()
+        --We may turn off JIT because it's faster, but this function runs faster with it on
+        jit.on()
+    end
     while true do
         local c=readcharfun.read()
         if c==b';' then
@@ -924,7 +928,9 @@ function M.full_read_lua_string(s)
         table.insert(ret,M.read0(readcharfun,false))
         ::read_next::
     end
-    jit.off()
+    if _G.nelisp_optimize_jit and not jit_on then
+        jit.off()
+    end
     return ret
 end
 

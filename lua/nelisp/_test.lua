@@ -13,6 +13,7 @@ for k,_ in pairs(package.loaded) do
 end
 
 _G.nelisp_later=true
+_G.nelisp_optimize_jit=true
 
 local api=require'nelisp.api'
 api.init()
@@ -28,6 +29,4 @@ vim.schedule(function ()
     vim.api.nvim_set_current_tabpage(t)
 end)
 
-if jit.status() then vim.schedule(jit.on) end
-jit.off() --luajit makes the code slower (why?)
 api.load(_G.nelisp_emacs..'/lisp/loadup.el')

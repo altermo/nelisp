@@ -73,6 +73,17 @@ function M.call(fn)
     if M.co==coroutine.running() then
         return fn()
     end
-    return select(2,coroutine.resume(M.co,fn))
+    local jit_on
+    if not _G.nelisp_later then
+        error('TODO: remove jit.on and jit.off')
+    elseif _G.nelisp_optimize_jit then
+        jit_on=jit.status()
+        jit.off() --luajit makes the code slower (why?)
+    end
+    local ret={select(2,coroutine.resume(M.co,fn))}
+    if _G.nelisp_optimize_jit and jit_on then
+        jit.on()
+    end
+    return unpack(ret)
 end
 return M
