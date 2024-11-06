@@ -43,8 +43,7 @@ M.type={
     ---@class nelisp._vectorlike
     ---@field header nelisp.pvec
     ---@class nelisp._pvec
-    ---@field private contents (table<number,nelisp.obj|nil>)?
-    ---@field private size number?
+    ---@class nelisp._pvec_special: nelisp._pvec
 
     cons=3,
     ---@class nelisp._cons
@@ -77,13 +76,12 @@ M.pvec={
     user_ptr=8,
     process=9,
     frame=10,
-    ---@class nelisp._frame: nelisp._pvec
-    ---TODO
+    ---@class nelisp._frame: nelisp._pvec_special
 
     window=11,
     bool_vector=12,
     buffer=13,
-    ---@class nelisp._buffer: nelisp._pvec
+    ---@class nelisp._buffer: nelisp._pvec_special
 
     hash_table=14,
     ---@class nelisp._hash_table: nelisp._pvec
@@ -248,7 +246,7 @@ M.symbol_trapped_write={
 ---@return number
 function M.asize(a)
     ---@diagnostic disable-next-line: invisible
-    return (a --[[@as nelisp._pvec]]).size or 0
+    return (a --[[@as nelisp._normal_vector]]).size or 0
 end
 ---@param a nelisp.obj
 ---@param idx number
@@ -256,7 +254,7 @@ end
 function M.aref(a,idx)
     assert(0<=idx and idx<M.asize(a))
     ---@diagnostic disable-next-line: invisible
-    return ((a --[[@as nelisp._pvec]]).contents[idx+1] or vars.Qnil)
+    return ((a --[[@as nelisp._normal_vector]]).contents[idx+1] or vars.Qnil)
 end
 ---@param a nelisp.obj
 ---@param idx number
@@ -264,7 +262,7 @@ end
 function M.aset(a,idx,val)
     assert(0<=idx and idx<M.asize(a))
     ---@diagnostic disable-next-line: invisible
-    a --[[@as nelisp._pvec]].contents[idx+1]=not M.nilp(val) and val or nil
+    a --[[@as nelisp._normal_vector]].contents[idx+1]=not M.nilp(val) and val or nil
 end
 
 --- ;; P functions
