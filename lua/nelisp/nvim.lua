@@ -8,21 +8,21 @@ local M={}
 ---@class nelisp.vim.buffer:nelisp._buffer
 ---@field bufid number
 
-local ref_to_buf_obj=setmetatable({},{__mode='k'})
+local ref_to_buf=setmetatable({},{__mode='k'})
 ---@param bufid number
 ---@return nelisp.obj
 local function get_or_create_buf_obj(bufid)
     if not vim.b[bufid].nelisp_reference then
         vim.b[bufid].nelisp_reference=function() end
     end
-    if ref_to_buf_obj[vim.b[bufid].nelisp_reference] then
-        return ref_to_buf_obj[vim.b[bufid].nelisp_reference]
+    if ref_to_buf[vim.b[bufid].nelisp_reference] then
+        return ref_to_buf[vim.b[bufid].nelisp_reference]
     end
     ---@type nelisp.vim.buffer
     local b={
         bufid=bufid,
     }
-    ref_to_buf_obj[vim.b[bufid].nelisp_reference]=b
+    ref_to_buf[vim.b[bufid].nelisp_reference]=b
     return lisp.make_vectorlike_ptr(b,lisp.pvec.buffer)
 end
 ---@param name nelisp.obj
@@ -71,7 +71,7 @@ end
 
 ---@class nelisp.vim.terminal: nelisp._terminal
 ---@field chan_id number
------ No more fields, channel gets cleaned up if no references remain.
+----- No more fields, gets cleaned up if no references remain.
 
 local ref_to_terminal=setmetatable({},{__mode='v'})
 ---@param chan_id integer
@@ -97,6 +97,39 @@ function M.list_live_terminals()
         table.insert(terminals,M.get_or_create_terminal(chan_info.chan))
     end
     return terminals
+end
+
+--- ;; Frame
+---@class nelisp.vim.frame: nelisp._frame
+---@field tabpage_id integer
+
+local ref_to_frame=setmetatable({},{__mode='k'})
+---@param tab_id number
+---@return nelisp.obj
+local function get_or_create_frame(tab_id)
+    if not vim.t[tab_id].nelisp_reference then
+        vim.t[tab_id].nelisp_reference=function() end
+    end
+    if ref_to_frame[vim.t[tab_id].nelisp_reference] then
+        return ref_to_frame[vim.t[tab_id].nelisp_reference]
+    end
+    ---@type nelisp.vim.frame
+    local t={
+        tabpage_id=tab_id,
+    }
+    ref_to_frame[vim.t[tab_id].nelisp_reference]=t
+    return lisp.make_vectorlike_ptr(t,lisp.pvec.frame)
+end
+---@return nelisp.obj
+function M.get_current_frame()
+    return get_or_create_frame(vim.api.nvim_get_current_tabpage())
+end
+function M.get_all_frames()
+    local frames={}
+    for _,tab_id in ipairs(vim.api.nvim_list_tabpages()) do
+        table.insert(frames,get_or_create_frame(tab_id))
+    end
+    return frames
 end
 
 return M
