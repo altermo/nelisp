@@ -29,4 +29,5 @@ It is recommended to use this file when running the interpreter.
 <!--
 + [#992](https://github.com/neovim/neovim/issues/992) and [#16313](https://github.com/neovim/neovim/issues/16313): major/minor modes
 + [#1435](https://github.com/neovim/neovim/issues/1435): custom placement of statusline, tabline, winbar, cmdline
++ [#2161](https://github.com/neovim/neovim/issues/2161): basically emacs frames
 -->
