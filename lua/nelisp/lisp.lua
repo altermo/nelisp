@@ -77,6 +77,9 @@ M.pvec={
     user_ptr=8,
     process=9,
     frame=10,
+    ---@class nelisp._frame: nelisp._pvec
+    ---TODO
+
     window=11,
     bool_vector=12,
     buffer=13,
