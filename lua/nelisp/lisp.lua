@@ -99,6 +99,8 @@ M.pvec={
 
     obarray=15,
     terminal=16,
+    ---@class nelisp._terminal: nelisp._pvec_special
+
     window_configuration=17,
     subr=18,
     ---@class nelisp._subr: nelisp._pvec

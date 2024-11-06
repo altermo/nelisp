@@ -2,10 +2,11 @@ local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
 local alloc=require'nelisp.alloc'
 
+local M={}
+
+--- ;; Buffer
 ---@class nelisp.vim.buffer:nelisp._buffer
 ---@field bufid number
-
-local M={}
 
 local ref_to_buf_obj=setmetatable({},{__mode='k'})
 ---@param bufid number
@@ -65,4 +66,37 @@ function M.set_current_buffer(buffer)
     ---@cast buffer nelisp.vim.buffer
     vim.api.nvim_set_current_buf(buffer.bufid)
 end
+
+--- ;; Terminal (UI)
+
+---@class nelisp.vim.terminal: nelisp._terminal
+---@field chan_id number
+----- No more fields, channel gets cleaned up if no references remain.
+
+local ref_to_terminal=setmetatable({},{__mode='v'})
+---@param chan_id integer
+---@return nelisp.obj
+function M.get_or_create_terminal(chan_id)
+    if ref_to_terminal[chan_id] then
+        return ref_to_terminal[chan_id]
+    end
+    local chan_info=vim.api.nvim_get_chan_info(chan_id)
+    assert(next(chan_info))
+    assert(not vim.tbl_get(chan_info,'client','type') or chan_info.client.type=='ui')
+    ---@type nelisp.vim.terminal
+    local t={
+        chan_id=chan_id,
+    }
+    ref_to_terminal[chan_id]=t
+    return lisp.make_vectorlike_ptr(t,lisp.pvec.terminal)
+end
+---@return nelisp.obj[]
+function M.list_live_terminals()
+    local terminals={}
+    for _,chan_info in ipairs(vim.api.nvim_list_uis()) do
+        table.insert(terminals,M.get_or_create_terminal(chan_info.chan))
+    end
+    return terminals
+end
+
 return M
