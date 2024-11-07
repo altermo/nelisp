@@ -160,6 +160,16 @@ function M.print_obj(obj,escapeflag,printcharfun)
         if not _G.nelisp_later then
             error('TODO')
         end
+        if ptyp==lisp.pvec.normal_vector then
+            printcharfun.write('[')
+            table.insert(stack,{
+                t='vector',
+                printed=0,
+                obj=obj,
+                nobjs=lisp.asize(obj),
+            })
+            goto next_obj
+        end
         if ptyp==lisp.pvec.hash_table then
             printcharfun.write('#s(hash-table size 0 data (')
             table.insert(stack,{
@@ -229,6 +239,18 @@ function M.print_obj(obj,escapeflag,printcharfun)
             table.remove(stack)
             printcharfun.print_depth=printcharfun.print_depth-1
             goto next_obj
+        elseif e.t=='vector' then
+            if e.printed>=e.nobjs then
+                printcharfun.write(']')
+                table.remove(stack)
+                printcharfun.print_depth=printcharfun.print_depth-1
+                goto next_obj
+            end
+            if e.printed>0 then
+                printcharfun.write(' ')
+            end
+            obj=lisp.aref(e.obj,e.printed)
+            e.printed=e.printed+1
         else
             error('TODO')
         end
