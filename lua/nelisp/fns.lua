@@ -996,7 +996,19 @@ function F.gethash.f(key,table,dflt)
     local i=M.hash_lookup(h,key)
     return i>=0 and lisp.aref(h.key_and_value,2*i+1) or dflt
 end
-
+F.hash_table_rehash_size={'hash-table-rehash-size',1,1,0,[[Return the current rehash size of TABLE.]]}
+function F.hash_table_rehash_size.f(ctable)
+    local rehash_size=check_hash_table(ctable).rehash_size
+    if rehash_size<0 then
+        local s=-rehash_size
+        return lisp.make_fixnum(math.min(s,overflow.max))
+    end
+    return alloc.make_float(rehash_size+1)
+end
+F.hash_table_rehash_threshold={'hash-table-rehash-threshold',1,1,0,[[Return the current rehash threshold of TABLE.]]}
+function F.hash_table_rehash_threshold.f(ctable)
+    return alloc.make_float(check_hash_table(ctable).rehash_threshold)
+end
 F.delq={'delq',2,2,0,[[Delete members of LIST which are `eq' to ELT, and return the result.
 More precisely, this function skips any members `eq' to ELT at the
 front of LIST, then removes members `eq' to ELT from the remaining
@@ -1268,6 +1280,8 @@ function M.init_syms()
     vars.defsubr(F,'make_hash_table')
     vars.defsubr(F,'puthash')
     vars.defsubr(F,'gethash')
+    vars.defsubr(F,'hash_table_rehash_size')
+    vars.defsubr(F,'hash_table_rehash_threshold')
     vars.defsubr(F,'delq')
     vars.defsubr(F,'concat')
     vars.defsubr(F,'vconcat')
