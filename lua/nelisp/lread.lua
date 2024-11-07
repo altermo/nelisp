@@ -524,7 +524,7 @@ function M.read_symbol(readcharfun,uninterned_symbol,skip_shorthand,locate_syms)
     end
     return found
 end
-local function hash_table_from_plist(plist)
+function M.hash_table_from_plist(plist)
     local params={}
     local function addparam(name)
         local val=fns.plist_get(plist,vars['Q'..name])
@@ -620,7 +620,7 @@ local function skip_lazy_string(readcharfun)
     return true
 end
 ---@return nelisp.obj
-local function bytecode_from_list(elems,readcharfun)
+function M.bytecode_from_list(elems,readcharfun)
     local cidx=lisp.compiled_idx
     local size=#elems
     if not (size>=cidx.stack_depth and size<=cidx.interactive
@@ -685,7 +685,7 @@ function M.read0(readcharfun,locate_syms)
                 invalid_syntax('#s',readcharfun)
             end
             if t.elems[1]==vars.Qhash_table then
-                obj=hash_table_from_plist(lisp.xcdr(lisp.list(unpack(t.elems))))
+                obj=M.hash_table_from_plist(lisp.xcdr(lisp.list(unpack(t.elems))))
             else
                 error('TODO')
             end
@@ -710,7 +710,7 @@ function M.read0(readcharfun,locate_syms)
         elseif t.t=='byte_code' then
             table.remove(stack)
             locate_syms=t.old_locate_syms
-            obj=bytecode_from_list(t.elems,readcharfun)
+            obj=M.bytecode_from_list(t.elems,readcharfun)
         else
             error('TODO')
         end
@@ -1147,7 +1147,35 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
         local lex_bound=require'nelisp.data'.find_symbol_value(vars.Qlexical_binding)
         specpdl.bind(vars.Qinternal_interpreter_environment,
             (lex_bound==nil or lisp.nilp(lex_bound)) and vars.Qnil or lisp.list(vars.Qt))
-        for _,v in ipairs(M.full_read_lua_string(content)) do
+        local code
+        if _G.nelisp_compile_lisp_to_lua_path then
+            local root=_G.nelisp_compile_lisp_to_lua_path
+            vim.fn.mkdir(root,'p')
+            local fname=lisp.sdata(found[1]):gsub('/','%%')..'.lua'
+            local f=io.open(root..'/'..fname,'r')
+            if f then
+                code=require'nelisp.comp-lisp-to-lua'.read(f:read('*all'))
+                f:close()
+            end
+        end
+        if not code then
+            code=M.full_read_lua_string(content)
+            if _G.nelisp_compile_lisp_to_lua_if_not_found then
+                local root=_G.nelisp_compile_lisp_to_lua_path
+                vim.fn.mkdir(root,'p')
+                local fname=lisp.sdata(found[1]):gsub('/','%%')..'.lua'
+                local exists=io.open(root..'/'..fname,'r')
+                if not exists then
+                    local lua_code=require'nelisp.comp-lisp-to-lua'.compiles(code)
+                    local f=assert(io.open(root..'/'..fname,'w'))
+                    f:write(table.concat(lua_code,'\n'))
+                    f:close()
+                else
+                    exists:close()
+                end
+            end
+        end
+        for _,v in ipairs(code) do
             require'nelisp.eval'.eval_sub(v)
         end
         specpdl.unbind_to(count,nil)

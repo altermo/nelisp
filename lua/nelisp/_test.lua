@@ -29,4 +29,7 @@ vim.schedule(function ()
     vim.api.nvim_set_current_tabpage(t)
 end)
 
+_G.nelisp_compile_lisp_to_lua_path='/tmp/nelisp'
+_G.nelisp_compile_lisp_to_lua_if_not_found=true
+
 api.load(_G.nelisp_emacs..'/lisp/loadup.el')
