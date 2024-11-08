@@ -32,6 +32,7 @@ require'nelisp.casefiddle'.init_syms()
 require'nelisp.coding'.init_syms()
 require'nelisp.textprop'.init_syms()
 require'nelisp.xfaces'.init_syms()
+require'nelisp.frame'.init_syms()
 
 vars.commit_qsymbols()
 

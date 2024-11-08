@@ -158,12 +158,4 @@ end
 function M.frame_live_p(f)
     return vim.api.nvim_tabpage_is_valid((f --[[@as nelisp.vim.frame]]).tabpage_id)
 end
----@param f nelisp.obj
-function M.check_live_frame(f)
-    if not _G.nelisp_later then
-        error('TODO: move to frame.lua')
-    end
-    lisp.check_type(lisp.framep(f) and M.frame_live_p(f),vars.Qframe_live_p,f)
-end
-
 return M

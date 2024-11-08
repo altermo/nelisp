@@ -3,6 +3,7 @@ local lisp=require'nelisp.lisp'
 local signal=require'nelisp.signal'
 local nvim=require'nelisp.nvim'
 local alloc=require'nelisp.alloc'
+local frame_=require'nelisp.frame'
 
 ---@class nelisp.face
 ---@field lface nelisp.obj
@@ -377,7 +378,7 @@ function F.internal_make_lisp_face.f(face,frame)
     local global_lface=lface_from_face_name(nil,face,false)
     local f,lface
     if not lisp.nilp(frame) then
-        nvim.check_live_frame(frame)
+        frame_.check_live_frame(frame)
         f=(frame --[[@as nelisp._frame]])
         lface=lface_from_face_name(f,face,false)
     else
