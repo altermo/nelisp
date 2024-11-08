@@ -102,6 +102,9 @@ end
 --- ;; Frame
 ---@class nelisp.vim.frame: nelisp._frame
 ---@field tabpage_id integer
+---@field face_hash_table nelisp.obj
+---@field param_alist nelisp.obj
+---@field face_cache nelisp.face_cache
 
 local ref_to_frame=setmetatable({},{__mode='k'})
 ---@param tab_id number
@@ -116,9 +119,14 @@ local function get_or_create_frame(tab_id)
     ---@type nelisp.vim.frame
     local t={
         tabpage_id=tab_id,
+        face_hash_table=vars.F.make_hash_table(vars.QCtest,vars.Qeq),
+        param_alist=vars.Qnil,
+        face_cache={faces_by_id={},buckets={}},
     }
     ref_to_frame[vim.t[tab_id].nelisp_reference]=t
-    return lisp.make_vectorlike_ptr(t,lisp.pvec.frame)
+    local obj=lisp.make_vectorlike_ptr(t,lisp.pvec.frame)
+    require'nelisp.xfaces'.init_frame_faces(t)
+    return obj
 end
 ---@return nelisp.obj
 function M.get_current_frame()
@@ -130,6 +138,32 @@ function M.get_all_frames()
         table.insert(frames,get_or_create_frame(tab_id))
     end
     return frames
+end
+---@param f nelisp._frame
+function M.frame_hash_table(f)
+    return (f --[[@as nelisp.vim.frame]]).face_hash_table
+end
+---@param f nelisp._frame
+---@return nelisp.obj
+function M.frame_param_alist(f)
+    return (f --[[@as nelisp.vim.frame]]).param_alist
+end
+---@param f nelisp._frame
+---@return nelisp.face_cache
+function M.frame_face_cache(f)
+    return (f --[[@as nelisp.vim.frame]]).face_cache
+end
+---@param f nelisp.obj
+---@return boolean
+function M.frame_live_p(f)
+    return vim.api.nvim_tabpage_is_valid((f --[[@as nelisp.vim.frame]]).tabpage_id)
+end
+---@param f nelisp.obj
+function M.check_live_frame(f)
+    if not _G.nelisp_later then
+        error('TODO: move to frame.lua')
+    end
+    lisp.check_type(lisp.framep(f) and M.frame_live_p(f),vars.Qframe_live_p,f)
 end
 
 return M

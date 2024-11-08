@@ -352,6 +352,10 @@ function M.markerp(x) return M.pseudovectorp(x,M.pvec.marker) end
 function M.subchartablep(x) return M.pseudovectorp(x,M.pvec.sub_char_table) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.boolvectorp(x) return M.pseudovectorp(x,M.pvec.bool_vector) end
+---@overload fun(x:nelisp.obj):boolean
+function M.framep(x) return M.pseudovectorp(x,M.pvec.frame) end
+---@overload fun(x:nelisp.obj):boolean
+function M.fontp(x) return M.pseudovectorp(x,M.pvec.font) end
 
 --- ;; Other
 ---@param x nelisp.obj
