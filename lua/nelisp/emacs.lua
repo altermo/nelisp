@@ -40,5 +40,8 @@ MICRO is only present in unreleased development versions,
 and is not especially meaningful.  Prior to Emacs 26.1, an extra final
 component .BUILD is present.  This is now stored separately in
 `emacs-build-number'.]])
+
+    vars.defvar_bool('inhibit_x_resources','inhibit-x-resources',[[If non-nil, X resources, Windows Registry settings, and NS defaults are not used.]])
+    vars.V.inhibit_x_resources=vars.Qnil
 end
 return M
