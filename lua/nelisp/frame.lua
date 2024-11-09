@@ -100,6 +100,25 @@ function F.frame_parameter.f(frame,parameter)
         return vars.F.cdr(vars.F.assq(parameter,vars.F.frame_parameters(frame)))
     end
 end
+F.framep={'framep',1,1,0,[[Return non-nil if OBJECT is a frame.
+Value is:
+  t for a termcap frame (a character-only terminal),
+ `x' for an Emacs frame that is really an X window,
+ `w32' for an Emacs frame that is a window on MS-Windows display,
+ `ns' for an Emacs frame on a GNUstep or Macintosh Cocoa display,
+ `pc' for a direct-write MS-DOS frame,
+ `pgtk' for an Emacs frame running on pure GTK.
+ `haiku' for an Emacs frame running in Haiku.
+See also `frame-live-p'.]]}
+function F.framep.f(obj)
+    if not lisp.framep(obj) then
+        return vars.Qnil
+    end
+    if FRAME_WINDOW_P then
+        error('TODO')
+    end
+    return vars.Qt
+end
 
 function M.init_syms()
     vars.defsym('Qframep','framep')
@@ -119,5 +138,6 @@ function M.init_syms()
     vars.defsubr(F,'frame_list')
     vars.defsubr(F,'frame_parameter')
     vars.defsubr(F,'frame_parameters')
+    vars.defsubr(F,'framep')
 end
 return M
