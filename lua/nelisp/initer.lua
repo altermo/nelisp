@@ -34,6 +34,7 @@ require'nelisp.textprop'.init_syms()
 require'nelisp.xfaces'.init_syms()
 require'nelisp.frame'.init_syms()
 require'nelisp.font'.init_syms()
+require'nelisp.minibuf'.init_syms()
 
 vars.commit_qsymbols()
 
@@ -49,6 +50,7 @@ require'nelisp.charset'.init()
 require'nelisp.coding'.init()
 require'nelisp.xfaces'.init()
 require'nelisp.font'.init()
+require'nelisp.minibuf'.init()
 
 local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,1)
 assert(name=='Vsymbols',name)
