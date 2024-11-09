@@ -332,7 +332,8 @@ function F.letX.f(args)
         local elt=lisp.xcar(varlist)
         local var,val
         if lisp.symbolp(elt) then
-            error('TODO')
+            var=elt
+            val=vars.Qnil
         else
             var=vars.F.car(elt)
             if not lisp.nilp(vars.F.cdr(lisp.xcdr(elt))) then
