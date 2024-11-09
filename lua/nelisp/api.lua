@@ -4,56 +4,59 @@ local main_thread=require'nelisp.main_thread'
 local lisp=require'nelisp.lisp'
 local vars=require'nelisp.vars'
 local alloc=require'nelisp.alloc'
+local specpdl=require'nelisp.specpdl'
 local M={}
 function M.init()
     require'nelisp.initer'
 end
----@class nelisp.eval.prommise
----@field [1] 'Prommise, see :help ...' --TODO
----@field [2] true?
----@field [3] nelisp.obj?
+---@class nelisp.eval.promise
+---@field [1] 'promise'
+---@field [2] true|'error'|nil
+---@field [3] nelisp.obj|nil
 
 ---@param form string|nelisp.obj
----@return nelisp.obj|nelisp.eval.prommise?
+---@return nelisp.obj|nelisp.eval.promise?
 function M.eval(form)
-    if not _G.nelisp_later then
-        error('TODO: if it errors after it has prommised something, then the prommise is never resolved')
-        --What should happen is `prommise[2]='error'`
-        --Example `(progn (recursive-edit) (throw 'exit t))`
-    end
-    local done,prommise,ret
-    local status=main_thread.call(function ()
+    ---@type nelisp.eval.promise?
+    local promise
+    local done
+    local ret
+    local noerr,errmsg=main_thread.call(function ()
+        local count=specpdl.index()
+        local is_error=true
+        specpdl.record_unwind_protect(function ()
+            if is_error and promise then
+                promise[2]='error'
+            elseif promise then
+                promise[2]=true
+                promise[3]=ret
+            elseif is_error then
+            else
+                done=true
+            end
+        end)
         if type(form)=='string' then
             for _,cons in ipairs(lread.full_read_lua_string(form)) do
                 ret=eval.eval_sub(cons)
             end
-        elseif lisp.consp(form) then
-            ret=eval.eval_sub(form)
-        elseif lisp.nilp(form) then
-            ret=nil
+            is_error=false
         else
-            error('Unreachable')
+            ret=eval.eval_sub(form)
+            is_error=false
         end
-        done=true
-        if prommise then
-            prommise[2]=true
-            prommise[3]=ret
-        end
+        specpdl.unbind_to(count,nil)
     end)
-    if done then
+    if not noerr then
+        error('\r'..errmsg)
+    elseif done then
         return ret
-    elseif type(status)=='string' then
-        error(status)
-    elseif status then
-        ---@type nelisp.eval.prommise
-        prommise={'Prommise, see :help ...'}
-        return prommise
     else
-        return nil
+        promise={'promise'}
+        return promise
     end
 end
 ---@param path string
----@return nelisp.obj|nelisp.eval.prommise?
+---@return nelisp.obj|nelisp.eval.promise?
 function M.load(path)
     return M.eval(lisp.list(vars.Qload,alloc.make_string(path)))
 end
