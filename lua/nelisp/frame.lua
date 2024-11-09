@@ -120,6 +120,9 @@ function F.framep.f(obj)
     return vars.Qt
 end
 
+function M.init()
+    vars.V.frame_internal_parameters=lisp.list(vars.Qname,vars.Qparent_id,vars.Qwindow_id)
+end
 function M.init_syms()
     vars.defsym('Qframep','framep')
     vars.defsym('Qname','name')
@@ -134,10 +137,14 @@ function M.init_syms()
     vars.defsym('Qburied_buffer_list','buried-buffer-list')
     vars.defsym('Qmenu_bar_lines','menu-bar-lines')
     vars.defsym('Qtab_bar_lines','tab-bar-lines')
+    vars.defsym('Qparent_id','parent-id')
+    vars.defsym('Qwindow_id','window-id')
 
     vars.defsubr(F,'frame_list')
     vars.defsubr(F,'frame_parameter')
     vars.defsubr(F,'frame_parameters')
     vars.defsubr(F,'framep')
+
+    vars.defvar_lisp('frame_internal_parameters','frame-internal-parameters',[[Frame parameters specific to every frame.]])
 end
 return M
