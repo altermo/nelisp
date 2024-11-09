@@ -51,7 +51,14 @@ local function get_keymap(obj,error_if_not_keymap,autoload)
             return tem
         end
         if (autoload or not error_if_not_keymap) and lisp.eq(lisp.xcar(tem),vars.Qautoload) and lisp.symbolp(obj) then
-            error('TODO')
+            local tail=vars.F.nth(lisp.make_fixnum(4),tem)
+            if lisp.eq(tail,vars.Qkeymap) then
+                if autoload then
+                    error('TODO')
+                else
+                    return obj
+                end
+            end
         end
     end
     if error_if_not_keymap then
