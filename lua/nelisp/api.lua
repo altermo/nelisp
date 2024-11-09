@@ -47,7 +47,7 @@ function M.eval(form)
         specpdl.unbind_to(count,nil)
     end)
     if not noerr then
-        error('\r'..errmsg)
+        error(errmsg,0)
     elseif done then
         return ret
     else

@@ -70,7 +70,7 @@ function M.with_handler(tag_ch_cal,handlertype,fn,...)
         assert(e.type~='CATCHER_ALL','TODO')
         --TODO: maybe use a condition with a symbol instead
         if e.type=='CATCHER_LUA' then
-            return false,'E5108: Error executing lua '..msg.backtrace
+            return false,msg.backtrace
         else
             error(msg)
         end
