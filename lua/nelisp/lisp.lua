@@ -421,6 +421,8 @@ function M.check_chartable(x) M.check_type(M.chartablep(x),vars.Qchartablep,x) e
 function M.check_vector(x) M.check_type(M.vectorp(x),vars.Qvectorp,x) end
 ---@overload fun(x:nelisp.obj)
 function M.check_hash_table(x) M.check_type(M.hashtablep(x),vars.Qhash_table_p,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_frame(x) M.check_type(M.framep(x),vars.Qframep,x) end
 ---@param x nelisp.obj
 ---@return number
 function M.check_vector_or_string(x)

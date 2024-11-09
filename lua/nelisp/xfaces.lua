@@ -14,8 +14,6 @@ local frame_=require'nelisp.frame'
 ---@field faces_by_id nelisp.face[]
 ---@field buckets table<nelisp.face,nelisp.face>
 
-local M={}
-
 local lface_id_to_name={}
 
 local FRAME_WINDOW_P=false --no frames are graphical
@@ -343,6 +341,22 @@ local function realize_basic_faces(f)
         success_p=true
     end
     return success_p
+end
+local M={}
+---@param f nelisp._frame
+---@param idx number
+---@return nelisp.obj
+function M.tty_color_name(f,idx)
+    if idx>=0 then
+        _=f
+        error('TODO')
+    end
+    if idx==-2 then
+        return alloc.make_string('unspecified-fg')
+    elseif idx==-3 then
+        return alloc.make_string('unspecified-bg')
+    end
+    return vars.Qunspecified
 end
 ---@param f nelisp._frame
 function M.init_frame_faces(f)

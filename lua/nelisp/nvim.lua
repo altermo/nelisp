@@ -153,9 +153,66 @@ end
 function M.frame_face_cache(f)
     return (f --[[@as nelisp.vim.frame]]).face_cache
 end
----@param f nelisp.obj
+---@param f nelisp._frame
 ---@return boolean
 function M.frame_live_p(f)
     return vim.api.nvim_tabpage_is_valid((f --[[@as nelisp.vim.frame]]).tabpage_id)
+end
+---@param f nelisp._frame
+---@return number
+function M.frame_foreground_pixel(f)
+    return -2
+end
+---@param f nelisp._frame
+---@return number
+function M.frame_background_pixel(f)
+    return -3
+end
+---@param f nelisp._frame
+---@return string
+function M.frame_name(f)
+    return 'F'..(f --[[@as nelisp.vim.frame]]).tabpage_id
+end
+---@param f nelisp._frame
+---@return number
+function M.frame_height(f)
+    return vim.o.lines
+end
+---@param f nelisp._frame
+---@return number
+function M.frame_width(f)
+    return vim.o.columns
+end
+---@param f nelisp._frame
+---@return boolean
+function M.frame_wants_modeline_p(f)
+    return vim.o.laststatus==0 or vim.o.laststatus==1
+end
+---@param f nelisp._frame
+---@return nelisp.obj
+function M.frame_buffer_list(f)
+    local buffers={}
+    for _,win_id in ipairs(vim.api.nvim_tabpage_list_wins((f --[[@as nelisp.vim.frame]]).tabpage_id)) do
+        buffers[vim.api.nvim_win_get_buf(win_id)]=true
+    end
+    return lisp.list(unpack(vim.tbl_keys(buffers)))
+end
+---@param f nelisp._frame
+---@return nelisp.obj
+function M.frame_buried_buffer_list(f)
+    return vars.Qnil
+end
+---@param f nelisp._frame
+---@return number
+function M.frame_menu_bar_lines(f)
+    return 0
+end
+---@param f nelisp._frame
+---@return number
+function M.frame_tab_bar_lines(f)
+    if vim.o.showtabline==1 and #vim.api.nvim_list_tabpages()>1 then
+        return 1
+    end
+    return vim.o.showtabline==2 and 1 or 0
 end
 return M
