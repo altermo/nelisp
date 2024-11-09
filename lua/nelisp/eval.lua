@@ -744,7 +744,7 @@ function F.apply.f(args)
     local numargs=lisp.list_length(spread_arg)
     local fun=args[1]
     if numargs==0 then
-        error('TODO')
+        return vars.F.funcall(args)
     elseif numargs==1 then
         args[#args]=lisp.xcar(spread_arg)
         return vars.F.funcall(args)
