@@ -1093,6 +1093,28 @@ function F.copy_sequence.f(arg)
         signal.wrong_type_argument(vars.Qsequencep,arg)
     end
 end
+F.copy_alist={'copy-alist',1,1,0,[[Return a copy of ALIST.
+This is an alist which represents the same mapping from objects to objects,
+but does not share the alist structure with ALIST.
+The objects mapped (cars and cdrs of elements of the alist)
+are shared, however.
+Elements of ALIST that are not conses are also shared.]]}
+function F.copy_alist.f(alist)
+    lisp.check_list(alist)
+    if lisp.nilp(alist) then
+        return alist
+    end
+    alist=vars.F.copy_sequence(alist)
+    local tem=alist
+    while not lisp.nilp(tem) do
+        local car=lisp.xcar(tem)
+        if lisp.consp(car) then
+            lisp.xsetcar(tem,vars.F.cons(lisp.xcar(car),lisp.xcdr(car)))
+        end
+        tem=lisp.xcdr(tem)
+    end
+    return alist
+end
 local function validate_subarray(array,from,to,size)
     local f,t
     if lisp.fixnump(from) then
@@ -1286,6 +1308,7 @@ function M.init_syms()
     vars.defsubr(F,'concat')
     vars.defsubr(F,'vconcat')
     vars.defsubr(F,'copy_sequence')
+    vars.defsubr(F,'copy_alist')
     vars.defsubr(F,'string_to_multibyte')
     vars.defsubr(F,'string_as_unibyte')
     vars.defsubr(F,'substring')
