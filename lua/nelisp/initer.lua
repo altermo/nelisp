@@ -48,11 +48,8 @@ require'nelisp.charset'.init()
 require'nelisp.coding'.init()
 require'nelisp.xfaces'.init()
 
-if not _G.nelisp_later then
-    local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,2)
-    assert(name=='Vsymbols',name)
-    for k,_ in pairs(val) do
-        _=vars.V[k]
-    end
+local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,1)
+assert(name=='Vsymbols',name)
+for k,_ in pairs(val) do
+    _=vars.V[k]
 end
-
