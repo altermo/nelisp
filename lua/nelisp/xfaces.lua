@@ -122,10 +122,16 @@ end
 local function unspecifiedp(obj)
     return lisp.eq(obj,vars.Qunspecified)
 end
+local function ignore_defface_p(obj)
+    return lisp.eq(obj,vars.QCignore_defface)
+end
+local function reset_p(obj)
+    return lisp.eq(obj,vars.Qreset)
+end
 local function lface_fully_specified_p(lface)
     for i=1,lisp.asize(lface)-1 do
         if (i~=lface_index.font and i~=lface_index.inherit and i~=lface_index.distant_foreground) and
-            (unspecifiedp(lisp.aref(lface,i)) or lisp.eq(vars.QCignore_defface,lisp.aref(lface,i))) then
+            (unspecifiedp(lisp.aref(lface,i)) or ignore_defface_p(lisp.aref(lface,i))) then
             return false
         end
     end
@@ -432,6 +438,200 @@ function F.internal_make_lisp_face.f(face,frame)
     check_lface(lface)
     return lface
 end
+F.internal_set_lisp_face_attribute={'internal-set-lisp-face-attribute',3,4,0,[[Set attribute ATTR of FACE to VALUE.
+FRAME being a frame means change the face on that frame.
+FRAME nil means change the face of the selected frame.
+FRAME t means change the default for new frames.
+FRAME 0 means change the face on all frames, and change the default
+  for new frames.]]}
+function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
+    lisp.check_symbol(face)
+    lisp.check_symbol(attr)
+    face=resolve_face_name(face,true)
+    if lisp.fixnump(frame) and lisp.fixnum(frame)==0 then
+        error('TODO')
+    end
+
+    local lface
+    local old_value=vars.Qnil
+    local prop_index=false
+
+    if lisp.eq(frame,vars.Qt) then
+        error('TODO')
+    else
+        if lisp.nilp(frame) then
+            frame=nvim.get_current_frame()
+        end
+        frame_.check_live_frame(frame)
+        local f=(frame --[[@as nelisp._frame]])
+        lface=lface_from_face_name(f,face,false)
+        if lisp.nilp(lface) then
+            lface=vars.F.internal_make_lisp_face(face,frame)
+        end
+    end
+    if (lisp.eq(attr,vars.QCfamily)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCfoundry)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCheight)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCweight)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCslant)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCunderline)) then
+        local valid_p=false
+        if unspecifiedp(value) or ignore_defface_p(value) or reset_p(value) then
+            valid_p=true
+        elseif lisp.nilp(value) or lisp.eq(value,vars.Qt) then
+            valid_p=true
+        elseif lisp.stringp(value) and lisp.schars(value)>0 then
+            valid_p=true
+        elseif lisp.consp(value) then
+            error('TODO')
+        end
+        if not valid_p then
+            signal.signal_error('Invalid face underline',value)
+        end
+        old_value=lisp.aref(lface,lface_index.underline)
+        lisp.aset(lface,lface_index.underline,value)
+    elseif (lisp.eq(attr,vars.QCoverline)) then
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)
+        ) and ((
+            lisp.symbolp(value)
+            and not lisp.eq(value,vars.Qt)
+            and not lisp.nilp(value)) or (
+            lisp.stringp(value)
+            and lisp.schars(value)==0
+        )) then
+            signal.signal_error('Invalid face overline',value)
+        end
+        old_value=lisp.aref(lface,lface_index.overline)
+        lisp.aset(lface,lface_index.overline,value)
+    elseif (lisp.eq(attr,vars.QCstrike_through)) then
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)
+        ) and ((
+            lisp.symbolp(value)
+            and not lisp.eq(value,vars.Qt)
+            and not lisp.nilp(value)) or (
+            lisp.stringp(value)
+            and lisp.schars(value)==0
+        )) then
+            signal.signal_error('Invalid face strike-through',value)
+        end
+        old_value=lisp.aref(lface,lface_index.strike_through)
+        lisp.aset(lface,lface_index.strike_through,value)
+    elseif (lisp.eq(attr,vars.QCbox)) then
+        local valid_p=false
+        if lisp.eq(value,vars.Qt) then
+            value=lisp.make_fixnum(1)
+        end
+        if unspecifiedp(value) or ignore_defface_p(value) or reset_p(value) then
+            valid_p=true
+        elseif lisp.nilp(value) then
+            valid_p=true
+        elseif lisp.fixnump(value) then
+            valid_p=lisp.fixnum(value)~=0
+        elseif lisp.stringp(value) then
+            valid_p=lisp.schars(value)>0
+        elseif lisp.consp(value) and lisp.fixnump(lisp.xcar(value)) and lisp.fixnump(lisp.xcdr(value)) then
+            valid_p=true
+        elseif lisp.consp(value) then
+            error('TODO')
+        end
+        if not valid_p then
+            signal.signal_error('Invalid face box',value)
+        end
+        old_value=lisp.aref(lface,lface_index.box)
+        lisp.aset(lface,lface_index.box,value)
+    elseif (lisp.eq(attr,vars.QCinverse_video) or lisp.eq(attr,vars.QCreverse_video)) then
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            lisp.check_symbol(value)
+            if not lisp.eq(value,vars.Qt) and not lisp.nilp(value) then
+                signal.signal_error('Invalid inverse-video face attribute value',value)
+            end
+        end
+        old_value=lisp.aref(lface,lface_index.inverse)
+        lisp.aset(lface,lface_index.inverse,value)
+    elseif (lisp.eq(attr,vars.QCextend)) then
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            lisp.check_symbol(value)
+            if not lisp.eq(value,vars.Qt) and not lisp.nilp(value) then
+                signal.signal_error('Invalid extend face attribute value',value)
+            end
+        end
+        old_value=lisp.aref(lface,lface_index.extend)
+        lisp.aset(lface,lface_index.extend,value)
+    elseif (lisp.eq(attr,vars.QCforeground)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCdistant_foreground)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCbackground)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCstipple)) then
+    elseif (lisp.eq(attr,vars.QCwidth)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCfont)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCfontset)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCinherit)) then
+        local tail
+        if lisp.symbolp(value) then
+            tail=vars.Qnil
+        else
+            error('TODO')
+        end
+        if lisp.nilp(tail) then
+            lisp.aset(lface,lface_index.inherit,value)
+        else
+            signal.signal_error('Invalid face inheritance',value)
+        end
+    elseif (lisp.eq(attr,vars.QCbold)) then
+        error('TODO')
+    elseif (lisp.eq(attr,vars.QCitalic)) then
+        error('TODO')
+    else
+        signal.signal_error('Invalid face attribute name',attr)
+    end
+
+    if prop_index then
+        error('TODO')
+    end
+    if not lisp.eq(frame,vars.Qt)
+        and lisp.nilp(vars.F.get(face,vars.Qface_no_inherit))
+        and lisp.nilp(vars.F.equal(old_value,value))
+    then
+        if not _G.nelisp_later then
+            error('TODO: redraw')
+        end
+    end
+    if not unspecifiedp(value) and not ignore_defface_p(value)
+        and lisp.nilp(vars.F.equal(old_value,value)) then
+        local param=vars.Qnil
+        if lisp.eq(face,vars.Qdefault) then
+            if lisp.eq(attr,vars.QCforeground) then
+                error('TODO')
+            elseif lisp.eq(attr,vars.QCbackground) then
+                error('TODO')
+            end
+        elseif lisp.eq(face,vars.Qmenu) then
+            error('TODO')
+        end
+        if not lisp.nilp(param) then
+            error('TODO')
+        end
+    end
+    return face
+end
 
 function M.init()
     vars.V.face_new_frame_defaults=vars.F.make_hash_table(vars.QCtest,vars.Qeq,vars.QCsize,33)
@@ -439,6 +639,7 @@ end
 function M.init_syms()
     vars.defsubr(F,'internal_lisp_face_p')
     vars.defsubr(F,'internal_make_lisp_face')
+    vars.defsubr(F,'internal_set_lisp_face_attribute')
 
     vars.defsym('Qface','face')
     vars.defsym('Qface_no_inherit','face-no-inherit')
@@ -467,6 +668,29 @@ function M.init_syms()
     vars.defsym('Qchild_frame_border','child-frame-border')
     vars.defsym('Qtab_bar','tab-bar')
     vars.defsym('Qreset','reset')
+
+    vars.defsym('QCfamily',':family')
+    vars.defsym('QCfoundry',':foundry')
+    vars.defsym('QCheight',':height')
+    vars.defsym('QCweight',':weight')
+    vars.defsym('QCslant',':slant')
+    vars.defsym('QCunderline',':underline')
+    vars.defsym('QCoverline',':overline')
+    vars.defsym('QCstrike_through',':strike-through')
+    vars.defsym('QCbox',':box')
+    vars.defsym('QCinverse_video',':inverse-video')
+    vars.defsym('QCreverse_video',':reverse-video')
+    vars.defsym('QCextend',':extend')
+    vars.defsym('QCforeground',':foreground')
+    vars.defsym('QCdistant_foreground',':distant-foreground')
+    vars.defsym('QCbackground',':background')
+    vars.defsym('QCstipple',':stipple')
+    vars.defsym('QCwidth',':width')
+    vars.defsym('QCfont',':font')
+    vars.defsym('QCfontset',':fontset')
+    vars.defsym('QCinherit',':inherit')
+    vars.defsym('QCbold',':bold')
+    vars.defsym('QCitalic',':italic')
 
     vars.defvar_lisp('face_new_frame_defaults','face--new-frame-defaults',[[Hash table of global face definitions (for internal use only.)]])
 end
