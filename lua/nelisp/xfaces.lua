@@ -454,7 +454,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
 
     local lface
     local old_value=vars.Qnil
-    local prop_index=false
+    local prop_index
 
     if lisp.eq(frame,vars.Qt) then
         error('TODO')
@@ -470,15 +470,56 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         end
     end
     if (lisp.eq(attr,vars.QCfamily)) then
-        error('TODO')
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            lisp.check_string(value)
+            if lisp.schars(value)==0 then
+                signal.signal_error('Invalid face family',value)
+            end
+        end
+        old_value=lisp.aref(lface,lface_index.family)
+        lisp.aset(lface,lface_index.family,value)
+        if not _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCfoundry)) then
-        error('TODO')
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            lisp.check_string(value)
+            if lisp.schars(value)==0 then
+                signal.signal_error('Invalid face foundry',value)
+            end
+        end
+        old_value=lisp.aref(lface,lface_index.foundry)
+        lisp.aset(lface,lface_index.foundry,value)
+        if not _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCheight)) then
-        error('TODO')
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            error('TODO')
+        end
+        old_value=lisp.aref(lface,lface_index.height)
+        lisp.aset(lface,lface_index.height,value)
+        if not _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCweight)) then
-        error('TODO')
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            error('TODO')
+        end
+        old_value=lisp.aref(lface,lface_index.weight)
+        lisp.aset(lface,lface_index.weight,value)
+        if not _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCslant)) then
-        error('TODO')
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            error('TODO')
+        end
+        old_value=lisp.aref(lface,lface_index.slant)
+        lisp.aset(lface,lface_index.slant,value)
+        if not _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCunderline)) then
         local valid_p=false
         if unspecifiedp(value) or ignore_defface_p(value) or reset_p(value) then
@@ -571,14 +612,41 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         old_value=lisp.aref(lface,lface_index.extend)
         lisp.aset(lface,lface_index.extend,value)
     elseif (lisp.eq(attr,vars.QCforeground)) then
-        error('TODO')
+        if lisp.nilp(value) then error('TODO') end
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            lisp.check_string(value)
+            if lisp.schars(value)==0 then
+                signal.signal_error('Empty foreground color value',value)
+            end
+        end
+        old_value=lisp.aref(lface,lface_index.foreground)
+        lisp.aset(lface,lface_index.foreground,value)
     elseif (lisp.eq(attr,vars.QCdistant_foreground)) then
         error('TODO')
     elseif (lisp.eq(attr,vars.QCbackground)) then
-        error('TODO')
+        if lisp.nilp(value) then error('TODO') end
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            lisp.check_string(value)
+            if lisp.schars(value)==0 then
+                signal.signal_error('Empty background color value',value)
+            end
+        end
+        old_value=lisp.aref(lface,lface_index.background)
+        lisp.aset(lface,lface_index.background,value)
     elseif (lisp.eq(attr,vars.QCstipple)) then
     elseif (lisp.eq(attr,vars.QCwidth)) then
-        error('TODO')
+        if (not unspecifiedp(value)
+            and not ignore_defface_p(value)
+            and not reset_p(value)) then
+            error('TODO')
+        end
+        old_value=lisp.aref(lface,lface_index.swidth)
+        lisp.aset(lface,lface_index.swidth,value)
+        if not _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCfont)) then
         error('TODO')
     elseif (lisp.eq(attr,vars.QCfontset)) then
