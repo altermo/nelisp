@@ -52,8 +52,20 @@ function F.Xbacktrace.f()
     print'Backtrace:'
     for entry in specpdl.riter() do
         if entry.type==specpdl.type.backtrace then
+            local args=entry.args
+            if type(lisp.xtype(args))~='table' then
+                args={args}
+            end
+            local str_args={}
+            for _,arg in ipairs(args) do
+                if not pcall(function ()
+                    table.insert(str_args,inspect(arg))
+                end) then
+                    table.insert(str_args,'...')
+                end
+            end
             ---@cast entry nelisp.specpdl.backtrace_entry
-            print('  ('..inspect(entry.func)..' ...)')
+            print('  ('..inspect(entry.func)..' '..table.concat(str_args,' ')..')')
         end
     end
     return vars.Qt
