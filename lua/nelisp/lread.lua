@@ -955,7 +955,10 @@ end
 local function openp(path,s,suffixes,storep,predicate,newer,no_native)
     local _=no_native
     newer=not lisp.nilp(newer)
+    ---@type -1|file*
     local save_fd=-1
+    local save_mtime=-math.huge
+    local save_string
     lisp.check_string(s)
     lisp.for_each_tail_safe(suffixes,function (tail)
         lisp.check_string_car(tail)
@@ -992,6 +995,7 @@ local function openp(path,s,suffixes,storep,predicate,newer,no_native)
             if (not lisp.nilp(handler) or (not lisp.nilp(predicate) and not lisp.eq(predicate,vars.Qt))) and not lisp.fixnatp(predicate) then
                 error('TODO')
             else
+                ---@type -1|file*
                 local fd
                 local encoded_fn=require'nelisp.coding'.encode_file_name(fstr)
                 local pfn=lisp.sdata(encoded_fn)
@@ -1007,16 +1011,31 @@ local function openp(path,s,suffixes,storep,predicate,newer,no_native)
                 end
                 if fd~=-1 then
                     if newer and not lisp.fixnatp(predicate) then
-                        error('TODO')
+                        local info=assert(vim.uv.fs_stat(pfn))
+                        local mtime=info.mtime.sec*1000+info.mtime.nsec/1000000
+                        if mtime<=save_mtime then
+                            io.close((fd --[[@as file*]]))
+                        else
+                            if save_fd~=-1 then
+                                io.close(save_fd --[[@as file*]])
+                            end
+                            save_fd=fd
+                            save_mtime=mtime
+                            save_string=fstr
+                        end
                     else
                         if storep then
                             storep[1]=fstr
                         end
-                        return fd --[[@as unknown]]
+                        return fd
                     end
                 end
-                if 0<=save_fd and not lisp.consp(lisp.xcdr(tail)) then
-                    error('TODO')
+                if save_fd~=-1 and not lisp.consp(lisp.xcdr(tail)) then
+                    assert(save_string)
+                    if storep then
+                        storep[1]=save_string
+                    end
+                    return save_fd
                 end
             end
         end)
@@ -1299,6 +1318,23 @@ function F.lread__substitute_object_in_subtree.f(object,placeholder,completed)
     end
     return vars.Qnil
 end
+F.locate_file_internal={'locate-file-internal',2,4,0,[[Search for FILENAME through PATH.
+Returns the file's name in absolute form, or nil if not found.
+If SUFFIXES is non-nil, it should be a list of suffixes to append to
+file name when searching.
+If non-nil, PREDICATE is used instead of `file-readable-p'.
+PREDICATE can also be an integer to pass to the faccessat(2) function,
+in which case file-name-handlers are ignored.
+This function will normally skip directories, so if you want it to find
+directories, make sure the PREDICATE function returns `dir-ok' for them.]]}
+function F.locate_file_internal.f(filename,path,suffixes,predicate)
+    local file={}
+    local fd=openp(path,filename,suffixes,file,predicate,false,true)
+    if lisp.nilp(predicate) and fd~=-1 then
+        io.close(fd --[[@as file*]])
+    end
+    return file[1]
+end
 
 function M.init()
     if not _G.nelisp_later then
@@ -1323,6 +1359,7 @@ function M.init_syms()
     vars.defsubr(F,'read_from_string')
     vars.defsubr(F,'read')
     vars.defsubr(F,'lread__substitute_object_in_subtree')
+    vars.defsubr(F,'locate_file_internal')
 
     vars.defvar_lisp('obarray','obarray',[[Symbol table for use by `intern' and `read'.
 It is a vector whose length ought to be prime for best results.
