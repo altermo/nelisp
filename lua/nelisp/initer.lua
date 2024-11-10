@@ -35,6 +35,7 @@ require'nelisp.xfaces'.init_syms()
 require'nelisp.frame'.init_syms()
 require'nelisp.font'.init_syms()
 require'nelisp.minibuf'.init_syms()
+require'nelisp.callproc'.init_syms()
 
 vars.commit_qsymbols()
 
