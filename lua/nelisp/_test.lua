@@ -5,6 +5,9 @@ _G.nelisp_root=home..'/.nelisp/nelisp'
 if not vim.tbl_contains(vim.opt.runtimepath:get(),_G.nelisp_root) then
     vim.opt.runtimepath:append(_G.nelisp_root)
 end
+if not vim.tbl_contains(vim.opt.runtimepath:get(),_G.nelisp_emacs..'/lisp') then
+    vim.opt.runtimepath:append(_G.nelisp_emacs..'/lisp')
+end
 
 for k,_ in pairs(package.loaded) do
     if k:match('^nelisp%.') then

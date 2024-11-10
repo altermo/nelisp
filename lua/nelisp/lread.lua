@@ -1341,7 +1341,6 @@ function M.init()
         error('TODO: initialize load path')
     end
     assert(_G.nelisp_emacs)
-    vars.V.load_path=lisp.list(alloc.make_string(_G.nelisp_emacs..'/lisp'))
     vars.V.load_file_name=vars.Qnil --I don't know why emacs sets it to nil twice
 
     lisp.set_symbol_val(vars.Qnil --[[@as nelisp._symbol]],vars.Qnil)
@@ -1416,14 +1415,21 @@ This is useful when the file being loaded is a temporary copy.]])
     vars.defsym('Qrehash_threshold','rehash-threshold')
     vars.defsym('Qpurecopy','purecopy')
 
-    vars.defvar_lisp('load_path','load-path',[[List of directories to search for files to load.
+    vars.defvar_forward('load_path','load-path',[[List of directories to search for files to load.
 Each element is a string (directory file name) or nil (meaning
 `default-directory').
 This list is consulted by the `require' function.
 Initialized during startup as described in Info node `(elisp)Library Search'.
 Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
-and without trailing slashes.]])
+and without trailing slashes.]],function ()
+            return lisp.list(unpack(vim.tbl_map(alloc.make_string,vim.opt.runtimepath:get())))
+        end,function (obj)
+            lisp.for_each_tail_safe(obj,function (tail)
+                assert(lisp.stringp(tail),'TODO')
+                vim.opt.runtimepath:append(lisp.sdata(tail))
+            end)
+        end)
 
     vars.defsym('Qmacroexp__dynvars','macroexp--dynvars')
     vars.defvar_lisp('macroexp__dynvars','macroexp--dynvars',[[List of variables declared dynamic in the current scope.

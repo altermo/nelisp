@@ -31,6 +31,8 @@ function M.find_symbol_value(sym)
     local s=(sym --[[@as nelisp._symbol]])
     if s.redirect==lisp.symbol_redirect.plainval then
         return lisp.symbol_val(sym)
+    elseif s.redirect==lisp.symbol_redirect.forwarded then
+        return s.value[1]()
     else
         error('TODO')
     end

@@ -22,12 +22,15 @@ M.type={
     ---@field name nelisp.obj
     ---@field plist nelisp.obj
     ---@field redirect nelisp.symbol_redirect
-    ---@field value nelisp.obj|nelisp.buffer_local_value|nelisp._symbol?
+    ---@field value nelisp.obj|nelisp.buffer_local_value|nelisp._symbol|nelisp.forward?
     ---@field fn nelisp.obj
     ---@field interned nelisp.symbol_interned
     ---@field trapped_write nelisp.symbol_trapped_write
     ---@field declared_special boolean?
     ---@field next nelisp.obj?
+    ---@class nelisp.forward
+    ---@field [1] fun():nelisp.obj
+    ---@field [2] fun(v:nelisp.obj)
 
     int0=2,
     ---@class nelisp._fixnum
@@ -227,7 +230,7 @@ M.symbol_redirect={
     plainval=1,
     varalias=2,
     localized=3,
-    --forwarded=4 --This is (probably) not needed
+    forwarded=4,
 }
 ---@enum nelisp.symbol_interned
 M.symbol_interned={
