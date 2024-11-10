@@ -5,6 +5,11 @@ local lread=require'nelisp.lread'
 local overflow=require'nelisp.overflow'
 local alloc=require'nelisp.alloc'
 local chartab=require'nelisp.chartab'
+local nvim=require'nelisp.nvim'
+
+---@class nelisp.buffer_local_value
+---@field local_if_set boolean?
+---@field default_value nelisp.obj?
 
 local M={}
 ---@param sym nelisp.obj
@@ -21,6 +26,18 @@ function M.set_internal(sym,newval,where,bindflag)
     end
     if s.redirect==lisp.symbol_redirect.plainval then
         lisp.set_symbol_val(s,newval)
+    elseif s.redirect==lisp.symbol_redirect.localized then
+        if lisp.nilp(where) then
+            where=nvim.get_current_buffer()
+        end
+        local blv=s.value --[[@as nelisp.buffer_local_value]]
+        local buffer=where --[[@as nelisp._buffer]]
+        if nvim.get_buffer_var(buffer,s)
+            or blv.local_if_set then
+            nvim.set_buffer_var(buffer,s,newval)
+        else
+            blv.default_value=newval
+        end
     else
         error('TODO')
     end
@@ -33,6 +50,13 @@ function M.find_symbol_value(sym)
         return lisp.symbol_val(sym)
     elseif s.redirect==lisp.symbol_redirect.forwarded then
         return s.value[1]()
+    elseif s.redirect==lisp.symbol_redirect.localized then
+        local var=nvim.get_buffer_var(nvim.get_current_buffer() --[[@as nelisp._buffer]],s)
+        if var then
+            return var
+        end
+        local blv=s.value --[[@as nelisp.buffer_local_value]]
+        return blv.default_value
     else
         error('TODO')
     end
@@ -293,11 +317,16 @@ function F.defalias.f(sym,definition,docstring)
 end
 ---@param s nelisp._symbol
 ---@param val nelisp.obj
+---@return nelisp.buffer_local_value
 local function make_blv(s,val)
-    if not _G.nelisp_later then
+    if s.redirect==lisp.symbol_redirect.plainval then
+        ---@type nelisp.buffer_local_value
+        return {
+            default_value=val,
+        }
+    else
         error('TODO')
     end
-    return {}
 end
 F.make_variable_buffer_local={'make-variable-buffer-local',1,1,'vMake Variable Buffer Local: ',[[Make VARIABLE become buffer-local whenever it is set.
 At any time, the value for the current buffer is in effect,

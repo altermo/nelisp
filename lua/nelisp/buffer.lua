@@ -3,11 +3,9 @@ local lisp=require'nelisp.lisp'
 local nvim=require'nelisp.nvim'
 local signal=require'nelisp.signal'
 local alloc=require'nelisp.alloc'
+
 local M={}
 
-function M.init()
-    vars.F.get_buffer_create(alloc.make_unibyte_string('*scratch*'),vars.Qnil)
-end
 ---@param buffer nelisp._buffer
 ---@return boolean
 function M.BUFFERLIVEP(buffer)
@@ -75,6 +73,10 @@ function F.get_buffer_create.f(buffer_or_name,inhibit_buffer_hooks)
     return nvim.create_buffer(buffer_or_name)
 end
 
+function M.init()
+    --This should be last, after all per buffer variables are defined
+    vars.F.get_buffer_create(alloc.make_unibyte_string('*scratch*'),vars.Qnil)
+end
 function M.init_syms()
     vars.defsubr(F,'get_buffer_create')
     vars.defsubr(F,'get_buffer')

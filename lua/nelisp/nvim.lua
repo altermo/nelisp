@@ -7,6 +7,7 @@ local M={}
 --- ;; Buffer
 ---@class nelisp.vim.buffer:nelisp._buffer
 ---@field bufid number
+---@field vars table<nelisp._symbol,nelisp.obj>
 
 local ref_to_buf=setmetatable({},{__mode='k'})
 ---@param bufid number
@@ -21,6 +22,7 @@ local function get_or_create_buf_obj(bufid)
     ---@type nelisp.vim.buffer
     local b={
         bufid=bufid,
+        vars={},
     }
     ref_to_buf[vim.b[bufid].nelisp_reference]=b
     return lisp.make_vectorlike_ptr(b,lisp.pvec.buffer)
@@ -65,6 +67,24 @@ function M.set_current_buffer(buffer)
     end
     ---@cast buffer nelisp.vim.buffer
     vim.api.nvim_set_current_buf(buffer.bufid)
+end
+---@return nelisp.obj
+function M.get_current_buffer()
+    return get_or_create_buf_obj(vim.api.nvim_get_current_buf())
+end
+---@param buffer nelisp._buffer
+---@param sym nelisp._symbol
+---@return nelisp.obj?
+function M.get_buffer_var(buffer,sym)
+    ---@cast buffer nelisp.vim.buffer
+    return buffer.vars[sym]
+end
+---@param buffer nelisp._buffer
+---@param sym nelisp._symbol
+---@param val nelisp.obj|nil
+function M.set_buffer_var(buffer,sym,val)
+    ---@cast buffer nelisp.vim.buffer
+    buffer.vars[sym]=val
 end
 
 --- ;; Terminal (UI)

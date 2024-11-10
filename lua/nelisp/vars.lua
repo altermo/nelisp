@@ -2,7 +2,7 @@
 ---@field defsym fun(name:string,symname:string)
 ---@field commit_qsymbols fun()
 ---@field defvar_lisp fun(name:string,symname:string?,doc:string?):nelisp.obj
----@field defvar_forward fun(name:string,symname:string,doc:string,get:(fun():nelisp.obj),set:(fun(v:nelisp.obj)))
+---@field defvar_forward fun(name:string,symname:string?,doc:string,get:(fun():nelisp.obj),set:(fun(v:nelisp.obj)))
 ---@field defvar_bool fun(name:string,symname:string,doc:string?)
 ---@field defsubr fun(map:nelisp.defsubr_map,name:string)
 ---@field F table<string,fun(...:(nelisp.obj|nelisp.obj[])):nelisp.obj>
