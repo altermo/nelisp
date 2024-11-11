@@ -93,9 +93,14 @@ function M.record_unwind_protect(func)
         lisp_eval_depth=vars.lisp_eval_depth,
     } --[[@as nelisp.specpdl.unwind_entry]])
 end
----@param index nelisp.specpdl.index
+---@param index nelisp.specpdl.index|nelisp.specpdl.backtrace_entry
 function M.backtrace_debug_on_exit(index)
-    local entry=specpdl[index]
+    local entry
+    if type(index)=='number' then
+        entry=specpdl[index]
+    else
+        entry=index
+    end
     assert(entry.type==M.type.backtrace)
     return entry.debug_on_exit
 end
@@ -127,21 +132,67 @@ function M.bind(sym,val)
         error('TODO')
     end
 end
----@return fun():nelisp.specpdl.all_entries
-function M.riter()
+---@param idx number?
+---@return fun():nelisp.specpdl.all_entries,number
+function M.riter(idx)
     return coroutine.wrap(function ()
-        for i=#specpdl,1,-1 do
-            coroutine.yield(specpdl[i])
+        for i=(idx or #specpdl),1,-1 do
+            coroutine.yield(specpdl[i],i)
         end
     end)
 end
 ---@return nelisp.specpdl.backtrace_entry?
-function M.backtrace_next()
-    for i in M.riter() do
-        if i.type==M.type.backtrace then
-            return i --[[@as nelisp.specpdl.backtrace_entry]]
+---@param idx_ number?
+---@return number
+function M.backtrace_next(idx_)
+    for i,idx in M.riter(idx_) do
+        if i.type==M.type.backtrace and idx~=idx_ then
+            return i --[[@as nelisp.specpdl.backtrace_entry]],idx
         end
     end
-    return nil
+    return nil,0
+end
+---@param base nelisp.obj
+---@return nelisp.specpdl.entry?
+---@return number
+function M.get_backtrace_starting_at(base)
+    local pdl,idx=M.backtrace_next()
+    if not lisp.nilp(base) then
+        base=vars.F.indirect_function(base,vars.Qt)
+        while pdl and not lisp.eq(vars.F.indirect_function(pdl.func,vars.Qt),base) do
+            pdl,idx=M.backtrace_next(idx)
+        end
+    end
+    return pdl,idx
+end
+---@return nelisp.specpdl.entry?
+function M.get_backtrace_frame(nframes,base)
+    lisp.check_fixnat(nframes)
+    local pdl,idx=M.get_backtrace_starting_at(base)
+    for _=1,lisp.fixnum(nframes) do
+        pdl,idx=M.backtrace_next(idx)
+        if not pdl then
+            break
+        end
+    end
+    return pdl
+end
+---@param function_ nelisp.obj
+---@param pdl nelisp.specpdl.backtrace_entry?
+---@return nelisp.obj
+function M.backtrace_frame_apply(function_,pdl)
+    if not pdl then
+        return vars.Qnil
+    end
+    local flags=vars.Qnil
+    if M.backtrace_debug_on_exit(pdl) then
+        error('TODO')
+    end
+    if pdl.nargs=='UNEVALLED' then
+        return vars.F.funcall({function_,vars.Qnil,pdl.func,pdl.args[1],flags})
+    else
+        local tem=vars.F.list(pdl.args)
+        return vars.F.funcall({function_,vars.Qt,pdl.func,tem,flags})
+    end
 end
 return M

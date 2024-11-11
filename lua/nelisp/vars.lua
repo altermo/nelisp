@@ -162,10 +162,10 @@ function vars.defsubr(map,name)
     assert(type(d[1])=='string')
     assert(type(d[2])=='number')
     assert(type(d[3])=='number')
-    assert(type(d[4])=='string' or d[4]==0)
+    assert(type(d[4])=='string' or d[4]==0 or d[4]==nil)
     assert(type(d[5])=='string')
     assert(type(d.f)=='function')
-    assert(#d==5)
+    assert(table.maxn(d)==5)
     vars.F[name]=f
     local symname=d[1]
     if d[3]>=0 and d[3]<=8 then

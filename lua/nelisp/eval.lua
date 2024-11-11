@@ -1041,6 +1041,11 @@ function F.signal.f(error_symbol,d)
     end
     signal_or_quit(error_symbol,d,false)
 end
+F.backtrace_frame_internal={'backtrace-frame--internal',3,3,nil,[[Call FUNCTION on stack frame NFRAMES away from BASE.
+Return the result of FUNCTION, or nil if no matching frame could be found.]]}
+function F.backtrace_frame_internal.f(function_,nframes,base)
+    return specpdl.backtrace_frame_apply(function_,specpdl.get_backtrace_frame(nframes,base))
+end
 F.run_hook_with_args={'run-hook-with-args',1,-2,0,[[Run HOOK with the specified arguments ARGS.
         HOOK should be a symbol, a hook variable.  The value of HOOK
         may be nil, a function, or a list of functions.  Call each
@@ -1140,6 +1145,7 @@ function M.init_syms()
     vars.defsubr(F,'throw')
     vars.defsubr(F,'unwind_protect')
     vars.defsubr(F,'condition_case')
+    vars.defsubr(F,'backtrace_frame_internal')
     vars.defsubr(F,'signal')
     vars.defsubr(F,'run_hook_with_args')
     vars.defsubr(F,'run_hooks')
