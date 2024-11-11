@@ -43,5 +43,8 @@ component .BUILD is present.  This is now stored separately in
 
     vars.defvar_bool('inhibit_x_resources','inhibit-x-resources',[[If non-nil, X resources, Windows Registry settings, and NS defaults are not used.]])
     vars.V.inhibit_x_resources=vars.Qnil
+
+    vars.defvar_bool('noninteractive','noninteractive',[[Non-nil means Emacs is running without interactive terminal.]])
+    vars.V.noninteractive=vars.Qnil
 end
 return M
