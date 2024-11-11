@@ -4,6 +4,7 @@
 ---@field defvar_lisp fun(name:string,symname:string?,doc:string?):nelisp.obj
 ---@field defvar_forward fun(name:string,symname:string?,doc:string,get:(fun():nelisp.obj),set:(fun(v:nelisp.obj)))
 ---@field defvar_bool fun(name:string,symname:string,doc:string?)
+---@field defvar_localized fun(name:string,symname:string,doc:string,blv:nelisp.buffer_local_value)
 ---@field defsubr fun(map:nelisp.defsubr_map,name:string)
 ---@field F table<string,fun(...:(nelisp.obj|nelisp.obj[])):nelisp.obj>
 ---@field V table<string,nelisp.obj>
@@ -112,21 +113,42 @@ vars.defvar_forward=function (name,symname,doc,get,set)
     p.redirect=lisp.symbol_redirect.forwarded
     p.value={get,set} --[[@as nelisp.forward]]
 end
+---@param doc string
+---@param name string
+---@param symname string
+---@param blv nelisp.buffer_local_value
+vars.defvar_localized=function (name,symname,doc,blv)
+    local sym=vars.defvar_lisp(name,symname,doc)
+    local p=(sym --[[@as nelisp._symbol]])
+    local lisp=require'nelisp.lisp'
+    p.redirect=lisp.symbol_redirect.localized
+    assert(blv.default_value)
+    p.value=blv
+end
 vars.V=setmetatable({},{__index=function (_,k)
     local sym=assert(Vsymbols[k],'DEV: Not an internal variable: '..tostring(k)) --[[@as nelisp._symbol]]
     local lisp=require'nelisp.lisp'
-    if sym.redirect==lisp.symbol_redirect.forwarded then
+    if sym.redirect==lisp.symbol_redirect.plainval then
+        return assert(lisp.symbol_val(sym),'DEV: Internal variable not set: '..tostring(k))
+    elseif sym.redirect==lisp.symbol_redirect.forwarded then
         return sym.value[1]()
+    elseif sym.redirect==lisp.symbol_redirect.localized then
+        local data=require'nelisp.data'
+        return data.find_symbol_value(sym)
+    else
+        error('TODO')
     end
-    return assert(lisp.symbol_val(sym),'DEV: Internal variable not set: '..tostring(k))
 end,__newindex=function (_,k,v)
         assert(type(v)=='table' and type(v[1])=='number')
         local lisp=require'nelisp.lisp'
         local sym=assert(Vsymbols[k],'DEV: Not an internal variable: '..tostring(k)) --[[@as nelisp._symbol]]
-        if sym.redirect==lisp.symbol_redirect.forwarded then
+        if sym.redirect==lisp.symbol_redirect.plainval then
+            lisp.set_symbol_val(sym,v)
+        elseif sym.redirect==lisp.symbol_redirect.forwarded then
             return sym.value[2](v)
+        else
+            error('TODO')
         end
-        lisp.set_symbol_val(sym,v)
     end})
 
 vars.F={}

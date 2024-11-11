@@ -5,6 +5,14 @@ local signal=require'nelisp.signal'
 local alloc=require'nelisp.alloc'
 
 local M={}
+local function defvar_per_buffer(name,symname,defval,doc)
+    ---@type nelisp.buffer_local_value
+    local blv={
+        local_if_set=true,
+        default_value=defval,
+    }
+    vars.defvar_localized(name,symname,doc,blv)
+end
 
 ---@param buffer nelisp._buffer
 ---@return boolean
@@ -74,6 +82,16 @@ function F.get_buffer_create.f(buffer_or_name,inhibit_buffer_hooks)
 end
 
 function M.init()
+    defvar_per_buffer('enable_multibyte_characters','enable-multibyte-characters',vars.Qnil,[[Non-nil means the buffer contents are regarded as multi-byte characters.
+Otherwise they are regarded as unibyte.  This affects the display,
+file I/O and the behavior of various editing commands.
+
+This variable is buffer-local but you cannot set it directly;
+use the function `set-buffer-multibyte' to change a buffer's representation.
+To prevent any attempts to set it or make it buffer-local, Emacs will
+signal an error in those cases.
+See also Info node `(elisp)Text Representations'.]])
+
     --This should be last, after all per buffer variables are defined
     vars.F.get_buffer_create(alloc.make_unibyte_string('*scratch*'),vars.Qnil)
 end
