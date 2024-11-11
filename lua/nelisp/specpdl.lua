@@ -10,7 +10,7 @@ local vars=require'nelisp.vars'
 ---@field type nelisp.specpdl.type.backtrace
 ---@field debug_on_exit boolean
 ---@field func nelisp.obj
----@field args nelisp.obj[]|nelisp.obj
+---@field args nelisp.obj[]
 ---@field nargs number|'UNEVALLED'
 
 ---@class nelisp.specpdl.let_entry: nelisp.specpdl.entry
@@ -74,8 +74,7 @@ function M.unbind_to(index,val,assert_ignore)
 end
 ---@param func nelisp.obj
 ---@param args nelisp.obj[]
----@param nargs number
----@overload fun(func:nelisp.obj,args:nelisp.obj,nargs:'UNEVALLED')
+---@param nargs number|'UNEVALLED'
 function M.record_in_backtrace(func,args,nargs)
     local index=M.index()
     table.insert(specpdl,{

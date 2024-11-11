@@ -145,7 +145,7 @@ function M.eval_sub(form)
     local original_args=lisp.xcdr(form)
     local val
     lisp.check_list(original_args)
-    local count=specpdl.record_in_backtrace(original_fun,original_args,'UNEVALLED')
+    local count=specpdl.record_in_backtrace(original_fun,{original_args},'UNEVALLED')
     if not lisp.nilp(vars.V.debug_on_next_call) then
         error('TODO')
     end
