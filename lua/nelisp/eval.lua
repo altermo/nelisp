@@ -1061,6 +1061,20 @@ function F.run_hook_with_args.f(args)
         return vars.Qnil
     end)
 end
+F.run_hook_with_args_until_success={'run-hook-with-args-until-success',1,-2,0,[[Run HOOK with the specified arguments ARGS.
+HOOK should be a symbol, a hook variable.  The value of HOOK
+may be nil, a function, or a list of functions.  Call each
+function in order with arguments ARGS, stopping at the first
+one that returns non-nil, and return that value.  Otherwise (if
+all functions return nil, or if there are no functions to call),
+return nil.
+
+Do not use `make-local-variable' to make a hook variable buffer-local.
+Instead, use `add-hook' and specify t for the LOCAL argument.
+usage: (run-hook-with-args-until-success HOOK &rest ARGS)]]}
+function F.run_hook_with_args_until_success.f(args)
+    return run_hook_with_args(args,vars.F.funcall)
+end
 F.run_hooks={'run-hooks',0,-2,0,[[Run each hook in HOOKS.
         Each argument should be a symbol, a hook variable.
         These symbols are processed in the order specified.
@@ -1148,6 +1162,7 @@ function M.init_syms()
     vars.defsubr(F,'backtrace_frame_internal')
     vars.defsubr(F,'signal')
     vars.defsubr(F,'run_hook_with_args')
+    vars.defsubr(F,'run_hook_with_args_until_success')
     vars.defsubr(F,'run_hooks')
     vars.defsubr(F,'default_toplevel_value')
     vars.defsubr(F,'set_default_toplevel_value')
