@@ -1228,6 +1228,59 @@ function F.string_equal.f(a,b)
     lisp.check_string(b)
     return lisp.sdata(a)==lisp.sdata(b) and vars.Qt or vars.Qnil
 end
+local function string_ascii_p(s)
+    if lisp.string_multibyte(s) then
+        return lisp.schars(s)==lisp.sbytes(s)
+    end
+    for c in lisp.sdata(s):gmatch('.') do
+        if c:byte()>127 then
+            return false
+        end
+    end
+    return true
+end
+local function string_byte_to_char(s,idx)
+    local best_above=lisp.schars(s)
+    local best_above_byte=lisp.sbytes(s)
+    if best_above==best_above_byte then
+        return idx
+    end
+    error('TODO')
+end
+F.string_search={'string-search',2,3,0,[[Search for the string NEEDLE in the string HAYSTACK.
+The return value is the position of the first occurrence of NEEDLE in
+HAYSTACK, or nil if no match was found.
+
+The optional START-POS argument says where to start searching in
+HAYSTACK and defaults to zero (start at the beginning).
+It must be between zero and the length of HAYSTACK, inclusive.
+
+Case is always significant and text properties are ignored.]]}
+function F.string_search.f(needle,haystack,start_pos)
+    lisp.check_string(needle)
+    lisp.check_string(haystack)
+    local start=0
+    if not lisp.nilp(start_pos) then
+        lisp.check_fixnum(start_pos)
+        start=lisp.fixnum(start_pos)
+        if start<0 or start>lisp.schars(haystack) then
+            signal.args_out_of_range(haystack,start_pos)
+        end
+        start=string_char_to_byte(haystack,start)
+    end
+    local res
+    if lisp.string_multibyte(haystack)==lisp.string_multibyte(needle) or
+        (string_ascii_p(haystack) and string_ascii_p(needle)) then
+        res=lisp.sdata(haystack):find(lisp.sdata(needle),start+1,true)
+        if res then res=res-1 end
+    else
+        error('TODO')
+    end
+    if not res then
+        return vars.Qnil
+    end
+    return lisp.make_fixnum(string_byte_to_char(haystack,res))
+end
 F.require={'require',1,3,0,[[If FEATURE is not already loaded, load it from FILENAME.
 If FEATURE is not a member of the list `features', then the feature was
 not yet loaded; so load it from file FILENAME.
@@ -1313,6 +1366,7 @@ function M.init_syms()
     vars.defsubr(F,'string_as_unibyte')
     vars.defsubr(F,'substring')
     vars.defsubr(F,'string_equal')
+    vars.defsubr(F,'string_search')
     vars.defsubr(F,'require')
     vars.defsubr(F,'secure_hash_algorithms')
 
