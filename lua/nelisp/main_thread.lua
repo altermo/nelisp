@@ -38,7 +38,8 @@ local function cmd_error(d,_msg)
     end
     local readcharfun=print_.make_printcharfun()
     print_.print_obj(d,true,readcharfun)
-    error('\n\nError (nelisp):\n'..readcharfun.out()..'\n\n'.._msg.backtrace)
+    --error('\n\nError (nelisp):\n'..readcharfun.out()..'\n\n'.._msg.backtrace)
+    error('\n\nError (nelisp):\n'..readcharfun.out()..'\n')
 end
 local function command_loop_2(handlers)
     local val
