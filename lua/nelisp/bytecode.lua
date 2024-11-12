@@ -540,7 +540,7 @@ function M.exec_byte_code(fun,args_template,args)
                     goto next
                 elseif op==ins.get then
                     local v1=pop()
-                    set_top(vars.F.get(v1,top()))
+                    set_top(vars.F.get(top(),v1))
                     goto next
                 elseif op==ins.substring then
                     local v2=pop()
