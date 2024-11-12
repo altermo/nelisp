@@ -1060,6 +1060,42 @@ function F.delq.f(elt,list)
     lisp.check_list_end(tail,list)
     return list
 end
+F.delete={'delete',2,2,0,[[Delete members of SEQ which are `equal' to ELT, and return the result.
+SEQ must be a sequence (i.e. a list, a vector, or a string).
+The return value is a sequence of the same type.
+
+If SEQ is a list, this behaves like `delq', except that it compares
+with `equal' instead of `eq'.  In particular, it may remove elements
+by altering the list structure.
+
+If SEQ is not a list, deletion is never performed destructively;
+instead this function creates and returns a new vector or string.
+
+Write `(setq foo (delete element foo))' to be sure of correctly
+changing the value of a sequence `foo'.  See also `remove', which
+does not modify the argument.]]}
+function F.delete.f(elt,seq)
+    if lisp.vectorp(seq) then
+        error('TODO')
+    elseif lisp.stringp(seq) then
+        error('TODO')
+    else
+        local prev=vars.Qnil
+        local _,tail=lisp.for_each_tail(seq,function (tail)
+            if not lisp.nilp(vars.F.equal(elt,lisp.xcar(tail))) then
+                if lisp.nilp(prev) then
+                    seq=lisp.xcdr(tail)
+                else
+                    vars.F.setcdr(prev,lisp.xcdr(tail))
+                end
+            else
+                prev=tail
+            end
+        end)
+        lisp.check_list_end(tail,seq)
+    end
+    return seq
+end
 F.concat={'concat',0,-2,0,[[Concatenate all the arguments and make the result a string.
 The result is a string whose elements are the elements of all the arguments.
 Each argument may be a string or a list or vector of characters (integers).
@@ -1385,6 +1421,7 @@ function M.init_syms()
     vars.defsubr(F,'hash_table_rehash_size')
     vars.defsubr(F,'hash_table_rehash_threshold')
     vars.defsubr(F,'delq')
+    vars.defsubr(F,'delete')
     vars.defsubr(F,'concat')
     vars.defsubr(F,'vconcat')
     vars.defsubr(F,'copy_sequence')
