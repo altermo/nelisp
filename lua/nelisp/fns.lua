@@ -371,6 +371,25 @@ function F.mapc.f(func,sequence)
     mapcar1(leni,nil,func,sequence)
     return sequence
 end
+---@param obj nelisp.obj
+---@return nelisp._hash_table
+local function check_hash_table(obj)
+    lisp.check_hash_table(obj)
+    return obj --[[@as nelisp._hash_table]]
+end
+F.maphash={'maphash',2,2,0,[[Call FUNCTION for all entries in hash table TABLE.
+FUNCTION is called with two arguments, KEY and VALUE.
+`maphash' always returns nil.]]}
+function F.maphash.f(func,table)
+    local h=check_hash_table(table)
+    for i=0,lisp.asize(h.next)-1 do
+        local k=lisp.aref(h.key_and_value,i*2)
+        if k~=vars.Qunique then
+            vars.F.funcall({func,k,lisp.aref(h.key_and_value,i*2+1)})
+        end
+    end
+    return vars.Qnil
+end
 F.nreverse={'nreverse',1,1,0,[[Reverse order of items in a list, vector or string SEQ.
 If SEQ is a list, it should be nil-terminated.
 This function may destructively modify SEQ to produce the value.]]}
@@ -975,12 +994,6 @@ function F.make_hash_table.f(args)
     return make_hash_table(testdesc,size,rehash_size,rehash_threshold,weak)
 end
 ---@param obj nelisp.obj
----@return nelisp._hash_table
-local function check_hash_table(obj)
-    lisp.check_hash_table(obj)
-    return obj --[[@as nelisp._hash_table]]
-end
----@param obj nelisp.obj
 ---@param h nelisp._hash_table
 local function check_mutable_hash_table(obj,h)
     if not h.mutable then
@@ -1353,6 +1366,7 @@ function M.init_syms()
     vars.defsubr(F,'nth')
     vars.defsubr(F,'mapcar')
     vars.defsubr(F,'mapc')
+    vars.defsubr(F,'maphash')
     vars.defsubr(F,'nreverse')
     vars.defsubr(F,'reverse')
     vars.defsubr(F,'nconc')
