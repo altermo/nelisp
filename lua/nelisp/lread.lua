@@ -7,6 +7,7 @@ local fns=require'nelisp.fns'
 local specpdl=require'nelisp.specpdl'
 local overflow=require'nelisp.overflow'
 local alloc=require'nelisp.alloc'
+local handler=require'nelisp.handler'
 
 local M={}
 
@@ -991,8 +992,8 @@ local function openp(path,s,suffixes,storep,predicate,newer,no_native)
             else
                 error('TODO')
             end
-            local handler=vars.F.find_file_name_handler(fstr,vars.Qfile_exists_p)
-            if (not lisp.nilp(handler) or (not lisp.nilp(predicate) and not lisp.eq(predicate,vars.Qt))) and not lisp.fixnatp(predicate) then
+            local handler_=vars.F.find_file_name_handler(fstr,vars.Qfile_exists_p)
+            if (not lisp.nilp(handler_) or (not lisp.nilp(predicate) and not lisp.eq(predicate,vars.Qt))) and not lisp.fixnatp(predicate) then
                 error('TODO')
             else
                 ---@type -1|file*
@@ -1112,12 +1113,17 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     end
     local count=specpdl.index()
     lisp.check_string(file)
-    local handler=vars.F.find_file_name_handler(file,vars.Qload)
-    if not lisp.nilp(handler) then
+    local handler_=vars.F.find_file_name_handler(file,vars.Qload)
+    if not lisp.nilp(handler_) then
         error('TODO')
     end
     if not lisp.nilp(noerror) then
-        error('TODO')
+        file=handler.internal_condition_case(function ()
+            return vars.F.substitute_in_file_name(file)
+        end,vars.Qt,function () return vars.Qnil end)
+        if lisp.nilp(file) then
+            return vars.Qnil
+        end
     else
         file=vars.F.substitute_in_file_name(file)
     end
