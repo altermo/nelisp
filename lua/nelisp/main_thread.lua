@@ -25,7 +25,7 @@ local function command_loop_1()
         fn=coroutine.yield()
     end
 end
-local function cmd_error(d)
+local function cmd_error(d,_msg)
     if not _G.nelisp_later then
         error('TODO')
     end
@@ -38,7 +38,7 @@ local function cmd_error(d)
     end
     local readcharfun=print_.make_printcharfun()
     print_.print_obj(d,true,readcharfun)
-    error('\n\nError (nelisp):\n'..readcharfun.out()..'\n')
+    error('\n\nError (nelisp):\n'..readcharfun.out()..'\n\n'.._msg.backtrace)
 end
 local function command_loop_2(handlers)
     local val

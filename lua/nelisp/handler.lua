@@ -9,9 +9,9 @@ local signal=require'nelisp.signal'
 ---@field is_lua nil
 ---@field handler_id number
 ---@field nonlocal_exit 'SIGNAL'|'THROW'
+---@field backtrace string
 ---@class nelisp.handler.msg_lua: nelisp.handler.msg_other
 ---@field is_lua true
----@field backtrace string
 ---@field val nil
 ---@field handler_id nil
 ---@field nonlocal_exit nil
@@ -94,6 +94,7 @@ function M.unwind_to_catch(handler_id,val,nonlocal_exit)
         val=val,
         handler_id=handler_id,
         nonlocal_exit=nonlocal_exit,
+        backtrace=debug.traceback(),
     }
     error(msg)
 end
@@ -119,7 +120,7 @@ function M.internal_condition_case(bfun,handlers,hfun)
     if noerr then
         return unpack(args --[[@as(any[])]])
     end
-    return hfun(args.val)
+    return hfun(args.val,args)
 end
 function M.internal_lisp_condition_case(var,bodyform,handlers)
     local tail=handlers
