@@ -4,29 +4,6 @@ local lisp=require'nelisp.lisp'
 local print_=require'nelisp.print'
 local M={}
 
-local function convert_from_lua(x)
-    local alloc=require'nelisp.alloc'
-    if type(x)=='number' then
-        return lisp.make_fixnum(x)
-    elseif type(x)=='nil' then
-        return vars.Qnil
-    elseif type(x)=='boolean' then
-        return x and vars.Qt or vars.Qnil
-    elseif type(x)=='table' then
-        if not vim.islist(x) then
-            error('Non list tables can\'t be converted')
-        end
-        return lisp.list(unpack(vim.tbl_map(convert_from_lua,x)))
-    elseif type(x)=='string' then
-        return alloc.make_string(x)
-    elseif type(x)=='function' then
-        error('Conversion from type not supported: '..type(x))
-        error('TODO')
-    else
-        error('Conversion from type not supported: '..type(x))
-    end
-end
-
 local inspect=function (x)
     local printcharfun=print_.make_printcharfun()
     print_.print_obj(x,true,printcharfun)
@@ -71,18 +48,19 @@ function F.Xerror.f(x)
     error(inspect(x))
     return vars.Qt
 end
-F.Xlua_eval={'!lua-eval',1,1,0,[[internal function]]}
-function F.Xlua_eval.f(x)
-    --TODO: maybe support arguments which get converted from nelisp to lua
+F.Xlua_exec={'!lua-exec',1,-2,0,[[internal function]]}
+function F.Xlua_exec.f(args)
+    local x=args[1]
     lisp.check_string(x)
     local s=lisp.sdata(x)
-    return convert_from_lua(loadstring('return '..s)())
+    loadstring(s)(unpack(args,2))
+    return vars.Qnil
 end
 
 function M.init_syms()
     vars.defsubr(F,'Xprint')
     vars.defsubr(F,'Xbacktrace')
     vars.defsubr(F,'Xerror')
-    vars.defsubr(F,'Xlua_eval')
+    vars.defsubr(F,'Xlua_exec')
 end
 return M
