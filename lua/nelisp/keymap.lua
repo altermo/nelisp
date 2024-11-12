@@ -838,5 +838,12 @@ Meta-foo as command input turns into this character followed by foo.]])
     vars.V.meta_prefix_char=lisp.make_fixnum(27)
 
     vars.defvar_lisp('special_event_map','special-event-map',[[Keymap defining bindings for special events to execute at low level.]])
+
+    vars.defvar_lisp('minor_mode_map_alist','minor-mode-map-alist',[[Alist of keymaps to use for minor modes.
+Each element looks like (VARIABLE . KEYMAP); KEYMAP is used to read
+key sequences and look up bindings if VARIABLE's value is non-nil.
+If two active keymaps bind the same key, the keymap appearing earlier
+in the list takes precedence.]])
+    vars.V.minor_mode_map_alist=vars.Qnil
 end
 return M
