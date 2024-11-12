@@ -7,6 +7,11 @@ if not vim.tbl_contains(vim.opt.runtimepath:get(),_G.nelisp_root) then
 end
 if not vim.tbl_contains(vim.opt.runtimepath:get(),_G.nelisp_emacs..'/lisp') then
     vim.opt.runtimepath:append(_G.nelisp_emacs..'/lisp')
+    for path,t in vim.fs.dir(_G.nelisp_emacs..'/lisp') do
+        if t=='directory' then
+            vim.opt.runtimepath:append(_G.nelisp_emacs..'/lisp/'..path)
+        end
+    end
 end
 
 for k,_ in pairs(package.loaded) do
