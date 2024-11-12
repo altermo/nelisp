@@ -404,7 +404,7 @@ function F.defvar.f(args)
         end
         local exp=lisp.xcar(tail)
         tail=lisp.xcdr(tail)
-        return defvar(sym,exp,lisp.xcar(tail),true)
+        return defvar(sym,exp,vars.F.car(tail),true)
     elseif not lisp.nilp(vars.V.internal_interpreter_environment)
         and lisp.symbolp(sym) and (not (sym --[[@as nelisp._symbol]]).declared_special) then
         vars.V.internal_interpreter_environment=vars.F.cons(sym,vars.V.internal_interpreter_environment)
