@@ -227,6 +227,18 @@ function F.assq.f(key,alist)
     lisp.check_list_end(tail,alist)
     return vars.Qnil
 end
+F.rassq={'rassq',2,2,0,[[Return non-nil if KEY is `eq' to the cdr of an element of ALIST.
+The value is actually the first element of ALIST whose cdr is KEY.]]}
+function F.rassq.f(key,alist)
+    local ret,tail=lisp.for_each_tail(alist,function (tail)
+        if lisp.consp(lisp.xcar(tail)) and lisp.eq(lisp.xcdr(lisp.xcar(tail)),key) then
+            return lisp.xcar(tail)
+        end
+    end)
+    if ret then return ret end
+    lisp.check_list_end(tail,alist)
+    return vars.Qnil
+end
 F.assoc={'assoc',2,3,0,[[Return non-nil if KEY is equal to the car of an element of ALIST.
 The value is actually the first element of ALIST whose car equals KEY.
 
@@ -1333,6 +1345,7 @@ end
 function M.init_syms()
     vars.defsubr(F,'append')
     vars.defsubr(F,'assq')
+    vars.defsubr(F,'rassq')
     vars.defsubr(F,'assoc')
     vars.defsubr(F,'member')
     vars.defsubr(F,'memq')
