@@ -20,7 +20,25 @@ function F.capitalize.f(arg)
     end
     return alloc.make_string(vim.fn.toupper(lisp.sdata(arg)))
 end
+F.downcase={'downcase',1,1,0,[[Convert argument to lower case and return that.
+The argument may be a character or string.  The result has the same type,
+including the multibyteness of the string.
+
+This means that if this function is called with a unibyte string
+argument, and downcasing it would turn it into a multibyte string
+(according to the current locale), the downcasing is done using ASCII
+\"C\" rules instead.  To accurately downcase according to the current
+locale, the string must be converted into multibyte first.
+
+The argument object is not altered--the value is a copy.]]}
+function F.downcase.f(arg)
+    if _G.nelisp_later then
+        error('TODO')
+    end
+    return alloc.make_string(vim.fn.tolower(lisp.sdata(arg)))
+end
 function M.init_syms()
     vars.defsubr(F,'capitalize')
+    vars.defsubr(F,'downcase')
 end
 return M
