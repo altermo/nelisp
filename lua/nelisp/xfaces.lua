@@ -508,7 +508,10 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
             and not reset_p(value)) then
-            error('TODO')
+            lisp.check_symbol(value)
+            if font_.font_weight_name_numeric(value)<0 then
+                signal.signal_error('Invalid face weight',value)
+            end
         end
         old_value=lisp.aref(lface,lface_index.weight)
         lisp.aset(lface,lface_index.weight,value)

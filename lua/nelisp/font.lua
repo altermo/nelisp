@@ -71,6 +71,30 @@ local function build_style_table(tbl)
     end
     return t
 end
+---@param prop nelisp.font_index
+---@param val nelisp.obj
+---@param noerror boolean
+---@return number
+local function font_style_to_value(prop,val,noerror)
+    local t=lisp.aref(font_style_table,prop-font_index.weight)
+    lisp.check_vector(t)
+    local len=lisp.asize(t)
+    if lisp.symbolp(val) then
+        for i=0,len-1 do
+            lisp.check_vector(lisp.aref(t,i))
+            for j=1,lisp.asize(lisp.aref(t,i))-1 do
+                if lisp.eq(val,lisp.aref(lisp.aref(t,i),j)) then
+                    lisp.check_fixnum(lisp.aref(lisp.aref(t,i),0))
+                    local n=lisp.fixnum(lisp.aref(lisp.aref(t,i),0))
+                    return bit.bor(bit.lshift(n,8),bit.lshift(i,4),(j-1))
+                end
+            end
+        end
+        error('TODO')
+    else
+        error('TODO')
+    end
+end
 
 local M={}
 ---@enum nelisp.font_xlfd
@@ -91,6 +115,11 @@ M.xlfd={
     encoding=13,
     last=14,
 }
+function M.font_weight_name_numeric(name)
+    local n=font_style_to_value(font_index.weight,name,false)
+    if n<0 then return n end
+    return bit.rshift(n,8)
+end
 function M.font_update_sort_order(order)
     local shift_bits=23
     for i=1,4 do
