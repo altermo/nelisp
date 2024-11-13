@@ -4,6 +4,7 @@ local signal=require'nelisp.signal'
 local nvim=require'nelisp.nvim'
 local alloc=require'nelisp.alloc'
 local frame_=require'nelisp.frame'
+local font_=require'nelisp.font'
 
 ---@class nelisp.face
 ---@field lface nelisp.obj
@@ -15,6 +16,7 @@ local frame_=require'nelisp.frame'
 ---@field buckets table<nelisp.face,nelisp.face>
 
 local lface_id_to_name={}
+local font_sort_order
 
 local FRAME_WINDOW_P=false --no frames are graphical
 local FRAME_TERMCAP_P=true --all frames are in a terminal
@@ -700,6 +702,47 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
     end
     return face
 end
+F.internal_set_font_selection_order={'internal-set-font-selection-order',1,1,0,[[Set font selection order for face font selection to ORDER.
+ORDER must be a list of length 4 containing the symbols `:width',
+`:height', `:weight', and `:slant'.  Face attributes appearing
+first in ORDER are matched first, e.g. if `:height' appears before
+`:weight' in ORDER, font selection first tries to find a font with
+a suitable height, and then tries to match the font weight.
+Value is ORDER.]]}
+function F.internal_set_font_selection_order.f(order)
+    lisp.check_list(order)
+    local list=order
+    local indices={}
+    for i=1,4 do
+        if not lisp.consp(list) then
+            break
+        end
+        local attr=lisp.xcar(list)
+        local xlfd
+        if lisp.eq(attr,vars.QCwidth) then
+            xlfd=font_.xlfd.swidth
+        elseif lisp.eq(attr,vars.QCheight) then
+            xlfd=font_.xlfd.point_size
+        elseif lisp.eq(attr,vars.QCweight) then
+            xlfd=font_.xlfd.weight
+        elseif lisp.eq(attr,vars.QCslant) then
+            xlfd=font_.xlfd.slant
+        end
+        if not xlfd or indices[i] then
+            break
+        end
+        indices[i]=xlfd
+
+        list=lisp.xcdr(list)
+    end
+    if not lisp.nilp(list) or #indices~=4 then
+        signal.signal_error('Invalid font sort order',order)
+    end
+    font_sort_order=indices
+    font_.font_update_sort_order(font_sort_order)
+
+    return vars.Qnil
+end
 
 function M.init()
     vars.V.face_new_frame_defaults=vars.F.make_hash_table(vars.QCtest,vars.Qeq,vars.QCsize,33)
@@ -708,6 +751,7 @@ function M.init_syms()
     vars.defsubr(F,'internal_lisp_face_p')
     vars.defsubr(F,'internal_make_lisp_face')
     vars.defsubr(F,'internal_set_lisp_face_attribute')
+    vars.defsubr(F,'internal_set_font_selection_order')
 
     vars.defsym('Qface','face')
     vars.defsym('Qface_no_inherit','face-no-inherit')
