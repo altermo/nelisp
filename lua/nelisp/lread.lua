@@ -1179,24 +1179,27 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
             local fname=lisp.sdata(found[1]):gsub('/','%%')..'.lua'
             local f=io.open(root..'/'..fname,'r')
             if f then
-                code=require'nelisp.comp-lisp-to-lua'.read(f:read('*all'))
+                local info=assert(vim.uv.fs_stat(lisp.sdata(found[1])))
+                local mtime=info.mtime.sec*1000+info.mtime.nsec/1000000
+                local info_cache=assert(vim.uv.fs_stat(root..'/'..fname))
+                local mtime_cache=info_cache.mtime.sec*1000+info_cache.mtime.nsec/1000000
+                if mtime<=mtime_cache then
+                    code=require'nelisp.comp-lisp-to-lua'.read(f:read('*all'))
+                end
                 f:close()
             end
         end
         if not code then
             code=M.full_read_lua_string(content)
-            if _G.nelisp_compile_lisp_to_lua_if_not_found then
+            if _G.nelisp_compile_lisp_to_lua_path then
                 local root=_G.nelisp_compile_lisp_to_lua_path
                 vim.fn.mkdir(root,'p')
                 local fname=lisp.sdata(found[1]):gsub('/','%%')..'.lua'
-                local exists=io.open(root..'/'..fname,'r')
-                if not exists then
-                    local lua_code=require'nelisp.comp-lisp-to-lua'.compiles(code)
-                    local f=assert(io.open(root..'/'..fname,'w'))
+                local lua_code=require'nelisp.comp-lisp-to-lua'.compiles(code)
+                local f=io.open(root..'/'..fname,'w')
+                if f then
                     f:write(table.concat(lua_code,'\n'))
                     f:close()
-                else
-                    exists:close()
                 end
             end
         end
