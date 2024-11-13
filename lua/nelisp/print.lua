@@ -285,9 +285,58 @@ function F.prin1_to_string.f(obj,noescape,overrides)
     obj=alloc.make_string(printcharfun.out())
     return obj
 end
+F.prin1={'prin1',1,3,0,[[Output the printed representation of OBJECT, any Lisp object.
+Quoting characters are printed when needed to make output that `read'
+can handle, whenever this is possible.  For complex objects, the behavior
+is controlled by `print-level' and `print-length', which see.
+
+OBJECT is any of the Lisp data types: a number, a string, a symbol,
+a list, a buffer, a window, a frame, etc.
+
+A printed representation of an object is text which describes that object.
+
+Optional argument PRINTCHARFUN is the output stream, which can be one
+of these:
+
+   - a buffer, in which case output is inserted into that buffer at point;
+   - a marker, in which case output is inserted at marker's position;
+   - a function, in which case that function is called once for each
+     character of OBJECT's printed representation;
+   - a symbol, in which case that symbol's function definition is called; or
+   - t, in which case the output is displayed in the echo area.
+
+If PRINTCHARFUN is omitted, the value of `standard-output' (which see)
+is used instead.
+
+Optional argument OVERRIDES should be a list of settings for print-related
+variables.  An element in this list can be the symbol t, which means "reset
+all the values to their defaults".  Otherwise, an element should be a pair,
+where the `car' or the pair is the setting symbol, and the `cdr' is the
+value of the setting to use for this `prin1' call.
+
+For instance:
+
+  (prin1 object nil \\='((length . 100) (circle . t))).
+
+See Info node `(elisp)Output Overrides' for a list of possible values.
+
+As a special case, OVERRIDES can also simply be the symbol t, which
+means "use default values for all the print-related settings".]]}
+function F.prin1.f(obj,printcharfun,overrides)
+    if _G.nelisp_later then
+        error('TODO')
+    end
+    assert(lisp.nilp(printcharfun),'TODO')
+    assert(lisp.nilp(overrides),'TODO')
+    local printcharfun_=M.make_printcharfun()
+    M.print_obj(obj,true,printcharfun_)
+    print(printcharfun_.out())
+    return obj
+end
 
 function M.init_syms()
     vars.defsubr(F,'prin1_to_string')
+    vars.defsubr(F,'prin1')
 
     vars.defvar_bool('print_integers_as_characters','print-integers-as-characters',[[Non-nil means integers are printed using characters syntax.
 Only independent graphic characters, and control characters with named
