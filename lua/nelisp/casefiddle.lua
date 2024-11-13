@@ -18,7 +18,12 @@ function F.capitalize.f(arg)
     if _G.nelisp_later then
         error('TODO')
     end
-    return alloc.make_string(vim.fn.toupper(lisp.sdata(arg)))
+    local s=lisp.sdata(arg)
+    local f=function (c,rest,r) return c:upper()..rest:lower()..(r or '') end
+    s=s:gsub('(%w)(%w*)(%W)',f)
+    s=s:gsub('(%w)(%w*)$',f)
+    s=s:gsub('^(%w)(%w*)',f)
+    return alloc.make_string(s)
 end
 F.downcase={'downcase',1,1,0,[[Convert argument to lower case and return that.
 The argument may be a character or string.  The result has the same type,
