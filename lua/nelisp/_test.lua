@@ -1,15 +1,15 @@
 local home=vim.env.HOME
-_G.nelisp_emacs=home..'/.nelisp/emacs'
-_G.nelisp_root=home..'/.nelisp/nelisp'
+local nelisp_root=home..'/.nelisp/nelisp'
+local nelisp_emacs=home..'/.nelisp/emacs'
 
-if not vim.tbl_contains(vim.opt.runtimepath:get(),_G.nelisp_root) then
-    vim.opt.runtimepath:append(_G.nelisp_root)
+if not vim.tbl_contains(vim.opt.runtimepath:get(),nelisp_root) then
+    vim.opt.runtimepath:append(nelisp_root)
 end
-if not vim.tbl_contains(vim.opt.runtimepath:get(),_G.nelisp_emacs..'/lisp') then
-    vim.opt.runtimepath:append(_G.nelisp_emacs..'/lisp')
-    for path,t in vim.fs.dir(_G.nelisp_emacs..'/lisp') do
+if not vim.tbl_contains(vim.opt.runtimepath:get(),nelisp_emacs..'/lisp') then
+    vim.opt.runtimepath:append(nelisp_emacs..'/lisp')
+    for path,t in vim.fs.dir(nelisp_emacs..'/lisp') do
         if t=='directory' then
-            vim.opt.runtimepath:append(_G.nelisp_emacs..'/lisp/'..path)
+            vim.opt.runtimepath:append(nelisp_emacs..'/lisp/'..path)
         end
     end
 end
@@ -39,4 +39,4 @@ end)
 
 _G.nelisp_compile_lisp_to_lua_path='/tmp/nelisp'
 
-api.load(_G.nelisp_emacs..'/lisp/loadup.el')
+api.load(nelisp_emacs..'/lisp/loadup.el')

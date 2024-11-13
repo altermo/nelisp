@@ -1349,7 +1349,6 @@ function M.init()
     if not _G.nelisp_later then
         error('TODO: initialize load path')
     end
-    assert(_G.nelisp_emacs)
     vars.V.load_file_name=vars.Qnil --I don't know why emacs sets it to nil twice
 
     lisp.set_symbol_val(vars.Qnil --[[@as nelisp._symbol]],vars.Qnil)
