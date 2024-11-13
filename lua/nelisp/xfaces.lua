@@ -766,10 +766,34 @@ function F.internal_set_alternative_font_family_alist.f(alist)
     vars.face_alternative_font_family_alist=alist
     return alist
 end
+F.internal_set_alternative_font_registry_alist={'internal-set-alternative-font-registry-alist',1,1,0,[[Define alternative font registries to try in face font selection.
+ALIST is an alist of (REGISTRY ALTERNATIVE1 ALTERNATIVE2 ...) entries.
+Each ALTERNATIVE is tried in order if no fonts of font registry REGISTRY can
+be found.  Value is ALIST.]]}
+function F.internal_set_alternative_font_registry_alist.f(alist)
+    lisp.check_list(alist)
+    alist=vars.F.copy_sequence(alist)
+    local tail=alist
+    while lisp.consp(tail) do
+        local entry=lisp.xcar(tail)
+        lisp.check_list(entry)
+        entry=vars.F.copy_sequence(entry)
+        lisp.xsetcar(tail,entry)
+        local tail2=entry
+        while lisp.consp(tail2) do
+            lisp.xsetcar(tail2,vars.F.downcase(lisp.xcar(tail2)))
+            tail2=lisp.xcdr(tail2)
+        end
+        tail=lisp.xcdr(tail)
+    end
+    vars.face_alternative_font_registry_alist=alist
+    return alist
+end
 
 function M.init()
     vars.V.face_new_frame_defaults=vars.F.make_hash_table(vars.QCtest,vars.Qeq,vars.QCsize,33)
     vars.face_alternative_font_family_alist=vars.Qnil
+    vars.face_alternative_font_registry_alist=vars.Qnil
 end
 function M.init_syms()
     vars.defsubr(F,'internal_lisp_face_p')
@@ -777,6 +801,7 @@ function M.init_syms()
     vars.defsubr(F,'internal_set_lisp_face_attribute')
     vars.defsubr(F,'internal_set_font_selection_order')
     vars.defsubr(F,'internal_set_alternative_font_family_alist')
+    vars.defsubr(F,'internal_set_alternative_font_registry_alist')
 
     vars.defsym('Qface','face')
     vars.defsym('Qface_no_inherit','face-no-inherit')
