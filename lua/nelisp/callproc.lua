@@ -74,6 +74,10 @@ Non-ASCII characters are encoded according to the initial value of
 use.
 
 See `setenv' and `getenv'.]],function ()
+            if not _G.nelisp_later then
+                error('TODO: the returned value may be changed (by setcdr/setcar)')
+                error('TODO: also, it may be changed by neovim and not reflected')
+            end
             local list=vars.Qnil
             for k,v in pairs(vim.fn.environ()) do
                 if v=='' then

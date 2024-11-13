@@ -1429,12 +1429,14 @@ Initialized during startup as described in Info node `(elisp)Library Search'.
 Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
 and without trailing slashes.]],function ()
+            if not _G.nelisp_later then
+                error('TODO: the returned value may be changed (by setcdr/setcar)')
+                error('TODO: also, it may be changed by neovim and not reflected')
+                error('TODO: implement forwarding cons cells')
+            end
             return lisp.list(unpack(vim.tbl_map(alloc.make_string,vim.opt.runtimepath:get())))
         end,function (obj)
-            lisp.for_each_tail_safe(obj,function (tail)
-                assert(lisp.stringp(tail),'TODO')
-                vim.opt.runtimepath:append(lisp.sdata(tail))
-            end)
+            error('TODO')
         end)
 
     vars.defsym('Qmacroexp__dynvars','macroexp--dynvars')
