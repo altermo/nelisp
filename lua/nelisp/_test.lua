@@ -5,12 +5,10 @@ local nelisp_emacs=home..'/.nelisp/emacs'
 if not vim.tbl_contains(vim.opt.runtimepath:get(),nelisp_root) then
     vim.opt.runtimepath:append(nelisp_root)
 end
-if not vim.tbl_contains(vim.opt.runtimepath:get(),nelisp_emacs..'/lisp') then
-    vim.opt.runtimepath:append(nelisp_emacs..'/lisp')
-    for path,t in vim.fs.dir(nelisp_emacs..'/lisp') do
-        if t=='directory' then
-            vim.opt.runtimepath:append(nelisp_emacs..'/lisp/'..path)
-        end
+_G.nelisp_load_path={nelisp_emacs..'/lisp'}
+for path,t in vim.fs.dir(nelisp_emacs..'/lisp') do
+    if t=='directory' then
+        table.insert(vim.opt.runtimepath:get(),nelisp_emacs..'/lisp/'..path)
     end
 end
 

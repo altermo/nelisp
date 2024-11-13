@@ -1423,23 +1423,32 @@ This is useful when the file being loaded is a temporary copy.]])
     vars.defsym('Qrehash_threshold','rehash-threshold')
     vars.defsym('Qpurecopy','purecopy')
 
-    vars.defvar_forward('load_path','load-path',[[List of directories to search for files to load.
+--    vars.defvar_forward('load_path','load-path',[[List of directories to search for files to load.
+--Each element is a string (directory file name) or nil (meaning
+--`default-directory').
+--This list is consulted by the `require' function.
+--Initialized during startup as described in Info node `(elisp)Library Search'.
+--Use `directory-file-name' when adding items to this path.  However, Lisp
+--programs that process this list should tolerate directories both with
+--and without trailing slashes.]],function ()
+--            if _G.nelisp_later then
+--                error('TODO: the returned value may be changed (by setcdr/setcar)')
+--                error('TODO: also, it may be changed by neovim and not reflected')
+--                error('TODO: implement forwarding cons cells')
+--            end
+--            return lisp.list(unpack(vim.tbl_map(alloc.make_string,vim.opt.runtimepath:get())))
+--        end,function (obj)
+--            error('TODO')
+--        end)
+    vars.defvar_lisp('load_path','load-path',[[List of directories to search for files to load.
 Each element is a string (directory file name) or nil (meaning
 `default-directory').
 This list is consulted by the `require' function.
 Initialized during startup as described in Info node `(elisp)Library Search'.
 Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
-and without trailing slashes.]],function ()
-            if _G.nelisp_later then
-                error('TODO: the returned value may be changed (by setcdr/setcar)')
-                error('TODO: also, it may be changed by neovim and not reflected')
-                error('TODO: implement forwarding cons cells')
-            end
-            return lisp.list(unpack(vim.tbl_map(alloc.make_string,vim.opt.runtimepath:get())))
-        end,function (obj)
-            error('TODO')
-        end)
+and without trailing slashes.]])
+    vars.V.load_path=lisp.list(unpack(vim.tbl_map(alloc.make_string,_G.nelisp_load_path)))
 
     vars.defsym('Qmacroexp__dynvars','macroexp--dynvars')
     vars.defvar_lisp('macroexp__dynvars','macroexp--dynvars',[[List of variables declared dynamic in the current scope.
