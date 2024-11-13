@@ -4,7 +4,7 @@ local M={}
 
 local F={}
 local function default_to_grave_quoting_style()
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     return true

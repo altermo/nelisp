@@ -14,7 +14,7 @@ any handlers that are members of `inhibit-file-name-handlers',
 but still do run any other handlers.  This lets handlers
 use the standard functions without calling themselves recursively.]]}
 function F.find_file_name_handler.f(filename,operation)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     return vars.Qnil
@@ -32,7 +32,7 @@ If `/~' appears, all of FILENAME through that `/' is discarded.
 If `//' appears, everything up to and including the first of
 those `/' is discarded.]]}
 function F.substitute_in_file_name.f(filename)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     return filename
@@ -69,7 +69,7 @@ filesystem tree, not (expand-file-name ".." dirname).  Note: make
 sure DIRNAME in this example doesn't end in a slash, unless it's
 the root directory.]]}
 function F.expand_file_name.f(name,default_directory)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     if not lisp.nilp(default_directory) then
@@ -91,7 +91,7 @@ empty string (in some cases) as the current directory.
 Symbolic links to directories count as directories.
 See `file-symlink-p' to distinguish symlinks.]]}
 function F.file_directory_p.f(filename)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     return vim.fn.isdirectory(lisp.sdata(filename))==1 and vars.Qt or vars.Qnil

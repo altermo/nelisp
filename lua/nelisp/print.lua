@@ -36,7 +36,7 @@ end
 ---@param printcharfun nelisp.print.printcharfun
 function M.print_obj(obj,escapeflag,printcharfun)
     local out={}
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: implement print_depth')
     end
     local base_depth=printcharfun.print_depth
@@ -157,7 +157,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
         goto print_obj
     elseif typ==lisp.type.vectorlike then
         local ptyp=lisp.pseudovector_type(obj)
-        if not _G.nelisp_later then
+        if _G.nelisp_later then
             error('TODO')
         end
         if ptyp==lisp.pvec.normal_vector then
@@ -274,7 +274,7 @@ See `prin1' for the meaning of OVERRIDES.
 
 A printed representation of an object is text which describes that object.]]}
 function F.prin1_to_string.f(obj,noescape,overrides)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     if not lisp.nilp(overrides) then

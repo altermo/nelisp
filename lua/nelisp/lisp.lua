@@ -1,3 +1,8 @@
+if _G.nelisp_later then
+    --Avoid `_G.nelisp_later` being undefined
+    _G.nelisp_later=_G.nelisp_later
+    error('TODO: remove once nelisp_later is removed')
+end
 local vars=require'nelisp.vars'
 local b=require'nelisp.bytes'
 local M={}
@@ -372,7 +377,7 @@ end
 
 ---@param x nelisp.obj
 function M.loadhist_attach(x)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
 end

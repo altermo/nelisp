@@ -85,7 +85,7 @@ function vars.defvar_lisp(name,symname,doc)
     end
     Vsymbols[name]=sym
     if doc then
-        if not _G.nelisp_later then
+        if _G.nelisp_later then
             error('TODO')
         end
     end

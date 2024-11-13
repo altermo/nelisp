@@ -15,7 +15,7 @@ The argument object is not altered--the value is a copy.  If argument
 is a character, characters which map to multiple code points when
 cased, e.g. ﬁ, are returned unchanged.]]}
 function F.capitalize.f(arg)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     return alloc.make_string(vim.fn.toupper(lisp.sdata(arg)))

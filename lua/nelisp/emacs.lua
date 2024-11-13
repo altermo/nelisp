@@ -3,7 +3,7 @@ local lread=require'nelisp.lread'
 local alloc=require'nelisp.alloc'
 local M={}
 function M.init()
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: command-line-args how should it be initialized?')
         error('TODO: system-type should also be initialized')
     end

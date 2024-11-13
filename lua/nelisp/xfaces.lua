@@ -144,7 +144,7 @@ local function make_realized_face(lface)
     local face={} --[[@as unknown]]
     face.lface=lface
     face.ascii_face=face
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: maybe need zero out all other options (emacs does it)')
     end
     return face
@@ -154,7 +154,7 @@ end
 ---@return nelisp.face
 local function realize_tty_face(f,lface)
     local face=make_realized_face(lface)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: implement realize_tty_face')
     end
     return face
@@ -181,7 +181,7 @@ local function realize_face(f,lface,former_face_id)
     local cache=nvim.frame_face_cache(f)
     if former_face_id>=0 and cache.faces_by_id[former_face_id] then
         uncache_face(f,cache.faces_by_id[former_face_id])
-        if not _G.nelisp_later then
+        if _G.nelisp_later then
             error('TODO: redraw')
         end
     end
@@ -430,7 +430,7 @@ function F.internal_make_lisp_face.f(face,frame)
         lface=global_lface
     end
     if lisp.nilp(vars.F.get(face,vars.Qface_no_inherit)) then
-        if not _G.nelisp_later then
+        if _G.nelisp_later then
             error('TODO: redraw')
         end
     end
@@ -480,7 +480,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         end
         old_value=lisp.aref(lface,lface_index.family)
         lisp.aset(lface,lface_index.family,value)
-        if not _G.nelisp_later then error('TODO: set prop_index') end
+        if _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCfoundry)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -492,7 +492,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         end
         old_value=lisp.aref(lface,lface_index.foundry)
         lisp.aset(lface,lface_index.foundry,value)
-        if not _G.nelisp_later then error('TODO: set prop_index') end
+        if _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCheight)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -501,7 +501,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         end
         old_value=lisp.aref(lface,lface_index.height)
         lisp.aset(lface,lface_index.height,value)
-        if not _G.nelisp_later then error('TODO: set prop_index') end
+        if _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCweight)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -510,7 +510,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         end
         old_value=lisp.aref(lface,lface_index.weight)
         lisp.aset(lface,lface_index.weight,value)
-        if not _G.nelisp_later then error('TODO: set prop_index') end
+        if _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCslant)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -519,7 +519,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         end
         old_value=lisp.aref(lface,lface_index.slant)
         lisp.aset(lface,lface_index.slant,value)
-        if not _G.nelisp_later then error('TODO: set prop_index') end
+        if _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCunderline)) then
         local valid_p=false
         if unspecifiedp(value) or ignore_defface_p(value) or reset_p(value) then
@@ -646,7 +646,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         end
         old_value=lisp.aref(lface,lface_index.swidth)
         lisp.aset(lface,lface_index.swidth,value)
-        if not _G.nelisp_later then error('TODO: set prop_index') end
+        if _G.nelisp_later then error('TODO: set prop_index') end
     elseif (lisp.eq(attr,vars.QCfont)) then
         error('TODO')
     elseif (lisp.eq(attr,vars.QCfontset)) then
@@ -678,7 +678,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         and lisp.nilp(vars.F.get(face,vars.Qface_no_inherit))
         and lisp.nilp(vars.F.equal(old_value,value))
     then
-        if not _G.nelisp_later then
+        if _G.nelisp_later then
             error('TODO: redraw')
         end
     end

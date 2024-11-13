@@ -20,7 +20,6 @@ for k,_ in pairs(package.loaded) do
     end
 end
 
-_G.nelisp_later=true
 _G.nelisp_optimize_jit=true
 
 local api=require'nelisp.api'

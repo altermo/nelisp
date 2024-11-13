@@ -43,7 +43,7 @@ function M.create_buffer(name)
     local vname=lisp.sdata(name)
     local bufid=vim.api.nvim_create_buf(true,false)
     vim.api.nvim_buf_set_name(bufid,vname)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: what if name is multibyte which looks like unibyte or vice versa?')
     end
     return get_or_create_buf_obj(bufid)
@@ -62,7 +62,7 @@ function M.buffer_name(buffer)
 end
 ---@param buffer nelisp._buffer
 function M.set_current_buffer(buffer)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: what about unsetting buffer local variables, and other things?')
     end
     ---@cast buffer nelisp.vim.buffer

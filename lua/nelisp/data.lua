@@ -306,7 +306,7 @@ Internally, this normally uses `fset', but if SYMBOL has a
 The return value is undefined.]]}
 function F.defalias.f(sym,definition,docstring)
     lisp.check_symbol(sym)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     vars.F.fset(sym,definition)
@@ -436,7 +436,7 @@ local function arith_driver(code,args)
         end
         return lisp.make_fixnum(acc)
     end
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: args may contain markers')
     end
     if code=='+' then
@@ -457,7 +457,7 @@ local function arith_driver(code,args)
         end
         return call(fn,function (a,b) return a/b end)
     elseif code=='or' or code=='and' then
-        if not _G.nelisp_later then
+        if _G.nelisp_later then
             error('TODO: bit can only do numbers up to 32 bit, fixnum is 52 bit')
             error('TODO: a number being negative is treated as it having infinite ones at the left side')
         end
@@ -484,7 +484,7 @@ end
 ---@param code '='|'<='|'/='
 ---@return boolean
 local function arithcompare(a,b,code)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: args may contain markers')
     end
     local lt,gt,eq

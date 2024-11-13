@@ -432,7 +432,7 @@ end
 ---@return nelisp.obj?
 ---@return boolean whether the whole `s` was parsed, or only the beginning
 function M.string_to_number(s,base)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: create own implementation of number parser')
     end
     local num=tonumber(s=='' and '0' or s,base)
@@ -566,7 +566,7 @@ function M.hash_table_from_plist(plist)
     return ht
 end
 local function fromfilep(readcharfun)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     return false
@@ -895,7 +895,7 @@ end
 ---@param s string
 ---@return nelisp.lread.objlist
 function M.full_read_lua_string(s)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         --local readcharfun=M.make_readcharfun(str.make(s,(s:match('[\x80-\xff]') and true or false)))
         error('TODO')
         error('TODO: remove jit.on and jit.off')
@@ -1049,7 +1049,7 @@ local function openp(path,s,suffixes,storep,predicate,newer,no_native)
     return -1
 end
 local function lisp_file_lexically_bound_p(content)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     local l=assert(vim.lpeg,'vim.lpeg not found, neovim version too old')
@@ -1108,7 +1108,7 @@ is bound to the file's name.
 
 Return t if the file exists and loads successfully.]]}
 function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     local count=specpdl.index()
@@ -1160,7 +1160,7 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     specpdl.record_unwind_protect(function ()
         io.close(fd)
     end)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: a lot of stuff should be set up here')
     else
         specpdl.bind(vars.Qload_in_progress,vars.Qnil)
@@ -1249,7 +1249,7 @@ a substring of STRING from which to read;  they default to 0 and
 the end of STRING.]]}
 function F.read_from_string.f(s,start,end_)
     assert(lisp.nilp(start) and lisp.nilp(end_),'TODO')
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     lisp.check_string(s)
@@ -1271,7 +1271,7 @@ function F.read.f(stream)
     if lisp.nilp(stream) then
         error('TODO')
     end
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     elseif lisp.stringp(stream) then
         return lisp.xcar(vars.F.read_from_string(stream,vars.Qnil,vars.Qnil))
@@ -1346,7 +1346,7 @@ function F.locate_file_internal.f(filename,path,suffixes,predicate)
 end
 
 function M.init()
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: initialize load path')
     end
     vars.V.load_file_name=vars.Qnil --I don't know why emacs sets it to nil twice
@@ -1431,7 +1431,7 @@ Initialized during startup as described in Info node `(elisp)Library Search'.
 Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
 and without trailing slashes.]],function ()
-            if not _G.nelisp_later then
+            if _G.nelisp_later then
                 error('TODO: the returned value may be changed (by setcdr/setcar)')
                 error('TODO: also, it may be changed by neovim and not reflected')
                 error('TODO: implement forwarding cons cells')

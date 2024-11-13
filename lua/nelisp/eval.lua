@@ -233,7 +233,7 @@ function M.init_once()
 end
 function M.init()
     vars.lisp_eval_depth=0
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         vars.F.make_variable_buffer_local(vars.Qlexical_binding)
     end
     vars.autoload_queue=vars.Qnil
@@ -949,7 +949,7 @@ local function wants_debugger(list,conditions)
 end
 local function maybe_call_debugger(conditions,sig,d)
     local combined_data=vars.F.cons(sig,d)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: emacs does an if which basically checks if the debugger had an error')
         --The if: when_entered_debugger < num_nonmacro_input_events
     end
@@ -1007,7 +1007,7 @@ local function signal_or_quit(error_symbol,d,keyboard_quit)
             return vars.Qnil
         end
     end
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: will we ever need to do backtrace on redisplay error?')
         error('TODO: we will (for now) not support batch (noninteractive) mode')
     end

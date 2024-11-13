@@ -13,7 +13,7 @@ end
 ---@return "DONT RETURN"
 local function compile(obj,printcharfun)
     printcharfun.print_depth=printcharfun.print_depth+1
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: recursive/circular check')
         error('TODO: reuse reused objects')
     end

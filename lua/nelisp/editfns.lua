@@ -121,7 +121,7 @@ local function styled_format(args,message)
                 if prec==0 then
                     error('TODO')
                 else
-                    if not _G.nelisp_later then
+                    if _G.nelisp_later then
                         error('TODO')
                     end
                     nchars_string=lisp.schars(arg)
@@ -203,7 +203,7 @@ local function styled_format(args,message)
                 else
                     error('TODO')
                 end
-                if not _G.nelisp_later then
+                if _G.nelisp_later then
                     error('TODO')
                 end
                 buf.write(p)

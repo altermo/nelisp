@@ -7,13 +7,13 @@ local signal=require'nelisp.signal'
 local alloc=require'nelisp.alloc'
 local M={}
 local function at_endline_loc_p(...)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     return false
 end
 local function at_begline_loc_p(...)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     return false
@@ -28,7 +28,7 @@ local function eregex_to_vimregex(s)
     local signal_err=function (msg)
         signal.xsignal(vars.Qinvalid_regexp,alloc.make_string(msg))
     end
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: signal error on bad pattern')
     end
     local data={}
@@ -48,7 +48,7 @@ local function eregex_to_vimregex(s)
                 signal_err('Trailing backslash')
             end
             if c==b'(' then
-                if not _G.nelisp_later then
+                if _G.nelisp_later then
                     error('TODO: signal error on bad capture')
                 end
                 c=in_buf.read()
@@ -59,7 +59,7 @@ local function eregex_to_vimregex(s)
                     end
                 end
                 depth=depth+1
-                if not _G.nelisp_later then
+                if _G.nelisp_later then
                     error('TODO')
                 elseif parens==4 or parens_overflow then
                     out_buf.write('\\%(')
@@ -137,7 +137,7 @@ local function eregex_to_vimregex(s)
             end
             error('TODO')
         elseif c==b'+' or c==b'*' or c==b'?' then
-            if not _G.nelisp_later then
+            if _G.nelisp_later then
                 error('TODO: if previous expression is not valid the treat it as a literal')
             end
             out_buf.write('\\')
@@ -208,7 +208,7 @@ local F={}
 local function string_match_1(regexp,s,start,posix,modify_data)
     lisp.check_string(regexp)
     lisp.check_string(s)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     local pos_bytes=0
@@ -232,7 +232,7 @@ local function string_match_1(regexp,s,start,posix,modify_data)
         return vars.Qnil
     end
     local _,pat_start,pat_end=unpack(vim.fn.matchstrpos(lisp.sdata(s),vregex,pos_bytes))
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: somehow also return the positions of the submatches (or nil if they didn\'t match)')
     end
     if start==-1 or pat_end==-1 then
@@ -251,7 +251,7 @@ local function string_match_1(regexp,s,start,posix,modify_data)
             local sub_start=#list[idx]
             local sub_end=#list[idx+sub_patterns]+sub_start
             if list[idx+sub_patterns]=='' then
-                if not _G.nelisp_later then
+                if _G.nelisp_later then
                     error('TODO: empty matches are trimmed')
                 end
                 table.insert(search_regs.start,-1)
@@ -320,7 +320,7 @@ function F.match_data.f(integers,reuse,reseat)
         error('TODO')
     end
     if search_regs.parens_overflow then
-        if not _G.nelisp_later then
+        if _G.nelisp_later then
             error('TODO')
         end
         return lisp.list(alloc.make_string('Error: match parens can\'t be converted to position'))

@@ -16,7 +16,7 @@ end
 ---@param str string
 ---@return number
 function M.hash_string(str)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: placeholder hash algorithm')
     end
     local hash=0
@@ -29,7 +29,7 @@ end
 ---@param _depth number?
 ---@return number
 local function sxhash(obj,_depth)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     local depth=_depth or 0
@@ -1365,7 +1365,7 @@ function F.require.f(feature,filename,noerror)
     lisp.check_symbol(feature)
     local from_file=not lisp.nilp(vars.V.load_in_progress)
     if not from_file then
-        if not _G.nelisp_later then
+        if _G.nelisp_later then
             error('TODO')
         end
     end

@@ -77,7 +77,7 @@ local function parse_modifiers_uncached(sym)
     local mods=0
     local name=lisp.symbol_name(sym)
     local i=0
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: maybe ...-1 is incorrect, and it should just be ...')
     end
     while i<lisp.sbytes(name)-1 do
@@ -330,7 +330,7 @@ local function access_keymap(map,idx,t_ok,noinherit,autoload)
     return access_keymap_1(map,idx,t_ok,noinherit,autoload) or vars.Qnil
 end
 local function silly_event_symbol_error(sym)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
 end
@@ -594,7 +594,7 @@ F.use_global_map={'use-global-map',1,1,0,[[Select KEYMAP as the global keymap.]]
 function F.use_global_map.f(keymap)
     keymap=get_keymap(keymap,true,true)
     current_global_map=keymap
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     return vars.Qnil

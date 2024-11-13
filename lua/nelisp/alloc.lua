@@ -44,7 +44,7 @@ end
 ---@param c string
 ---@return nelisp.obj
 function M.make_string(c)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: multibyte')
     end
     return M.make_unibyte_string(c)

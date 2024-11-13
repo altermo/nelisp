@@ -24,7 +24,7 @@ This file does the following things (this might be outdated):
 It is recommended to use this file when running the interpreter.
 ### `error('TODO')` and `_G.nelisp_later`
 + `error('TODO')` should be used for paths that are not yet implemented
-+ `_G.nelisp_later` is (mostly) for when implementing a feature half way, and if this is false then error about needing to implement it full way.
++ `_G.nelisp_later` is (mostly) for when implementing a feature half way, and if this is `true` then error about needing to implement it full way.
 
 <!--
 + [#992](https://github.com/neovim/neovim/issues/992) and [#16313](https://github.com/neovim/neovim/issues/16313): major/minor modes

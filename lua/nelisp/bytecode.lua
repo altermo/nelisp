@@ -193,7 +193,7 @@ end
 ---@param args nelisp.obj[]
 ---@return nelisp.obj
 function M.exec_byte_code(fun,args_template,args)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: speed inprovement')
     end
     local cidx=lisp.compiled_idx

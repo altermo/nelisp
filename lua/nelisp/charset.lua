@@ -178,7 +178,7 @@ local function load_charset(charset,control_flag)
     else
         error('TODO')
     end
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     else
         charset.min_char=0

@@ -26,7 +26,7 @@ local function command_loop_1()
     end
 end
 local function cmd_error(d,_msg)
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO')
     end
     local sig=lisp.xcar(d)
@@ -52,7 +52,7 @@ local function command_loop_2(handlers)
 end
 function M.recursive_edit(top_level)
     if top_level then
-        if not _G.nelisp_later then
+        if _G.nelisp_later then
             error('TODO: call the function in top-level')
         end
         while true do
@@ -69,7 +69,7 @@ function M.call(fn)
         return fn()
     end
     local jit_on
-    if not _G.nelisp_later then
+    if _G.nelisp_later then
         error('TODO: remove jit.on and jit.off')
     elseif _G.nelisp_optimize_jit then
         jit_on=jit.status()
