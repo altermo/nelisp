@@ -442,6 +442,21 @@ function F.internal_make_lisp_face.f(face,frame)
     check_lface(lface)
     return lface
 end
+local function merge_face_heights(from,to,invalid)
+    local result=invalid
+    if lisp.fixnump(from) then
+        result=from
+    elseif lisp.floatp(from) then
+        if lisp.fixnump(to) then
+            result=lisp.make_fixnum(lisp.xfloat_data(from)*lisp.fixnum(to))
+        else
+            error('TODO')
+        end
+    else
+        error('TODO')
+    end
+    return result
+end
 F.internal_set_lisp_face_attribute={'internal-set-lisp-face-attribute',3,4,0,[[Set attribute ATTR of FACE to VALUE.
 FRAME being a frame means change the face on that frame.
 FRAME nil means change the face of the selected frame.
@@ -501,7 +516,14 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
             and not reset_p(value)) then
-            error('TODO')
+            if lisp.eq(face,vars.Qdefault) then
+                error('TODO')
+            else
+                local test=merge_face_heights(value,lisp.make_fixnum(10),vars.Qnil)
+                if not lisp.fixnump(test) or lisp.fixnum(test)<=0 then
+                    signal.signal_error('Face height does not produce a positive integer',value)
+                end
+            end
         end
         old_value=lisp.aref(lface,M.lface_index.height)
         lisp.aset(lface,M.lface_index.height,value)
@@ -592,7 +614,32 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         elseif lisp.consp(value) and lisp.fixnump(lisp.xcar(value)) and lisp.fixnump(lisp.xcdr(value)) then
             valid_p=true
         elseif lisp.consp(value) then
-            error('TODO')
+            local tem=value
+            while lisp.consp(tem) do
+                local k=lisp.xcar(tem)
+                tem=lisp.xcdr(tem)
+                if not lisp.consp(tem) then
+                    break
+                end
+                local v=lisp.xcar(tem)
+                if lisp.eq(k,vars.QCline_width) then
+                    if (not lisp.consp(v) or not lisp.fixnump(lisp.xcar(v)) or lisp.fixnum(lisp.xcar(v))==0 or
+                        not lisp.fixnump(lisp.xcdr(v)) or lisp.fixnum(lisp.xcdr(v))==0)
+                        and (not lisp.fixnump(v) or lisp.fixnum(v)==0) then
+                        break
+                    end
+                elseif lisp.eq(k,vars.QCcolor) then
+                    error('TODO')
+                elseif lisp.eq(k,vars.QCstyle) then
+                    if not lisp.eq(v,vars.Qpressed_button) and not lisp.eq(v,vars.Qreleased_button) and not lisp.eq(v,vars.Qflat_button) then
+                        break
+                    end
+                else
+                    break
+                end
+                tem=lisp.xcdr(tem)
+            end
+            valid_p=lisp.nilp(tem)
         end
         if not valid_p then
             signal.signal_error('Invalid face box',value)
@@ -666,7 +713,13 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         if lisp.symbolp(value) then
             tail=vars.Qnil
         else
-            error('TODO')
+            tail=value
+            while lisp.consp(tail) do
+                if not lisp.symbolp(lisp.xcar(tail)) then
+                    break
+                end
+                tail=lisp.xcdr(tail)
+            end
         end
         if lisp.nilp(tail) then
             lisp.aset(lface,M.lface_index.inherit,value)
@@ -702,7 +755,9 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
                 error('TODO')
             end
         elseif lisp.eq(face,vars.Qmenu) then
-            error('TODO')
+            if _G.nelisp_later then
+                error('TODO: signal menu face changed')
+            end
         end
         if not lisp.nilp(param) then
             error('TODO')
@@ -863,7 +918,15 @@ local function merge_face_ref(w,f,face_ref,to,err_msg,named_merge_points,attr_fi
                 elseif lisp.eq(keyword,vars.QCstrike_through) then
                     error('TODO')
                 elseif lisp.eq(keyword,vars.QCbox) then
-                    error('TODO')
+                    if lisp.eq(value,vars.Qt) then
+                        value=lisp.make_fixnum(1)
+                    end
+                    if (lisp.fixnump(value) and lisp.fixnum(value)~=0)
+                        or lisp.stringp(value) or lisp.consp(value) or lisp.nilp(value) then
+                        lisp.aset(to,M.lface_index.box,value)
+                    else
+                        err=true
+                    end
                 elseif lisp.eq(keyword,vars.QCinverse_video) or lisp.eq(keyword,vars.QCreverse_video) then
                     error('TODO')
                 elseif lisp.eq(keyword,vars.QCforeground) then
@@ -1080,6 +1143,9 @@ function M.init_syms()
     vars.defsym('Qchild_frame_border','child-frame-border')
     vars.defsym('Qtab_bar','tab-bar')
     vars.defsym('Qreset','reset')
+    vars.defsym('Qpressed_button','pressed-button')
+    vars.defsym('Qreleased_button','released-button')
+    vars.defsym('Qflat_button','flat-button')
 
     vars.defsym('QCfamily',':family')
     vars.defsym('QCfoundry',':foundry')
@@ -1105,6 +1171,8 @@ function M.init_syms()
     vars.defsym('QCitalic',':italic')
     vars.defsym('QCfiltered',':filtered')
     vars.defsym('QCstyle',':style')
+    vars.defsym('QCline_width',':line-width')
+    vars.defsym('QCcolor',':color')
 
     vars.defvar_lisp('face_new_frame_defaults','face--new-frame-defaults',[[Hash table of global face definitions (for internal use only.)]])
 end

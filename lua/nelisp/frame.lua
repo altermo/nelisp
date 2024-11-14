@@ -96,7 +96,7 @@ function F.frame_parameter.f(frame,parameter)
     elseif lisp.eq(parameter,vars.Qbackground_color) or lisp.eq(parameter,vars.Qforeground_color) then
         error('TODO')
     elseif lisp.eq(parameter,vars.Qdisplay_type) or lisp.eq(parameter,vars.Qbackground_mode) then
-        error('TODO')
+        return vars.F.cdr(vars.F.assq(parameter,nvim.frame_param_alist(f)))
     else
         return vars.F.cdr(vars.F.assq(parameter,vars.F.frame_parameters(frame)))
     end
