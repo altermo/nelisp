@@ -252,6 +252,23 @@ function F.garbage_collect.f()
     collectgarbage()
     return vars.Qnil
 end
+F.record={'record',1,-2,0,[[Create a new record.
+TYPE is its type as returned by `type-of'; it should be either a
+symbol or a type descriptor.  SLOTS is used to initialize the record
+slots with shallow copies of the arguments.
+usage: (record TYPE &rest SLOTS)]]}
+function F.record.f(args)
+    local elems={}
+    for k,v in ipairs(args) do
+        elems[k]=v
+    end
+    ---@type nelisp._record
+    local vec={
+        size=#args,
+        contents=elems,
+    }
+    return lisp.make_vectorlike_ptr(vec,lisp.pvec.record)
+end
 
 function M.init_syms()
     vars.defsubr(F,'list')
@@ -263,6 +280,7 @@ function M.init_syms()
     vars.defsubr(F,'make_byte_code')
     vars.defsubr(F,'make_closure')
     vars.defsubr(F,'garbage_collect')
+    vars.defsubr(F,'record')
 
     vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end
