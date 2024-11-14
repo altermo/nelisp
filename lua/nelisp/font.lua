@@ -36,8 +36,22 @@ local width_table={
     {150,{'extra-expanded','extraexpanded'}},
     {200,{'ultra-expanded','ultraexpanded','wide'}}
 }
+local function build_style_table(tbl)
+    local t=alloc.make_vector(#tbl,'nil')
+    for i=1,#tbl do
+        local elt=alloc.make_vector((#tbl[i][2])+1,'nil')
+        lisp.aset(elt,0,lisp.make_fixnum(tbl[i][1]))
+        for j=1,#tbl[i][2] do
+            lisp.aset(elt,j,lread.intern_c_string(tbl[i][2][j]))
+        end
+        lisp.aset(t,i-1,elt)
+    end
+    return t
+end
+
+local M={}
 ---@enum nelisp.font_index
-local font_index={
+M.font_index={
     type=0,
     foundry=1,
     family=2,
@@ -59,44 +73,6 @@ local font_index={
     file=16,
     object_max=17,
 }
-local function build_style_table(tbl)
-    local t=alloc.make_vector(#tbl,'nil')
-    for i=1,#tbl do
-        local elt=alloc.make_vector((#tbl[i][2])+1,'nil')
-        lisp.aset(elt,0,lisp.make_fixnum(tbl[i][1]))
-        for j=1,#tbl[i][2] do
-            lisp.aset(elt,j,lread.intern_c_string(tbl[i][2][j]))
-        end
-        lisp.aset(t,i-1,elt)
-    end
-    return t
-end
----@param prop nelisp.font_index
----@param val nelisp.obj
----@param noerror boolean
----@return number
-local function font_style_to_value(prop,val,noerror)
-    local t=lisp.aref(font_style_table,prop-font_index.weight)
-    lisp.check_vector(t)
-    local len=lisp.asize(t)
-    if lisp.symbolp(val) then
-        for i=0,len-1 do
-            lisp.check_vector(lisp.aref(t,i))
-            for j=1,lisp.asize(lisp.aref(t,i))-1 do
-                if lisp.eq(val,lisp.aref(lisp.aref(t,i),j)) then
-                    lisp.check_fixnum(lisp.aref(lisp.aref(t,i),0))
-                    local n=lisp.fixnum(lisp.aref(lisp.aref(t,i),0))
-                    return bit.bor(bit.lshift(n,8),bit.lshift(i,4),(j-1))
-                end
-            end
-        end
-        error('TODO')
-    else
-        error('TODO')
-    end
-end
-
-local M={}
 ---@enum nelisp.font_xlfd
 M.xlfd={
     foundry=0,
@@ -115,8 +91,42 @@ M.xlfd={
     encoding=13,
     last=14,
 }
+---@param prop nelisp.font_index
+---@param val nelisp.obj
+---@param noerror boolean
+---@return number
+local function font_style_to_value(prop,val,noerror)
+    local t=lisp.aref(font_style_table,prop-M.font_index.weight)
+    lisp.check_vector(t)
+    local len=lisp.asize(t)
+    if lisp.symbolp(val) then
+        for i=0,len-1 do
+            lisp.check_vector(lisp.aref(t,i))
+            for j=1,lisp.asize(lisp.aref(t,i))-1 do
+                if lisp.eq(val,lisp.aref(lisp.aref(t,i),j)) then
+                    lisp.check_fixnum(lisp.aref(lisp.aref(t,i),0))
+                    local n=lisp.fixnum(lisp.aref(lisp.aref(t,i),0))
+                    return bit.bor(bit.lshift(n,8),bit.lshift(i,4),(j-1))
+                end
+            end
+        end
+        error('TODO')
+    else
+        error('TODO')
+    end
+end
+---@param attrs nelisp.obj
+function M.font_clear_prop(attrs,prop)
+    lisp.check_vector(attrs)
+    local xfaces=require'nelisp.xfaces'
+    local font=lisp.aref(attrs,xfaces.lface_index.font)
+    if not lisp.fontp(font) then
+        return
+    end
+    error('TODO')
+end
 function M.font_weight_name_numeric(name)
-    local n=font_style_to_value(font_index.weight,name,false)
+    local n=font_style_to_value(M.font_index.weight,name,false)
     if n<0 then return n end
     return bit.rshift(n,8)
 end
@@ -125,13 +135,13 @@ function M.font_update_sort_order(order)
     for i=1,4 do
         local xlfd_idx=order[i]
         if xlfd_idx==M.xlfd.weight then
-            sort_shift_bits[font_index.weight]=shift_bits
+            sort_shift_bits[M.font_index.weight]=shift_bits
         elseif xlfd_idx==M.xlfd.slant then
-            sort_shift_bits[font_index.slant]=shift_bits
+            sort_shift_bits[M.font_index.slant]=shift_bits
         elseif xlfd_idx==M.xlfd.swidth then
-            sort_shift_bits[font_index.width]=shift_bits
+            sort_shift_bits[M.font_index.width]=shift_bits
         elseif xlfd_idx==M.xlfd.point_size then
-            sort_shift_bits[font_index.size]=shift_bits
+            sort_shift_bits[M.font_index.size]=shift_bits
         else
             error('unreachable')
         end
@@ -151,11 +161,11 @@ function M.init()
 
     font_style_table=vars.F.vector({vars.V.font_weight_table,vars.V.font_slant_table,vars.V.font_width_table})
 
-    sort_shift_bits[font_index.type]=0
-    sort_shift_bits[font_index.slant]=2
-    sort_shift_bits[font_index.weight]=9
-    sort_shift_bits[font_index.size]=16
-    sort_shift_bits[font_index.width]=23
+    sort_shift_bits[M.font_index.type]=0
+    sort_shift_bits[M.font_index.slant]=2
+    sort_shift_bits[M.font_index.weight]=9
+    sort_shift_bits[M.font_index.size]=16
+    sort_shift_bits[M.font_index.width]=23
 end
 function M.init_syms()
     vars.defvar_lisp('font_weight_table','font-weight-table',[[Vector of valid font weight values.

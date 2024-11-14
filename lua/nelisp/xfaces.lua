@@ -21,8 +21,10 @@ local font_sort_order
 local FRAME_WINDOW_P=false --no frames are graphical
 local FRAME_TERMCAP_P=true --all frames are in a terminal
 
+local M={}
+
 ---@enum nelisp.lface_index
-local lface_index={
+M.lface_index={
     _symbol_face=0,
     family=1,
     foundry=2,
@@ -132,12 +134,12 @@ local function reset_p(obj)
 end
 local function lface_fully_specified_p(lface)
     for i=1,lisp.asize(lface)-1 do
-        if (i~=lface_index.font and i~=lface_index.inherit and i~=lface_index.distant_foreground) and
+        if (i~=M.lface_index.font and i~=M.lface_index.inherit and i~=M.lface_index.distant_foreground) and
             (unspecifiedp(lisp.aref(lface,i)) or ignore_defface_p(lisp.aref(lface,i))) then
             return false
         end
     end
-    return lisp.asize(lface)==lface_index.size
+    return lisp.asize(lface)==M.lface_index.size
 end
 ---@param lface nelisp.obj
 ---@return nelisp.face
@@ -209,60 +211,60 @@ local function realize_default_face(f)
         error('TODO')
     end
     if not FRAME_WINDOW_P then
-        lisp.aset(lface,lface_index.family,alloc.make_string('default'))
-        lisp.aset(lface,lface_index.foundry,lisp.aref(lface,lface_index.family))
-        lisp.aset(lface,lface_index.swidth,vars.Qnormal)
-        lisp.aset(lface,lface_index.height,lisp.make_fixnum(1))
-        if unspecifiedp(lisp.aref(lface,lface_index.weight)) then
-            lisp.aset(lface,lface_index.weight,vars.Qnormal)
+        lisp.aset(lface,M.lface_index.family,alloc.make_string('default'))
+        lisp.aset(lface,M.lface_index.foundry,lisp.aref(lface,M.lface_index.family))
+        lisp.aset(lface,M.lface_index.swidth,vars.Qnormal)
+        lisp.aset(lface,M.lface_index.height,lisp.make_fixnum(1))
+        if unspecifiedp(lisp.aref(lface,M.lface_index.weight)) then
+            lisp.aset(lface,M.lface_index.weight,vars.Qnormal)
         end
-        if unspecifiedp(lisp.aref(lface,lface_index.slant)) then
-            lisp.aset(lface,lface_index.slant,vars.Qnormal)
+        if unspecifiedp(lisp.aref(lface,M.lface_index.slant)) then
+            lisp.aset(lface,M.lface_index.slant,vars.Qnormal)
         end
-        if unspecifiedp(lisp.aref(lface,lface_index.fontset)) then
-            lisp.aset(lface,lface_index.fontset,vars.Qnil)
+        if unspecifiedp(lisp.aref(lface,M.lface_index.fontset)) then
+            lisp.aset(lface,M.lface_index.fontset,vars.Qnil)
         end
     end
-    if unspecifiedp(lisp.aref(lface,lface_index.extend)) then
-        lisp.aset(lface,lface_index.extend,vars.Qnil)
+    if unspecifiedp(lisp.aref(lface,M.lface_index.extend)) then
+        lisp.aset(lface,M.lface_index.extend,vars.Qnil)
     end
-    if unspecifiedp(lisp.aref(lface,lface_index.underline)) then
-        lisp.aset(lface,lface_index.underline,vars.Qnil)
+    if unspecifiedp(lisp.aref(lface,M.lface_index.underline)) then
+        lisp.aset(lface,M.lface_index.underline,vars.Qnil)
     end
-    if unspecifiedp(lisp.aref(lface,lface_index.overline)) then
-        lisp.aset(lface,lface_index.overline,vars.Qnil)
+    if unspecifiedp(lisp.aref(lface,M.lface_index.overline)) then
+        lisp.aset(lface,M.lface_index.overline,vars.Qnil)
     end
-    if unspecifiedp(lisp.aref(lface,lface_index.strike_through)) then
-        lisp.aset(lface,lface_index.strike_through,vars.Qnil)
+    if unspecifiedp(lisp.aref(lface,M.lface_index.strike_through)) then
+        lisp.aset(lface,M.lface_index.strike_through,vars.Qnil)
     end
-    if unspecifiedp(lisp.aref(lface,lface_index.box)) then
-        lisp.aset(lface,lface_index.box,vars.Qnil)
+    if unspecifiedp(lisp.aref(lface,M.lface_index.box)) then
+        lisp.aset(lface,M.lface_index.box,vars.Qnil)
     end
-    if unspecifiedp(lisp.aref(lface,lface_index.inverse)) then
-        lisp.aset(lface,lface_index.inverse,vars.Qnil)
+    if unspecifiedp(lisp.aref(lface,M.lface_index.inverse)) then
+        lisp.aset(lface,M.lface_index.inverse,vars.Qnil)
     end
-    if unspecifiedp(lisp.aref(lface,lface_index.foreground)) then
+    if unspecifiedp(lisp.aref(lface,M.lface_index.foreground)) then
         local color=vars.F.assq(vars.Qforeground_color,nvim.frame_param_alist(f))
         if lisp.consp(color) and lisp.stringp(lisp.xcdr(color)) then
-            lisp.aset(lface,lface_index.foreground,lisp.xcdr(color))
+            lisp.aset(lface,M.lface_index.foreground,lisp.xcdr(color))
         elseif FRAME_WINDOW_P then
             return false
         elseif FRAME_TERMCAP_P then
-            lisp.aset(lface,lface_index.foreground,alloc.make_string('unspecified-fg'))
+            lisp.aset(lface,M.lface_index.foreground,alloc.make_string('unspecified-fg'))
         end
     end
-    if unspecifiedp(lisp.aref(lface,lface_index.background)) then
+    if unspecifiedp(lisp.aref(lface,M.lface_index.background)) then
         local color=vars.F.assq(vars.Qbackground_color,nvim.frame_param_alist(f))
         if lisp.consp(color) and lisp.stringp(lisp.xcdr(color)) then
-            lisp.aset(lface,lface_index.background,lisp.xcdr(color))
+            lisp.aset(lface,M.lface_index.background,lisp.xcdr(color))
         elseif FRAME_WINDOW_P then
             return false
         elseif FRAME_TERMCAP_P then
-            lisp.aset(lface,lface_index.background,alloc.make_string('unspecified-bg'))
+            lisp.aset(lface,M.lface_index.background,alloc.make_string('unspecified-bg'))
         end
     end
-    if unspecifiedp(lisp.aref(lface,lface_index.stipple)) then
-        lisp.aset(lface,lface_index.stipple,vars.Qnil)
+    if unspecifiedp(lisp.aref(lface,M.lface_index.stipple)) then
+        lisp.aset(lface,M.lface_index.stipple,vars.Qnil)
     end
     assert(lface_fully_specified_p(lface))
     check_lface(lface)
@@ -280,19 +282,19 @@ local function get_lface_attributes_no_remap(f,sym,signal_p)
     return vars.Qnil
 end
 local function merge_face_vectors(w,f,from,to,named_merge_points)
-    if not unspecifiedp(lisp.aref(from,lface_index.inherit))
-        and not lisp.nilp(lisp.aref(from,lface_index.inherit)) then
+    if not unspecifiedp(lisp.aref(from,M.lface_index.inherit))
+        and not lisp.nilp(lisp.aref(from,M.lface_index.inherit)) then
         error('TODO')
     end
     local font=vars.Qnil
-    if lisp.fontp(lisp.aref(from,lface_index.font)) then
+    if lisp.fontp(lisp.aref(from,M.lface_index.font)) then
         error('TODO')
     end
-    for i=1,lface_index.size-1 do
+    for i=1,M.lface_index.size-1 do
         if not unspecifiedp(lisp.aref(from,i)) then
-            if i==lface_index.height and not lisp.fixnump(lisp.aref(from,i)) then
+            if i==M.lface_index.height and not lisp.fixnump(lisp.aref(from,i)) then
                 error('TODO')
-            elseif i~=lface_index.font and not lisp.eq(lisp.aref(from,i),lisp.aref(to,i)) then
+            elseif i~=M.lface_index.font and not lisp.eq(lisp.aref(from,i),lisp.aref(to,i)) then
                 error('TODO')
             end
         end
@@ -300,7 +302,7 @@ local function merge_face_vectors(w,f,from,to,named_merge_points)
     if not lisp.nilp(font) then
         error('TODO')
     end
-    lisp.aset(to,lface_index.inherit,vars.Qnil)
+    lisp.aset(to,M.lface_index.inherit,vars.Qnil)
 end
 ---@param f nelisp._frame
 ---@param sym nelisp.obj
@@ -315,7 +317,7 @@ local function realize_named_face(f,sym,id)
         lface=vars.F.internal_make_lisp_face(sym,f)
     end
     local symbol_attrs=get_lface_attributes_no_remap(f,sym,true)
-    for i=1,lface_index.size-1 do
+    for i=1,M.lface_index.size-1 do
         if lisp.eq(lisp.aref(symbol_attrs,i),vars.Qreset) then
             lisp.aset(symbol_attrs,i,lisp.aref(attrs,i))
         end
@@ -350,7 +352,6 @@ local function realize_basic_faces(f)
     end
     return success_p
 end
-local M={}
 ---@param f nelisp._frame
 ---@param idx number
 ---@return nelisp.obj
@@ -388,7 +389,7 @@ function F.internal_lisp_face_p.f(face,frame)
     return lface
 end
 local function lfacep(lface)
-    return lisp.vectorp(lface) and lisp.eq(lisp.aref(lface,0),vars.Qface) and lisp.asize(lface)==lface_index.size
+    return lisp.vectorp(lface) and lisp.eq(lisp.aref(lface,0),vars.Qface) and lisp.asize(lface)==M.lface_index.size
 end
 F.internal_make_lisp_face={'internal-make-lisp-face',1,2,0,[[Make FACE, a symbol, a Lisp face with all attributes nil.
 If FACE was not known as a face before, create a new one.
@@ -410,21 +411,21 @@ function F.internal_make_lisp_face.f(face,frame)
         table.insert(lface_id_to_name,face)
         local face_id_=lisp.make_fixnum(#lface_id_to_name)
         vars.F.put(face,vars.Qface,face_id_)
-        global_lface=alloc.make_vector(lface_index.size,vars.Qunspecified)
+        global_lface=alloc.make_vector(M.lface_index.size,vars.Qunspecified)
         lisp.aset(global_lface,0,vars.Qface)
         vars.F.puthash(face,vars.F.cons(face_id_,global_lface),vars.V.face_new_frame_defaults)
     elseif f==nil then
-        for i=1,lface_index.size-1 do
+        for i=1,M.lface_index.size-1 do
             lisp.aset(global_lface,i,vars.Qunspecified)
         end
     end
     if f then
         if lisp.nilp(lface) then
-            lface=alloc.make_vector(lface_index.size,vars.Qunspecified)
+            lface=alloc.make_vector(M.lface_index.size,vars.Qunspecified)
             lisp.aset(lface,0,vars.Qface)
             vars.F.puthash(face,lface,nvim.frame_hash_table(f))
         else
-            for i=1,lface_index.size-1 do
+            for i=1,M.lface_index.size-1 do
                 lisp.aset(lface,i,vars.Qunspecified)
             end
         end
@@ -480,9 +481,9 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
                 signal.signal_error('Invalid face family',value)
             end
         end
-        old_value=lisp.aref(lface,lface_index.family)
-        lisp.aset(lface,lface_index.family,value)
-        if _G.nelisp_later then error('TODO: set prop_index') end
+        old_value=lisp.aref(lface,M.lface_index.family)
+        lisp.aset(lface,M.lface_index.family,value)
+        prop_index=font_.font_index.family
     elseif (lisp.eq(attr,vars.QCfoundry)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -492,18 +493,18 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
                 signal.signal_error('Invalid face foundry',value)
             end
         end
-        old_value=lisp.aref(lface,lface_index.foundry)
-        lisp.aset(lface,lface_index.foundry,value)
-        if _G.nelisp_later then error('TODO: set prop_index') end
+        old_value=lisp.aref(lface,M.lface_index.foundry)
+        lisp.aset(lface,M.lface_index.foundry,value)
+        prop_index=font_.font_index.foundry
     elseif (lisp.eq(attr,vars.QCheight)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
             and not reset_p(value)) then
             error('TODO')
         end
-        old_value=lisp.aref(lface,lface_index.height)
-        lisp.aset(lface,lface_index.height,value)
-        if _G.nelisp_later then error('TODO: set prop_index') end
+        old_value=lisp.aref(lface,M.lface_index.height)
+        lisp.aset(lface,M.lface_index.height,value)
+        prop_index=font_.font_index.size
     elseif (lisp.eq(attr,vars.QCweight)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -513,18 +514,18 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
                 signal.signal_error('Invalid face weight',value)
             end
         end
-        old_value=lisp.aref(lface,lface_index.weight)
-        lisp.aset(lface,lface_index.weight,value)
-        if _G.nelisp_later then error('TODO: set prop_index') end
+        old_value=lisp.aref(lface,M.lface_index.weight)
+        lisp.aset(lface,M.lface_index.weight,value)
+        prop_index=font_.font_index.weight
     elseif (lisp.eq(attr,vars.QCslant)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
             and not reset_p(value)) then
             error('TODO')
         end
-        old_value=lisp.aref(lface,lface_index.slant)
-        lisp.aset(lface,lface_index.slant,value)
-        if _G.nelisp_later then error('TODO: set prop_index') end
+        old_value=lisp.aref(lface,M.lface_index.slant)
+        lisp.aset(lface,M.lface_index.slant,value)
+        prop_index=font_.font_index.slant
     elseif (lisp.eq(attr,vars.QCunderline)) then
         local valid_p=false
         if unspecifiedp(value) or ignore_defface_p(value) or reset_p(value) then
@@ -539,8 +540,8 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         if not valid_p then
             signal.signal_error('Invalid face underline',value)
         end
-        old_value=lisp.aref(lface,lface_index.underline)
-        lisp.aset(lface,lface_index.underline,value)
+        old_value=lisp.aref(lface,M.lface_index.underline)
+        lisp.aset(lface,M.lface_index.underline,value)
     elseif (lisp.eq(attr,vars.QCoverline)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -554,8 +555,8 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         )) then
             signal.signal_error('Invalid face overline',value)
         end
-        old_value=lisp.aref(lface,lface_index.overline)
-        lisp.aset(lface,lface_index.overline,value)
+        old_value=lisp.aref(lface,M.lface_index.overline)
+        lisp.aset(lface,M.lface_index.overline,value)
     elseif (lisp.eq(attr,vars.QCstrike_through)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -569,8 +570,8 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         )) then
             signal.signal_error('Invalid face strike-through',value)
         end
-        old_value=lisp.aref(lface,lface_index.strike_through)
-        lisp.aset(lface,lface_index.strike_through,value)
+        old_value=lisp.aref(lface,M.lface_index.strike_through)
+        lisp.aset(lface,M.lface_index.strike_through,value)
     elseif (lisp.eq(attr,vars.QCbox)) then
         local valid_p=false
         if lisp.eq(value,vars.Qt) then
@@ -592,8 +593,8 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         if not valid_p then
             signal.signal_error('Invalid face box',value)
         end
-        old_value=lisp.aref(lface,lface_index.box)
-        lisp.aset(lface,lface_index.box,value)
+        old_value=lisp.aref(lface,M.lface_index.box)
+        lisp.aset(lface,M.lface_index.box,value)
     elseif (lisp.eq(attr,vars.QCinverse_video) or lisp.eq(attr,vars.QCreverse_video)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -603,8 +604,8 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
                 signal.signal_error('Invalid inverse-video face attribute value',value)
             end
         end
-        old_value=lisp.aref(lface,lface_index.inverse)
-        lisp.aset(lface,lface_index.inverse,value)
+        old_value=lisp.aref(lface,M.lface_index.inverse)
+        lisp.aset(lface,M.lface_index.inverse,value)
     elseif (lisp.eq(attr,vars.QCextend)) then
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
@@ -614,8 +615,8 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
                 signal.signal_error('Invalid extend face attribute value',value)
             end
         end
-        old_value=lisp.aref(lface,lface_index.extend)
-        lisp.aset(lface,lface_index.extend,value)
+        old_value=lisp.aref(lface,M.lface_index.extend)
+        lisp.aset(lface,M.lface_index.extend,value)
     elseif (lisp.eq(attr,vars.QCforeground)) then
         if lisp.nilp(value) then error('TODO') end
         if (not unspecifiedp(value)
@@ -626,8 +627,8 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
                 signal.signal_error('Empty foreground color value',value)
             end
         end
-        old_value=lisp.aref(lface,lface_index.foreground)
-        lisp.aset(lface,lface_index.foreground,value)
+        old_value=lisp.aref(lface,M.lface_index.foreground)
+        lisp.aset(lface,M.lface_index.foreground,value)
     elseif (lisp.eq(attr,vars.QCdistant_foreground)) then
         error('TODO')
     elseif (lisp.eq(attr,vars.QCbackground)) then
@@ -640,8 +641,8 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
                 signal.signal_error('Empty background color value',value)
             end
         end
-        old_value=lisp.aref(lface,lface_index.background)
-        lisp.aset(lface,lface_index.background,value)
+        old_value=lisp.aref(lface,M.lface_index.background)
+        lisp.aset(lface,M.lface_index.background,value)
     elseif (lisp.eq(attr,vars.QCstipple)) then
     elseif (lisp.eq(attr,vars.QCwidth)) then
         if (not unspecifiedp(value)
@@ -649,9 +650,9 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
             and not reset_p(value)) then
             error('TODO')
         end
-        old_value=lisp.aref(lface,lface_index.swidth)
-        lisp.aset(lface,lface_index.swidth,value)
-        if _G.nelisp_later then error('TODO: set prop_index') end
+        old_value=lisp.aref(lface,M.lface_index.swidth)
+        lisp.aset(lface,M.lface_index.swidth,value)
+        prop_index=font_.font_index.width
     elseif (lisp.eq(attr,vars.QCfont)) then
         error('TODO')
     elseif (lisp.eq(attr,vars.QCfontset)) then
@@ -664,7 +665,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
             error('TODO')
         end
         if lisp.nilp(tail) then
-            lisp.aset(lface,lface_index.inherit,value)
+            lisp.aset(lface,M.lface_index.inherit,value)
         else
             signal.signal_error('Invalid face inheritance',value)
         end
@@ -677,7 +678,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
     end
 
     if prop_index then
-        error('TODO')
+        font_.font_clear_prop(lface,prop_index)
     end
     if not lisp.eq(frame,vars.Qt)
         and lisp.nilp(vars.F.get(face,vars.Qface_no_inherit))
