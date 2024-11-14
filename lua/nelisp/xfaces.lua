@@ -5,6 +5,7 @@ local nvim=require'nelisp.nvim'
 local alloc=require'nelisp.alloc'
 local frame_=require'nelisp.frame'
 local font_=require'nelisp.font'
+local term=require'nelisp.term'
 
 ---@class nelisp.face
 ---@field lface nelisp.obj
@@ -167,7 +168,7 @@ end
 ---@param face nelisp.face
 local function cache_face(f,face)
     local cache=nvim.frame_face_cache(f)
-    face.id=#cache.faces_by_id+1
+    face.id=#cache.faces_by_id+(cache.faces_by_id[0] and 1 or 0)
     cache.faces_by_id[face.id]=face
     cache.buckets[face]=face
 end
@@ -793,6 +794,219 @@ function F.internal_set_alternative_font_registry_alist.f(alist)
     vars.face_alternative_font_registry_alist=alist
     return alist
 end
+local function filter_face_ref(face_ref,w,err_msg)
+    if not lisp.consp(face_ref) then
+        return face_ref,true
+    end
+    if not lisp.eq(lisp.xcar(face_ref),vars.QCfiltered) then
+        return face_ref,true
+    end
+    error('TODO')
+end
+---@param err_msg boolean
+---@param attr_filter nelisp.lface_index
+---@param to nelisp.obj
+local function merge_face_ref(w,f,face_ref,to,err_msg,named_merge_points,attr_filter)
+    local filtered_face_ref=face_ref
+    local ok=true
+    while true do
+        face_ref=filtered_face_ref
+        filtered_face_ref,ok=filter_face_ref(face_ref,w,err_msg)
+        if not ok then
+            return false
+        end
+        if lisp.eq(face_ref,filtered_face_ref) then
+            break
+        end
+    end
+    if lisp.nilp(face_ref) then
+        return true
+    elseif lisp.consp(face_ref) then
+        local first=lisp.xcar(face_ref)
+        if lisp.eq(first,vars.Qforeground_color) or lisp.eq(first,vars.Qbackground_color) then
+            error('TODO')
+        elseif lisp.symbolp(first) and lisp.sdata(lisp.symbol_name(first)):sub(1,1)==':' then
+            if attr_filter>0 then
+                error('TODO')
+            end
+            while lisp.consp(face_ref) and lisp.consp(lisp.xcdr(face_ref)) do
+                local err=false
+                local keyword=lisp.xcar(face_ref)
+                local value=lisp.xcar(lisp.xcdr(face_ref))
+                if lisp.eq(value,vars.Qunspecified) then
+                elseif lisp.eq(keyword,vars.QCfamily) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCfoundry) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCheight) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCweight) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCslant) then
+                    if lisp.symbolp(value) and font_.font_slant_name_numeric(value)>=0 then
+                        lisp.aset(to,M.lface_index.slant,value)
+                        font_.font_clear_prop(to,font_.font_index.slant)
+                    else
+                        err=true
+                    end
+                elseif lisp.eq(keyword,vars.QCunderline) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCoverline) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCstrike_through) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCbox) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCinverse_video) or lisp.eq(keyword,vars.QCreverse_video) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCforeground) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCdistant_foreground) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCbackground) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCstipple) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCwidth) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCfont) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCfontset) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCinherit) then
+                    error('TODO')
+                elseif lisp.eq(keyword,vars.QCextend) then
+                    error('TODO')
+                else
+                    err=true
+                end
+                if err then
+                    ok=false
+                end
+                face_ref=lisp.xcdr(lisp.xcdr(face_ref))
+            end
+        else
+            error('TODO')
+        end
+
+    else
+        error('TODO')
+    end
+    return ok
+end
+local function face_from_id_or_nil(f,id)
+    return nvim.frame_face_cache(f).faces_by_id[id]
+end
+local function face_from_id(f,id)
+    return assert(face_from_id_or_nil(f,id))
+end
+local function tty_supports_face_attributes_p(f,attrs,def_face)
+    if not (unspecifiedp(lisp.aref(attrs,M.lface_index.family))
+        and unspecifiedp(lisp.aref(attrs,M.lface_index.foundry))
+        and unspecifiedp(lisp.aref(attrs,M.lface_index.stipple))
+        and unspecifiedp(lisp.aref(attrs,M.lface_index.height))
+        and unspecifiedp(lisp.aref(attrs,M.lface_index.swidth))
+        and unspecifiedp(lisp.aref(attrs,M.lface_index.overline))
+        and unspecifiedp(lisp.aref(attrs,M.lface_index.box))) then
+        return false
+    end
+
+    local def_attrs=def_face.lface
+    local test_caps=0
+
+    local val=lisp.aref(attrs,M.lface_index.weight)
+    if not unspecifiedp(val) then
+        error('TODO')
+    end
+
+    val=lisp.aref(attrs,M.lface_index.slant)
+    if not unspecifiedp(val) then
+        local slant=font_.font_slant_name_numeric(val)
+        if slant>=0 then
+            local def_slant=font_.font_slant_name_numeric(lisp.aref(def_attrs,M.lface_index.slant))
+            if slant==100 or slant==def_slant then
+                return false
+            else
+                test_caps=bit.bor(test_caps,term.tty_cap.italic)
+            end
+        end
+    end
+
+    val=lisp.aref(attrs,M.lface_index.underline)
+    if not unspecifiedp(val) then
+        error('TODO')
+    end
+
+    val=lisp.aref(attrs,M.lface_index.inverse)
+    if not unspecifiedp(val) then
+        error('TODO')
+    end
+
+    val=lisp.aref(attrs,M.lface_index.strike_through)
+    if not unspecifiedp(val) then
+        error('TODO')
+    end
+
+    val=lisp.aref(attrs,M.lface_index.foreground)
+    if not unspecifiedp(val) then
+        error('TODO')
+    end
+
+    val=lisp.aref(attrs,M.lface_index.background)
+    if not unspecifiedp(val) then
+        error('TODO')
+    end
+
+    return term.tty_capable_p(f,test_caps)
+end
+F.display_supports_face_attributes_p={'display-supports-face-attributes-p',1,2,0,[[Return non-nil if all the face attributes in ATTRIBUTES are supported.
+The optional argument DISPLAY can be a display name, a frame, or
+nil (meaning the selected frame's display).
+
+For instance, to check whether the display supports underlining:
+
+  (display-supports-face-attributes-p \\='(:underline t))
+
+The definition of `supported' is somewhat heuristic, but basically means
+that a face containing all the attributes in ATTRIBUTES, when merged
+with the default face for display, can be represented in a way that's
+
+ (1) different in appearance from the default face, and
+ (2) `close in spirit' to what the attributes specify, if not exact.
+
+Point (2) implies that a `:weight black' attribute will be satisfied by
+any display that can display bold, and a `:foreground \"yellow\"' as long
+as it can display a yellowish color, but `:slant italic' will _not_ be
+satisfied by the tty display code's automatic substitution of a `dim'
+face for italic.]]}
+function F.display_supports_face_attributes_p.f(attributes,display)
+    local frame
+    if lisp.nilp(display) then
+        frame=nvim.get_current_frame()
+    elseif lisp.framep(display) then
+        frame=display
+    else
+        error('TODO')
+    end
+    frame_.check_live_frame(frame)
+    local f=(frame --[[@as nelisp._frame]])
+    local attrs=alloc.make_vector(M.lface_index.size,vars.Qunspecified)
+    merge_face_ref(nil,f,attributes,attrs,true,nil,0)
+    local def_face=face_from_id_or_nil(f,face_id.default)
+    if def_face==nil then
+        if not realize_basic_faces(f) then
+            signal.error('Cannot realize default face')
+        end
+        def_face=face_from_id(f,face_id.default)
+    end
+    local supports
+    if FRAME_TERMCAP_P then
+        supports=tty_supports_face_attributes_p(f,attrs,def_face)
+    else
+        error('TODO')
+    end
+    return supports and vars.Qt or vars.Qnil
+end
 
 function M.init()
     vars.V.face_new_frame_defaults=vars.F.make_hash_table(vars.QCtest,vars.Qeq,vars.QCsize,33)
@@ -806,6 +1020,7 @@ function M.init_syms()
     vars.defsubr(F,'internal_set_font_selection_order')
     vars.defsubr(F,'internal_set_alternative_font_family_alist')
     vars.defsubr(F,'internal_set_alternative_font_registry_alist')
+    vars.defsubr(F,'display_supports_face_attributes_p')
 
     vars.defsym('Qface','face')
     vars.defsym('Qface_no_inherit','face-no-inherit')
@@ -857,6 +1072,7 @@ function M.init_syms()
     vars.defsym('QCinherit',':inherit')
     vars.defsym('QCbold',':bold')
     vars.defsym('QCitalic',':italic')
+    vars.defsym('QCfiltered',':filtered')
 
     vars.defvar_lisp('face_new_frame_defaults','face--new-frame-defaults',[[Hash table of global face definitions (for internal use only.)]])
 end

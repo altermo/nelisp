@@ -130,6 +130,11 @@ function M.font_weight_name_numeric(name)
     if n<0 then return n end
     return bit.rshift(n,8)
 end
+function M.font_slant_name_numeric(name)
+    local n=font_style_to_value(M.font_index.slant,name,false)
+    if n<0 then return n end
+    return bit.rshift(n,8)
+end
 function M.font_update_sort_order(order)
     local shift_bits=23
     for i=1,4 do
