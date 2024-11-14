@@ -522,7 +522,10 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         if (not unspecifiedp(value)
             and not ignore_defface_p(value)
             and not reset_p(value)) then
-            error('TODO')
+            lisp.check_symbol(value)
+            if font_.font_slant_name_numeric(value)<0 then
+                signal.signal_error('Invalid face slant',value)
+            end
         end
         old_value=lisp.aref(lface,M.lface_index.slant)
         lisp.aset(lface,M.lface_index.slant,value)
@@ -850,7 +853,11 @@ local function merge_face_ref(w,f,face_ref,to,err_msg,named_merge_points,attr_fi
                         err=true
                     end
                 elseif lisp.eq(keyword,vars.QCunderline) then
-                    error('TODO')
+                    if lisp.eq(value,vars.Qt) or lisp.nilp(value) or lisp.stringp(value) or lisp.consp(value) then
+                        lisp.aset(to,M.lface_index.underline,value)
+                    else
+                        err=true
+                    end
                 elseif lisp.eq(keyword,vars.QCoverline) then
                     error('TODO')
                 elseif lisp.eq(keyword,vars.QCstrike_through) then
@@ -900,6 +907,20 @@ end
 local function face_from_id(f,id)
     return assert(face_from_id_or_nil(f,id))
 end
+local function face_attr_equal_p(a,b)
+    if lisp.xtype(a)~=lisp.xtype(b) then
+        return false
+    end
+    if lisp.eq(a,b) then
+        return true
+    end
+    local typ=lisp.xtype(a)
+    if typ==lisp.type.symbol or typ==lisp.type.int0 then
+        return false
+    else
+        error('TODO')
+    end
+end
 local function tty_supports_face_attributes_p(f,attrs,def_face)
     if not (unspecifiedp(lisp.aref(attrs,M.lface_index.family))
         and unspecifiedp(lisp.aref(attrs,M.lface_index.foundry))
@@ -934,7 +955,17 @@ local function tty_supports_face_attributes_p(f,attrs,def_face)
 
     val=lisp.aref(attrs,M.lface_index.underline)
     if not unspecifiedp(val) then
-        error('TODO')
+        if lisp.stringp(val) then
+            error('TODO: neovim actually supports collored underline')
+            return false
+        elseif lisp.eq(vars.F.car_safe(val),vars.QCstyle) and lisp.eq(vars.F.car_safe(vars.F.cdr_safe(val)),vars.Qwave) then
+            error('TODO: neovim actually supports wave underline')
+            return false
+        elseif face_attr_equal_p(val,lisp.aref(def_attrs,M.lface_index.underline)) then
+            return false
+        else
+            test_caps=bit.bor(test_caps,term.tty_cap.underline)
+        end
     end
 
     val=lisp.aref(attrs,M.lface_index.inverse)
@@ -1073,6 +1104,7 @@ function M.init_syms()
     vars.defsym('QCbold',':bold')
     vars.defsym('QCitalic',':italic')
     vars.defsym('QCfiltered',':filtered')
+    vars.defsym('QCstyle',':style')
 
     vars.defvar_lisp('face_new_frame_defaults','face--new-frame-defaults',[[Hash table of global face definitions (for internal use only.)]])
 end
