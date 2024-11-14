@@ -2,6 +2,7 @@ local nvim=require'nelisp.nvim'
 local lisp=require'nelisp.lisp'
 local vars=require'nelisp.vars'
 local alloc=require'nelisp.alloc'
+local signal=require'nelisp.signal'
 
 local FRAME_WINDOW_P=false --no frames are graphical
 local M={}
@@ -119,6 +120,35 @@ function F.framep.f(obj)
     end
     return vars.Qt
 end
+F.window_system={'window-system',0,1,0,[[The name of the window system that FRAME is displaying through.
+The value is a symbol:
+ nil for a termcap frame (a character-only terminal),
+ `x' for an Emacs frame that is really an X window,
+ `w32' for an Emacs frame that is a window on MS-Windows display,
+ `ns' for an Emacs frame on a GNUstep or Macintosh Cocoa display,
+ `pc' for a direct-write MS-DOS frame.
+ `pgtk' for an Emacs frame using pure GTK facilities.
+ `haiku' for an Emacs frame running in Haiku.
+
+FRAME defaults to the currently selected frame.
+
+Use of this function as a predicate is deprecated.  Instead,
+use `display-graphic-p' or any of the other `display-*-p'
+predicates which report frame's specific UI-related capabilities.]]}
+function F.window_system.f(frame)
+    if lisp.nilp(frame) then
+        frame=nvim.get_current_frame()
+    end
+    local typ=vars.F.framep(frame)
+    if lisp.nilp(typ) then
+        signal.wrong_type_argument(vars.Qframep,frame)
+    end
+    if lisp.eq(typ,vars.Qt) then
+        return vars.Qnil
+    else
+        return typ
+    end
+end
 
 function M.init()
     vars.V.frame_internal_parameters=lisp.list(vars.Qname,vars.Qparent_id,vars.Qwindow_id)
@@ -144,6 +174,7 @@ function M.init_syms()
     vars.defsubr(F,'frame_parameter')
     vars.defsubr(F,'frame_parameters')
     vars.defsubr(F,'framep')
+    vars.defsubr(F,'window_system')
 
     vars.defvar_lisp('frame_internal_parameters','frame-internal-parameters',[[Frame parameters specific to every frame.]])
 end
