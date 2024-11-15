@@ -800,6 +800,8 @@ F.subrp={'subrp',1,1,0,[[Return t if OBJECT is a built-in function.]]}
 function F.subrp.f(a) return lisp.subrp(a) and vars.Qt or vars.Qnil end
 F.byte_code_function_p={'byte-code-function-p',1,1,0,[[Return t if OBJECT is a byte-compiled function object.]]}
 function F.byte_code_function_p.f(a) return lisp.compiledp(a) and vars.Qt or vars.Qnil end
+F.recordp={'recordp',1,1,0,[[Return t if OBJECT is a record.]]}
+function F.recordp.f(object) return lisp.recordp(object) and vars.Qt or vars.Qnil end
 
 function M.init()
     local error_tail=alloc.cons(vars.Qerror,vars.Qnil)
@@ -883,6 +885,7 @@ function M.init_syms()
     vars.defsubr(F,'hash_table_p')
     vars.defsubr(F,'subrp')
     vars.defsubr(F,'byte_code_function_p')
+    vars.defsubr(F,'recordp')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')
