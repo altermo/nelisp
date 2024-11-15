@@ -149,6 +149,7 @@ function M.eval_sub(form)
     if not lisp.nilp(vars.V.debug_on_next_call) then
         error('TODO')
     end
+    ::retry::
     local fun=original_fun
     if (not lisp.symbolp(fun)) then
         error('TODO')
@@ -197,7 +198,8 @@ function M.eval_sub(form)
         if not lisp.symbolp(funcar) then
             signal.xsignal(vars.Qinvalid_function,original_fun)
         elseif lisp.eq(funcar,vars.Qautoload) then
-            error('TODO')
+            vars.F.autoload_do_load(fun,original_fun,vars.Qnil)
+            goto retry
         elseif lisp.eq(funcar,vars.Qmacro) then
             local count1=specpdl.index()
             specpdl.bind(vars.Qlexical_binding,lisp.nilp(vars.V.internal_interpreter_environment) and vars.Qnil or vars.Qt)
@@ -831,6 +833,44 @@ function F.autoload.f(func,file,docstring,interactive,type_)
     end
     return vars.F.defalias(func,lisp.list(vars.Qautoload,file,docstring,interactive,type_),vars.Qnil)
 end
+local function load_with_autoload_queue(file,noerror,nomessage,nosuffix,must_suffix)
+    local count=specpdl.index()
+    local oldqueue=vars.autoload_queue
+    specpdl.record_unwind_protect(function ()
+        local queue=vars.autoload_queue
+        vars.autoload_queue=oldqueue
+        while lisp.consp(queue) do
+            error('TODO')
+        end
+    end)
+    vars.autoload_queue=vars.Qt
+    local tem=lread.save_match_data_load(file,noerror,nomessage,nosuffix,must_suffix)
+    vars.autoload_queue=vars.Qt
+    specpdl.unbind_to(count,nil)
+    return tem
+end
+F.autoload_do_load={'autoload-do-load',1,3,0,[[Load FUNDEF which should be an autoload.
+If non-nil, FUNNAME should be the symbol whose function value is FUNDEF,
+in which case the function returns the new autoloaded function value.
+If equal to `macro', MACRO-ONLY specifies that FUNDEF should only be loaded if
+it defines a macro.]]}
+function F.autoload_do_load.f(fundef,funname,macro_only)
+    if not lisp.consp(fundef) or not lisp.eq(vars.Qautoload,lisp.xcar(fundef)) then
+        return fundef
+    end
+    local kind=vars.F.nth(lisp.make_fixnum(4),fundef)
+    if lisp.eq(macro_only,vars.Qmacro) and not (lisp.eq(kind,vars.Qt) or lisp.eq(kind,vars.Qmacro)) then
+        return fundef
+    end
+    lisp.check_symbol(funname)
+    local ignore_errors=(lisp.eq(kind,vars.Qt) or lisp.eq(kind,vars.Qmacro)) and vars.Qnil or macro_only
+    load_with_autoload_queue(vars.F.car(vars.F.cdr(fundef)),ignore_errors,vars.Qt,vars.Qnil,vars.Qt)
+    if lisp.nilp(funname) or not lisp.nilp(ignore_errors) then
+        return vars.Qnil
+    else
+        error('TODO')
+    end
+end
 F.throw={'throw',2,2,0,[[Throw to the catch for TAG and return VALUE from it.
 Both TAG and VALUE are evalled.]]}
 function F.throw.f(tag,value)
@@ -1156,6 +1196,7 @@ function M.init_syms()
     vars.defsubr(F,'apply')
     vars.defsubr(F,'function_')
     vars.defsubr(F,'autoload')
+    vars.defsubr(F,'autoload_do_load')
     vars.defsubr(F,'throw')
     vars.defsubr(F,'unwind_protect')
     vars.defsubr(F,'condition_case')

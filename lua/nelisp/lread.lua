@@ -934,6 +934,15 @@ function M.full_read_lua_string(s)
     end
     return ret
 end
+function M.save_match_data_load(file,noerror,nomessage,nosuffix,mustsuffix)
+    local count=specpdl.index()
+    local matchdata=vars.F.match_data(vars.Qnil,vars.Qnil,vars.Qnil)
+    specpdl.record_unwind_protect(function ()
+        vars.F.set_match_data(matchdata,vars.Qt)
+    end)
+    local result=vars.F.load(file,noerror,nomessage,nosuffix,mustsuffix)
+    return specpdl.unbind_to(count,result)
+end
 
 local F={}
 local function suffix_p(s,suffix)
@@ -1135,7 +1144,11 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     else
         local suffixes
         if not lisp.nilp(mustsuffix) then
-            error('TODO')
+            if suffix_p(file,'.el') or suffix_p(file,'.elc') then
+                mustsuffix=vars.Qnil
+            elseif not lisp.nilp(vars.F.file_name_directory(file)) then
+                mustsuffix=vars.Qnil
+            end
         end
         if not lisp.nilp(nosuffix) then
             error('TODO')
