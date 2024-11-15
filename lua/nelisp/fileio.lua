@@ -96,12 +96,24 @@ function F.file_directory_p.f(filename)
     end
     return vim.fn.isdirectory(lisp.sdata(filename))==1 and vars.Qt or vars.Qnil
 end
+F.file_name_directory={'file-name-directory',1,1,0,[[Return the directory component in file name FILENAME.
+Return nil if FILENAME does not include a directory.
+Otherwise return a directory name.
+Given a Unix syntax file name, returns a string ending in slash.]]}
+function F.file_name_directory.f(filename)
+    if _G.nelisp_later then
+        error('TODO')
+    end
+    local dir=vim.fs.dirname(lisp.sdata(filename))..'/'
+    return alloc.make_specified_string(dir,-1,lisp.string_multibyte(filename))
+end
 
 function M.init_syms()
     vars.defsubr(F,'find_file_name_handler')
     vars.defsubr(F,'substitute_in_file_name')
     vars.defsubr(F,'expand_file_name')
     vars.defsubr(F,'file_directory_p')
+    vars.defsubr(F,'file_name_directory')
 
     vars.defsym('Qfile_exists_p','file-exists-p')
 
