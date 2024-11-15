@@ -187,10 +187,8 @@ function F.aref.f(array,idx)
         return chartab.ref(array,idxval)
     else
         local size
-        if lisp.vectorp(array) then
+        if lisp.vectorp(array) or lisp.compiledp(array) or lisp.recordp(array) then
             size=lisp.asize(array)
-        elseif lisp.compiledp(array) or lisp.recordp(array) then
-            error('TODO')
         else
             signal.wrong_type_argument(vars.Qarrayp,array)
         end
@@ -212,8 +210,7 @@ function F.aset.f(array,idx,newval)
     if lisp.chartablep(array) then
         lisp.check_chartable(array)
         chartab.set(array,idxval,newval)
-    elseif lisp.vectorp(array) then
-        lisp.check_vector(array)
+    elseif lisp.vectorp(array) or lisp.recordp(array) then
         if idxval<0 or idxval>=lisp.asize(array) then
             signal.args_out_of_range(array,idx)
         end
