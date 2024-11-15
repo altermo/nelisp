@@ -360,6 +360,19 @@ function F.letX.f(args)
     local val=vars.F.progn(lisp.xcdr(args))
     return specpdl.unbind_to(count,val)
 end
+---@return nelisp.specpdl.let_entry?
+local function default_toplevel_binding(sym)
+    local binding=nil
+    for pdl in specpdl.riter() do
+        if pdl.type==specpdl.type.let or pdl.type==specpdl.type.let_default then
+            ---@cast pdl nelisp.specpdl.let_entry
+            if lisp.eq(pdl.symbol,sym) then
+                binding=pdl
+            end
+        end
+    end
+    return binding
+end
 local function defvar(sym,initvalue,docstring,eval)
     lisp.check_symbol(sym)
     local tem=vars.F.default_boundp(sym)
@@ -367,7 +380,10 @@ local function defvar(sym,initvalue,docstring,eval)
     if lisp.nilp(tem) then
         vars.F.set_default(sym,eval and M.eval_sub(initvalue) or initvalue)
     else
-        error('TODO')
+        local binding=default_toplevel_binding(sym)
+        if binding and binding.old_value==nil then
+            error('TODO')
+        end
     end
     return sym
 end
@@ -1134,19 +1150,6 @@ function F.run_hooks.f(args)
         vars.F.run_hook_with_args({v})
     end
     return vars.Qnil
-end
----@return nelisp.specpdl.let_entry?
-local function default_toplevel_binding(sym)
-    local binding=nil
-    for pdl in specpdl.riter() do
-        if pdl.type==specpdl.type.let or pdl.type==specpdl.type.let_default then
-            ---@cast pdl nelisp.specpdl.let_entry
-            if lisp.eq(pdl.symbol,sym) then
-                binding=pdl
-            end
-        end
-    end
-    return binding
 end
 F.default_toplevel_value={'default-toplevel-value',1,1,0,[[Return SYMBOL's toplevel default value.
         "Toplevel" means outside of any let binding.]]}
