@@ -715,6 +715,63 @@ function F.string_to_number.f(s,base)
     local val=lread.string_to_number(p,b)
     return val==nil and lisp.make_fixnum(0) or val
 end
+F.type_of={'type-of',1,1,0,[[Return a symbol representing the type of OBJECT.
+The symbol returned names the object's basic type;
+for example, (type-of 1) returns `integer'.]]}
+function F.type_of.f(object)
+    local typ=lisp.xtype(object)
+    if typ==lisp.type.int0 then
+        return vars.Qinteger
+    elseif typ==lisp.type.symbol then
+        return vars.Qsymbol
+    elseif typ==lisp.type.string then
+        return vars.Qstring
+    elseif typ==lisp.type.cons then
+        return vars.Qcons
+    elseif typ==lisp.type.float then
+        return vars.Qfloat
+    end
+    assert(typ==lisp.type.vectorlike)
+    local ptyp=lisp.pseudovector_type(object)
+    if ptyp==lisp.pvec.normal_vector then return vars.Qvector
+    elseif ptyp==lisp.pvec.bignum then return vars.Qinteger
+    elseif ptyp==lisp.pvec.marker then return vars.Qmarker
+    elseif ptyp==lisp.pvec.symbol_with_pos then return vars.Qsymbol_with_pos
+    elseif ptyp==lisp.pvec.overlay then return vars.Qoverlay
+    elseif ptyp==lisp.pvec.finalizer then return vars.Qfinalizer
+    elseif ptyp==lisp.pvec.user_ptr then return vars.Quser_ptr
+    elseif ptyp==lisp.pvec.window_configuration then return vars.Qwindow_configuration
+    elseif ptyp==lisp.pvec.process then return vars.Qprocess
+    elseif ptyp==lisp.pvec.window then return vars.Qwindow
+    elseif ptyp==lisp.pvec.subr then return vars.Qsubr
+    elseif ptyp==lisp.pvec.compiled then return vars.Qcompiled_function
+    elseif ptyp==lisp.pvec.buffer then return vars.Qbuffer
+    elseif ptyp==lisp.pvec.char_table then return vars.Qchar_table
+    elseif ptyp==lisp.pvec.bool_vector then return vars.Qbool_vector
+    elseif ptyp==lisp.pvec.frame then return vars.Qframe
+    elseif ptyp==lisp.pvec.hash_table then return vars.vars.Qhash_table
+    elseif ptyp==lisp.pvec.font then error('TODO')
+    elseif ptyp==lisp.pvec.thread then return vars.Qthread
+    elseif ptyp==lisp.pvec.mutex then return vars.Qmutex
+    elseif ptyp==lisp.pvec.condvar then return vars.Qcondition_variable
+    elseif ptyp==lisp.pvec.terminal then return vars.vars.Qterminal
+    elseif ptyp==lisp.pvec.record then
+        local t=lisp.aref(object,0)
+        if lisp.recordp(t) and lisp.asize(t)>1 then
+            return lisp.aref(t,1)
+        else
+            return t
+        end
+    elseif ptyp==lisp.pvec.module_function then return vars.Qmodule_function
+    elseif ptyp==lisp.pvec.native_comp_unit then return vars.Qnative_comp_unit
+    elseif ptyp==lisp.pvec.xwidget then return vars.Qxwidget
+    elseif ptyp==lisp.pvec.xwidget_view then return vars.Qxwidget_view
+    elseif ptyp==lisp.pvec.ts_parser then return vars.Qtreesit_parser
+    elseif ptyp==lisp.pvec.ts_node then return vars.Qtreesit_node
+    elseif ptyp==lisp.pvec.ts_compiled_query then return vars.Qtreesit_compiled_query
+    elseif ptyp==lisp.pvec.sqlite then return vars.Qsqlite end
+    error('unreachable')
+end
 F.default_boundp={'default-boundp',1,1,0,[[Return t if SYMBOL has a non-void default value.
 A variable may have a buffer-local value.  This function says whether
 the variable has a non-void value outside of the current buffer
@@ -863,6 +920,7 @@ function M.init_syms()
     vars.defsubr(F,'neq')
 
     vars.defsubr(F,'string_to_number')
+    vars.defsubr(F,'type_of')
 
     vars.defsubr(F,'local_variable_if_set_p')
     vars.defsubr(F,'default_boundp')
@@ -918,6 +976,39 @@ function M.init_syms()
     vars.defsym('Qcurve','curve')
     vars.defsym('Qstraight','straight')
     vars.defsym('Qgrave','grave')
+
+    vars.defsym('Qinteger','integer')
+    vars.defsym('Qsymbol','symbol')
+    vars.defsym('Qstring','string')
+    vars.defsym('Qcons','cons')
+    vars.defsym('Qfloat','float')
+    vars.defsym('Qvector','vector')
+    vars.defsym('Qmarker','marker')
+    vars.defsym('Qsymbol_with_pos','symbol-with-pos')
+    vars.defsym('Qoverlay','overlay')
+    vars.defsym('Qfinalizer','finalizer')
+    vars.defsym('Quser_ptr','user-ptr')
+    vars.defsym('Qwindow_configuration','window-configuration')
+    vars.defsym('Qprocess','process')
+    vars.defsym('Qwindow','window')
+    vars.defsym('Qsubr','subr')
+    vars.defsym('Qcompiled_function','compiled-function')
+    vars.defsym('Qbuffer','buffer')
+    vars.defsym('Qchar_table','char-table')
+    vars.defsym('Qbool_vector','bool-vector')
+    vars.defsym('Qframe','frame')
+    vars.defsym('Qthread','thread')
+    vars.defsym('Qmutex','mutex')
+    vars.defsym('Qcondition_variable','condition-variable')
+    vars.defsym('Qterminal','terminal')
+    vars.defsym('Qmodule_function','module-function')
+    vars.defsym('Qnative_comp_unit','native-comp-unit')
+    vars.defsym('Qxwidget','xwidget')
+    vars.defsym('Qxwidget_view','xwidget-view')
+    vars.defsym('Qtreesit_parser','treesit-parser')
+    vars.defsym('Qtreesit_node','treesit-node')
+    vars.defsym('Qtreesit_compiled_query','treesit-compiled-query')
+    vars.defsym('Qsqlite','sqlite')
 
     vars.Qunique=alloc.make_symbol(alloc.make_pure_c_string'unbound')
 end
