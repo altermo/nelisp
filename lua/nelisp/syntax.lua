@@ -27,6 +27,14 @@ local syntax_code={
 local syntax_code_object
 local standard_syntax_table
 
+---@type nelisp.F
+local F={}
+F.standard_syntax_table={'standard-syntax-table',0,0,0,[[Return the standard syntax table.
+This is the one used for new buffers.]]}
+function F.standard_syntax_table.f()
+    return standard_syntax_table
+end
+
 local M={}
 function M.init()
     syntax_code_object=alloc.make_vector(syntax_code.max,'nil')
@@ -88,5 +96,7 @@ function M.init()
 end
 function M.init_syms()
     vars.defsym('Qsyntax_table','syntax-table')
+
+    vars.defsubr(F,'standard_syntax_table')
 end
 return M
