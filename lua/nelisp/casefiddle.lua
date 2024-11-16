@@ -3,6 +3,7 @@ local alloc=require'nelisp.alloc'
 local lisp=require'nelisp.lisp'
 local M={}
 
+---@type nelisp.F
 local F={}
 F.capitalize={'capitalize',1,1,0,[[Convert argument to capitalized form and return that.
 This means that each word's first character is converted to either

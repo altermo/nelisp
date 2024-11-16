@@ -372,12 +372,13 @@ function M.map_char_table(c_fun,fun,ctable)
     end
 end
 
+---@type nelisp.F
 local F={}
 F.char_table_extra_slot={'char-table-extra-slot',2,2,0,[[Return the value of CHAR-TABLE's extra-slot number N.]]}
 function F.char_table_extra_slot.f(ctable,n)
     lisp.check_chartable(ctable)
     lisp.check_fixnum(n)
-    if lisp.fixnum(n)<0 or lisp.fixnum(n)>=chartable_extra_slots(ctable) then
+    if lisp.fixnum(n)<0 or lisp.fixnum(n)>=chartable_extra_slots(ctable --[[@as nelisp._char_table]]) then
         signal.args_out_of_range(ctable,n)
     end
     return lisp.aref((ctable --[[@as nelisp._char_table]]).extras,lisp.fixnum(n))
@@ -386,7 +387,7 @@ F.set_char_table_extra_slot={'set-char-table-extra-slot',3,3,0,[[Set CHAR-TABLE'
 function F.set_char_table_extra_slot.f(ctable,n,value)
     lisp.check_chartable(ctable)
     lisp.check_fixnum(n)
-    if lisp.fixnum(n)<0 or lisp.fixnum(n)>=chartable_extra_slots(ctable) then
+    if lisp.fixnum(n)<0 or lisp.fixnum(n)>=chartable_extra_slots(ctable --[[@as nelisp._char_table]]) then
         signal.args_out_of_range(ctable,n)
     end
     lisp.aset((ctable --[[@as nelisp._char_table]]).extras,lisp.fixnum(n),value)

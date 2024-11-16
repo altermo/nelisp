@@ -2,6 +2,7 @@ local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
 local M={}
 
+---@type nelisp.F
 local F={}
 local function default_to_grave_quoting_style()
     if _G.nelisp_later then

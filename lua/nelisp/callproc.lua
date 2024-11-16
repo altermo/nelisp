@@ -4,6 +4,7 @@ local alloc=require'nelisp.alloc'
 local b=require'nelisp.bytes'
 local M={}
 
+---@type nelisp.F
 local F={}
 ---@return true|string|nil
 local function getenv_internal_1(variable,env)

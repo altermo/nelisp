@@ -136,6 +136,7 @@ function M.str_to_multibyte(s)
     end))
 end
 
+---@type nelisp.F
 local F={}
 F.max_char={'max-char',0,1,0,[[Return the maximum character code.
 If UNICODE is non-nil, return the maximum character code defined

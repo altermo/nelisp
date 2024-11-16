@@ -9,6 +9,7 @@ local chars=require'nelisp.chars'
 
 local M={}
 
+---@type nelisp.F
 local F={}
 local function str2num(idx,s)
     ---@type number?
@@ -300,7 +301,7 @@ Text properties, if any, are copied from the format-string to the
 produced text.
 
 usage: (format STRING &rest OBJECTS)]]}
-function F.format.f(args)
+function F.format.fa(args)
     return styled_format(args,false)
 end
 F.format_message={'format-message',1,-2,0,[[Format a string out of a format-string and arguments.
@@ -313,7 +314,7 @@ and right quote replacement characters are specified by
 `text-quoting-style'.
 
 usage: (format-message STRING &rest OBJECTS)]]}
-function F.format_message.f(args)
+function F.format_message.fa(args)
     return styled_format(args,true)
 end
 F.message={'message',1,-2,0,[[Display a message at the bottom of the screen.
@@ -336,7 +337,7 @@ also `current-message'.
 
 usage: (message FORMAT-STRING &rest ARGS)]]}
 ---@param args nelisp.obj[]
-function F.message.f(args)
+function F.message.fa(args)
     if lisp.nilp(args[1]) or (lisp.stringp(args[1]) and lisp.sbytes(args[1])==0) then
         error('TODO')
     end
@@ -362,7 +363,7 @@ properties to add to the result.
 
 See Info node `(elisp) Text Properties' for more information.
 usage: (propertize STRING &rest PROPERTIES)]]}
-function F.propertize.f(args)
+function F.propertize.fa(args)
     if #args%2==0 then
         signal.xsignal(vars.Qwrong_number_of_arguments,vars.Qpropertize,lisp.make_fixnum(#args))
     end

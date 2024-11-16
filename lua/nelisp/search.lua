@@ -204,6 +204,7 @@ local function eregex_to_vimregex(s)
     return '\\V'..('\\('):rep(parens)..out_buf.out(),data,parens_overflow
 end
 
+---@type nelisp.F
 local F={}
 local function string_match_1(regexp,s,start,posix,modify_data)
     lisp.check_string(regexp)

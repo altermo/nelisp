@@ -944,6 +944,7 @@ function M.save_match_data_load(file,noerror,nomessage,nosuffix,mustsuffix)
     return specpdl.unbind_to(count,result)
 end
 
+---@type nelisp.F
 local F={}
 local function suffix_p(s,suffix)
     return lisp.sdata(s):sub(-#suffix)==suffix

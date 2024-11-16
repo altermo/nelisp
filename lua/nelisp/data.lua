@@ -62,6 +62,7 @@ function M.find_symbol_value(sym)
     end
 end
 
+---@type nelisp.F
 local F={}
 F.symbol_value={'symbol-value',1,1,0,[[Return SYMBOL's value.  Error if that is void.
 Note that if `lexical-binding' is in effect, this returns the
@@ -95,6 +96,7 @@ function F.default_value.f(sym)
     local val=default_value(sym)
     if val then return val end
     signal.xsignal(vars.Qvoid_variable,sym)
+    error('unreachable')
 end
 F.symbol_function={'symbol-function',1,1,0,[[Return SYMBOL's function definition, or nil if that is void.]]}
 function F.symbol_function.f(sym)
@@ -239,6 +241,7 @@ function F.car.f(list)
         return list
     else
         signal.wrong_type_argument(vars.Qlistp,list)
+        error('unreachable')
     end
 end
 F.car_safe={'car-safe',1,1,0,[[Return the car of OBJECT if it is a cons cell, or else nil.]]}
@@ -263,6 +266,7 @@ function F.cdr.f(list)
         return list
     else
         signal.wrong_type_argument(vars.Qlistp,list)
+        error('unreachable')
     end
 end
 F.cdr_safe={'cdr-safe',1,1,0,[[Return the cdr of OBJECT if it is a cons cell, or else nil.]]}
@@ -550,7 +554,7 @@ With two or more arguments, return first argument divided by the rest.
 With one argument, return 1 divided by the argument.
 The arguments must be numbers or markers.
 usage: (/ NUMBER &rest DIVISORS)]]}
-function F.quo.f(args)
+function F.quo.fa(args)
     if #args==1 then
         error('TODO')
     end
@@ -558,7 +562,7 @@ function F.quo.f(args)
 end
 F.times={'*',0,-2,0,[[Return product of any number of arguments, which are numbers or markers.
 usage: (* &rest NUMBERS-OR-MARKERS)]]}
-function F.times.f(args)
+function F.times.fa(args)
     if #args==0 then
         return lisp.make_fixnum(1)
     end
@@ -566,7 +570,7 @@ function F.times.f(args)
 end
 F.plus={'+',0,-2,0,[[Return sum of any number of arguments, which are numbers or markers.
 usage: (+ &rest NUMBERS-OR-MARKERS)]]}
-function F.plus.f(args)
+function F.plus.fa(args)
     if #args==0 then
         return lisp.make_fixnum(0)
     elseif #args==1 then
@@ -578,7 +582,7 @@ F.minus={'-',0,-2,0,[[Negate number or subtract numbers or markers and return th
 With one arg, negates it.  With more than one arg,
 subtracts all but the first from the first.
 usage: (- &optional NUMBER-OR-MARKER &rest MORE-NUMBERS-OR-MARKERS)]]}
-function F.minus.f(args)
+function F.minus.fa(args)
     if #args==0 then
         return lisp.make_fixnum(0)
     elseif #args==1 then
@@ -616,7 +620,7 @@ function F.ash.f(value,count)
 end
 F.lss={'<',1,-2,0,[[Return t if each arg (a number or marker), is less than the next arg.
 usage: (< NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
-function F.lss.f(args)
+function F.lss.fa(args)
     if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
         return lisp.fixnum(args[1])<lisp.fixnum(args[2]) and vars.Qt or vars.Qnil
     end
@@ -624,7 +628,7 @@ function F.lss.f(args)
 end
 F.leq={'<=',1,-2,0,[[Return t if each arg (a number or marker) is less than or equal to the next.
 usage: (<= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
-function F.leq.f(args)
+function F.leq.fa(args)
     if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
         return lisp.fixnum(args[1])<=lisp.fixnum(args[2]) and vars.Qt or vars.Qnil
     end
@@ -632,7 +636,7 @@ function F.leq.f(args)
 end
 F.gtr={'>',1,-2,0,[[Return t if each arg (a number or marker) is greater than the next arg.
 usage: (> NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
-function F.gtr.f(args)
+function F.gtr.fa(args)
     if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
         return lisp.fixnum(args[1])>lisp.fixnum(args[2]) and vars.Qt or vars.Qnil
     end
@@ -640,7 +644,7 @@ function F.gtr.f(args)
 end
 F.geq={'>=',1,-2,0,[[Return t if each arg (a number or marker) is greater than or equal to the next.
 usage: (>= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
-function F.geq.f(args)
+function F.geq.fa(args)
     if #args==2 and lisp.fixnump(args[1]) and lisp.fixnump(args[2]) then
         return lisp.fixnum(args[1])>=lisp.fixnum(args[2]) and vars.Qt or vars.Qnil
     end
@@ -649,7 +653,7 @@ end
 F.logior={'logior',0,-2,0,[[Return bitwise-or of all the arguments.
 Arguments may be integers, or markers converted to integers.
 usage: (logior &rest INTS-OR-MARKERS)]]}
-function F.logior.f(args)
+function F.logior.fa(args)
     if #args==0 then
         return lisp.make_fixnum(0)
     end
@@ -659,7 +663,7 @@ end
 F.logand={'logand',0,-2,0,[[Return bitwise-and of all the arguments.
 Arguments may be integers, or markers converted to integers.
 usage: (logand &rest INTS-OR-MARKERS)]]}
-function F.logand.f(args)
+function F.logand.fa(args)
     if #args==0 then
         return lisp.make_fixnum(-1)
     end
@@ -668,7 +672,7 @@ function F.logand.f(args)
 end
 F.eqlsign={'=',1,-2,0,[[Return t if args, all numbers or markers, are equal.
 usage: (= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
-function F.eqlsign.f(args)
+function F.eqlsign.fa(args)
     return arithcompare_driver('=',args)
 end
 F.neq={'/=',2,2,0,[[Return t if first arg is not equal to second arg.  Both must be numbers or markers.]]}
@@ -710,7 +714,7 @@ function F.string_to_number.f(s,base)
     end
     local p=lisp.sdata(s):gsub('^[ \t]+','')
     local val=lread.string_to_number(p,b)
-    return val==nil and lisp.make_fixnum(0) or val
+    return val~=nil and val or lisp.make_fixnum(0)
 end
 F.type_of={'type-of',1,1,0,[[Return a symbol representing the type of OBJECT.
 The symbol returned names the object's basic type;
@@ -784,7 +788,7 @@ function F.boundp.f(sym)
     lisp.check_symbol(sym)
     local s=(sym --[[@as nelisp._symbol]])
     if s.redirect==lisp.symbol_redirect.plainval then
-        return lisp.symbol_val(sym)==nil and vars.Qnil or vars.Qt
+        return lisp.symbol_val(s)==nil and vars.Qnil or vars.Qt
     else
         error('TODO')
     end

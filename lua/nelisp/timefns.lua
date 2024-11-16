@@ -2,6 +2,7 @@ local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
 local M={}
 
+---@type nelisp.F
 local F={}
 local function make_lisp_time(seconds,nanoseconds)
     if lisp.nilp(vars.V.current_time_list) then

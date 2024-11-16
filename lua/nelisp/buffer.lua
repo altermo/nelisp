@@ -20,6 +20,7 @@ function M.BUFFERLIVEP(buffer)
     return not lisp.nilp(nvim.buffer_name(buffer))
 end
 
+---@type nelisp.F
 local F={}
 F.get_buffer={'get-buffer',1,1,0,[[Return the buffer named BUFFER-OR-NAME.
 BUFFER-OR-NAME must be either a string or a buffer.  If BUFFER-OR-NAME

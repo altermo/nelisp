@@ -260,6 +260,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
     return table.concat(out,'')
 end
 
+---@type nelisp.F
 local F={}
 F.prin1_to_string={'prin1-to-string',1,3,0,[[Return a string containing the printed representation of OBJECT.
 OBJECT can be any Lisp object.  This function outputs quoting characters

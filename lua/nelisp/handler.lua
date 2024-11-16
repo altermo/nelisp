@@ -122,6 +122,7 @@ function M.internal_condition_case(bfun,handlers,hfun)
     end
     return hfun(args.val,args)
 end
+---@return nelisp.obj
 function M.internal_lisp_condition_case(var,bodyform,handlers)
     local tail=handlers
     local success_handler=vars.Qnil
@@ -141,11 +142,12 @@ function M.internal_lisp_condition_case(var,bodyform,handlers)
         tail=lisp.xcdr(tail)
     end
     local result
+    ---@return nelisp.obj
     local function f(idx)
         local clause=clauses[idx]
         if not clause then
             result=require'nelisp.eval'.eval_sub(bodyform)
-            return
+            return result
         end
         local condition=lisp.consp(clause) and lisp.xcar(clause) or var.Qnil
         if not lisp.consp(condition) then
@@ -153,7 +155,7 @@ function M.internal_lisp_condition_case(var,bodyform,handlers)
         end
         local noerr,ret=M.with_handler(condition,'CONDITION_CASE',f,idx+1)
         if noerr then
-            return ret
+            return ret --[[@as nelisp.obj]]
         end
         ---@cast ret nelisp.handler.msg_other
         local val=ret.val

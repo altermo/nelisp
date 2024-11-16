@@ -78,6 +78,7 @@ local charset_arg={
 }
 
 local M={}
+---@type nelisp.F
 local F={}
 local function charset_symbol_attributes(sym)
     return vars.F.gethash(sym,vars.charset_hash_table,vars.Qnil)
@@ -228,7 +229,7 @@ local function cons_to_unsigned(obj)
 end
 F.define_charset_internal={'define-charset-internal',charset_arg.max,-2,0,[[For internal use only.
 usage: (define-charset-internal ...)]]}
-function F.define_charset_internal.f(args)
+function F.define_charset_internal.fa(args)
     if #args~=charset_arg.max then
         vars.F.signal(vars.Qwrong_number_of_arguments,vars.F.cons(lread.intern_c_string('define-charset-internal'),lisp.make_fixnum(#args)))
     end

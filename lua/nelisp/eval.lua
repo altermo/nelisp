@@ -242,6 +242,7 @@ function M.init()
     vars.signaling_function=vars.Qnil
 end
 
+---@type nelisp.F
 local F={}
 F.setq={'setq',0,-1,0,[[Set each SYM to the value of its VAL.
 The symbols SYM are variables; they are literal (not evaluated).
@@ -730,7 +731,7 @@ F.funcall={'funcall',1,-2,0,[[Call first argument as a function, passing remaini
 Return the value that function returns.
 Thus, (funcall \\='cons \\='x \\='y) returns (x . y).
 usage: (funcall FUNCTION &rest ARGUMENTS)]]}
-function F.funcall.f(args)
+function F.funcall.fa(args)
     vars.lisp_eval_depth=vars.lisp_eval_depth+1
     if vars.lisp_eval_depth>lisp.fixnum(vars.V.max_lisp_eval_depth) then
         if lisp.fixnum(vars.V.max_lisp_eval_depth)<100 then
@@ -758,7 +759,7 @@ With a single argument, call the argument's first element using the
 other elements as args.
 Thus, (apply \\='+ 1 2 \\='(3 4)) returns 10.
 usage: (apply FUNCTION &rest ARGUMENTS)]]}
-function F.apply.f(args)
+function F.apply.fa(args)
     local spread_arg=args[#args]
     local numargs=lisp.list_length(spread_arg)
     local fun=args[1]
@@ -900,6 +901,7 @@ function F.throw.f(tag,value)
         end
     end
     signal.xsignal(vars.Qno_catch,tag,value)
+    error('unreachable')
 end
 F.unwind_protect={'unwind-protect',1,-1,0,[[Do BODYFORM, protecting with UNWINDFORMS.
 If BODYFORM completes normally, its value is returned
@@ -1096,6 +1098,7 @@ function F.signal.f(error_symbol,d)
         error_symbol=vars.Qerror
     end
     signal_or_quit(error_symbol,d,false)
+    error('unreachable')
 end
 F.backtrace_frame_internal={'backtrace-frame--internal',3,3,nil,[[Call FUNCTION on stack frame NFRAMES away from BASE.
 Return the result of FUNCTION, or nil if no matching frame could be found.]]}
@@ -1111,7 +1114,7 @@ F.run_hook_with_args={'run-hook-with-args',1,-2,0,[[Run HOOK with the specified 
         Do not use `make-local-variable' to make a hook variable buffer-local.
         Instead, use `add-hook' and specify t for the LOCAL argument.
         usage: (run-hook-with-args HOOK &rest ARGS)]]}
-function F.run_hook_with_args.f(args)
+function F.run_hook_with_args.fa(args)
     return run_hook_with_args(args,function (a)
         vars.F.funcall(a)
         return vars.Qnil
@@ -1128,7 +1131,7 @@ return nil.
 Do not use `make-local-variable' to make a hook variable buffer-local.
 Instead, use `add-hook' and specify t for the LOCAL argument.
 usage: (run-hook-with-args-until-success HOOK &rest ARGS)]]}
-function F.run_hook_with_args_until_success.f(args)
+function F.run_hook_with_args_until_success.fa(args)
     return run_hook_with_args(args,vars.F.funcall)
 end
 F.run_hooks={'run-hooks',0,-2,0,[[Run each hook in HOOKS.
@@ -1145,7 +1148,7 @@ F.run_hooks={'run-hooks',0,-2,0,[[Run each hook in HOOKS.
         Do not use `make-local-variable' to make a hook variable buffer-local.
         Instead, use `add-hook' and specify t for the LOCAL argument.
         usage: (run-hooks &rest HOOKS)]]}
-function F.run_hooks.f(args)
+function F.run_hooks.fa(args)
     for _,v in ipairs(args) do
         vars.F.run_hook_with_args({v})
     end
@@ -1160,6 +1163,7 @@ function F.default_toplevel_value.f(sym)
         value=vars.F.default_value(sym)
         if value==nil then
             signal.xsignal(vars.Qvoid_variable,sym)
+            error('unreachable')
         end
     end
     return value

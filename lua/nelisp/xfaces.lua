@@ -374,6 +374,7 @@ function M.init_frame_faces(f)
     assert(realize_basic_faces(f))
 end
 
+---@type nelisp.F
 local F={}
 F.internal_lisp_face_p={'internal-lisp-face-p',1,2,0,[[Return non-nil if FACE names a face.
 FACE should be a symbol or string.

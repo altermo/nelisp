@@ -241,6 +241,7 @@ function M.encode_file_name(s)
     return s
 end
 
+---@type nelisp.F
 local F={}
 local function coding_system_spec(coding_system_symbol)
     return vars.F.gethash(coding_system_symbol,vars.coding_system_hash_table,vars.Qnil)
@@ -495,7 +496,7 @@ local function make_subsidiaries(base)
 end
 F.define_coding_system_internal={'define-coding-system-internal',coding_arg.max,-2,0,[[For internal use only.
 usage: (define-coding-system-internal ...)]]}
-function F.define_coding_system_internal.f(args)
+function F.define_coding_system_internal.fa(args)
     if #args<coding_arg.max then
         vars.F.signal(vars.Qwrong_number_of_arguments,vars.F.cons(
             lread.intern('define-coding-system-internal'),
@@ -934,6 +935,7 @@ function F.check_coding_system.f(coding_system)
         return coding_system
     end
     signal.xsignal(vars.Qcoding_system_error,coding_system)
+    error('unreachable')
 end
 F.set_safe_terminal_coding_system_internal={'set-safe-terminal-coding-system-internal',1,1,0,[[Internal use only.]]}
 function F.set_safe_terminal_coding_system_internal.f(coding_system)
@@ -950,7 +952,7 @@ If multiple coding systems belong to the same category,
 all but the first one are ignored.
 
 usage: (set-coding-system-priority &rest coding-systems)]]}
-function F.set_coding_system_priority.f(args)
+function F.set_coding_system_priority.fa(args)
     local changed={}
     local priorities={}
     local j=0

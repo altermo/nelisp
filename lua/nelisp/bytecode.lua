@@ -732,6 +732,7 @@ function M.exec_byte_code(fun,args_template,args)
     end
     return assert(setup_frame()) --[[@as nelisp.obj]]
 end
+---@type nelisp.F
 local F={}
 F.byte_code={'byte-code',3,3,0,[[Function used internally in byte-compiled code.
 The first argument, BYTESTR, is a string of byte code;

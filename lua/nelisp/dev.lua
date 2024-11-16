@@ -10,6 +10,7 @@ local inspect=function (x)
     return printcharfun.out()
 end
 
+---@type nelisp.F
 local F={}
 F.Xprint={'!print',1,1,0,[[internal function]]}
 function F.Xprint.f(x)
@@ -49,7 +50,7 @@ function F.Xerror.f(x)
     return vars.Qt
 end
 F.Xlua_exec={'!lua-exec',1,-2,0,[[internal function]]}
-function F.Xlua_exec.f(args)
+function F.Xlua_exec.fa(args)
     local x=args[1]
     lisp.check_string(x)
     local s=lisp.sdata(x)

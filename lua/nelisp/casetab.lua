@@ -38,6 +38,7 @@ local function set_case_table(ctable,standard)
     return ctable
 end
 
+---@type nelisp.F
 local F={}
 F.case_table_p={'case-table-p',1,1,0,[[Return t if OBJECT is a case table.
 See `set-case-table' for more information on these data structures.]]}

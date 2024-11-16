@@ -1,6 +1,7 @@
 local vars=require'nelisp.vars'
 local M={}
 
+---@type nelisp.F
 local F={}
 F.interactive={'interactive',0,-1,0,[[Specify a way of parsing arguments for interactive use of a function.
 For example, write

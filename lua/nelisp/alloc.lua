@@ -110,11 +110,12 @@ function M.init_symbol(val,name)
     p.declared_special=nil --false
 end
 
+---@type nelisp.F
 local F={}
 F.list={'list',0,-2,0,[[Return a newly created list with specified arguments as elements.
 Allows any number of arguments, including zero.
 usage: (list &rest OBJECTS)]]}
-function F.list.f(args)
+function F.list.fa(args)
     local val=vars.Qnil
     for i=#args,1,-1 do
         val=vars.F.cons(args[i],val)
@@ -162,7 +163,7 @@ end
 F.vector={'vector',0,-2,0,[[Return a newly created vector with specified arguments as elements.
 Allows any number of arguments, including zero.
 usage: (vector &rest OBJECTS)]]}
-function F.vector.f(args)
+function F.vector.fa(args)
     local vec=M.make_vector(#args,'nil')
     for i=1,#args do
         (vec --[[@as nelisp._normal_vector]]).contents[i]=args[i]
@@ -184,7 +185,7 @@ argument to catch the left-over arguments.  If such an integer is used, the
 arguments will not be dynamically bound but will be instead pushed on the
 stack before executing the byte-code.
 usage: (make-byte-code ARGLIST BYTE-CODE CONSTANTS DEPTH &optional DOCSTRING INTERACTIVE-SPEC &rest ELEMENTS)]]}
-function F.make_byte_code.f(args)
+function F.make_byte_code.fa(args)
     local cidx=lisp.compiled_idx
     if not ((lisp.fixnump(args[cidx.arglist])
         or lisp.consp(args[cidx.arglist])
@@ -203,7 +204,7 @@ F.make_closure={'make-closure',1,-2,0,[[Create a byte-code closure from PROTOTYP
 Return a copy of PROTOTYPE, a byte-code object, with CLOSURE-VARS
 replacing the elements in the beginning of the constant-vector.
 usage: (make-closure PROTOTYPE &rest CLOSURE-VARS)]]}
-function F.make_closure.f(args)
+function F.make_closure.fa(args)
     local protofn=args[1]
     lisp.check_type(lisp.compiledp(protofn),vars.Qbyte_code_function_p,protofn)
     local protovec=(protofn --[[@as nelisp._compiled]]).contents
@@ -257,7 +258,7 @@ TYPE is its type as returned by `type-of'; it should be either a
 symbol or a type descriptor.  SLOTS is used to initialize the record
 slots with shallow copies of the arguments.
 usage: (record TYPE &rest SLOTS)]]}
-function F.record.f(args)
+function F.record.fa(args)
     local elems={}
     for k,v in ipairs(args) do
         elems[k]=v

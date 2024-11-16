@@ -10,6 +10,7 @@ function M.copy_textprop(start,end_,src,pos,dest,props)
     end
 end
 
+---@type nelisp.F
 local F={}
 ---@return nelisp.obj
 local function validate_plist(list)

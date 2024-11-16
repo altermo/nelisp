@@ -142,6 +142,7 @@ local function concat_to_vector(args)
     return result
 end
 
+---@type nelisp.F
 local F={}
 local function concat_to_list(args)
     local nargs=#args-1
@@ -205,7 +206,7 @@ All arguments except the last argument are copied.  The last argument
 is just used as the tail of the new list.
 
 usage: (append &rest SEQUENCES)]]}
-function F.append.f(args)
+function F.append.fa(args)
     if #args==0 then
         return vars.Qnil
     end
@@ -433,7 +434,7 @@ end
 F.nconc={'nconc',0,-2,0,[[Concatenate any number of lists by altering them.
 Only the last argument is not altered, and need not be a list.
 usage: (nconc &rest LISTS)]]}
-function F.nconc.f(args)
+function F.nconc.fa(args)
     local val=vars.Qnil
     for k,v in ipairs(args) do
         local tem=v
@@ -913,7 +914,7 @@ table read only. Any further changes to purified tables will result
 in an error.
 
 usage: (make-hash-table &rest KEYWORD-ARGS)]]}
-function F.make_hash_table.f(args)
+function F.make_hash_table.fa(args)
     local used={}
     local test=get_key_arg(vars.QCtest,args,used) or vars.Qeql
     local testdesc
@@ -1103,14 +1104,14 @@ Each argument may be a string or a list or vector of characters (integers).
 Values of the `composition' property of the result are not guaranteed
 to be `eq'.
 usage: (concat &rest SEQUENCES)]]}
-function F.concat.f(args)
+function F.concat.fa(args)
     return M.concat_to_string(args)
 end
 F.vconcat={'vconcat',0,-2,0,[[Concatenate all the arguments and make the result a vector.
 The result is a vector whose elements are the elements of all the arguments.
 Each argument may be a list, vector or string.
 usage: (vconcat &rest SEQUENCES)]]}
-function F.vconcat.f(args)
+function F.vconcat.fa(args)
     return concat_to_vector(args)
 end
 F.copy_sequence={'copy-sequence',1,1,0,[[Return a copy of a list, vector, string, char-table or record.

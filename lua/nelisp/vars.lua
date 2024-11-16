@@ -1,6 +1,5 @@
 --- Lua-ls doesn't handle vararg typing well
----@alias nelisp.F_fun
----| fun(args:nelisp.obj[]):nelisp.obj
+---@alias nelisp.F_fun_normal
 ---| fun():nelisp.obj
 ---| fun(a:nelisp.obj):nelisp.obj
 ---| fun(a:nelisp.obj,b:nelisp.obj):nelisp.obj
@@ -9,6 +8,19 @@
 ---| fun(a:nelisp.obj,b:nelisp.obj,c:nelisp.obj,d:nelisp.obj,e:nelisp.obj):nelisp.obj
 ---| fun(a:nelisp.obj,b:nelisp.obj,c:nelisp.obj,d:nelisp.obj,e:nelisp.obj,f:nelisp.obj):nelisp.obj
 ---| fun(a:nelisp.obj,b:nelisp.obj,c:nelisp.obj,d:nelisp.obj,e:nelisp.obj,f:nelisp.obj,g:nelisp.obj):nelisp.obj
+---@alias nelisp.F_fun_args
+---| fun(args:nelisp.obj[]):nelisp.obj
+---@alias nelisp.F_fun nelisp.F_fun_normal|nelisp.F_fun_args
+
+---@class nelisp.F.entry
+---@field [1] string name
+---@field [2] number minargs
+---@field [3] number maxargs
+---@field [4] string|0|nil intspec
+---@field [5] string docs
+---@field f nelisp.F_fun_normal?
+---@field fa nelisp.F_fun_args?
+---@alias nelisp.F table<string,nelisp.F.entry>
 
 ---@class nelisp.vars
 ---@field defsym fun(name:string,symname:string)
@@ -17,7 +29,7 @@
 ---@field defvar_forward fun(name:string,symname:string?,doc:string,get:(fun():nelisp.obj),set:(fun(v:nelisp.obj)))
 ---@field defvar_bool fun(name:string,symname:string,doc:string?)
 ---@field defvar_localized fun(name:string,symname:string,doc:string,blv:nelisp.buffer_local_value)
----@field defsubr fun(map:nelisp.defsubr_map,name:string)
+---@field defsubr fun(map:nelisp.F,name:string)
 ---@field F table<string,nelisp.F_fun>
 ---@field V table<string,nelisp.obj>
 ---@field modifier_symbols (0|nelisp.obj)[]
@@ -164,20 +176,24 @@ end,__newindex=function (_,k,v)
     end})
 
 vars.F={}
----@alias nelisp.defsubr_map {[string]:{[1]:string,[2]:number,[3]:number,[4]:string|0,[5]:string,f:fun(...:nelisp.obj):nelisp.obj}}
----@param map nelisp.defsubr_map
+---@param map nelisp.F
 ---@param name string
 function vars.defsubr(map,name)
     assert(not vars.F[name],'DEV: internal function already defined: '..name)
     local d=assert(map[name])
-    local f=assert(d.f)
     assert(type(d[1])=='string')
     assert(type(d[2])=='number')
     assert(type(d[3])=='number')
     assert(type(d[4])=='string' or d[4]==0 or d[4]==nil)
     assert(type(d[5])=='string')
-    assert(type(d.f)=='function')
-    assert(table.maxn(d)==5)
+    local f
+    if d[3]==-2 then
+        assert(type(d.fa)=='function',d[1])
+        f=assert(d.fa)
+    else
+        assert(type(d.f)=='function')
+        f=assert(d.f)
+    end
     vars.F[name]=f
     local symname=d[1]
     if d[3]>=0 and d[3]<=8 then

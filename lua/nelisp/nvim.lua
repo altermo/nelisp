@@ -189,9 +189,9 @@ function M.frame_background_pixel(f)
     return -3
 end
 ---@param f nelisp._frame
----@return string
+---@return nelisp.obj
 function M.frame_name(f)
-    return 'F'..(f --[[@as nelisp.vim.frame]]).tabpage_id
+    return alloc.make_string('F'..(f --[[@as nelisp.vim.frame]]).tabpage_id)
 end
 ---@param f nelisp._frame
 ---@return number

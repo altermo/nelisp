@@ -20,6 +20,7 @@ local modifiers_t={
     triple=32,
 }
 
+---@type nelisp.F
 local F={}
 F.make_keymap={'make-keymap',0,1,0,[[Construct and return a new keymap, of the form (keymap CHARTABLE . ALIST).
 CHARTABLE is a char-table that holds the bindings for all characters
@@ -475,6 +476,7 @@ function F.event_convert_list.f(event_desc)
         return apply_modifiers(modifiers,base)
     else
         signal.error('Invalid base event')
+        error('unreachable')
     end
 end
 F.define_key={'define-key',3,4,0,[[In KEYMAP, define key sequence KEY as DEF.

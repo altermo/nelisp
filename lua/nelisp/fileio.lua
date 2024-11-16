@@ -3,6 +3,7 @@ local lisp=require'nelisp.lisp'
 local alloc=require'nelisp.alloc'
 local M={}
 
+---@type nelisp.F
 local F={}
 F.find_file_name_handler={'find-file-name-handler',2,2,0,[[Return FILENAME's handler function for OPERATION, if it has one.
 Otherwise, return nil.
