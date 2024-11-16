@@ -315,7 +315,8 @@ local function realize_named_face(f,sym,id)
     check_lface_attrs(attrs)
     assert(lface_fully_specified_p(attrs))
     if lisp.nilp(lface) then
-        lface=vars.F.internal_make_lisp_face(sym,f)
+        local frame=f --[[@as nelisp.obj]]
+        lface=vars.F.internal_make_lisp_face(sym,frame)
     end
     local symbol_attrs=get_lface_attributes_no_remap(f,sym,true)
     for i=1,M.lface_index.size-1 do
@@ -1103,7 +1104,7 @@ function F.display_supports_face_attributes_p.f(attributes,display)
 end
 
 function M.init()
-    vars.V.face_new_frame_defaults=vars.F.make_hash_table(vars.QCtest,vars.Qeq,vars.QCsize,33)
+    vars.V.face_new_frame_defaults=vars.F.make_hash_table(vars.QCtest,vars.Qeq,vars.QCsize,lisp.make_fixnum(33))
     vars.face_alternative_font_family_alist=vars.Qnil
     vars.face_alternative_font_registry_alist=vars.Qnil
 end

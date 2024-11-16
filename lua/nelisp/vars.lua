@@ -1,3 +1,15 @@
+--- Lua-ls doesn't handle vararg typing well
+---@alias nelisp.F_fun
+---| fun(args:nelisp.obj[]):nelisp.obj
+---| fun():nelisp.obj
+---| fun(a:nelisp.obj):nelisp.obj
+---| fun(a:nelisp.obj,b:nelisp.obj):nelisp.obj
+---| fun(a:nelisp.obj,b:nelisp.obj,c:nelisp.obj):nelisp.obj
+---| fun(a:nelisp.obj,b:nelisp.obj,c:nelisp.obj,d:nelisp.obj):nelisp.obj
+---| fun(a:nelisp.obj,b:nelisp.obj,c:nelisp.obj,d:nelisp.obj,e:nelisp.obj):nelisp.obj
+---| fun(a:nelisp.obj,b:nelisp.obj,c:nelisp.obj,d:nelisp.obj,e:nelisp.obj,f:nelisp.obj):nelisp.obj
+---| fun(a:nelisp.obj,b:nelisp.obj,c:nelisp.obj,d:nelisp.obj,e:nelisp.obj,f:nelisp.obj,g:nelisp.obj):nelisp.obj
+
 ---@class nelisp.vars
 ---@field defsym fun(name:string,symname:string)
 ---@field commit_qsymbols fun()
@@ -6,7 +18,7 @@
 ---@field defvar_bool fun(name:string,symname:string,doc:string?)
 ---@field defvar_localized fun(name:string,symname:string,doc:string,blv:nelisp.buffer_local_value)
 ---@field defsubr fun(map:nelisp.defsubr_map,name:string)
----@field F table<string,fun(...:(nelisp.obj|nelisp.obj[])):nelisp.obj>
+---@field F table<string,nelisp.F_fun>
 ---@field V table<string,nelisp.obj>
 ---@field modifier_symbols (0|nelisp.obj)[]
 ---@field lisp_eval_depth number
