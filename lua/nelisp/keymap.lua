@@ -847,5 +847,10 @@ key sequences and look up bindings if VARIABLE's value is non-nil.
 If two active keymaps bind the same key, the keymap appearing earlier
 in the list takes precedence.]])
     vars.V.minor_mode_map_alist=vars.Qnil
+
+    vars.defvar_lisp('help_char','help-char',[[Character to recognize as meaning Help.
+    When it is read, do `(eval help-form)', and display result if it's a string.
+    If the value of `help-form' is nil, this char can be read normally.]])
+    vars.V.help_char=lisp.make_fixnum(8) -- ctrl-h
 end
 return M
