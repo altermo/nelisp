@@ -473,6 +473,11 @@ function F.defvaralias.f(new_alias,base_variable,docstring)
     vars.F.put(new_alias,vars.Qvariable_documentation,docstring)
     return base_variable
 end
+F.defvar_1={'defvar-1',2,3,0,[[Like `defvar' but as a function.
+More specifically behaves like (defvar SYM 'INITVALUE DOCSTRING).]]}
+function F.defvar_1.f(sym,initvalue,docstring)
+    return defvar(sym,initvalue,docstring,false)
+end
 F.make_var_non_special={'internal-make-var-non-special',1,1,0,[[Internal function.]]}
 function F.make_var_non_special.f(sym)
     lisp.check_symbol(sym)
@@ -1186,6 +1191,7 @@ function M.init_syms()
     vars.defsubr(F,'letX')
     vars.defsubr(F,'defvar')
     vars.defsubr(F,'defvaralias')
+    vars.defsubr(F,'defvar_1')
     vars.defsubr(F,'make_var_non_special')
     vars.defsubr(F,'internal__define_uninitialized_variable')
     vars.defsubr(F,'defconst')
