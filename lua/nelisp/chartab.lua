@@ -445,6 +445,23 @@ function F.set_char_table_range.f(ctable,range,value)
     end
     return value
 end
+F.set_char_table_parent={'set-char-table-parent',2,2,0,[[Set the parent char-table of CHAR-TABLE to PARENT.
+Return PARENT.  PARENT must be either nil or another char-table.]]}
+function F.set_char_table_parent.f(ctable,parent)
+    lisp.check_chartable(ctable)
+    if not lisp.nilp(parent) then
+        lisp.check_chartable(parent)
+        local temp=parent
+        while not lisp.nilp(temp) do
+            if lisp.eq(temp,ctable) then
+                signal.error('Attempt to make a chartable be its own parent')
+            end
+            temp=(temp --[[@as nelisp._char_table]]).parent
+        end
+    end
+    (ctable --[[@as nelisp._char_table]]).parent=parent
+    return parent
+end
 
 function M.init_syms()
     vars.defsym('Qchar_code_property_table','char-code-property-table')
@@ -453,5 +470,6 @@ function M.init_syms()
     vars.defsubr(F,'char_table_extra_slot')
     vars.defsubr(F,'set_char_table_extra_slot')
     vars.defsubr(F,'set_char_table_range')
+    vars.defsubr(F,'set_char_table_parent')
 end
 return M
