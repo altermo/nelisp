@@ -270,6 +270,11 @@ function F.record.fa(args)
     }
     return lisp.make_vectorlike_ptr(vec,lisp.pvec.record)
 end
+F.make_marker={'make-marker',0,0,0,[[Return a newly allocated marker which does not point at any place.]]}
+function F.make_marker.f()
+    local nvim=require'nelisp.nvim'
+    return nvim.make_marker()
+end
 
 function M.init_syms()
     vars.defsubr(F,'list')
@@ -282,6 +287,7 @@ function M.init_syms()
     vars.defsubr(F,'make_closure')
     vars.defsubr(F,'garbage_collect')
     vars.defsubr(F,'record')
+    vars.defsubr(F,'make_marker')
 
     vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end

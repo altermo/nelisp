@@ -77,6 +77,8 @@ M.pvec={
     _free=1,
     bignum=2,
     marker=3,
+    ---@class nelisp._marker: nelisp._pvec_special
+
     overlay=4,
     finalizer=5,
     symbol_with_pos=6,

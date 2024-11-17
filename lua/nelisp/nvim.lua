@@ -235,4 +235,17 @@ function M.frame_tab_bar_lines(f)
     end
     return vim.o.showtabline==2 and 1 or 0
 end
+
+--- ;; Marker
+
+---@class nelisp.vim.marker:nelisp._marker
+---@field bufid number?
+---@field id number?
+
+---@return nelisp.obj
+function M.make_marker()
+    ---@type nelisp.vim.marker
+    local m={}
+    return lisp.make_vectorlike_ptr(m,lisp.pvec.marker)
+end
 return M
