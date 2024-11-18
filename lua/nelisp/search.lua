@@ -223,7 +223,9 @@ local function string_match_1(regexp,s,start,posix,modify_data)
             signal.args_out_of_range(s,start)
         end
         if lisp.string_multibyte(s) then
-            error('TODO')
+            if lisp.sbytes(s)~=lisp.schars(s) then
+                error('TODO')
+            end
         else
             pos_bytes=pos
         end
