@@ -6,6 +6,8 @@ local overflow=require'nelisp.overflow'
 local alloc=require'nelisp.alloc'
 local chartab=require'nelisp.chartab'
 local nvim=require'nelisp.nvim'
+local fns=require'nelisp.fns'
+local chars=require'nelisp.chars'
 
 ---@class nelisp.buffer_local_value
 ---@field local_if_set boolean?
@@ -183,7 +185,9 @@ function F.aref.f(array,idx)
         elseif not lisp.string_multibyte(array) then
             return lisp.make_fixnum(lisp.sref(array,idxval))
         end
-        error('TODO')
+        local idxval_byte=fns.string_char_to_byte(array,idxval)
+        local c=chars.stringchar(lisp.sdata(array):sub(idxval_byte+1))
+        return lisp.make_fixnum(c)
     elseif lisp.chartablep(array) then
         lisp.check_chartable(array)
         return chartab.ref(array,idxval)

@@ -1205,7 +1205,7 @@ local function validate_subarray(array,from,to,size)
     signal.args_out_of_range(array,from,to)
     error('unreachable')
 end
-local function string_char_to_byte(s,idx)
+function M.string_char_to_byte(s,idx)
     local best_above=lisp.schars(s)
     local best_above_byte=lisp.sbytes(s)
     if best_above==best_above_byte then
@@ -1265,8 +1265,8 @@ function F.substring.f(s,from,to)
     local f,t=validate_subarray(s,from,to,size)
     local res
     if lisp.stringp(s) then
-        local from_byte=f~=0 and string_char_to_byte(s,f) or 0
-        local to_byte=t==size and lisp.sbytes(s) or string_char_to_byte(s,t)
+        local from_byte=f~=0 and M.string_char_to_byte(s,f) or 0
+        local to_byte=t==size and lisp.sbytes(s) or M.string_char_to_byte(s,t)
         res=alloc.make_specified_string(lisp.sdata(s):sub(from_byte+1,to_byte),to_byte-from_byte,lisp.string_multibyte(s))
         textprop.copy_textprop(lisp.make_fixnum(f),lisp.make_fixnum(t),s,lisp.make_fixnum(0),res,vars.Qnil)
     else
@@ -1328,7 +1328,7 @@ function F.string_search.f(needle,haystack,start_pos)
         if start<0 or start>lisp.schars(haystack) then
             signal.args_out_of_range(haystack,start_pos)
         end
-        start=string_char_to_byte(haystack,start)
+        start=M.string_char_to_byte(haystack,start)
     end
     local res
     if lisp.string_multibyte(haystack)==lisp.string_multibyte(needle) or
