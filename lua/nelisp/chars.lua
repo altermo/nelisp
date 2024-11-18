@@ -99,6 +99,16 @@ function M.stringcharandlength(s)
     assert(p3)
     assert(p4)
 end
+---@param str nelisp.obj
+---@param i_bytes number
+---@return number,number
+function M.fetchstringcharadvance(str,i_bytes)
+    if lisp.string_multibyte(str) then
+        error('TODO')
+    else
+        return lisp.sref(str,i_bytes),1
+    end
+end
 
 ---@param c number
 function M.chartobyte8(c)

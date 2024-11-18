@@ -98,7 +98,7 @@ function M.concat_to_string(args)
             signal.wrong_type_argument(vars.Qsequencep,arg)
         end
     end
-    return dest_multibyte and error('TODO') or alloc.make_unibyte_string(buf.out())
+    return dest_multibyte and alloc.make_multibyte_string(buf.out(),-1) or alloc.make_unibyte_string(buf.out())
 end
 local function concat_to_vector(args)
     local result_len=0

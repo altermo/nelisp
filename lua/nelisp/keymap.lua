@@ -778,6 +778,134 @@ function F.map_keymap.f(function_,keymap,sorf_first)
     map_keymap(keymap,map_keymap_call,function_,true)
     return vars.Qnil
 end
+---@param ch number
+---@return string
+local function key_description(ch)
+    local p=''
+    local c=bit.band(ch,bit.bor(b.CHAR_META,bit.bnot(-b.CHAR_META)))
+    local c2=bit.band(c,bit.bnot(bit.bor(b.CHAR_ALT,b.CHAR_CTL,b.CHAR_HYPER,
+        b.CHAR_META,b.CHAR_SHIFT,b.CHAR_SUPER)))
+    if not chars.characterp(lisp.make_fixnum(c)) then
+        error('TODO')
+    end
+    local tab_as_ci=(c2==b'\t' and bit.band(c,b.CHAR_META)~=0)
+    if bit.band(c,b.CHAR_ALT)~=0 then
+        error('TODO')
+    end
+    if bit.band(c,b.CHAR_CTL)~=0
+        or (c2<b' ' and c2~=27 and c2~=b'\t' and c2~=b'\r')
+        or tab_as_ci then
+        p=p..'C-'
+        c=bit.band(c,bit.bnot(b.CHAR_CTL))
+    end
+    if bit.band(c,b.CHAR_HYPER)~=0 then
+        error('TODO')
+    end
+    if bit.band(c,b.CHAR_META)~=0 then
+        error('TODO')
+    end
+    if bit.band(c,b.CHAR_SHIFT)~=0 then
+        error('TODO')
+    end
+    if bit.band(c,b.CHAR_SUPER)~=0 then
+        error('TODO')
+    end
+    if c<32 then
+        if c==27 then
+            error('TODO')
+        elseif tab_as_ci then
+            error('TODO')
+        elseif c==b'\t' then
+            error('TODO')
+        elseif c==b'\r' --[[ctrl-m]] then
+            error('TODO')
+        else
+            if c>0 and c<=26 --[[ctrl-z]] then
+                p=p..string.char(c+96)
+            else
+                p=p..string.char(c+64)
+            end
+        end
+    elseif c==127 then
+        error('TODO')
+    elseif c==b' ' then
+        error('TODO')
+    elseif c<128 then
+        p=p..string.char(c)
+    else
+        error('TODO')
+    end
+    return p
+end
+F.single_key_description={'single-key-description',1,2,0,[[Return a pretty description of a character event KEY.
+Control characters turn into C-whatever, etc.
+Optional argument NO-ANGLES non-nil means don't put angle brackets
+around function keys and event symbols.
+
+See `text-char-description' for describing character codes.]]}
+function F.single_key_description.f(key,no_angles)
+    if lisp.consp(key) and lucid_event_type_list_p(key) then
+        error('TODO')
+    end
+    if lisp.consp(key) and lisp.fixnump(lisp.xcar(key)) and lisp.fixnump(lisp.xcdr(key)) then
+        error('TODO')
+    end
+    key=lisp.event_head(key)
+    if lisp.fixnump(key) then
+        local p=key_description(lisp.fixnum(key))
+        return alloc.make_specified_string(p,-1,true)
+    else
+        error('TODO')
+    end
+end
+F.key_description={'key-description',1,2,0,[[Return a pretty description of key-sequence KEYS.
+Optional arg PREFIX is the sequence of keys leading up to KEYS.
+For example, [?\\C-x ?l] is converted into the string \"C-x l\".
+
+For an approximate inverse of this, see `kbd'.]]}
+function F.key_description.f(keys,prefix)
+    local add_meta=false
+    local lists={prefix,keys}
+    local args={}
+    local sep=alloc.make_string(' ')
+    for _,list in ipairs(lists) do
+        if not (lisp.nilp(list) or lisp.stringp(list) or lisp.vectorp(list) or lisp.consp(list)) then
+            signal.wrong_type_argument(vars.Qarrayp,list)
+        end
+        local listlen=lisp.fixnum(vars.F.length(list))
+        local i=0
+        local i_bytes=0
+        while i<listlen do
+            local key
+            if lisp.stringp(list) then
+                local c,bytes=chars.fetchstringcharadvance(list,i_bytes)
+                i_bytes=i_bytes+bytes
+                i=i+1
+                if chars.singlebytecharp(c) and bit.band(c,128)~=0 then
+                    c=bit.bxor(c,bit.bor(128,b.CHAR_META))
+                end
+                key=lisp.make_fixnum(c)
+            else
+                error('TODO')
+            end
+            if add_meta then
+                error('TODO')
+            elseif lisp.eq(key,vars.V.meta_prefix_char) then
+                error('TODO')
+            end
+            table.insert(args,vars.F.single_key_description(key,vars.Qnil))
+            table.insert(args,sep)
+        end
+    end
+    if add_meta then
+        error('TODO')
+    elseif #args==0 then
+        return alloc.make_string('')
+    else
+        table.remove(args,#args)
+        return vars.F.concat(args)
+    end
+end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,lisp.make_fixnum(0))
@@ -812,6 +940,8 @@ function M.init_syms()
     vars.defsubr(F,'current_global_map')
     vars.defsubr(F,'lookup_key')
     vars.defsubr(F,'map_keymap')
+    vars.defsubr(F,'single_key_description')
+    vars.defsubr(F,'key_description')
 
     vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
 
