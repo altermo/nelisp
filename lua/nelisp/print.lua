@@ -74,7 +74,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
             goto break_
         end
         local multibyte=lisp.string_multibyte(obj)
-        assert(not multibyte,'TODO')
+        assert(lisp.sbytes(obj)==lisp.schars(obj) or not multibyte,'TODO')
         local has_properties=lisp.string_intervals(obj)
         assert(not has_properties,'TODO')
         printcharfun.write('"')
