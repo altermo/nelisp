@@ -135,7 +135,7 @@ local function styled_format(args,message)
                 end
                 local convbytes=nbytes
                 if convbytes>0 and multibyte and not lisp.string_multibyte(arg) then
-                    error('TODO')
+                    convbytes=chars.count_size_as_multibyte(lisp.sdata(arg))
                 end
                 local padding=width<field_width and field_width-width or 0
                 if fmt_props then
@@ -144,7 +144,7 @@ local function styled_format(args,message)
                 if not flags.minus and padding>0 then
                     buf.write((' '):rep(padding))
                 end
-                if multibyte then
+                if #buf.out()>0 and multibyte then
                     error('TODO: more checks and set maybe_combine_byte')
                 end
                 if lisp.string_multibyte(arg) then
@@ -217,7 +217,7 @@ local function styled_format(args,message)
             else
                 if multibyte_format then
                     error('TODO')
-                elseif multibyte then
+                elseif multibyte and not chars.asciicharp(format_char) then
                     error('TODO')
                 else
                     buf.write(format_char)

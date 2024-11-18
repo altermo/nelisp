@@ -145,6 +145,17 @@ function M.str_to_multibyte(s)
         return M.byte8string(string.byte(c))
     end))
 end
+---@param s string
+---@return number
+function M.count_size_as_multibyte(s)
+    local len=#s
+    for i=1,#s do
+        if s:byte(i)>127 then
+            len=len+1
+        end
+    end
+    return len
+end
 
 ---@type nelisp.F
 local F={}
