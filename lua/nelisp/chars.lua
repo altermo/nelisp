@@ -78,7 +78,7 @@ end
 ---@param s string
 ---@return number
 function M.stringchar(s)
-    return (M.stringcharandlength(s))
+    return select(2,M.stringcharandlength(s))
 end
 ---@param s string
 ---@return number
