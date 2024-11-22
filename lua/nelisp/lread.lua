@@ -629,6 +629,7 @@ function M.bytecode_from_list(elems,readcharfun)
         lisp.consp(elems[cidx.arglist]) or
         lisp.nilp(elems[cidx.arglist]))
         and lisp.fixnatp(elems[cidx.stack_depth])) then
+        vim.print(lisp.fixnatp(elems[cidx.stack_depth]))
         invalid_syntax('Invalid byte-code object',readcharfun)
     end
     if vars.V.load_force_doc_strings
