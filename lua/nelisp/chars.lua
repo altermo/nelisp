@@ -41,7 +41,10 @@ function M.charstring(c)
     elseif c<=bytes.MAX_2_BYTE_CHAR then
         return string.char(bit.bor(0xc0,bit.rshift(c,6)),bit.bor(0x80,bit.band(c,0x3f)))
     elseif c<=bytes.MAX_3_BYTE_CHAR then
-        error('TODO')
+            return string.char(
+                bit.bor(0xe0,bit.rshift(c,12)),
+                bit.bor(0x80,bit.band(bit.rshift(c,6),0x3f)),
+                bit.bor(0x80,bit.band(c,0x3f)))
     elseif c<=bytes.MAX_4_BYTE_CHAR then
         error('TODO')
     elseif c<=bytes.MAX_5_BYTE_CHAR then

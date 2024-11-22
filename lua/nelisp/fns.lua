@@ -71,12 +71,20 @@ function M.concat_to_string(args)
             else
                 some_multibyte=true
             end
-        else
+        elseif lisp.nilp(arg) then
+        elseif lisp.consp(arg) then
+            while lisp.consp(arg) do
+                local ch=lisp.xcar(arg)
+                chars.check_character(ch)
+                local c=lisp.fixnum(ch)
+                if not chars.asciicharp(c) and not chars.charbyte8p(c) then
+                    dest_multibyte=true
+                end
+                arg=lisp.xcdr(arg)
+            end
+        elseif lisp.vectorp(arg) then
             error('TODO')
         end
-    end
-    if dest_multibyte and some_multibyte then
-        error('TODO')
     end
     local buf=print_.make_printcharfun()
     for _,arg in ipairs(args) do
@@ -87,13 +95,22 @@ function M.concat_to_string(args)
             if lisp.string_multibyte(arg)==dest_multibyte then
                 buf.write(lisp.sdata(arg))
             else
-                error('TODO')
+                buf.write(chars.str_to_multibyte(lisp.sdata(arg)))
             end
         elseif lisp.vectorp(arg) then
             error('TODO')
         elseif lisp.nilp(arg) then
         elseif lisp.consp(arg) then
-            error('TODO')
+            local tail=arg
+            while not lisp.nilp(tail) do
+                local c=lisp.fixnum(lisp.xcar(tail))
+                if dest_multibyte then
+                    buf.write(chars.charstring(c))
+                else
+                    buf.write(c)
+                end
+                tail=lisp.xcdr(tail)
+            end
         else
             signal.wrong_type_argument(vars.Qsequencep,arg)
         end
