@@ -384,6 +384,13 @@ function F.char_to_string.f(char)
     local str=chars.charstring(c)
     return alloc.make_string_from_bytes(str,1)
 end
+F.current_message={'current-message',0,0,0,[[Return the string currently displayed in the echo area, or nil if none.]]}
+function F.current_message.f()
+    if _G.nelisp_later then
+        error('TODO')
+    end
+    return vars.Qnil
+end
 
 function M.init_syms()
     vars.defsubr(F,'format')
@@ -392,6 +399,7 @@ function M.init_syms()
     vars.defsubr(F,'system_name')
     vars.defsubr(F,'propertize')
     vars.defsubr(F,'char_to_string')
+    vars.defsubr(F,'current_message')
 
     vars.defvar_lisp('system_name','system-name',[[The host name of the machine Emacs is running on.]])
     vars.V.system_name=vars.Qnil
