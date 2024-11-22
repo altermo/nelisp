@@ -81,7 +81,7 @@ function M.print_obj(obj,escapeflag,printcharfun)
         local need_nohex=false
         for i=0,lisp.sbytes(obj)-1 do
             local c=lisp.sref(obj,i)
-            if chars.singlebytecharp(c) and not chars.asciicharp(c) and vars.V.print_escape_nonascii then
+            if chars.singlebytecharp(c) and not chars.asciicharp(c) and not lisp.nilp(vars.V.print_escape_nonascii) then
                 error('TODO')
             else
                 if need_nohex and ((b'0'<=c and c<=b'9') or (b'a'<=c and c<=b'f') or (b'A'<=c and c<=b'F')) then
@@ -380,5 +380,12 @@ A value of nil means no limit.  See also `eval-expression-print-level'.]])
     vars.defvar_bool('print_quoted','print-quoted',[[Non-nil means print quoted forms with reader syntax.
 I.e., (quote foo) prints as \\='foo, (function foo) as #\\='foo.]])
     vars.V.print_quoted=vars.Qt
+
+    vars.defvar_bool('print_escape_nonascii','print-escape-nonascii',[[Non-nil means print unibyte non-ASCII chars in strings as \\OOO.
+\(OOO is the octal representation of the character code.)
+Only single-byte characters are affected, and only in `prin1'.
+When the output goes in a multibyte buffer, this feature is
+enabled regardless of the value of the variable.]])
+    vars.V.print_escape_nonascii=vars.Qnil
 end
 return M
