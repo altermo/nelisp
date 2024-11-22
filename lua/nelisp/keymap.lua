@@ -927,6 +927,8 @@ function M.init()
     vars.V.function_key_map=vars.F.make_sparse_keymap(vars.Qnil)
     current_global_map=vars.Qnil
     vars.V.special_event_map=lisp.list(vars.Qkeymap)
+
+    vars.V.command_error_function=lread.intern('command-error-default-function')
 end
 
 function M.init_syms()
@@ -982,5 +984,23 @@ in the list takes precedence.]])
     When it is read, do `(eval help-form)', and display result if it's a string.
     If the value of `help-form' is nil, this char can be read normally.]])
     vars.V.help_char=lisp.make_fixnum(8) -- ctrl-h
+
+    vars.defvar_lisp('command_error_function','command-error-function',[[Function to output error messages.
+Called with three arguments:
+- the error data, a list of the form (SIGNALED-CONDITION . SIGNAL-DATA)
+  such as what `condition-case' would bind its variable to,
+- the context (a string which normally goes at the start of the message),
+- the Lisp function within which the error was signaled.
+
+For instance, to make error messages stand out more in the echo area,
+you could say something like:
+
+    (setq command-error-function
+          (lambda (data _ _)
+            (message "%s" (propertize (error-message-string data)
+                                      \\='face \\='error))))
+
+Also see `set-message-function' (which controls how non-error messages
+are displayed).]])
 end
 return M
