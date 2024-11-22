@@ -1014,6 +1014,7 @@ function M.init_syms()
     vars.defsym('Qtreesit_node','treesit-node')
     vars.defsym('Qtreesit_compiled_query','treesit-compiled-query')
     vars.defsym('Qsqlite','sqlite')
+    vars.defsym('Qbyte_code','byte-code')
 
     vars.Qunique=alloc.make_symbol(alloc.make_pure_c_string'unbound')
 end

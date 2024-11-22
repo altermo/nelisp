@@ -571,6 +571,14 @@ local function compile(obj,printcharfun)
             table.insert(elems,lisp.xcar(tail))
             tail=lisp.xcdr(tail)
         end
+        if printcharfun.print_depth==1 and lisp.xcar(obj)==vars.Qbyte_code then
+            if _G.nelisp_later then
+                error('TODO: byte-code may be used in (defvar ...) and similar forms, compile them to')
+            end
+            elems[1]=vars.QXbyte_code
+            local fun=vars.F.make_byte_code({vars.Qnil,elems[2],elems[3],elems[4]})
+            table.insert(elems,2,alloc.make_unibyte_string(compile_compiled(fun)))
+        end
         printcharfun.write('C(')
         for _,elem in ipairs(elems) do
             compile(elem,printcharfun)
@@ -660,8 +668,9 @@ function M.compiles(objs)
     return out
 end
 ---@param str string
-local function str_to_fun(str)
-    local fn=loadstring(str)
+---@return fun(vectorp:nelisp.obj[],stack:nelisp.obj[]):nelisp.obj
+function M._str_to_fun(str)
+    local fn=assert(loadstring(str))
     debug.setfenv(fn,compiled_globals)
     return fn
 end
@@ -669,7 +678,7 @@ end
 ---@return fun(vectorp:nelisp.obj[],stack:nelisp.obj[]):nelisp.obj
 function M.compiled_to_fun(fun)
     local str=compile_compiled(fun)
-    return str_to_fun(str)
+    return M._str_to_fun(str)
 end
 local globals={
     C=function (...)
@@ -703,7 +712,7 @@ local globals={
     COMP=function (str_fn,...)
         local fun=lread.bytecode_from_list({...},{})
         if str_fn~='' then
-            bytecode._cache[fun]=str_to_fun(str_fn)
+            bytecode._cache[fun]=M._str_to_fun(str_fn)
         end
         return fun
     end,

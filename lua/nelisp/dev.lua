@@ -2,6 +2,8 @@ local vars=require'nelisp.vars'
 local specpdl=require'nelisp.specpdl'
 local lisp=require'nelisp.lisp'
 local print_=require'nelisp.print'
+local signal=require'nelisp.signal'
+local bytecode=require'nelisp.bytecode'
 local M={}
 
 local inspect=function (x)
@@ -57,11 +59,26 @@ function F.Xlua_exec.fa(args)
     loadstring(s)(unpack(args,2))
     return vars.Qnil
 end
+F.Xbyte_code={'!byte-code',4,4,0,[[internal function]]}
+function F.Xbyte_code.f(lua_str,bytestr,vector,maxdepth)
+    if not (lisp.stringp(bytestr) and lisp.vectorp(vector) and lisp.fixnatp(maxdepth)) then
+        signal.error('Invalid byte-code')
+    end
+    if lisp.string_multibyte(bytestr) then
+        bytestr=vars.F.string_as_unibyte(bytestr)
+    end
+    local fun=vars.F.make_byte_code({vars.Qnil,bytestr,vector,maxdepth})
+    bytecode._cache[fun]=require'nelisp.comp-lisp-to-lua'._str_to_fun(lisp.sdata(lua_str))
+    return bytecode.exec_byte_code(fun,0,{})
+end
 
 function M.init_syms()
     vars.defsubr(F,'Xprint')
     vars.defsubr(F,'Xbacktrace')
     vars.defsubr(F,'Xerror')
     vars.defsubr(F,'Xlua_exec')
+    vars.defsubr(F,'Xbyte_code')
+
+    vars.defsym('QXbyte_code','!byte-code')
 end
 return M
