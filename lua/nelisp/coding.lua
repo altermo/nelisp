@@ -993,6 +993,16 @@ function F.set_coding_system_priority.fa(args)
     end
     return vars.Qnil
 end
+F.coding_system_base={'coding-system-base',1,1,0,[[Return the base of CODING-SYSTEM.
+Any alias or subsidiary coding system is not a base coding system.]]}
+function F.coding_system_base.f(coding_system)
+    if lisp.nilp(coding_system) then
+        return vars.Qno_conversion
+    end
+    local spec=check_coding_system_get_spec(coding_system)
+    local attrs=lisp.aref(spec,0)
+    return lisp.aref(attrs,coding_attr.base_name)
+end
 
 function M.init()
     for i=0,coding_category.max-1 do
@@ -1176,5 +1186,6 @@ Only 128th through 159th elements have a meaning.]])
     vars.defsubr(F,'check_coding_system')
     vars.defsubr(F,'set_safe_terminal_coding_system_internal')
     vars.defsubr(F,'set_coding_system_priority')
+    vars.defsubr(F,'coding_system_base')
 end
 return M
