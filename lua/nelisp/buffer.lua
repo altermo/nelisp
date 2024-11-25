@@ -81,6 +81,20 @@ function F.get_buffer_create.f(buffer_or_name,inhibit_buffer_hooks)
     end
     return nvim.create_buffer(buffer_or_name)
 end
+F.force_mode_line_update={'force-mode-line-update',0,1,0,[[Force redisplay of the current buffer's mode line and header line.
+With optional non-nil ALL, force redisplay of all mode lines, tab lines and
+header lines.  This function also forces recomputation of the
+menu bar menus and the frame title.]]}
+function F.force_mode_line_update.f(all)
+    if lisp.nilp(all) then
+        vim.cmd.redrawstatus()
+        vim.cmd.redrawtabline()
+    else
+        vim.cmd.redrawstatus{bang=true}
+        vim.cmd.redrawtabline()
+    end
+    return all
+end
 
 function M.init()
     defvar_per_buffer('enable_multibyte_characters','enable-multibyte-characters',vars.Qnil,[[Non-nil means the buffer contents are regarded as multi-byte characters.
@@ -100,5 +114,6 @@ function M.init_syms()
     vars.defsubr(F,'get_buffer_create')
     vars.defsubr(F,'get_buffer')
     vars.defsubr(F,'set_buffer')
+    vars.defsubr(F,'force_mode_line_update')
 end
 return M
