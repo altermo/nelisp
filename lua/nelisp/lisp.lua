@@ -325,6 +325,8 @@ function M.nilp(x) return x==vars.Qnil end
 function M.symbolinternedininitialobarrayp(x) return (x --[[@as nelisp._symbol]]).interned==M.symbol_interned.interned_in_initial_obarray end
 ---@overload fun(x:nelisp.obj):boolean
 function M._listp(x) return M.consp(x) or M.nilp(x) end
+---@overload fun(x:nelisp.obj):boolean
+function M.autoloadp(x) return M.consp(x) and M.eq(vars.Qautoload,M.xcar(x)) end
 --- ;;; P functions type
 ---@overload fun(x:nelisp.obj):boolean
 function M.baresymbolp(x) return M.xtype(x)==M.type.symbol end
