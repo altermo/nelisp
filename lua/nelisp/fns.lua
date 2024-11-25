@@ -365,7 +365,34 @@ local function mapcar1(leni,vals,fn,seq)
     end
     return leni
 end
+F.mapconcat={'mapconcat',2,3,0,[[Apply FUNCTION to each element of SEQUENCE, and concat the results as strings.
+In between each pair of results, stick in SEPARATOR.  Thus, " " as
+  SEPARATOR results in spaces between the values returned by FUNCTION.
 
+SEQUENCE may be a list, a vector, a bool-vector, or a string.
+
+Optional argument SEPARATOR must be a string, a vector, or a list of
+characters; nil stands for the empty string.
+
+FUNCTION must be a function of one argument, and must return a value
+  that is a sequence of characters: either a string, or a vector or
+  list of numbers that are valid character codepoints.]]}
+function F.mapconcat.f(func,sequence,separator)
+    if lisp.chartablep(sequence) then
+        signal.wrong_type_argument(vars.Qlistp,sequence)
+    end
+    local leni=lisp.fixnum(vars.F.length(sequence))
+    if leni==0 then return alloc.make_multibyte_string('',0) end
+    local args={}
+    assert(mapcar1(leni,args,func,sequence)==leni)
+    if (lisp.nilp(separator) or (lisp.stringp(separator) and lisp.schars(separator)==0)) then
+    else
+        for i=1,leni-1 do
+            table.insert(args,i*2,separator)
+        end
+    end
+    return vars.F.concat(args)
+end
 F.mapcar={'mapcar',2,2,0,[[Apply FUNCTION to each element of SEQUENCE, and make a list of the results.
 The result is a list just as long as SEQUENCE.
 SEQUENCE may be a list, a vector, a bool-vector, or a string.]]}
@@ -1418,6 +1445,7 @@ function M.init_syms()
     vars.defsubr(F,'memq')
     vars.defsubr(F,'nthcdr')
     vars.defsubr(F,'nth')
+    vars.defsubr(F,'mapconcat')
     vars.defsubr(F,'mapcar')
     vars.defsubr(F,'mapc')
     vars.defsubr(F,'maphash')
