@@ -480,7 +480,10 @@ local function setup_coding_system(coding_system,coding)
         coding.decoder=decode_coding_raw_text
         coding.encoder=encode_coding_raw_text
         if not lisp.eq(eol_type,vars.Qunix) then
-            error('TODO')
+            coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_decoding)
+            if not lisp.vectorp(eol_type) then
+                coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_encoding)
+            end
         end
     end
 end
