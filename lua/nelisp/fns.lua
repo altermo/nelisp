@@ -1431,6 +1431,10 @@ F.secure_hash_algorithms={'secure-hash-algorithms',0,0,0,[[Return a list of all 
 function F.secure_hash_algorithms.f()
     return lisp.list(vars.Qmd5,vars.Qsha1,vars.Qsha224,vars.Qsha256,vars.Qsha384,vars.Qsha512)
 end
+F.identity={'identity',1,1,0,[[Return the ARGUMENT unchanged.]]}
+function F.identity.f(argument)
+    return argument
+end
 
 function M.init()
     vars.V.features=lisp.list(vars.Qemacs)
@@ -1479,6 +1483,7 @@ function M.init_syms()
     vars.defsubr(F,'string_search')
     vars.defsubr(F,'require')
     vars.defsubr(F,'secure_hash_algorithms')
+    vars.defsubr(F,'identity')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
