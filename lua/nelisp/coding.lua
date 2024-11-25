@@ -279,6 +279,9 @@ local function coding_id_eol_type(id)
     return lisp.aref(lisp.aref(
         (vars.coding_system_hash_table --[[@as nelisp._hash_table]]).key_and_value,id*2+1),2)
 end
+local function coding_system_p(coding_system)
+    return coding_system_id(coding_system)>=0 or error('TODO')
+end
 ---@return number
 local function encode_inhibit_flag(flag)
     return (lisp.nilp(flag) and -1) or (lisp.eq(flag,vars.Qt) and 1) or 0
@@ -1003,6 +1006,30 @@ function F.coding_system_base.f(coding_system)
     local attrs=lisp.aref(spec,0)
     return lisp.aref(attrs,coding_attr.base_name)
 end
+F.coding_system_eol_type={'coding-system-eol-type',1,1,0,[[Return eol-type of CODING-SYSTEM.
+An eol-type is an integer 0, 1, 2, or a vector of coding systems.
+
+Integer values 0, 1, and 2 indicate a format of end-of-line; LF, CRLF,
+and CR respectively.
+
+A vector value indicates that a format of end-of-line should be
+detected automatically.  Nth element of the vector is the subsidiary
+coding system whose eol-type is N.]]}
+function F.coding_system_eol_type.f(coding_system)
+    if lisp.nilp(coding_system) then
+        coding_system=vars.Qno_conversion
+    end
+    if not coding_system_p(coding_system) then
+        return vars.Qnil
+    end
+    local spec=coding_system_spec(coding_system)
+    local eol_type=lisp.aref(spec,2)
+    if lisp.vectorp(eol_type) then
+        return vars.F.copy_sequence(eol_type)
+    end
+    local n=lisp.eq(eol_type,vars.Qunix) and 0 or (lisp.eq(eol_type,vars.Qdos) and 1 or 2)
+    return lisp.make_fixnum(n)
+end
 
 function M.init()
     for i=0,coding_category.max-1 do
@@ -1187,5 +1214,6 @@ Only 128th through 159th elements have a meaning.]])
     vars.defsubr(F,'set_safe_terminal_coding_system_internal')
     vars.defsubr(F,'set_coding_system_priority')
     vars.defsubr(F,'coding_system_base')
+    vars.defsubr(F,'coding_system_eol_type')
 end
 return M
