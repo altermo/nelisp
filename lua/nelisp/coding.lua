@@ -1206,6 +1206,12 @@ or reading output of a subprocess.
 Only 128th through 159th elements have a meaning.]])
     vars.V.latin_extra_code_table=alloc.make_vector(256,'nil')
 
+    vars.defvar_lisp('default_process_coding_system','default-process-coding-system',[[
+Cons of coding systems used for process I/O by default.
+The car part is used for decoding a process output,
+the cdr part is used for encoding a text to be sent to a process.]])
+    vars.V.default_process_coding_system=vars.Qnil
+
     vars.defsubr(F,'define_coding_system_internal')
     vars.defsubr(F,'define_coding_system_alias')
     vars.defsubr(F,'coding_system_put')
