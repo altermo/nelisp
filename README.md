@@ -89,8 +89,6 @@ end
 require'nelisp.api'.init()
 ~~~
 
-<!--
-+ [#992](https://github.com/neovim/neovim/issues/992) and [#16313](https://github.com/neovim/neovim/issues/16313): major/minor modes
-+ [#1435](https://github.com/neovim/neovim/issues/1435): custom placement of statusline, tabline, winbar, cmdline
-+ [#2161](https://github.com/neovim/neovim/issues/2161): basically emacs frames
--->
+## Goals
++ Being able to run emacs plugins such as magit and org-mode
++ Performant(fast) loading of elisp-stdlib (100-200ms)
