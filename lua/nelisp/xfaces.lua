@@ -1148,6 +1148,7 @@ function M.init_syms()
     vars.defsym('Qpressed_button','pressed-button')
     vars.defsym('Qreleased_button','released-button')
     vars.defsym('Qflat_button','flat-button')
+    vars.defsym('Qwave','wave')
 
     vars.defsym('QCfamily',':family')
     vars.defsym('QCfoundry',':foundry')
