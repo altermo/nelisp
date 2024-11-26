@@ -1021,12 +1021,19 @@ local function tty_supports_face_attributes_p(f,attrs,def_face)
     val=lisp.aref(attrs,M.lface_index.underline)
     if not unspecifiedp(val) then
         if lisp.stringp(val) then
-            error('TODO: neovim actually supports collored underline')
+            if _G.nelisp_later then
+                error('TODO: neovim actually supports collored underline')
+            end
             return false
         elseif lisp.eq(vars.F.car_safe(val),vars.QCstyle) and lisp.eq(vars.F.car_safe(vars.F.cdr_safe(val)),vars.Qwave) then
-            error('TODO: neovim actually supports wave underline')
+            if _G.nelisp_later then
+                error('TODO: neovim actually supports wave underline')
+            end
             return false
         elseif face_attr_equal_p(val,lisp.aref(def_attrs,M.lface_index.underline)) then
+            if _G.nelisp_later then
+                error('TODO: neovim actually supports some styled underline')
+            end
             return false
         else
             test_caps=bit.bor(test_caps,term.tty_cap.underline)
