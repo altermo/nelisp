@@ -275,6 +275,21 @@ function F.make_marker.f()
     local nvim=require'nelisp.nvim'
     return nvim.make_marker()
 end
+local function make_bool_vector(length,init)
+    local v={}
+    ---@cast v nelisp._bool_vector
+    v.contents={}
+    for i=1,length do
+        v.contents[i]=not lisp.nilp(init)
+    end
+    return lisp.make_vectorlike_ptr(v,lisp.pvec.bool_vector)
+end
+F.make_bool_vector={'make-bool-vector',2,2,0,[[Return a new bool-vector of length LENGTH, using INIT for each element.
+LENGTH must be a number.  INIT matters only in whether it is t or nil.]]}
+function F.make_bool_vector.f(length,init)
+    lisp.check_fixnat(length)
+    return make_bool_vector(lisp.fixnum(length),init)
+end
 
 function M.init_syms()
     vars.defsubr(F,'list')
@@ -288,6 +303,7 @@ function M.init_syms()
     vars.defsubr(F,'garbage_collect')
     vars.defsubr(F,'record')
     vars.defsubr(F,'make_marker')
+    vars.defsubr(F,'make_bool_vector')
 
     vars.defsym('Qchar_table_extra_slots','char-table-extra-slots')
 end

@@ -90,6 +90,9 @@ M.pvec={
 
     window=11,
     bool_vector=12,
+    ---@class nelisp._bool_vector: nelisp._pvec
+    ---@field contents boolean[] (1-indexed)
+
     buffer=13,
     ---@class nelisp._buffer: nelisp._pvec_special
 
