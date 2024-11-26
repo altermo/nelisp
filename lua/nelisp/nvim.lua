@@ -90,6 +90,12 @@ function M.set_buffer_var(buffer,sym,val)
     ---@cast buffer nelisp.vim.buffer
     buffer.vars[sym]=val
 end
+---@param buffer nelisp._buffer
+---@return nelisp.obj
+function M.buffer_category_table(buffer)
+    ---@cast buffer nelisp.vim.buffer
+    return buffer.category_table
+end
 
 --- ;; Terminal (UI)
 
