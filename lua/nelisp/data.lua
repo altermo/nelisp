@@ -864,6 +864,8 @@ F.byte_code_function_p={'byte-code-function-p',1,1,0,[[Return t if OBJECT is a b
 function F.byte_code_function_p.f(a) return lisp.compiledp(a) and vars.Qt or vars.Qnil end
 F.recordp={'recordp',1,1,0,[[Return t if OBJECT is a record.]]}
 function F.recordp.f(object) return lisp.recordp(object) and vars.Qt or vars.Qnil end
+F.char_table_p={'char-table-p',1,1,0,[[Return t if OBJECT is a char-table.]]}
+function F.char_table_p.f(a) return lisp.chartablep(a) and vars.Qt or vars.Qnil end
 
 function M.init()
     local error_tail=alloc.cons(vars.Qerror,vars.Qnil)
@@ -949,6 +951,7 @@ function M.init_syms()
     vars.defsubr(F,'subrp')
     vars.defsubr(F,'byte_code_function_p')
     vars.defsubr(F,'recordp')
+    vars.defsubr(F,'char_table_p')
 
     vars.defsym('Qquote','quote')
     vars.defsym('Qlambda','lambda')
