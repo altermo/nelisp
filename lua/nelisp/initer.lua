@@ -44,6 +44,7 @@ vars.commit_qsymbols()
 
 require'nelisp.eval'.init()
 require'nelisp.category'.init() --Needs to be loaded before buffer
+require'nelisp.syntax'.init() --Needs to be loaded before buffer
 require'nelisp.buffer'.init()
 require'nelisp.fns'.init()
 require'nelisp.lread'.init()
@@ -57,7 +58,6 @@ require'nelisp.xfaces'.init()
 require'nelisp.font'.init()
 require'nelisp.minibuf'.init()
 require'nelisp.frame'.init()
-require'nelisp.syntax'.init()
 
 local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,1)
 assert(name=='Vsymbols',name)

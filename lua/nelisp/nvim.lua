@@ -8,6 +8,8 @@ local M={}
 ---@class nelisp.vim.buffer:nelisp._buffer
 ---@field bufid number
 ---@field vars table<nelisp._symbol,nelisp.obj>
+---@field category_table nelisp.obj
+---@field syntax_table nelisp.obj
 
 local ref_to_buf=setmetatable({},{__mode='k'})
 ---@param bufid number
@@ -24,6 +26,7 @@ local function get_or_create_buf_obj(bufid)
         bufid=bufid,
         vars={},
         category_table=vars.standard_category_table,
+        syntax_table=vars.standard_syntax_table,
     }
     ref_to_buf[vim.b[bufid].nelisp_reference]=b
     return lisp.make_vectorlike_ptr(b,lisp.pvec.buffer)
