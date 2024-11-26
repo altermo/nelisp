@@ -471,5 +471,9 @@ function M.init_syms()
     vars.defsubr(F,'set_char_table_extra_slot')
     vars.defsubr(F,'set_char_table_range')
     vars.defsubr(F,'set_char_table_parent')
+
+    vars.defvar_lisp('char_code_property_alist','char-code-property-alist',[[Alist of character property name vs char-table containing property values.
+Internal use only.]])
+    vars.V.char_code_property_alist=vars.Qnil
 end
 return M
