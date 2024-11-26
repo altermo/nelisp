@@ -618,6 +618,51 @@ F.charsetp={'charsetp',1,1,0,[[Return non-nil if and only if OBJECT is a charset
 function F.charsetp.f(obj)
     return charsetp(obj) and vars.Qt or vars.Qnil
 end
+F.set_charset_priority={'set-charset-priority',1,-2,0,[[Assign higher priority to the charsets given as arguments.
+usage: (set-charset-priority &rest charsets)]]}
+function F.set_charset_priority.fa(args)
+    local old_list=vars.F.copy_sequence(vars.charset_ordered_list)
+    local new_list=vars.Qnil
+    for i=1,#args do
+        local id=M.check_charset_get_id(args[i])
+        if not lisp.nilp(vars.F.memq(lisp.make_fixnum(id),old_list)) then
+            old_list=vars.F.delq(lisp.make_fixnum(id),old_list)
+            new_list=vars.F.cons(lisp.make_fixnum(id),new_list)
+        end
+    end
+    vars.charset_non_preferred_head=old_list
+    vars.charset_ordered_list=vars.F.nconc({vars.F.nreverse(new_list),old_list})
+    vars.charset_ordered_list_tick=vars.charset_ordered_list_tick+1
+
+    vars.charset_unibyte=-1
+    old_list=vars.charset_ordered_list
+    local list_2022=vars.Qnil
+    local list_emacs_mule=vars.Qnil
+    while lisp.consp(old_list) do
+        if not lisp.nilp(vars.F.memq(lisp.xcar(old_list),vars.iso_2022_charset_list)) then
+            list_2022=vars.F.cons(lisp.xcar(old_list),list_2022)
+        end
+        if not lisp.nilp(vars.F.memq(lisp.xcar(old_list),vars.emacs_mule_charset_list)) then
+            list_emacs_mule=vars.F.cons(lisp.xcar(old_list),list_emacs_mule)
+        end
+        if vars.charset_unibyte<0 then
+            local charset=vars.charset_table[lisp.fixnum(lisp.xcar(old_list))]
+            if charset.dimension==1
+                and charset.ascii_compatible_p
+                and charset.max_code>=0x80 then
+                vars.charset_unibyte=charset.id
+            end
+        end
+        old_list=lisp.xcdr(old_list)
+    end
+    vars.iso_2022_charset_list=vars.F.nreverse(list_2022)
+    vars.emacs_mule_charset_list=vars.F.nreverse(list_emacs_mule)
+    if vars.charset_unibyte<0 then
+        vars.charset_unibyte=vars.charset_iso_8859_1
+    end
+    return vars.Qnil
+end
+
 function M.init()
     vars.charset_hash_table=vars.F.make_hash_table({vars.QCtest,vars.Qeq})
     vars.charset_table={}
@@ -650,6 +695,8 @@ function M.init()
     vars.charset_unicode=define_charset_internal(vars.Qunicode,3,'\x00\xFF\x00\xFF\x00\x10\0',0,b.MAX_UNICODE_CHAR,-1,0,-1,true,false,0)
     vars.charset_emacs=define_charset_internal(vars.Qemacs,3,'\x00\xFF\x00\xFF\x00\x3F\0',0,b.MAX_5_BYTE_CHAR,-1,0,-1,true,true,0)
     vars.charset_eight_bit=define_charset_internal(vars.Qeight_bit,1,'\x80\xFF\0\0\0\0\0',128,255,-1,0,-1,false,true,b.MAX_5_BYTE_CHAR+1)
+
+    vars.charset_unibyte=vars.charset_iso_8859_1
 end
 function M.init_syms()
     vars.defsubr(F,'set_charset_plist')
@@ -658,6 +705,7 @@ function M.init_syms()
     vars.defsubr(F,'define_charset_alias')
     vars.defsubr(F,'unify_charset')
     vars.defsubr(F,'charsetp')
+    vars.defsubr(F,'set_charset_priority')
 
     vars.defsym('Qemacs','emacs')
     vars.defsym('Qiso_8859_1','iso-8859-1')

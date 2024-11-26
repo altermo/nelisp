@@ -49,6 +49,7 @@
 ---@field charset_jisx0208 number
 ---@field charset_ksc5601 number
 ---@field safe_terminal_coding nelisp.coding_system
+---@field charset_unibyte number
 ---@field [string] nelisp.obj
 local vars={}
 
