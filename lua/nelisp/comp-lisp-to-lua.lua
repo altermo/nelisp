@@ -579,13 +579,13 @@ local function compile(obj,printcharfun)
             local fun=vars.F.make_byte_code({vars.Qnil,elems[2],elems[3],elems[4]})
             table.insert(elems,2,alloc.make_unibyte_string(compile_compiled(fun)))
         end
-        printcharfun.write('C(')
+        printcharfun.write('C{')
         for _,elem in ipairs(elems) do
             compile(elem,printcharfun)
             printcharfun.write(',')
         end
         compile(tail,printcharfun)
-        printcharfun.write(')')
+        printcharfun.write('}')
     elseif typ==lisp.type.vectorlike then
         if lisp.compiledp(obj) then
             printcharfun.write('COMP(')
@@ -598,14 +598,14 @@ local function compile(obj,printcharfun)
             end
             printcharfun.write(')')
         elseif lisp.vectorp(obj) then
-            printcharfun.write('V(')
+            printcharfun.write('V{')
             for i=0,lisp.asize(obj)-1 do
                 if i~=0 then
                     printcharfun.write(',')
                 end
                 compile(lisp.aref(obj,i),printcharfun)
             end
-            printcharfun.write(')')
+            printcharfun.write('}')
         elseif lisp.hashtablep(obj) then
             local ht=(obj --[[@as nelisp._hash_table]])
             printcharfun.write('HASHTABEL{')
@@ -681,8 +681,7 @@ function M.compiled_to_fun(fun)
     return M._str_to_fun(str)
 end
 local globals={
-    C=function (...)
-        local args={...}
+    C=function (args)
         local val=args[#args]
         for i=#args-1,1,-1 do
             val=alloc.cons(args[i],val)
@@ -701,8 +700,7 @@ local globals={
     INT=function (n)
         return lisp.make_fixnum(n)
     end,
-    V=function (...)
-        local args={...}
+    V=function (args)
         local vec=alloc.make_vector(#args,'nil')
         for i=0,#args-1 do
             lisp.aset(vec,i,args[i+1])
