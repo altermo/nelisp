@@ -23,6 +23,7 @@ local function get_or_create_buf_obj(bufid)
     local b={
         bufid=bufid,
         vars={},
+        category_table=vars.standard_category_table,
     }
     ref_to_buf[vim.b[bufid].nelisp_reference]=b
     return lisp.make_vectorlike_ptr(b,lisp.pvec.buffer)

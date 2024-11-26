@@ -38,10 +38,12 @@ require'nelisp.minibuf'.init_syms()
 require'nelisp.callproc'.init_syms()
 require'nelisp.macros'.init_syms()
 require'nelisp.syntax'.init_syms()
+require'nelisp.category'.init_syms()
 
 vars.commit_qsymbols()
 
 require'nelisp.eval'.init()
+require'nelisp.category'.init() --Needs to be loaded before buffer
 require'nelisp.buffer'.init()
 require'nelisp.fns'.init()
 require'nelisp.lread'.init()
