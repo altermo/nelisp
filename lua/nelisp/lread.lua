@@ -357,6 +357,9 @@ function M.read_string_literal(readcharfun)
     local s=''
     local force_singlebyte=false
     local force_multibyte=false
+    if readcharfun.ismultibyte then
+        error('TODO')
+    end
     while c~=-1 and c~=b'"' do
         if c==b'\\' then
             c=readcharfun.read()
@@ -393,7 +396,7 @@ function M.read_string_literal(readcharfun)
             end
             s=s..chars.charstring(c)
         else
-            s=s..chars.charstring(c)
+            s=s..string.char(c)
             if chars.charbyte8p(c) then
                 force_singlebyte=true
             elseif not chars.asciicharp(c) then
