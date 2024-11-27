@@ -360,6 +360,16 @@ local function mapcar1(leni,vals,fn,seq)
             end
             tail=lisp.xcdr(tail)
         end
+    elseif lisp.stringp(seq) then
+        local i_bytes=0
+        for i=0,leni-1 do
+            local c,len=chars.fetchstringcharadvance(seq,i_bytes)
+            i_bytes=i_bytes+len
+            local dummy=vars.F.funcall({fn,lisp.make_fixnum(c)})
+            if vals then
+                vals[i+1]=dummy
+            end
+        end
     else
         error('TODO')
     end

@@ -112,7 +112,9 @@ end
 ---@return number,number
 function M.fetchstringcharadvance(str,i_bytes)
     if lisp.string_multibyte(str) then
-        error('TODO')
+        local s=lisp.sdata(str):sub(i_bytes+1)
+        local len,char=M.stringcharandlength(s)
+        return char,len
     else
         return lisp.sref(str,i_bytes),1
     end
