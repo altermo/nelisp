@@ -14,6 +14,7 @@ function M.init()
 end
 function M.init_syms()
     vars.defsym('Qrisky_local_variable','risky-local-variable')
+    vars.defsym('Qfile_name_handler_alist','file-name-handler-alist')
 
     vars.defvar_lisp('dump_mode','dump-mode','Non-nil when Emacs is dumping itself.')
     vars.V.dump_mode=vars.Qnil

@@ -7,6 +7,8 @@ local lread=require'nelisp.lread'
 local fns=require'nelisp.fns'
 local overflow=require'nelisp.overflow'
 local chartab=require'nelisp.chartab'
+local specpdl=require'nelisp.specpdl'
+local chars=require'nelisp.chars'
 
 ---@enum nelisp.charset_method
 local charset_method={
@@ -170,6 +172,181 @@ local function charset_fast_map_set(c,fast_map)
         fast_map[bit.rshift(c,15)]=bit.bor(fast_map[bit.rshift(c,15)+62],bit.lshift(1,bit.band(bit.rshift(c,12),7)))
     end
 end
+---@param readcharfun nelisp.lread.readcharfun
+---@return number
+local function read_hex(readcharfun)
+    while true do
+        local c=readcharfun.read()
+        if c==b'#' then
+            while c~=b'\n' do
+                c=readcharfun.read()
+            end
+        elseif c==b'0' then
+            c=readcharfun.read()
+            if c==b'x' then
+                break
+            else
+                signal.error('charset map file invalid syntax: expected x after 0')
+            end
+        elseif c<0 then
+            return -1
+        end
+    end
+    ---@type number?
+    local n=0
+    while true do
+        local c=readcharfun.read()
+        local digit=chars.charhexdigit(c)
+        if digit<0 then
+            break
+        end
+        n=overflow.add(overflow.mul_2exp(n,4),digit)
+        if n==nil then
+            signal.error('charset map file invalid syntax: overflow')
+        end
+    end
+    readcharfun.unread()
+    return assert(n)
+end
+local function load_charset_map(charset,entries,control_flag)
+    if control_flag~=0 then
+        error('TODO')
+    end
+    local min_char=entries[1][3]
+    local max_char=min_char
+    local nonascii_min_char=b.MAX_CHAR
+    for i=1,#entries do
+        local from,to,from_c=unpack(entries[i])
+        local from_index=code_point_to_index(charset,from)
+        local to_index,to_c
+        if from==to then
+            to_index=from_index
+            to_c=from_c
+        else
+            to_index=code_point_to_index(charset,to)
+            to_c=from_c+(to_index-from_index)
+        end
+        if from_index<0 or to_index<0 then
+            error('TODO')
+        end
+        local lim_index=to_index+1
+        if to_c>max_char then
+            max_char=to_c
+        elseif from_c<min_char then
+            min_char=from_c
+        end
+        if control_flag==1 then
+            error('TODO')
+        elseif control_flag==2 then
+            error('TODO')
+        elseif control_flag==3 then
+            error('TODO')
+        elseif control_flag==4 then
+            error('TODO')
+        else
+            assert(control_flag==0)
+            if charset.ascii_compatible_p then
+                if not chars.asciicharp(from_c) then
+                    if from_c<nonascii_min_char then
+                        nonascii_min_char=from_c
+                    end
+                elseif not chars.asciicharp(to_c) then
+                    nonascii_min_char=0x80
+                end
+            end
+            while from_c<=to_c do
+                charset_fast_map_set(from_c,charset.fast_map)
+                from_c=from_c+1
+            end
+        end
+    end
+    if control_flag==0 then
+        charset.min_char=(charset.ascii_compatible_p and nonascii_min_char or min_char)
+        charset.max_char=max_char
+    elseif control_flag==4 then
+        error('TODO')
+    end
+end
+local function load_charset_map_from_file(charset,mapfile,control_flag)
+    local min_code=charset.min_code
+    local max_code=charset.max_code
+    local suffixes=lisp.list(alloc.make_unibyte_string('.map'),alloc.make_unibyte_string('.txt'))
+    local fd
+    local count=specpdl.index()
+    specpdl.record_unwind_protect(function ()
+        if fd and fd~=-1 then
+            io.close(fd --[[@as file*]])
+        end
+    end)
+    specpdl.bind(vars.Qfile_name_handler_alist,vars.Qnil)
+    local path={}
+    fd=lread.openp(vars.V.charset_map_path,mapfile,suffixes,path,vars.Qnil,false,false)
+    if fd==-1 then
+        signal.error('Field loading charset map %s')
+    end
+    ---@cast fd file*
+    local content=fd:read('*a')
+    local readcharfun=lread.make_readcharfun(alloc.make_unibyte_string(content))
+    specpdl.unbind_to(count,nil)
+    local entries
+    if _G.nelisp_compile_lisp_to_lua_path then
+        local root=_G.nelisp_compile_lisp_to_lua_path
+        vim.fn.mkdir(root,'p')
+        local fname=lisp.sdata(path[1]):gsub('/','%%')..'.lua'
+        local f=io.open(root..'/'..fname,'r')
+        if f then
+            local info=assert(vim.uv.fs_stat(lisp.sdata(path[1])))
+            local mtime=info.mtime.sec*1000+info.mtime.nsec/1000000
+            local info_cache=assert(vim.uv.fs_stat(root..'/'..fname))
+            local mtime_cache=info_cache.mtime.sec*1000+info_cache.mtime.nsec/1000000
+            if mtime<=mtime_cache then
+                entries=assert(loadstring(f:read('*a')))()
+            end
+            f:close()
+        end
+    end
+    if not entries then
+        entries={}
+        while true do
+            local from,to,c
+            from=read_hex(readcharfun)
+            if from<0 then break end
+            if readcharfun.read()==b'-' then
+                to=read_hex(readcharfun)
+                if to<0 then
+                    signal.error('charset map file invalid syntax: expected hex after -, got end of file')
+                end
+            else
+                readcharfun.unread()
+                to=from
+            end
+            c=read_hex(readcharfun)
+            if c<0 then
+                signal.error('charset map file invalid syntax: expected hex, got end of file')
+            end
+            if from<min_code or to>max_code or from>to or c>b.MAX_CHAR then
+                signal.error('charset map file invalid syntax: hex out of range')
+            end
+            table.insert(entries,{from,to,c})
+        end
+        if _G.nelisp_compile_lisp_to_lua_path then
+            local root=_G.nelisp_compile_lisp_to_lua_path
+            vim.fn.mkdir(root,'p')
+            local fname=lisp.sdata(path[1]):gsub('/','%%')..'.lua'
+            local f=io.open(root..'/'..fname,'w')
+            local lua_code={'return {'}
+            for _,e in ipairs(entries) do
+                table.insert(lua_code,string.format('{%d,%d,%d},',e[1],e[2],e[3]))
+            end
+            table.insert(lua_code,'}')
+            if f then
+                f:write(table.concat(lua_code,'\n'))
+                f:close()
+            end
+        end
+    end
+    load_charset_map(charset,entries,control_flag)
+end
 ---@param charset nelisp.charset
 ---@param control_flag number
 local function load_charset(charset,control_flag)
@@ -180,11 +357,10 @@ local function load_charset(charset,control_flag)
         assert(charset.unified_p)
         map=lisp.aref(charset_attributes(charset),charset_idx.unify_map)
     end
-    if _G.nelisp_later then
-        error('TODO')
+    if lisp.stringp(map) then
+        load_charset_map_from_file(charset,map,control_flag)
     else
-        charset.min_char=0
-        charset.max_char=0
+        error('TODO')
     end
 end
 function M.check_charset_get_id(x)

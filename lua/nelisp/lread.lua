@@ -968,10 +968,16 @@ local function complete_filename_p(pathname)
     end
     return false
 end
+---@param path nelisp.obj
+---@param s nelisp.obj
+---@param suffixes nelisp.obj
+---@param storep table?
+---@param predicate nelisp.obj
+---@param newer boolean
+---@param no_native boolean
 ---@return -1|file*
-local function openp(path,s,suffixes,storep,predicate,newer,no_native)
+function M.openp(path,s,suffixes,storep,predicate,newer,no_native)
     local _=no_native
-    newer=not lisp.nilp(newer)
     ---@type -1|file*
     local save_fd=-1
     local save_mtime=-math.huge
@@ -1165,7 +1171,7 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
                 suffixes=vars.F.append({suffixes,vars.V.load_file_rep_suffixes})
             end
         end
-        fd=openp(vars.V.load_path,file,suffixes,found,vars.Qnil,vars.V.load_prefer_newer,no_native)
+        fd=M.openp(vars.V.load_path,file,suffixes,found,vars.Qnil,not lisp.nilp(vars.V.load_prefer_newer),no_native)
     end
     if fd==-1 then
         error('TODO')
@@ -1358,7 +1364,7 @@ This function will normally skip directories, so if you want it to find
 directories, make sure the PREDICATE function returns `dir-ok' for them.]]}
 function F.locate_file_internal.f(filename,path,suffixes,predicate)
     local file={}
-    local fd=openp(path,filename,suffixes,file,predicate,false,true)
+    local fd=M.openp(path,filename,suffixes,file,predicate,false,true)
     if lisp.nilp(predicate) and fd~=-1 then
         io.close(fd --[[@as file*]])
     end
