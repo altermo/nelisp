@@ -134,12 +134,37 @@ function F.string_to_syntax.f(str)
     local match
     local p=1
     if lisp.sref(str,p)~=0 then
-        error('TODO')
+        local len,char=chars.stringcharandlength(lisp.sdata(str):sub(2))
+        match=lisp.make_fixnum(char)
+        if lisp.fixnum(match)==b' ' then
+            match=vars.Qnil
+        end
+        p=p+len
     else
         match=vars.Qnil
     end
-    while lisp.sref(str,p)~=0 do
-        error('TODO')
+    while true do
+        local c=lisp.sref(str,p)
+        p=p+1
+        if c==0 then
+            break
+        elseif c==b'1' then
+            val=bit.bor(val,bit.lshift(1,16))
+        elseif c==b'2' then
+            val=bit.bor(val,bit.lshift(1,17))
+        elseif c==b'3' then
+            val=bit.bor(val,bit.lshift(1,18))
+        elseif c==b'4' then
+            val=bit.bor(val,bit.lshift(1,19))
+        elseif c==b'p' then
+            val=bit.bor(val,bit.lshift(1,20))
+        elseif c==b'b' then
+            val=bit.bor(val,bit.lshift(1,21))
+        elseif c==b'n' then
+            val=bit.bor(val,bit.lshift(1,22))
+        elseif c==b'c' then
+            val=bit.bor(val,bit.lshift(1,23))
+        end
     end
     if val<lisp.asize(syntax_code_object) and lisp.nilp(match) then
         return lisp.aref(syntax_code_object,val)
