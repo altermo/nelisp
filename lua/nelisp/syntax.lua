@@ -58,6 +58,10 @@ This is the one used for new buffers.]]}
 function F.standard_syntax_table.f()
     return vars.standard_syntax_table
 end
+local function check_syntax_table(obj)
+    lisp.check_type(lisp.chartablep(obj) and
+        lisp.eq((obj --[[@as nelisp._char_table]]).purpose,vars.Qsyntax_table),vars.Qsyntax_table_p,obj)
+end
 F.modify_syntax_entry={'modify-syntax-entry',2,3,'cSet syntax for character: \nsSet syntax for %s to: ',[[Set syntax for character CHAR according to string NEWENTRY.
 The syntax is changed only for table SYNTAX-TABLE, which defaults to
  the current buffer's syntax table.
@@ -107,7 +111,7 @@ function F.modify_syntax_entry.f(c,newentry,syntax_table)
     if lisp.nilp(syntax_table) then
         syntax_table=nvim.buffer_syntax_table(nvim.get_current_buffer() --[[@as nelisp._buffer]])
     else
-        error('TODO')
+        check_syntax_table(syntax_table)
     end
     newentry=vars.F.string_to_syntax(newentry)
     if lisp.consp(c) then
@@ -234,6 +238,7 @@ function M.init()
 end
 function M.init_syms()
     vars.defsym('Qsyntax_table','syntax-table')
+    vars.defsym('Qsyntax_table_p','syntax-table-p')
 
     vars.defsubr(F,'standard_syntax_table')
     vars.defsubr(F,'modify_syntax_entry')
