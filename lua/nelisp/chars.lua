@@ -97,8 +97,13 @@ function M.stringcharandlength(s)
     if bit.band(c,0x20)==0 then
         return 2,d+(c<0xc2 and 0x3fff80 or 0)
     end
-    error('TODO')
     assert(p2)
+    d=bit.lshift(d,6)+p2-(bit.lshift(0x20,12)+0x80)
+    if bit.band(c,0x10)==0 then
+        assert(bytes.MAX_2_BYTE_CHAR<d and d<=bytes.MAX_3_BYTE_CHAR)
+        return 3,d
+    end
+    error('TODO')
     assert(p3)
     assert(p4)
 end
