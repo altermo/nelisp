@@ -275,7 +275,7 @@ function F.make_marker.f()
     local nvim=require'nelisp.nvim'
     return nvim.make_marker()
 end
-local function make_bool_vector(length,init)
+function M.make_bool_vector(length,init)
     local v={}
     ---@cast v nelisp._bool_vector
     v.contents={}
@@ -288,7 +288,7 @@ F.make_bool_vector={'make-bool-vector',2,2,0,[[Return a new bool-vector of lengt
 LENGTH must be a number.  INIT matters only in whether it is t or nil.]]}
 function F.make_bool_vector.f(length,init)
     lisp.check_fixnat(length)
-    return make_bool_vector(lisp.fixnum(length),init)
+    return M.make_bool_vector(lisp.fixnum(length),init)
 end
 
 function M.init_syms()

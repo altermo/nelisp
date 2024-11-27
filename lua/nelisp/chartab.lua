@@ -155,6 +155,91 @@ function M.ref(ctable,c)
     end
     return val
 end
+local sub_char_table_ref_and_range
+---@return nelisp.obj
+local function char_table_ref_simple(ctable,idx,c,fromptr,toptr,default,is_uniprop,is_subtable)
+    local val=is_subtable
+        and ((ctable --[[@as nelisp._sub_char_table]]).contents[idx+1] or vars.Qnil)
+        or ((ctable --[[@as nelisp._char_table]]).contents[idx+1] or vars.Qnil)
+    if is_uniprop then
+        error('TODO')
+    end
+    if lisp.subchartablep(val) then
+        val=sub_char_table_ref_and_range(val,c,fromptr,toptr,default,is_uniprop)
+    elseif lisp.nilp(val) then
+        val=default
+    end
+    return val
+end
+---@return nelisp.obj
+function sub_char_table_ref_and_range(ctable,c,fromptr,toptr,default,is_uniprop)
+    local tbl=(ctable --[[@as nelisp._sub_char_table]])
+    local depth=tbl.depth
+    local min_char=tbl.min_char
+    local ct_idx=chartab_idx(c,depth,min_char)
+    local val=char_table_ref_simple(ctable,ct_idx,c,fromptr,toptr,default,is_uniprop,true)
+    local idx=ct_idx
+    while idx>0 and fromptr[1]<min_char+idx*chartab_chars[depth+1] do
+        c=min_char+idx*chartab_chars[depth+1]-1
+        idx=idx-1
+        local this_val=char_table_ref_simple(ctable,idx,c,fromptr,toptr,default,is_uniprop,true)
+        if not lisp.eq(this_val,val) then
+            fromptr[1]=c+1
+            break
+        end
+    end
+    while true do
+        c=(ct_idx+1)*chartab_chars[depth+1]
+        if not (c<chartab_chars[depth]) then break end
+        c=c+min_char
+        if not (c<=toptr[1]) then break end
+        ct_idx=ct_idx+1
+        local this_val=char_table_ref_simple(ctable,ct_idx,c,fromptr,toptr,default,is_uniprop,true)
+        if not lisp.eq(this_val,val) then
+            toptr[1]=c-1
+            break
+        end
+    end
+    return val
+end
+---@param ctable nelisp.obj
+---@param c number
+---@param fromptr number[]
+---@param toptr number[]
+---@return nelisp.obj
+function M.char_table_ref_and_range(ctable,c,fromptr,toptr)
+    local tbl=(ctable --[[@as nelisp._char_table]])
+    local ct_idx=chartab_idx(c,0,0)
+    local is_uniprop=uniproptablep(ctable)
+    if fromptr[1]<0 then
+        fromptr[1]=0
+    end
+    if toptr[1]<0 then
+        toptr[1]=bytes.MAX_CHAR
+    end
+    local val=char_table_ref_simple(ctable,ct_idx,c,fromptr,toptr,tbl.default,is_uniprop,false)
+
+    local idx=ct_idx
+    while fromptr[1]<idx*chartab_chars[1] do
+        c=idx*chartab_chars[1]-1
+        idx=idx-1
+        local this_val=char_table_ref_simple(ctable,idx,c,fromptr,toptr,tbl.default,is_uniprop,false)
+        if not lisp.eq(this_val,val) then
+            fromptr[1]=c+1
+            break
+        end
+    end
+    while toptr[1]>(ct_idx+1)*chartab_chars[1] do
+        ct_idx=ct_idx+1
+        c=ct_idx*chartab_chars[1]
+        local this_val=char_table_ref_simple(ctable,ct_idx,c,fromptr,toptr,tbl.default,is_uniprop,false)
+        if not lisp.eq(this_val,val) then
+            toptr[1]=c-1
+            break
+        end
+    end
+    return val
+end
 ---@param ctable nelisp.obj
 ---@return nelisp.obj
 local function copy_sub_char_table(ctable)

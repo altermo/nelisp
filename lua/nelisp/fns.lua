@@ -1194,6 +1194,12 @@ function F.copy_sequence.f(arg)
             error('TODO')
         end
         return val
+    elseif lisp.boolvectorp(arg) then
+        local bvec=alloc.make_bool_vector(lisp.bool_vector_size(arg),vars.Qnil)
+        for i=0,lisp.bool_vector_size(arg)-1 do
+            lisp.bool_vector_set(bvec,i,lisp.bool_vector_bitref(arg,i))
+        end
+        return bvec
     else
         error('TODO')
         signal.wrong_type_argument(vars.Qsequencep,arg)

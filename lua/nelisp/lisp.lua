@@ -658,4 +658,25 @@ M.compiled_idx={
     doc_string=5,
     interactive=6,
 }
+
+--- ;; bool vector
+---@param a nelisp.obj
+---@return number
+function M.bool_vector_size(a)
+    return #(a --[[@as nelisp._bool_vector]]).contents
+end
+---@param a nelisp.obj
+---@param idx number
+---@return boolean
+function M.bool_vector_bitref(a,idx)
+    assert(0<=idx and idx<M.bool_vector_size(a))
+    return (a --[[@as nelisp._bool_vector]]).contents[idx+1]
+end
+---@param a nelisp.obj
+---@param idx number
+---@param val boolean
+function M.bool_vector_set(a,idx,val)
+    assert(0<=idx and idx<M.bool_vector_size(a))
+    ;(a --[[@as nelisp._bool_vector]]).contents[idx+1]=val
+end
 return M

@@ -4,6 +4,9 @@ local alloc=require'nelisp.alloc'
 local signal=require'nelisp.signal'
 local nvim=require'nelisp.nvim'
 local b=require'nelisp.bytes'
+local chars=require'nelisp.chars'
+local chartab=require'nelisp.chartab'
+local fns=require'nelisp.fns'
 
 local M={}
 
@@ -44,6 +47,60 @@ function F.define_category.f(category,docstring,tbl)
     set_category_docstring(tbl,lisp.fixnum(category),docstring)
     return vars.Qnil
 end
+local function hash_get_category_set(ctable,category_set)
+    if lisp.nilp(lisp.aref((ctable --[[@as nelisp._char_table]]).extras,1)) then
+        chartab.set_extra(ctable,1,vars.F.make_hash_table(vars.QCtest,vars.Qequal))
+    end
+    local h=lisp.aref((ctable --[[@as nelisp._char_table]]).extras,1) --[[@as nelisp._hash_table]]
+    local i,hash=fns.hash_lookup(h,category_set)
+    if i>=0 then
+        return lisp.aref(h.key_and_value,2*i)
+    end
+    fns.hash_put(h,category_set,vars.Qnil,hash)
+    return category_set
+end
+F.modify_category_entry={'modify-category-entry',2,4,0,[[Modify the category set of CHARACTER by adding CATEGORY to it.
+The category is changed only for table TABLE, which defaults to
+the current buffer's category table.
+CHARACTER can be either a single character or a cons representing the
+lower and upper ends of an inclusive character range to modify.
+CATEGORY must be a category name (a character between ` ' and `~').
+Use `describe-categories' to see existing category names.
+If optional fourth argument RESET is non-nil,
+then delete CATEGORY from the category set instead of adding it.]]}
+function F.modify_category_entry.f(character,category,ctable,reset)
+    local start,end_
+    if lisp.fixnump(character) then
+        chars.check_character(character)
+        start=lisp.fixnum(character)
+        end_=start
+    else
+        lisp.check_cons(character)
+        chars.check_character(lisp.xcar(character))
+        chars.check_character(lisp.xcdr(character))
+        start=lisp.fixnum(lisp.xcar(character))
+        end_=lisp.fixnum(lisp.xcdr(character))
+    end
+    check_category(category)
+    ctable=check_category_table(ctable)
+    if lisp.nilp(category_docstring(ctable,lisp.fixnum(category))) then
+        signal.error("Undefined category: %c",lisp.fixnum(category))
+    end
+    local set_value=lisp.nilp(reset)
+    while start<=end_ do
+        local fromptr={start}
+        local toptr={end_}
+        local category_set=chartab.char_table_ref_and_range(ctable,start,fromptr,toptr)
+        if lisp.bool_vector_bitref(category_set,lisp.fixnum(category))~=lisp.nilp(reset) then
+            category_set=vars.F.copy_sequence(category_set)
+            lisp.bool_vector_set(category_set,lisp.fixnum(category),set_value)
+            category_set=hash_get_category_set(ctable,category_set)
+            chartab.set_range(ctable,start,toptr[1],category_set)
+        end
+        start=toptr[1]+1
+    end
+    return vars.Qnil
+end
 
 function M.init()
     vars.F.put(vars.Qcategory_table,vars.Qchar_table_extra_slots,lisp.make_fixnum(2))
@@ -53,6 +110,7 @@ function M.init()
 end
 function M.init_syms()
     vars.defsubr(F,'define_category')
+    vars.defsubr(F,'modify_category_entry')
 
     vars.defsym('Qcategory_table','category-table')
     vars.defsym('Qcategoryp','categoryp')
