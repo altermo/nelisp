@@ -69,6 +69,12 @@ for name,t in vim.fs.dir(elisp_path) do
     end
 end
 
+local data_path=vim.fs.joinpath(emacs_path,'etc')
+assert(vim.fn.isdirectory(elisp_path)==1,
+    '`emacs_path` directory does not contain `/etc` subdirectory')
+_G.nelisp_data_path=data_path
+
+
 ----- For developers: Reload all nelisp modules
 --for k,_ in pairs(package.loaded) do
 --    if k:match('^nelisp%.') then
