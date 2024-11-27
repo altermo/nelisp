@@ -91,5 +91,9 @@ See `setenv' and `getenv'.]],function ()
         end,function (obj)
             error('TODO')
         end)
+
+    vars.defvar_lisp('data_directory','data-directory',[[Directory of machine-independent files that come with GNU Emacs.
+These are files intended for Emacs to use while it runs.]])
+    vars.V.data_directory=alloc.make_string(_G.nelisp_data_path)
 end
 return M
