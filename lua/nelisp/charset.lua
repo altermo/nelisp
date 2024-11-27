@@ -948,6 +948,69 @@ function F.map_charset_chars.f(func,charset,arg,from_code,to_code)
     map_charset_chars(nil,func,arg,cs,from,to)
     return vars.Qnil
 end
+local function maybe_unify_char(c,val)
+    if lisp.fixnump(val) then
+        return lisp.fixnum(val)
+    elseif lisp.nilp(val) then
+        return c
+    end
+    error('TODO')
+end
+---@param charset nelisp.charset
+---@param code number
+---@return number
+local function decode_char_(charset,code)
+    local c
+    if code<charset.min_code or code>charset.max_code then
+        return -1
+    end
+    if charset.method==charset_method.subset then
+        error('TODO')
+    elseif charset.method==charset_method.superset then
+        error('TODO')
+    else
+        local char_index=code_point_to_index(charset,code)
+        if char_index<0 then
+            return -1
+        end
+        if charset.method==charset_method.map then
+            error('TODO')
+        else
+            assert(charset.method==charset_method.offset)
+            c=char_index+charset.code_offset
+            if charset.unified_p and b.MAX_UNICODE_CHAR<c and c<=b.MAX_5_BYTE_CHAR then
+                local val=chartab.ref(vars.char_unify_table,c)
+                c=maybe_unify_char(c,val)
+            end
+        end
+    end
+    return c
+end
+---@param charset nelisp.charset
+---@param code number
+local function decode_char(charset,code)
+    if chars.asciicharp(code) and charset.ascii_compatible_p then
+        return code
+    elseif code<charset.min_code or code>charset.max_code then
+        return -1
+    elseif charset.unified_p then
+        return decode_char_(charset,code)
+    else
+        error('TODO')
+    end
+end
+F.decode_char={'decode-char',2,2,0,[[Decode the pair of CHARSET and CODE-POINT into a character.
+Return nil if CODE-POINT is not valid in CHARSET.
+
+CODE-POINT may be a cons (HIGHER-16-BIT-VALUE . LOWER-16-BIT-VALUE),
+although this usage is obsolescent.]]}
+function F.decode_char.f(charset,code_point)
+    local id=M.check_charset_get_id(charset)
+    local code=cons_to_unsigned(code_point)
+    local charsetp_=vars.charset_table[id]
+    local c=decode_char(charsetp_,code)
+    return (c>=0 and lisp.make_fixnum(c) or vars.Qnil)
+end
 
 function M.init()
     vars.charset_hash_table=vars.F.make_hash_table({vars.QCtest,vars.Qeq})
@@ -1000,6 +1063,7 @@ function M.init_syms()
     vars.defsubr(F,'charsetp')
     vars.defsubr(F,'set_charset_priority')
     vars.defsubr(F,'map_charset_chars')
+    vars.defsubr(F,'decode_char')
 
     vars.defsym('Qemacs','emacs')
     vars.defsym('Qiso_8859_1','iso-8859-1')
