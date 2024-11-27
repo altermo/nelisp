@@ -177,7 +177,8 @@ local function load_charset(charset,control_flag)
     if charset.method==charset_method.map then
         map=lisp.aref(charset_attributes(charset),charset_idx.map)
     else
-        error('TODO')
+        assert(charset.unified_p)
+        map=lisp.aref(charset_attributes(charset),charset_idx.unify_map)
     end
     if _G.nelisp_later then
         error('TODO')
@@ -662,6 +663,81 @@ function F.set_charset_priority.fa(args)
     end
     return vars.Qnil
 end
+---@param cfunc function?
+---@param func nelisp.obj
+---@param arg nelisp.obj
+---@param cs nelisp.charset
+---@param from number
+---@param to number
+local function map_charset_chars(cfunc,func,arg,cs,from,to)
+    local partial=from>cs.min_code or to<cs.max_code
+    if cs.method==charset_method.offset then
+        local from_idx=code_point_to_index(cs,from)
+        local to_idx=code_point_to_index(cs,to)
+        local from_c=from_idx+cs.code_offset
+        local to_c=to_idx+cs.code_offset
+        if not _G.nelisp_later then
+        elseif cs.unified_p then
+            local attr=charset_attributes(cs)
+            if not lisp.chartablep(lisp.aref(attr,charset_idx.deunifier)) then
+                load_charset(cs,2)
+            end
+            if lisp.chartablep(lisp.aref(attr,charset_idx.deunifier)) then
+                error('TODO')
+            else
+                error('TODO')
+            end
+        end
+        local range=vars.F.cons(lisp.make_fixnum(from_c),lisp.make_fixnum(to_c))
+        if lisp.nilp(func) then
+            assert(cfunc)(arg,range)
+        else
+            vars.F.funcall{func,range,arg}
+        end
+    else
+        error('TODO')
+    end
+end
+F.map_charset_chars={'map-charset-chars',2,5,0,[[Call FUNCTION for all characters in CHARSET.
+Optional 3rd argument ARG is an additional argument to be passed
+to FUNCTION, see below.
+Optional 4th and 5th arguments FROM-CODE and TO-CODE specify the
+range of code points (in CHARSET) of target characters on which to
+map the FUNCTION.  Note that these are not character codes, but code
+points of CHARSET; for the difference see `decode-char' and
+`list-charset-chars'.  If FROM-CODE is nil or imitted, it stands for
+the first code point of CHARSET; if TO-CODE is nil or omitted, it
+stands for the last code point of CHARSET.
+
+FUNCTION will be called with two arguments: RANGE and ARG.
+RANGE is a cons (FROM .  TO), where FROM and TO specify a range of
+characters that belong to CHARSET on which FUNCTION should do its
+job.  FROM and TO are Emacs character codes, unlike FROM-CODE and
+TO-CODE, which are CHARSET code points.]]}
+function F.map_charset_chars.f(func,charset,arg,from_code,to_code)
+    local cs=M.check_charset_get_charset(charset)
+    local from,to
+    if lisp.nilp(from_code) then
+        from=cs.min_code
+    else
+        lisp.check_fixnat(from_code)
+        from=lisp.fixnum(from_code)
+        if from<cs.min_code then
+            from=cs.min_code
+        end
+    end
+    if lisp.nilp(to_code) then
+        to=cs.max_code
+    else
+        lisp.check_fixnat(to_code)
+        to=lisp.fixnum(to_code)
+        if to>cs.max_code then
+            to=cs.max_code
+        end
+    end
+    map_charset_chars(nil,func,arg,cs,from,to)
+    return vars.Qnil
+end
 
 function M.init()
     vars.charset_hash_table=vars.F.make_hash_table({vars.QCtest,vars.Qeq})
@@ -706,6 +782,7 @@ function M.init_syms()
     vars.defsubr(F,'unify_charset')
     vars.defsubr(F,'charsetp')
     vars.defsubr(F,'set_charset_priority')
+    vars.defsubr(F,'map_charset_chars')
 
     vars.defsym('Qemacs','emacs')
     vars.defsym('Qiso_8859_1','iso-8859-1')
