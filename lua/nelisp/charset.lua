@@ -807,6 +807,13 @@ function M.init()
     vars.charset_eight_bit=define_charset_internal(vars.Qeight_bit,1,'\x80\xFF\0\0\0\0\0',128,255,-1,0,-1,false,true,b.MAX_5_BYTE_CHAR+1)
 
     vars.charset_unibyte=vars.charset_iso_8859_1
+
+    if not _G.nelisp_later then
+        vars.V.charset_map_path=lisp.list(alloc.make_string(lisp.sdata(vars.V.data_directory)..'/charsets'))
+        assert(vim.fn.isdirectory(lisp.sdata(lisp.xcar(vars.V.charset_map_path)))==1)
+    else
+        error('TODO')
+    end
 end
 function M.init_syms()
     vars.defsubr(F,'set_charset_plist')
@@ -828,5 +835,8 @@ function M.init_syms()
 
     vars.defvar_lisp('charset_list','charset-list',[[List of all charsets ever defined.]])
     vars.V.charset_list=vars.Qnil
+
+    vars.defvar_lisp('charset_map_path','charset-map-path',[[List of directories to search for charset map files.]])
+    vars.V.charset_map_path=vars.Qnil
 end
 return M
