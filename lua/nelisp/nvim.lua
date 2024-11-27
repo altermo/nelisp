@@ -90,11 +90,18 @@ function M.set_buffer_var(buffer,sym,val)
     ---@cast buffer nelisp.vim.buffer
     buffer.vars[sym]=val
 end
+--TODO: instead implement a general BVAR like function
 ---@param buffer nelisp._buffer
 ---@return nelisp.obj
 function M.buffer_category_table(buffer)
     ---@cast buffer nelisp.vim.buffer
     return buffer.category_table
+end
+---@param buffer nelisp._buffer
+---@return nelisp.obj
+function M.buffer_syntax_table(buffer)
+    ---@cast buffer nelisp.vim.buffer
+    return buffer.syntax_table
 end
 
 --- ;; Terminal (UI)
