@@ -1256,12 +1256,10 @@ local function validate_subarray(array,from,to,size)
     error('unreachable')
 end
 function M.string_char_to_byte(s,idx)
-    local best_above=lisp.schars(s)
-    local best_above_byte=lisp.sbytes(s)
-    if best_above==best_above_byte then
+    if lisp.schars(s)==lisp.sbytes(s) then
         return idx
     end
-    error('TODO')
+    return vim.str_byteindex(lisp.sdata(s),idx)
 end
 F.string_to_multibyte={'string-to-multibyte',1,1,0,[[Return a multibyte string with the same individual chars as STRING.
 If STRING is multibyte, the result is STRING itself.
