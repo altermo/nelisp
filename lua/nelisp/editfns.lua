@@ -26,21 +26,22 @@ end
 local function styled_format(args,message)
     lisp.check_string(args[1])
     local formatlen=lisp.sbytes(args[1])
-    local idx=0
-    local argsidx=2
-    local buf=print_.make_printcharfun()
     local multibyte_format=lisp.string_multibyte(args[1])
     local multibyte=multibyte_format
     local fmt_props=not not lisp.string_intervals(args[1])
     local arg_intervals=false
     local quoting_style=message and vars.F.text_quoting_style() or vars.Qnil
-    local n=0
     for i=2,#args do
         if multibyte then break end
         if lisp.stringp(args[i]) and lisp.string_multibyte(args[i]) then
             multibyte=true
         end
     end
+    ::retry::
+    local buf=print_.make_printcharfun()
+    local n=0
+    local idx=0
+    local argsidx=2
     while idx<formatlen do
         local format_char=lisp.sref(args[1],idx)
         idx=idx+1
@@ -96,7 +97,11 @@ local function styled_format(args,message)
                 c=b's'
             elseif c==b'c' then
                 if lisp.fixnump(arg) and not chars.asciicharp(lisp.fixnum(arg)) then
-                    error('TODO')
+                    if not multibyte then
+                        multibyte=true
+                        goto retry
+                    end
+                    arg=vars.F.char_to_string(arg)
                 end
                 if not lisp.eq(arg,args[n+1]) then
                     c=b's'
@@ -144,11 +149,12 @@ local function styled_format(args,message)
                 if not flags.minus and padding>0 then
                     buf.write((' '):rep(padding))
                 end
-                if #buf.out()>0 and multibyte then
-                    error('TODO: more checks and set maybe_combine_byte')
-                end
-                if lisp.string_multibyte(arg) then
-                    error('TODO')
+                if #buf.out()>0 and multibyte
+                    and lisp.string_multibyte(arg)
+                    and not chars.charheadp(lisp.sref(arg,0))
+                    and error('TODO')
+                then
+                    error('TODO: set maybe_combine_byte')
                 end
                 buf.write(lisp.sdata(arg))
                 if flags.minus and padding>0 then

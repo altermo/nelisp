@@ -164,6 +164,11 @@ function M.count_size_as_multibyte(s)
     end
     return len
 end
+---@param c number
+---@return boolean
+function M.charheadp(c)
+    return bit.band(c,0xc0)~=0x80
+end
 
 ---@type nelisp.F
 local F={}
