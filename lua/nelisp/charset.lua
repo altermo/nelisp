@@ -694,8 +694,42 @@ local function map_charset_chars(cfunc,func,arg,cs,from,to)
         else
             vars.F.funcall{func,range,arg}
         end
+    elseif cs.method==charset_method.map then
+        if _G.nelisp_later then
+            error('TODO')
+        end
+    elseif cs.method==charset_method.subset then
+        local attr=charset_attributes(cs)
+        local subset_info=lisp.aref(attr,charset_idx.subset)
+        cs=vars.charset_table[lisp.fixnum(lisp.aref(subset_info,0))]
+        local offset=lisp.fixnum(lisp.aref(subset_info,3))
+        from=from-offset
+        if from<lisp.fixnum(lisp.aref(subset_info,1)) then
+            from=lisp.fixnum(lisp.aref(subset_info,1))
+        end
+        to=to-offset
+        if to>lisp.fixnum(lisp.aref(subset_info,2)) then
+            to=lisp.fixnum(lisp.aref(subset_info,2))
+        end
+        map_charset_chars(cfunc,func,arg,cs,from,to)
     else
-        error('TODO')
+        assert(cs.method==charset_method.superset)
+        local attrs=charset_attributes(cs)
+        local parent=lisp.aref(attrs,charset_idx.superset)
+        while lisp.consp(parent) do
+            cs=vars.charset_table[lisp.fixnum(lisp.xcar(lisp.xcar(parent)))]
+            local offset=lisp.fixnum(lisp.xcdr(lisp.xcar(parent)))
+            local this_from=from>offset and from-offset or 0
+            local this_to=to>offset and to-offset or 0
+            if this_from<cs.min_code then
+                this_from=cs.min_code
+            end
+            if this_to>cs.max_code then
+                this_to=cs.max_code
+            end
+            map_charset_chars(cfunc,func,arg,cs,this_from,this_to)
+            parent=lisp.xcdr(parent)
+        end
     end
 end
 F.map_charset_chars={'map-charset-chars',2,5,0,[[Call FUNCTION for all characters in CHARSET.
