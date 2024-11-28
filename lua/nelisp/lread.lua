@@ -1006,7 +1006,7 @@ function M.openp(path,s,suffixes,storep,predicate,newer,no_native)
             error('TODO')
         end
         local ofn=lisp.sdata(filename):gsub('^:/','')
-        local ret=lisp.for_each_tail_safe(lisp.nilp(suffixes) and error('TODO') or suffixes,function (tail)
+        local ret=lisp.for_each_tail_safe(lisp.nilp(suffixes) and lisp.list(alloc.make_unibyte_string('')) or suffixes,function (tail)
             local suffix=lisp.xcar(tail)
             local fn=ofn..lisp.sdata(suffix)
             local fstr
@@ -1165,7 +1165,7 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
             end
         end
         if not lisp.nilp(nosuffix) then
-            error('TODO')
+            suffixes=vars.Qnil
         else
             suffixes=vars.F.get_load_suffixes()
             if lisp.nilp(mustsuffix) then
