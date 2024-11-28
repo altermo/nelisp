@@ -659,7 +659,7 @@ function M.bytecode_from_list(elems,readcharfun)
     return lisp.make_vectorlike_ptr(vec,lisp.pvec.compiled)
 end
 ---@return nelisp.obj
-local function sub_char_table_from_list(elems)
+function M.sub_char_table_from_list(elems)
     if #elems<2 then
         signal.error('Invalid size of sub-char-table')
     elseif not lisp.ranged_fixnump(1,elems[1],3) then
@@ -683,7 +683,7 @@ local function sub_char_table_from_list(elems)
     return tbl
 end
 ---@return nelisp.obj
-local function char_table_from_list(elems,readcharfun)
+function M.char_table_from_list(elems,readcharfun)
     local chartab=require'nelisp.chartab'
     if #elems<4+chartab.chartab_size[1] then
         invalid_syntax('Invalid size char-table',readcharfun)
@@ -764,11 +764,11 @@ function M.read0(readcharfun,locate_syms)
         elseif t.t=='char_table' then
             table.remove(stack)
             locate_syms=t.old_locate_syms
-            obj=char_table_from_list(t.elems,readcharfun)
+            obj=M.char_table_from_list(t.elems,readcharfun)
         elseif t.t=='sub_char_table' then
             table.remove(stack)
             locate_syms=t.old_locate_syms
-            obj=sub_char_table_from_list(t.elems)
+            obj=M.sub_char_table_from_list(t.elems)
         else
             error('TODO')
         end

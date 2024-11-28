@@ -642,6 +642,38 @@ local function compile(obj,printcharfun)
             end
             assert(idx==ht.count)
             printcharfun.write('}}')
+        elseif lisp.chartablep(obj) then
+            local ct=(obj --[[@as nelisp._char_table]])
+            printcharfun.write('CHARTABLE{')
+            compile(ct.default,printcharfun)
+            printcharfun.write(',')
+            compile(ct.parent,printcharfun)
+            printcharfun.write(',')
+            compile(ct.purpose,printcharfun)
+            printcharfun.write(',')
+            compile(ct.ascii,printcharfun)
+            printcharfun.write(',')
+            for i=1,ct.size do
+                compile(ct.contents[i],printcharfun)
+                printcharfun.write(',')
+            end
+            for i=0,lisp.asize(ct.extras)-1 do
+                compile(lisp.aref(ct.extras,i),printcharfun)
+                printcharfun.write(',')
+            end
+            printcharfun.write('}')
+        elseif lisp.subchartablep(obj) then
+            local sct=(obj --[[@as nelisp._sub_char_table]])
+            printcharfun.write('SUBCHARTABLE{')
+            compile(lisp.make_fixnum(sct.depth),printcharfun)
+            printcharfun.write(',')
+            compile(lisp.make_fixnum(sct.min_char),printcharfun)
+            printcharfun.write(',')
+            for i=1,sct.size do
+                compile(sct.contents[i],printcharfun)
+                printcharfun.write(',')
+            end
+            printcharfun.write('}')
         else
             error('TODO')
         end
@@ -743,6 +775,12 @@ local globals={
     FLOAT=function (a)
         return alloc.make_float(a)
     end,
+    SUBCHARTABLE=function (elems)
+        return lread.sub_char_table_from_list(elems)
+    end,
+    CHARTABLE=function (elems)
+        return lread.char_table_from_list(elems)
+    end
 }
 ---@param code string
 function M.read(code)
