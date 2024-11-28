@@ -55,6 +55,10 @@ local vars={}
 
 local Qsymbols={}
 local Qsymbols_later={}
+if not _G.nelisp_debug then
+    Qsymbols_later=vars
+    Qsymbols=vars
+end
 ---@param name string
 ---@param symname string
 function vars.defsym(name,symname)
@@ -76,9 +80,13 @@ function vars.defsym(name,symname)
         Qsymbols_later[name]=found
     end
 end
-function vars.commit_qsymbols()
-    Qsymbols=setmetatable(Qsymbols_later,{__index=Qsymbols})
-    Qsymbols_later={}
+if _G.nelisp_debug then
+    function vars.commit_qsymbols()
+        Qsymbols=setmetatable(Qsymbols_later,{__index=Qsymbols})
+        Qsymbols_later={}
+    end
+else
+    vars.commit_qsymbols=function() end
 end
 
 ---@type table<string,nelisp.obj>
@@ -217,6 +225,9 @@ function vars.defsubr(map,name)
     lisp.set_symbol_function(sym,subr)
 end
 
+if not _G.nelisp_debug then
+    return vars
+end
 return setmetatable(vars,{__index=function (_,k)
     if Qsymbols[k] then
         return Qsymbols[k]
