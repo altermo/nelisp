@@ -549,6 +549,8 @@ local function compile(obj,printcharfun)
         else
             if lisp.symbolinternedininitialobarrayp(obj) then
                 printcharfun.write('S('..escapestr(lisp.symbol_name(obj))..')')
+            elseif (obj --[[@as nelisp._symbol]]).interned==lisp.symbol_interned.uninterned then
+                printcharfun.write('US('..escapestr(lisp.symbol_name(obj))..')')
             else
                 error('TODO')
             end
@@ -722,6 +724,9 @@ local globals={
     end,
     S=function (s)
         return lread.intern(s)
+    end,
+    US=function (s)
+        return vars.F.make_symbol(alloc.make_specified_string(s,-1,false))
     end,
     STR=function (s,nchars)
         if nchars then
