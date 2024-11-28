@@ -658,6 +658,50 @@ function M.bytecode_from_list(elems,readcharfun)
     }
     return lisp.make_vectorlike_ptr(vec,lisp.pvec.compiled)
 end
+---@return nelisp.obj
+local function sub_char_table_from_list(elems)
+    if #elems<2 then
+        signal.error('Invalid size of sub-char-table')
+    elseif not lisp.ranged_fixnump(1,elems[1],3) then
+        signal.error('Invalid depth in sub-char-table')
+    end
+    local depth=lisp.fixnum(elems[1])
+    local chartab=require'nelisp.chartab'
+    if chartab.chartab_size[depth+1]~=#elems-2 then
+        signal.error('Invalid size in sub-char-table')
+    end
+    table.remove(elems,1)
+    if not lisp.ranged_fixnump(0,elems[1],b.MAX_CHAR) then
+        signal.error('Invalid minimum character in sub-char-table')
+    end
+    local min_char=lisp.fixnum(elems[1])
+    table.remove(elems,1)
+    local tbl=chartab.make_subchartable(depth,min_char,'nil')
+    for i=1,#elems do
+        (tbl --[[@as nelisp._sub_char_table]]).contents[i]=elems[i]
+    end
+    return tbl
+end
+---@return nelisp.obj
+local function char_table_from_list(elems,readcharfun)
+    local chartab=require'nelisp.chartab'
+    if #elems<4+chartab.chartab_size[1] then
+        invalid_syntax('Invalid size char-table',readcharfun)
+    end
+    local obj=alloc.make_vector(chartab.chartab_size[1],'nil') --[[@as nelisp._char_table]]
+    obj.default=table.remove(elems,1)
+    obj.parent=table.remove(elems,1)
+    obj.purpose=table.remove(elems,1)
+    obj.ascii=table.remove(elems,1)
+    for i=1,chartab.chartab_size[1] do
+        (obj --[[@as nelisp._char_table]]).contents[i]=table.remove(elems,1)
+    end
+    obj.extras=alloc.make_vector(#elems,'nil')
+    for i=0,#elems-1 do
+        lisp.aset(obj.extras,i,elems[i+1])
+    end
+    return lisp.make_vectorlike_ptr(obj,lisp.pvec.char_table)
+end
 ---@param readcharfun nelisp.lread.readcharfun
 ---@param locate_syms boolean
 ---@return nelisp.obj
@@ -717,6 +761,14 @@ function M.read0(readcharfun,locate_syms)
             table.remove(stack)
             locate_syms=t.old_locate_syms
             obj=M.bytecode_from_list(t.elems,readcharfun)
+        elseif t.t=='char_table' then
+            table.remove(stack)
+            locate_syms=t.old_locate_syms
+            obj=char_table_from_list(t.elems,readcharfun)
+        elseif t.t=='sub_char_table' then
+            table.remove(stack)
+            locate_syms=t.old_locate_syms
+            obj=sub_char_table_from_list(t.elems)
         else
             error('TODO')
         end
@@ -797,6 +849,33 @@ function M.read0(readcharfun,locate_syms)
             end
         elseif ch==b'#' then
             obj=vars.F.intern(alloc.make_pure_c_string(''),vars.Qnil)
+        elseif ch==b'^' then
+            ch=readcharfun.read()
+            if ch==b'^' then
+                ch=readcharfun.read()
+                if ch==b'[' then
+                    table.insert(stack,{
+                        t='sub_char_table',
+                        elems={},
+                        old_locate_syms=locate_syms
+                    })
+                    locate_syms=false
+                    goto read_obj
+                else
+                    invalid_syntax('#^^',readcharfun)
+                end
+            elseif ch==b'[' then
+                table.insert(stack,{
+                    t='char_table',
+                    elems={},
+                    old_locate_syms=locate_syms
+                })
+                locate_syms=false
+                goto read_obj
+            else
+                invalid_syntax('#^',readcharfun)
+            end
+            error('unreachable')
         else
             error('TODO')
         end
@@ -865,7 +944,8 @@ function M.read0(readcharfun,locate_syms)
         elseif t.t=='special' then
             table.remove(stack)
             obj=alloc.cons(t.sym,alloc.cons(obj,vars.Qnil))
-        elseif t.t=='vector' or t.t=='record' or t.t=='byte_code' then
+        elseif t.t=='vector' or t.t=='record' or t.t=='byte_code'
+            or t.t=='char_table' or t.t=='sub_char_table' then
             table.insert(t.elems,obj)
             goto read_obj
         elseif t.t=='list_dot' then
@@ -1202,10 +1282,10 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
         local code=caching.cache(lisp.sdata(found[1]),function (cache_content)
             return require'nelisp.comp-lisp-to-lua'.read(cache_content)
         end,function (code)
-            return table.concat(require'nelisp.comp-lisp-to-lua'.compiles(code),'\n')
-        end,function ()
-            return M.full_read_lua_string(content)
-        end,true)
+                return table.concat(require'nelisp.comp-lisp-to-lua'.compiles(code),'\n')
+            end,function ()
+                return M.full_read_lua_string(content)
+            end,true)
         for _,v in ipairs(code) do
             require'nelisp.eval'.eval_sub(v)
         end

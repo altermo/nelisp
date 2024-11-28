@@ -25,14 +25,15 @@ local chartab_size={ --(1-indexed)
     bit.lshift(1,CHARTAB_SIZE_BITS_1),
     bit.lshift(1,CHARTAB_SIZE_BITS_2),
     bit.lshift(1,CHARTAB_SIZE_BITS_3)}
+M.chartab_size=chartab_size
 local function chartab_idx(c,depth,min_char)
     return bit.rshift(c-min_char,assert(chartab_bits[depth+1]))
 end
 ---@param depth number
 ---@param min_char number
----@param default nelisp.obj
+---@param default nelisp.obj|'nil'
 ---@return nelisp.obj
-local function make_subchartable(depth,min_char,default)
+function M.make_subchartable(depth,min_char,default)
     local v=alloc.make_vector(chartab_size[depth+1],default) --[[@as nelisp._sub_char_table]]
     v.depth=depth
     v.min_char=min_char
@@ -73,7 +74,7 @@ local function sub_char_table_set(ctable,c,val,is_uniprop)
             if is_uniprop then
                 error('TODO')
             else
-                sub=make_subchartable(depth+1,min_char+i*chartab_chars[depth+1],sub)
+                sub=M.make_subchartable(depth+1,min_char+i*chartab_chars[depth+1],sub)
                 tbl.contents[i+1]=sub
             end
         end
@@ -105,7 +106,7 @@ function M.set(ctable,c,val)
         local i=chartab_idx(c,0,0)
         local sub=tbl.contents[i+1] or vars.Qnil
         if not lisp.subchartablep(sub) then
-            sub=make_subchartable(1,i*chartab_chars[1],sub)
+            sub=M.make_subchartable(1,i*chartab_chars[1],sub)
             set_char_table_contents(ctable,i,sub)
         end
         sub_char_table_set(sub,c,val,uniproptablep(ctable))
@@ -246,7 +247,7 @@ local function copy_sub_char_table(ctable)
     local tbl=(ctable --[[@as nelisp._sub_char_table]])
     local depth=tbl.depth
     local min_char=tbl.min_char
-    local copy=make_subchartable(depth,min_char,vars.Qnil)
+    local copy=M.make_subchartable(depth,min_char,vars.Qnil)
     for i=0,chartab_size[depth+1]-1 do
         local val=(ctable --[[@as nelisp._sub_char_table]]).contents[i+1] or vars.Qnil
         ;(copy --[[@as nelisp._sub_char_table]]).contents[i+1]=(lisp.subchartablep(val)
@@ -307,7 +308,7 @@ local function sub_char_table_set_range(ctable,from,to,val,is_uniprop)
                 if is_uniprop then
                     error('TODO')
                 else
-                    sub=make_subchartable(depth+1,c,sub)
+                    sub=M.make_subchartable(depth+1,c,sub)
                     tbl.contents[i+1]=sub
                 end
             end
@@ -342,7 +343,7 @@ function M.set_range(ctable,from,to,val)
         else
             local sub=tbl.contents[i+1] or vars.Qnil
             if not lisp.subchartablep(sub) then
-                sub=make_subchartable(1,i*chartab_chars[1],sub)
+                sub=M.make_subchartable(1,i*chartab_chars[1],sub)
                 set_char_table_contents(ctable,i,sub)
             end
             sub_char_table_set_range(sub,from,to,val,is_uniprop)
