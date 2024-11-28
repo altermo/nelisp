@@ -9,6 +9,7 @@ local overflow=require'nelisp.overflow'
 local chartab=require'nelisp.chartab'
 local specpdl=require'nelisp.specpdl'
 local chars=require'nelisp.chars'
+local caching=require'nelisp.caching'
 
 ---@enum nelisp.charset_method
 local charset_method={
@@ -288,63 +289,41 @@ local function load_charset_map_from_file(charset,mapfile,control_flag)
     local content=fd:read('*a')
     local readcharfun=lread.make_readcharfun(alloc.make_unibyte_string(content))
     specpdl.unbind_to(count,nil)
-    local entries
-    if _G.nelisp_compile_lisp_to_lua_path then
-        local root=_G.nelisp_compile_lisp_to_lua_path
-        vim.fn.mkdir(root,'p')
-        local fname=lisp.sdata(path[1]):gsub('/','%%')..'.lua'
-        local f=io.open(root..'/'..fname,'r')
-        if f then
-            local info=assert(vim.uv.fs_stat(lisp.sdata(path[1])))
-            local mtime=info.mtime.sec*1000+info.mtime.nsec/1000000
-            local info_cache=assert(vim.uv.fs_stat(root..'/'..fname))
-            local mtime_cache=info_cache.mtime.sec*1000+info_cache.mtime.nsec/1000000
-            if mtime<=mtime_cache then
-                entries=assert(loadstring(f:read('*a')))()
-            end
-            f:close()
-        end
-    end
-    if not entries then
-        entries={}
-        while true do
-            local from,to,c
-            from=read_hex(readcharfun)
-            if from<0 then break end
-            if readcharfun.read()==b'-' then
-                to=read_hex(readcharfun)
-                if to<0 then
-                    signal.error('charset map file invalid syntax: expected hex after -, got end of file')
-                end
-            else
-                readcharfun.unread()
-                to=from
-            end
-            c=read_hex(readcharfun)
-            if c<0 then
-                signal.error('charset map file invalid syntax: expected hex, got end of file')
-            end
-            if from<min_code or to>max_code or from>to or c>b.MAX_CHAR then
-                signal.error('charset map file invalid syntax: hex out of range')
-            end
-            table.insert(entries,{from,to,c})
-        end
-        if _G.nelisp_compile_lisp_to_lua_path then
-            local root=_G.nelisp_compile_lisp_to_lua_path
-            vim.fn.mkdir(root,'p')
-            local fname=lisp.sdata(path[1]):gsub('/','%%')..'.lua'
-            local f=io.open(root..'/'..fname,'w')
+    local entries=caching.cache(lisp.sdata(path[1]),function (cache_content)
+        return assert(loadstring(cache_content))()
+    end,function (entries)
             local lua_code={'return {'}
             for _,e in ipairs(entries) do
                 table.insert(lua_code,string.format('{%d,%d,%d},',e[1],e[2],e[3]))
             end
             table.insert(lua_code,'}')
-            if f then
-                f:write(table.concat(lua_code,'\n'))
-                f:close()
+            return table.concat(lua_code,'\n')
+        end,function ()
+            local entries={}
+            while true do
+                local from,to,c
+                from=read_hex(readcharfun)
+                if from<0 then break end
+                if readcharfun.read()==b'-' then
+                    to=read_hex(readcharfun)
+                    if to<0 then
+                        signal.error('charset map file invalid syntax: expected hex after -, got end of file')
+                    end
+                else
+                    readcharfun.unread()
+                    to=from
+                end
+                c=read_hex(readcharfun)
+                if c<0 then
+                    signal.error('charset map file invalid syntax: expected hex, got end of file')
+                end
+                if from<min_code or to>max_code or from>to or c>b.MAX_CHAR then
+                    signal.error('charset map file invalid syntax: hex out of range')
+                end
+                table.insert(entries,{from,to,c})
             end
-        end
-    end
+            return entries
+        end,true)
     load_charset_map(charset,entries,control_flag)
 end
 ---@param charset nelisp.charset

@@ -8,6 +8,7 @@ local specpdl=require'nelisp.specpdl'
 local overflow=require'nelisp.overflow'
 local alloc=require'nelisp.alloc'
 local handler=require'nelisp.handler'
+local caching=require'nelisp.caching'
 
 local M={}
 
@@ -1198,37 +1199,13 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
         local lex_bound=require'nelisp.data'.find_symbol_value(vars.Qlexical_binding)
         specpdl.bind(vars.Qinternal_interpreter_environment,
             (lex_bound==nil or lisp.nilp(lex_bound)) and vars.Qnil or lisp.list(vars.Qt))
-        local code
-        if _G.nelisp_compile_lisp_to_lua_path then
-            local root=_G.nelisp_compile_lisp_to_lua_path
-            vim.fn.mkdir(root,'p')
-            local fname=lisp.sdata(found[1]):gsub('/','%%')..'.lua'
-            local f=io.open(root..'/'..fname,'r')
-            if f then
-                local info=assert(vim.uv.fs_stat(lisp.sdata(found[1])))
-                local mtime=info.mtime.sec*1000+info.mtime.nsec/1000000
-                local info_cache=assert(vim.uv.fs_stat(root..'/'..fname))
-                local mtime_cache=info_cache.mtime.sec*1000+info_cache.mtime.nsec/1000000
-                if mtime<=mtime_cache then
-                    code=require'nelisp.comp-lisp-to-lua'.read(f:read('*all'))
-                end
-                f:close()
-            end
-        end
-        if not code then
-            code=M.full_read_lua_string(content)
-            if _G.nelisp_compile_lisp_to_lua_path then
-                local root=_G.nelisp_compile_lisp_to_lua_path
-                vim.fn.mkdir(root,'p')
-                local fname=lisp.sdata(found[1]):gsub('/','%%')..'.lua'
-                local lua_code=require'nelisp.comp-lisp-to-lua'.compiles(code)
-                local f=io.open(root..'/'..fname,'w')
-                if f then
-                    f:write(table.concat(lua_code,'\n'))
-                    f:close()
-                end
-            end
-        end
+        local code=caching.cache(lisp.sdata(found[1]),function (cache_content)
+            return require'nelisp.comp-lisp-to-lua'.read(cache_content)
+        end,function (code)
+            return table.concat(require'nelisp.comp-lisp-to-lua'.compiles(code),'\n')
+        end,function ()
+            return M.full_read_lua_string(content)
+        end,true)
         for _,v in ipairs(code) do
             require'nelisp.eval'.eval_sub(v)
         end
