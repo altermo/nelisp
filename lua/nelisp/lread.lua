@@ -795,7 +795,7 @@ function M.read0(readcharfun,locate_syms)
                 invalid_syntax('#',readcharfun)
                 error('unreachable')
             end
-        elseif c==b'#' then
+        elseif ch==b'#' then
             obj=vars.F.intern(alloc.make_pure_c_string(''),vars.Qnil)
         else
             error('TODO')
