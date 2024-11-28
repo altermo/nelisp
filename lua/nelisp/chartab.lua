@@ -26,6 +26,7 @@ local chartab_size={ --(1-indexed)
     bit.lshift(1,CHARTAB_SIZE_BITS_2),
     bit.lshift(1,CHARTAB_SIZE_BITS_3)}
 M.chartab_size=chartab_size
+local uniprop_decoder={function () error('TODO') end}
 local function chartab_idx(c,depth,min_char)
     return bit.rshift(c-min_char,assert(chartab_bits[depth+1]))
 end
@@ -81,6 +82,10 @@ local function sub_char_table_set(ctable,c,val,is_uniprop)
         sub_char_table_set(sub,c,val,is_uniprop)
     end
 end
+local function uniprop_compressed_form_p(obj)
+    return lisp.stringp(obj) and lisp.schars(obj)>0
+        and (lisp.sref(obj,0)==1 or lisp.sref(obj,0)==2)
+end
 ---@param ctable nelisp.obj
 ---@return nelisp.obj
 local function char_table_ascii(ctable)
@@ -89,7 +94,7 @@ local function char_table_ascii(ctable)
     sub=(sub --[[@as nelisp._sub_char_table]]).contents[1] or vars.Qnil
     if not lisp.subchartablep(sub) then return sub end
     local val=(sub --[[@as nelisp._sub_char_table]]).contents[1] or vars.Qnil
-    if uniproptablep(ctable) then
+    if uniproptablep(ctable) and uniprop_compressed_form_p(val) then
         error('TODO')
     end
     return val
@@ -160,8 +165,8 @@ local sub_char_table_ref_and_range
 ---@return nelisp.obj
 local function char_table_ref_simple(ctable,idx,c,fromptr,toptr,default,is_uniprop,is_subtable)
     local val=is_subtable
-        and ((ctable --[[@as nelisp._sub_char_table]]).contents[idx+1] or vars.Qnil)
-        or ((ctable --[[@as nelisp._char_table]]).contents[idx+1] or vars.Qnil)
+    and ((ctable --[[@as nelisp._sub_char_table]]).contents[idx+1] or vars.Qnil)
+    or ((ctable --[[@as nelisp._char_table]]).contents[idx+1] or vars.Qnil)
     if is_uniprop then
         error('TODO')
     end
@@ -554,6 +559,47 @@ function F.char_table_subtype.f(char_table)
     lisp.check_chartable(char_table)
     return (char_table --[[@as nelisp._char_table]]).purpose
 end
+local function uniprop_table(prop)
+    local val=vars.F.assq(prop,vars.V.char_code_property_alist)
+    if not lisp.consp(val) then
+        return vars.Qnil
+    end
+    local ctable=lisp.xcdr(val)
+    if lisp.stringp(ctable) then
+        local intl=alloc.make_unibyte_string('international/')
+        local lread=require'nelisp.lread'
+        local fns=require'nelisp.fns'
+        local result=lread.save_match_data_load(fns.concat_to_string{intl,ctable},vars.Qt,vars.Qt,vars.Qt,vars.Qt)
+        if lisp.nilp(result) then
+            return vars.Qnil
+        end
+        ctable=lisp.xcdr(val)
+    end
+    if not lisp.chartablep(ctable) or not uniproptablep(ctable) then
+        return vars.Qnil
+    end
+    val=lisp.aref((ctable --[[@as nelisp._char_table]]).extras,1)
+    if lisp.fixnump(val) then
+        if lisp.fixnum(val)<0 or lisp.fixnum(val)>=#uniprop_decoder then
+            return vars.Qnil
+        end
+    elseif not lisp.nilp(val) then
+        return vars.Qnil
+    end
+    ;(ctable --[[@as nelisp._char_table]]).ascii=char_table_ascii(ctable)
+    return ctable
+end
+F.unicode_property_table_internal={'unicode-property-table-internal',1,1,0,[[Return a char-table for Unicode character property PROP.
+Use `get-unicode-property-internal' and
+`put-unicode-property-internal' instead of `aref' and `aset' to get
+and put an element value.]]}
+function F.unicode_property_table_internal.f(prop)
+    local ctable=uniprop_table(prop)
+    if lisp.chartablep(ctable) then
+        return ctable
+    end
+    return vars.F.cdr(vars.F.assq(prop,vars.V.char_code_property_alist))
+end
 
 function M.init_syms()
     vars.defsym('Qchar_code_property_table','char-code-property-table')
@@ -564,6 +610,7 @@ function M.init_syms()
     vars.defsubr(F,'set_char_table_range')
     vars.defsubr(F,'set_char_table_parent')
     vars.defsubr(F,'char_table_subtype')
+    vars.defsubr(F,'unicode_property_table_internal')
 
     vars.defvar_lisp('char_code_property_alist','char-code-property-alist',[[Alist of character property name vs char-table containing property values.
 Internal use only.]])
