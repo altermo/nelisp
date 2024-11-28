@@ -548,6 +548,12 @@ function F.set_char_table_parent.f(ctable,parent)
     (ctable --[[@as nelisp._char_table]]).parent=parent
     return parent
 end
+F.char_table_subtype={'char-table-subtype',1,1,0,[[
+Return the subtype of char-table CHAR-TABLE.  The value is a symbol.]]}
+function F.char_table_subtype.f(char_table)
+    lisp.check_chartable(char_table)
+    return (char_table --[[@as nelisp._char_table]]).purpose
+end
 
 function M.init_syms()
     vars.defsym('Qchar_code_property_table','char-code-property-table')
@@ -557,6 +563,7 @@ function M.init_syms()
     vars.defsubr(F,'set_char_table_extra_slot')
     vars.defsubr(F,'set_char_table_range')
     vars.defsubr(F,'set_char_table_parent')
+    vars.defsubr(F,'char_table_subtype')
 
     vars.defvar_lisp('char_code_property_alist','char-code-property-alist',[[Alist of character property name vs char-table containing property values.
 Internal use only.]])
