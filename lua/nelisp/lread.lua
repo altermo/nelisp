@@ -507,7 +507,11 @@ function M.read_symbol(readcharfun,uninterned_symbol,skip_shorthand,locate_syms)
         end
     end
     if uninterned_symbol then
-        error('TODO')
+        local name=alloc.make_specified_string(sym,-1,readcharfun.ismultibyte)
+        if locate_syms then
+            error('TODO')
+        end
+        return vars.F.make_symbol(name)
     end
     local obarray=M.obarray_check(vars.V.obarray)
     local found,longhand
@@ -876,6 +880,14 @@ function M.read0(readcharfun,locate_syms)
                 invalid_syntax('#^',readcharfun)
             end
             error('unreachable')
+        elseif ch==b':' then
+            c=readcharfun.read()
+            if (c<=32 or c==b.no_break_space or string.char(c):match'[]"\';#()[`,]') then
+                readcharfun.unread()
+                obj=vars.F.make_symbol(alloc.make_pure_c_string(''))
+            else
+                obj=M.read_symbol(readcharfun,true,false,locate_syms)
+            end
         else
             error('TODO')
         end
