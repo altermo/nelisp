@@ -26,7 +26,18 @@ local chartab_size={ --(1-indexed)
     bit.lshift(1,CHARTAB_SIZE_BITS_2),
     bit.lshift(1,CHARTAB_SIZE_BITS_3)}
 M.chartab_size=chartab_size
-local uniprop_decoder={function () error('TODO') end}
+local uniprop_decoder={ --(1-indexed)
+    function (ctable,value)
+        local tbl=(ctable --[[@as nelisp._char_table]])
+        if lisp.vectorp(lisp.aref(tbl.extras,4)) then
+            local valvec=lisp.aref(tbl.extras,4)
+            if lisp.fixnum(value)>=0 and lisp.fixnum(value)<lisp.asize(valvec) then
+                value=lisp.aref(valvec,lisp.fixnum(value))
+            end
+        end
+        return value
+    end
+}
 local function chartab_idx(c,depth,min_char)
     return bit.rshift(c-min_char,assert(chartab_bits[depth+1]))
 end
@@ -360,8 +371,62 @@ function M.set_range(ctable,from,to,val)
         tbl.ascii=char_table_ascii(ctable)
     end
 end
+local function uniprop_get_decoder_(tbl)
+    if not lisp.fixnump(lisp.aref((tbl --[[@as nelisp._char_table]]).extras,1)) then
+        return nil
+    end
+    local i=lisp.fixnum(lisp.aref((tbl --[[@as nelisp._char_table]]).extras,1))
+    if i<0 or i>=#uniprop_decoder then
+        return nil
+    end
+    return uniprop_decoder[i+1]
+end
 local function uniprop_get_decoder_if(tbl)
-    return uniproptablep(tbl) and error('TODO') or nil
+    return uniproptablep(tbl) and uniprop_get_decoder_(tbl) or nil
+end
+local function uniprop_table_uncompress(ctable,idx)
+    local tbl=(ctable --[[@as nelisp._sub_char_table]])
+    local val=assert(tbl.contents[idx+1])
+    local min_char=tbl.min_char+chartab_chars[3]*idx
+    local sub=M.make_subchartable(3,min_char,vars.Qnil)
+    tbl.contents[idx+1]=sub
+    local p=lisp.sdata(val)
+    local pidx=2
+    if p:sub(1,1)=='\1' then
+        local len,v=chars.stringcharandlength(p:sub(pidx))
+        idx=v
+        pidx=pidx+len
+        while pidx<=#p and idx<chartab_chars[3] do
+            len,v=chars.stringcharandlength(p:sub(pidx))
+            pidx=pidx+len
+            lisp.aset(sub,idx,v>0 and lisp.make_fixnum(v) or vars.Qnil)
+            idx=idx+1
+        end
+    elseif p:sub(1,1)=='\2' then
+        idx=0
+        while pidx<=#p do
+            local len,v=chars.stringcharandlength(p:sub(pidx))
+            pidx=pidx+len
+            local count=1
+            if pidx<=#p then
+                len,count=chars.stringcharandlength(p:sub(pidx))
+                if count<128 then
+                    count=1
+                else
+                    pidx=pidx+len
+                    count=count-128
+                end
+            end
+            for _=1,count do
+                lisp.aset(sub,idx,lisp.make_fixnum(v))
+                idx=idx+1
+            end
+        end
+        assert(idx==128)
+    else
+        error('unreachable')
+    end
+    return sub
 end
 local function map_sub_char_table(c_fun,fun,ctable,val,range,top)
     local from=lisp.fixnum(lisp.xcar(range))
@@ -393,8 +458,8 @@ local function map_sub_char_table(c_fun,fun,ctable,val,range,top)
     while c<=max_char do
         local this=lisp.aref(ctable,i)
         local nextc=c+chars_in_block
-        if is_uniprop then
-            error('TODO')
+        if is_uniprop and uniprop_compressed_form_p(this) then
+            this=uniprop_table_uncompress(ctable,i)
         end
         if lisp.subchartablep(this) then
             if to>=nextc then
@@ -415,13 +480,19 @@ local function map_sub_char_table(c_fun,fun,ctable,val,range,top)
                     if c_fun then
                         c_fun(lisp.xcar(range),val)
                     else
-                        error('TODO')
+                        if decoder then
+                            val=decoder(top,val)
+                        end
+                        vars.F.funcall{fun,lisp.xcar(range),val}
                     end
                 else
                     if c_fun then
                         c_fun(range,val)
                     else
-                        error('TODO')
+                        if decoder then
+                            val=decoder(top,val)
+                        end
+                        vars.F.funcall{fun,range,val}
                     end
                 end
             end
@@ -435,7 +506,9 @@ local function map_sub_char_table(c_fun,fun,ctable,val,range,top)
     end
     return val
 end
----@param c_fun fun(key:nelisp.obj,val:nelisp.obj)
+---@param c_fun fun(key:nelisp.obj,val:nelisp.obj)?
+---@param fun nelisp.obj
+---@param ctable nelisp.obj
 function M.map_char_table(c_fun,fun,ctable)
     local decoder=uniprop_get_decoder_if(ctable)
     local range=vars.F.cons(lisp.make_fixnum(0),lisp.make_fixnum(bytes.MAX_CHAR))
@@ -452,13 +525,19 @@ function M.map_char_table(c_fun,fun,ctable)
         if c_fun then
             c_fun(lisp.xcar(range),val)
         else
-            error('TODO')
+            if decoder then
+                val=decoder(ctable,val)
+            end
+            vars.F.funcall{fun,lisp.xcar(range),val}
         end
     else
         if c_fun then
             c_fun(range,val)
         else
-            error('TODO')
+            if decoder then
+                val=decoder(ctable,val)
+            end
+            vars.F.funcall{fun,range,val}
         end
     end
 end
@@ -600,6 +679,16 @@ function F.unicode_property_table_internal.f(prop)
     end
     return vars.F.cdr(vars.F.assq(prop,vars.V.char_code_property_alist))
 end
+F.map_char_table={'map-char-table',2,2,0,[[Call FUNCTION for each character in CHAR-TABLE that has non-nil value.
+FUNCTION is called with two arguments, KEY and VALUE.
+KEY is a character code or a cons of character codes specifying a
+range of characters that have the same value.
+VALUE is what (char-table-range CHAR-TABLE KEY) returns.]]}
+function F.map_char_table.f(func,char_table)
+    lisp.check_chartable(char_table)
+    M.map_char_table(nil,func,char_table)
+    return vars.Qnil
+end
 
 function M.init_syms()
     vars.defsym('Qchar_code_property_table','char-code-property-table')
@@ -611,6 +700,7 @@ function M.init_syms()
     vars.defsubr(F,'set_char_table_parent')
     vars.defsubr(F,'char_table_subtype')
     vars.defsubr(F,'unicode_property_table_internal')
+    vars.defsubr(F,'map_char_table')
 
     vars.defvar_lisp('char_code_property_alist','char-code-property-alist',[[Alist of character property name vs char-table containing property values.
 Internal use only.]])
