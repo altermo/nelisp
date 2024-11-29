@@ -214,10 +214,15 @@ function F.string.fa(args)
 end
 
 function M.init()
-    vars.V.auto_fill_chars=vars.F.make_char_table(vars.Qauto_fill_chars,vars.Qnil)
     local chartab=require'nelisp.chartab'
+
+    vars.V.auto_fill_chars=vars.F.make_char_table(vars.Qauto_fill_chars,vars.Qnil)
     chartab.set(vars.V.auto_fill_chars,bytes' ',vars.Qt)
     chartab.set(vars.V.auto_fill_chars,bytes'\n',vars.Qt)
+
+    vars.V.char_width_table=vars.F.make_char_table(vars.Qnil,lisp.make_fixnum(1))
+    chartab.set_range(vars.V.char_width_table,0x80,0x9f,lisp.make_fixnum(4))
+    chartab.set_range(vars.V.char_width_table,bytes.MAX_5_BYTE_CHAR+1,bytes.MAX_CHAR,lisp.make_fixnum(4))
 end
 function M.init_syms()
     vars.defsubr(F,'max_char')
@@ -229,5 +234,7 @@ function M.init_syms()
 
     vars.defvar_lisp('auto_fill_chars','auto-fill-chars',[[A char-table for characters which invoke auto-filling.
 Such characters have value t in this table.]])
+
+    vars.defvar_lisp('char_width_table','char-width-table','A char-table for width (columns) of each character.')
 end
 return M
