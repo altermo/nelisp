@@ -683,6 +683,24 @@ F.neq={'/=',2,2,0,[[Return t if first arg is not equal to second arg.  Both must
 function F.neq.f(a,b)
     return arithcompare(a,b,'/=') and vars.Qt or vars.Qnil
 end
+local function minmax_driver(args,comperison)
+    local accum=args[1]
+    for idx=2,#args do
+        local val=lisp.check_number_coerce_marker(args[idx])
+        if arithcompare(val,accum,comperison) then
+            accum=val
+        elseif lisp.floatp(val) then
+            error('TODO')
+        end
+    end
+    return accum
+end
+F.max={'max',1,-2,0,[[Return largest of all the arguments (which must be numbers or markers).
+The value is always a number; markers are converted to numbers.
+usage: (max NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
+function F.max.fa(args)
+    return minmax_driver(args,'>')
+end
 F.local_variable_if_set_p={'local-variable-if-set-p',1,2,0,[[Non-nil if VARIABLE is local in buffer BUFFER when set there.
 BUFFER defaults to the current buffer.
 
@@ -925,6 +943,7 @@ function M.init_syms()
     vars.defsubr(F,'geq')
     vars.defsubr(F,'eqlsign')
     vars.defsubr(F,'neq')
+    vars.defsubr(F,'max')
 
     vars.defsubr(F,'string_to_number')
     vars.defsubr(F,'type_of')
