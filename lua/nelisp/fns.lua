@@ -667,6 +667,7 @@ end
 ---@param kind 'plain'|'no_quit'|'including_properties'
 ---@param depth number
 ---@param ht table
+---@return boolean
 local function internal_equal(a,b,kind,depth,ht)
     ::tail_recursion::
     if depth>10 then
@@ -724,6 +725,34 @@ local function internal_equal(a,b,kind,depth,ht)
             goto tail_recursion
         end
     elseif t==lisp.type.vectorlike then
+        local pvec=lisp.pseudovector_type(a)
+        if pvec~=lisp.pseudovector_type(b) then
+            return false
+        end
+        if pvec==lisp.pvec.normal_vector or pvec==lisp.pvec.char_table or pvec==lisp.pvec.sub_char_table
+            or pvec==lisp.pvec.compiled or pvec==lisp.pvec.record then
+            if lisp.asize(a)~=lisp.asize(b) then
+                return false
+            end
+            for k,v in pairs(a) do
+                if type(v)~='table' then
+                    if a[k]~=b[k] then
+                        return false
+                    end
+                elseif k=='contents' then
+                    for i=0,lisp.asize(a)-1 do
+                        if not internal_equal(lisp.aref(a,i),lisp.aref(b,i),kind,depth+1,ht) then
+                            return false
+                        end
+                    end
+                else
+                    if not internal_equal(a[k],b[k],kind,depth+1,ht) then
+                        return false
+                    end
+                end
+            end
+            return true
+        end
         error('TODO')
     elseif t==lisp.type.string then
         return lisp.schars(a)==lisp.schars(b)
