@@ -673,6 +673,12 @@ Use `get-unicode-property-internal' and
 `put-unicode-property-internal' instead of `aref' and `aset' to get
 and put an element value.]]}
 function F.unicode_property_table_internal.f(prop)
+    if not _G.nelisp_later then
+        -- These tables are used in some really slow functions (e.g. map-char-table), so we just lie and say they don't exist
+        return vars.Qnil
+    else
+        rawget(_G,'error')('TODO: speedup map-char-table')
+    end
     local ctable=uniprop_table(prop)
     if lisp.chartablep(ctable) then
         return ctable
