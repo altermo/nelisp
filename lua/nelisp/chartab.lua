@@ -695,6 +695,45 @@ function F.map_char_table.f(func,char_table)
     M.map_char_table(nil,func,char_table)
     return vars.Qnil
 end
+local function optimize_sub_char_table(ctable,test)
+    local first=lisp.aref(ctable,0)
+    if lisp.subchartablep(first) then
+        lisp.aset(ctable,0,optimize_sub_char_table(first,test))
+    end
+    local optimizable=true
+    for i=1,lisp.asize(ctable)-1 do
+        local this=lisp.aref(ctable,i)
+        if lisp.subchartablep(this) then
+            lisp.aset(ctable,i,optimize_sub_char_table(this,test))
+        end
+        if optimizable then
+            if lisp.nilp(test) then
+                if lisp.nilp(vars.F.equal(this,first)) then
+                    optimizable=false
+                end
+            else
+                error('TODO')
+            end
+        end
+    end
+    if optimizable then
+        return first
+    end
+    return ctable
+end
+F.optimize_char_table={'optimize-char-table',1,2,0,[[Optimize CHAR-TABLE.
+TEST is the comparison function used to decide whether two entries are
+equivalent and can be merged.  It defaults to `equal'.]]}
+function F.optimize_char_table.f(char_table,test)
+    lisp.check_chartable(char_table)
+    for i=0,chartab_size[1]-1 do
+        if lisp.subchartablep(lisp.aref(char_table,i)) then
+            lisp.aset(char_table,i,optimize_sub_char_table(lisp.aref(char_table,i),test))
+        end
+    end
+    (char_table --[[@as nelisp._char_table]]).ascii=char_table_ascii(char_table)
+    return vars.Qnil
+end
 
 function M.init_syms()
     vars.defsym('Qchar_code_property_table','char-code-property-table')
@@ -707,6 +746,7 @@ function M.init_syms()
     vars.defsubr(F,'char_table_subtype')
     vars.defsubr(F,'unicode_property_table_internal')
     vars.defsubr(F,'map_char_table')
+    vars.defsubr(F,'optimize_char_table')
 
     vars.defvar_lisp('char_code_property_alist','char-code-property-alist',[[Alist of character property name vs char-table containing property values.
 Internal use only.]])
