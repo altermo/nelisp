@@ -58,6 +58,7 @@ require'nelisp.xfaces'.init()
 require'nelisp.font'.init()
 require'nelisp.minibuf'.init()
 require'nelisp.frame'.init()
+require'nelisp.chars'.init()
 
 local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,1)
 assert(name=='Vsymbols',name)

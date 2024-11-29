@@ -213,11 +213,21 @@ function F.string.fa(args)
     return alloc.make_specified_string(str,#args,is_ascii)
 end
 
+function M.init()
+    vars.V.auto_fill_chars=vars.F.make_char_table(vars.Qauto_fill_chars,vars.Qnil)
+    local chartab=require'nelisp.chartab'
+    chartab.set(vars.V.auto_fill_chars,bytes' ',vars.Qt)
+    chartab.set(vars.V.auto_fill_chars,bytes'\n',vars.Qt)
+end
 function M.init_syms()
     vars.defsubr(F,'max_char')
     vars.defsubr(F,'characterp')
     vars.defsubr(F,'string')
 
     vars.defsym('Qcharacterp','character')
+    vars.defsym('Qauto_fill_chars','auto-fill-chars')
+
+    vars.defvar_lisp('auto_fill_chars','auto-fill-chars',[[A char-table for characters which invoke auto-filling.
+Such characters have value t in this table.]])
 end
 return M
