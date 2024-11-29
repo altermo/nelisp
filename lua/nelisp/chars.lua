@@ -103,8 +103,13 @@ function M.stringcharandlength(s)
         assert(bytes.MAX_2_BYTE_CHAR<d and d<=bytes.MAX_3_BYTE_CHAR)
         return 3,d
     end
-    error('TODO')
     assert(p3)
+    d=bit.lshift(d,6)+p3-(bit.lshift(0x10,18)+0x80)
+    if bit.band(c,0x08)==0 then
+        assert(bytes.MAX_3_BYTE_CHAR<d and d<=bytes.MAX_4_BYTE_CHAR)
+        return 4,d
+    end
+    error('TODO')
     assert(p4)
 end
 ---@param str nelisp.obj
