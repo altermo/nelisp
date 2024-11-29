@@ -2,6 +2,7 @@ local bytes=require'nelisp.bytes'
 local signal=require'nelisp.signal'
 local lisp=require'nelisp.lisp'
 local vars=require'nelisp.vars'
+local alloc=require'nelisp.alloc'
 local M={}
 
 local function charvalidp(c)
@@ -196,10 +197,26 @@ usage: (characterp OBJECT)]]}
 function F.characterp.f(obj,_)
     return M.characterp(obj) and vars.Qt or vars.Qnil
 end
+F.string={'string',0,-2,0,[[
+Concatenate all the argument characters and make the result a string.
+usage: (string &rest CHARACTERS)]]}
+function F.string.fa(args)
+    local is_ascii=true
+    local str=''
+    for i=1,#args do
+        M.check_character(args[i])
+        if not M.asciicharp(lisp.fixnum(args[i])) then
+            is_ascii=false
+        end
+        str=str..M.charstring(lisp.fixnum(args[i]))
+    end
+    return alloc.make_specified_string(str,#args,is_ascii)
+end
 
 function M.init_syms()
     vars.defsubr(F,'max_char')
     vars.defsubr(F,'characterp')
+    vars.defsubr(F,'string')
 
     vars.defsym('Qcharacterp','character')
 end
