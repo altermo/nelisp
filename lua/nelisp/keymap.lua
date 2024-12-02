@@ -251,7 +251,7 @@ local function get_keyelt(obj,autoload)
         elseif lisp.eq(lisp.xcar(obj),vars.Qmenu_item) then
             error('TODO')
         elseif lisp.stringp(lisp.xcar(obj)) then
-            error('TODO')
+            obj=lisp.xcdr(obj)
         else
             return obj
         end
