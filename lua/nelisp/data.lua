@@ -384,7 +384,9 @@ function M.set_default_internal(sym,val,bindflag)
     end
     if s.redirect==lisp.symbol_redirect.plainval then
         M.set_internal(sym,val,vars.Qnil,bindflag)
-        return
+    elseif s.redirect==lisp.symbol_redirect.localized then
+        local blv=lisp.symbol_blv(s)
+        blv.default_value=val
     else
         error('TODO')
     end
