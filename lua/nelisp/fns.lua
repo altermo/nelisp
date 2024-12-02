@@ -1578,6 +1578,27 @@ function F.sort.f(seq,predicate)
     end
     return seq
 end
+F.string_lessp={'string-lessp',2,2,0,[[Return non-nil if STRING1 is less than STRING2 in lexicographic order.
+Case is significant.
+Symbols are also allowed; their print names are used instead.]]}
+function F.string_lessp.f(string1,string2)
+    if lisp.symbolp(string1) then
+        string1=lisp.symbol_name(string1)
+    else
+        lisp.check_string(string1)
+    end
+    if lisp.symbolp(string2) then
+        string2=lisp.symbol_name(string2)
+    else
+        lisp.check_string(string2)
+    end
+    if (lisp.schars(string1)==lisp.sbytes(string1) or not lisp.string_multibyte(string1))
+        and (lisp.schars(string2)==lisp.sbytes(string2) or not lisp.string_multibyte(string2)) then
+        return lisp.sdata(string1)<lisp.sdata(string2) and vars.Qt or vars.Qnil
+    else
+        error('TODO')
+    end
+end
 
 function M.init()
     vars.V.features=lisp.list(vars.Qemacs)
@@ -1628,6 +1649,7 @@ function M.init_syms()
     vars.defsubr(F,'secure_hash_algorithms')
     vars.defsubr(F,'identity')
     vars.defsubr(F,'sort')
+    vars.defsubr(F,'string_lessp')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
