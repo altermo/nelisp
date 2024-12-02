@@ -710,6 +710,10 @@ function F.lookup_key.f(keymap,key,accept_default)
     if not lisp.nilp(found) and not lisp.numberp(found) then
         return found
     end
+    if lisp.vectorp(key) and lisp.asize(key)>0 and lisp.eq(lisp.aref(key,0),vars.Qmenu_bar) then
+    else
+        return found
+    end
     error('TODO')
 end
 local function map_keymap_call(key,val,fun)
@@ -964,6 +968,7 @@ definition will take precedence.]])
     vars.defsym('Qhelp_echo','help-echo')
     vars.defsym('Qvertical_line','vertical-line')
     vars.defsym('Qmode_line','mode-line')
+    vars.defsym('Qmenu_bar','menu-bar')
     vars.defsym('Qtab_line','tab-line')
     vars.defsym('Qheader_line','header-line')
 
