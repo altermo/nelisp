@@ -1521,6 +1521,63 @@ F.identity={'identity',1,1,0,[[Return the ARGUMENT unchanged.]]}
 function F.identity.f(argument)
     return argument
 end
+---@param predicate nelisp.obj
+---@param seq table<number,nelisp.obj|nil> (1-indexed)
+---@param len number
+local function tim_sort(predicate,seq,len)
+    if len<2 then return end
+    if lisp.symbolp(predicate) then
+        local fun=(predicate --[[@as nelisp._symbol]]).fn
+        if lisp.symbolp(fun) then
+            local data=require'nelisp.data'
+            fun=data.indirect_function(fun)
+        end
+        if lisp.nilp(fun) or (lisp.consp(fun) and lisp.eq(lisp.xcar(fun),vars.Qautoload)) then
+        else
+            predicate=fun
+        end
+    end
+    local newseq={}
+    for i=1,len do
+        if seq[i]==nil then seq[i]=vars.Qnil end
+        newseq[i]={seq[i],i}
+    end
+    table.sort(newseq,function (a,b)
+        if not lisp.nilp(vars.F.funcall({predicate,a[1],b[1]})) then
+            return true
+        end
+        if not lisp.nilp(vars.F.funcall({predicate,b[1],a[1]})) then
+            return false
+        end
+        return a[2]<b[2]
+    end)
+    for k,v in ipairs(newseq) do
+        seq[k]=v[1]
+    end
+end
+F.sort={'sort',2,2,0,[[Sort SEQ, stably, comparing elements using PREDICATE.
+Returns the sorted sequence.  SEQ should be a list or vector.  SEQ is
+modified by side effects.  PREDICATE is called with two elements of
+SEQ, and should return non-nil if the first element should sort before
+the second.]]}
+function F.sort.f(seq,predicate)
+    if lisp.vectorp(seq) then
+        tim_sort(predicate,(seq --[[@as nelisp._normal_vector]]).contents,lisp.asize(seq))
+    elseif lisp.consp(seq) then
+        local result={}
+        local _,tail=lisp.for_each_tail(seq,function (tail)
+            table.insert(result,vars.F.car(tail))
+        end)
+        lisp.check_list_end(tail,seq)
+        tim_sort(predicate,result,#result)
+        lisp.for_each_tail(seq,function (tail_)
+            lisp.xsetcar(tail_,table.remove(result,1))
+        end)
+    else
+        signal.wrong_type_argument(vars.Qlist_or_vector_p,seq)
+    end
+    return seq
+end
 
 function M.init()
     vars.V.features=lisp.list(vars.Qemacs)
@@ -1570,6 +1627,7 @@ function M.init_syms()
     vars.defsubr(F,'require')
     vars.defsubr(F,'secure_hash_algorithms')
     vars.defsubr(F,'identity')
+    vars.defsubr(F,'sort')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
