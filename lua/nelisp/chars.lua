@@ -223,6 +223,9 @@ function M.init()
     vars.V.char_width_table=vars.F.make_char_table(vars.Qnil,lisp.make_fixnum(1))
     chartab.set_range(vars.V.char_width_table,0x80,0x9f,lisp.make_fixnum(4))
     chartab.set_range(vars.V.char_width_table,bytes.MAX_5_BYTE_CHAR+1,bytes.MAX_CHAR,lisp.make_fixnum(4))
+
+    vars.F.put(vars.Qchar_script_table,vars.Qchar_table_extra_slots,lisp.make_fixnum(1))
+    vars.V.char_script_table=vars.F.make_char_table(vars.Qchar_script_table,vars.Qnil)
 end
 function M.init_syms()
     vars.defsubr(F,'max_char')
@@ -231,10 +234,14 @@ function M.init_syms()
 
     vars.defsym('Qcharacterp','character')
     vars.defsym('Qauto_fill_chars','auto-fill-chars')
+    vars.defsym('Qchar_script_table','char-script-table')
 
     vars.defvar_lisp('auto_fill_chars','auto-fill-chars',[[A char-table for characters which invoke auto-filling.
 Such characters have value t in this table.]])
 
     vars.defvar_lisp('char_width_table','char-width-table','A char-table for width (columns) of each character.')
+
+    vars.defvar_lisp('char_script_table','char-script-table',[[Char table of script symbols.
+It has one extra slot whose value is a list of script symbols.]])
 end
 return M
