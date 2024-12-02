@@ -101,6 +101,11 @@ function F.modify_category_entry.f(character,category,ctable,reset)
     end
     return vars.Qnil
 end
+F.standard_category_table={'standard-category-table',0,0,0,[[Return the standard category table.
+This is the one used for new buffers.]]}
+function F.standard_category_table.f()
+    return vars.standard_category_table
+end
 
 function M.init()
     vars.F.put(vars.Qcategory_table,vars.Qchar_table_extra_slots,lisp.make_fixnum(2))
@@ -111,6 +116,7 @@ end
 function M.init_syms()
     vars.defsubr(F,'define_category')
     vars.defsubr(F,'modify_category_entry')
+    vars.defsubr(F,'standard_category_table')
 
     vars.defsym('Qcategory_table','category-table')
     vars.defsym('Qcategoryp','categoryp')
