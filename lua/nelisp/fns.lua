@@ -753,8 +753,21 @@ local function internal_equal(a,b,kind,depth,ht)
                 end
             end
             return true
+        elseif pvec==lisp.pvec.bool_vector then
+            local oa=(a --[[@as nelisp._bool_vector]])
+            local ob=(b --[[@as nelisp._bool_vector]])
+            if #oa.contents~=#ob.contents then
+                return false
+            end
+            for i=1,#oa.contents do
+                if oa.contents[i]~=ob.contents[i] then
+                    return false
+                end
+            end
+            return true
+        else
+            error('TODO')
         end
-        error('TODO')
     elseif t==lisp.type.string then
         return lisp.schars(a)==lisp.schars(b)
             and lisp.sdata(a)==lisp.sdata(b)
