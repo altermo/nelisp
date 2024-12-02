@@ -734,6 +734,27 @@ function F.optimize_char_table.f(char_table,test)
     (char_table --[[@as nelisp._char_table]]).ascii=char_table_ascii(char_table)
     return vars.Qnil
 end
+F.char_table_range={'char-table-range',2,2,0,[[Return the value in CHAR-TABLE for a range of characters RANGE.
+RANGE should be nil (for the default value),
+a cons of character codes (for characters in the range), or a character code.
+If RANGE is a cons (FROM . TO), the function returns the value for FROM.]]}
+function F.char_table_range.f(char_table,range)
+    lisp.check_chartable(char_table)
+    if lisp.nilp(range) then
+        return (char_table --[[@as nelisp._char_table]]).default
+    elseif chars.characterp(range) then
+        return M.ref(char_table,lisp.fixnum(range))
+    elseif lisp.consp(range) then
+        chars.check_character(lisp.xcar(range))
+        chars.check_character(lisp.xcdr(range))
+        local from=lisp.fixnum(lisp.xcar(range))
+        local to=lisp.fixnum(lisp.xcdr(range))
+        return M.char_table_ref_and_range(char_table,from,{from},{to})
+    else
+        signal.error("Invalid RANGE argument to `char-table-range'")
+        error('unreachable')
+    end
+end
 
 function M.init_syms()
     vars.defsym('Qchar_code_property_table','char-code-property-table')
@@ -747,6 +768,7 @@ function M.init_syms()
     vars.defsubr(F,'unicode_property_table_internal')
     vars.defsubr(F,'map_char_table')
     vars.defsubr(F,'optimize_char_table')
+    vars.defsubr(F,'char_table_range')
 
     vars.defvar_lisp('char_code_property_alist','char-code-property-alist',[[Alist of character property name vs char-table containing property values.
 Internal use only.]])
