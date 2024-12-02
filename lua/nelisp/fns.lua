@@ -7,6 +7,7 @@ local alloc=require'nelisp.alloc'
 local overflow=require'nelisp.overflow'
 local chartab=require'nelisp.chartab'
 local chars=require'nelisp.chars'
+local specpdl=require'nelisp.specpdl'
 
 local M={}
 
@@ -889,7 +890,7 @@ function F.provide.f(feature,subfeatures)
     lisp.check_symbol(feature)
     lisp.check_list(subfeatures)
     if not lisp.nilp(vars.autoload_queue) then
-        error('TODO')
+        vars.autoload_queue=vars.F.cons(vars.F.cons(lisp.make_fixnum(0),vars.V.features),vars.autoload_queue)
     end
     local tem=vars.F.memq(feature,vars.V.features)
     if lisp.nilp(tem) then
@@ -1430,6 +1431,7 @@ function F.string_search.f(needle,haystack,start_pos)
     end
     return lisp.make_fixnum(string_byte_to_char(haystack,res))
 end
+local require_nesting_list
 F.require={'require',1,3,0,[[If FEATURE is not already loaded, load it from FILENAME.
 If FEATURE is not a member of the list `features', then the feature was
 not yet loaded; so load it from file FILENAME.
@@ -1466,7 +1468,35 @@ function F.require.f(feature,filename,noerror)
     end
     tem=vars.F.memq(feature,vars.V.features)
     if lisp.nilp(tem) then
-        error('TODO')
+        local count=specpdl.index()
+        local old_require_nesting_list=require_nesting_list or vars.Qnil
+        local nesting=0
+        while not lisp.nilp(old_require_nesting_list) do
+            if not lisp.nilp(vars.F.equal(feature,lisp.xcar(old_require_nesting_list))) then
+                nesting=nesting+1
+            end
+            old_require_nesting_list=lisp.xcdr(old_require_nesting_list)
+        end
+        if nesting>3 then
+            signal.error("Recursive `require' for feature `%s'",lisp.sdata(lisp.symbol_name(feature)))
+        end
+        specpdl.record_unwind_protect(function ()
+            require_nesting_list=old_require_nesting_list
+        end)
+        require_nesting_list=vars.F.cons(feature,require_nesting_list)
+
+        local eval=require'nelisp.eval'
+        tem=eval.load_with_autoload_queue(lisp.nilp(filename) and lisp.symbol_name(feature) or filename,
+            noerror,vars.Qt,vars.Qnil,lisp.nilp(filename) and vars.Qt or vars.Qnil)
+
+        if lisp.nilp(tem) then
+            return specpdl.unbind_to(count,vars.Qnil)
+        end
+        tem=vars.F.memq(feature,vars.V.features)
+        if lisp.nilp(tem) then
+            error('TODO')
+        end
+        feature=specpdl.unbind_to(count,feature)
     end
     return feature
 end

@@ -855,7 +855,7 @@ function F.autoload.f(func,file,docstring,interactive,type_)
     end
     return vars.F.defalias(func,lisp.list(vars.Qautoload,file,docstring,interactive,type_),vars.Qnil)
 end
-local function load_with_autoload_queue(file,noerror,nomessage,nosuffix,must_suffix)
+function M.load_with_autoload_queue(file,noerror,nomessage,nosuffix,must_suffix)
     local count=specpdl.index()
     local oldqueue=vars.autoload_queue
     specpdl.record_unwind_protect(function ()
@@ -886,7 +886,7 @@ function F.autoload_do_load.f(fundef,funname,macro_only)
     end
     lisp.check_symbol(funname)
     local ignore_errors=(lisp.eq(kind,vars.Qt) or lisp.eq(kind,vars.Qmacro)) and vars.Qnil or macro_only
-    load_with_autoload_queue(vars.F.car(vars.F.cdr(fundef)),ignore_errors,vars.Qt,vars.Qnil,vars.Qt)
+    M.load_with_autoload_queue(vars.F.car(vars.F.cdr(fundef)),ignore_errors,vars.Qt,vars.Qnil,vars.Qt)
     if lisp.nilp(funname) or not lisp.nilp(ignore_errors) then
         return vars.Qnil
     else
