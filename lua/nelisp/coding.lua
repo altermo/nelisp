@@ -476,7 +476,10 @@ local function setup_coding_system(coding_system,coding)
     elseif lisp.eq(coding_type,vars.Qshift_jis) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qbig5) then
-        error('TODO')
+        coding.detector=detect_coding_big5
+        coding.decoder=decode_coding_big5
+        coding.encoder=encode_coding_big5
+        coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_decoding,coding_mask.require_encoding)
     else
         assert(lisp.eq(coding_type,vars.Qraw_text))
         coding.detector=0
@@ -754,7 +757,23 @@ function F.define_coding_system_internal.fa(args)
     elseif lisp.eq(coding_type,vars.Qshift_jis) then
         error('TODO')
     elseif lisp.eq(coding_type,vars.Qbig5) then
-        error('TODO')
+        if lisp.list_length(charset_list)~=2 then
+            signal.error('There should be just two charsets')
+        end
+        local cs=vars.charset_table[lisp.fixnum(lisp.xcar(charset_list))]
+        if cs.dimension~=1 then
+            signal.error('Dimension of charset %s is not one',lisp.sdata(lisp.symbol_name(charset.charset_name(cs))))
+        end
+        if cs.ascii_compatible_p then
+            lisp.aset(attrs,coding_attr.ascii_compat,vars.Qt)
+        end
+        charset_list=lisp.xcdr(charset_list)
+        cs=vars.charset_table[lisp.fixnum(lisp.xcar(charset_list))]
+        if cs.dimension~=2 then
+            signal.error('Dimension of charset %s is not two',lisp.sdata(lisp.symbol_name(charset.charset_name(cs))))
+        end
+        category=coding_category.big5
+        vars.big5_coding_system=name
     elseif lisp.eq(coding_type,vars.Qraw_text) then
         category=coding_category.raw_text
         lisp.aset(attrs,coding_attr.ascii_compat,vars.Qt)
@@ -1144,6 +1163,8 @@ function M.init()
     for i=0,coding_category.max-1 do
         vars.F.set(lisp.aref(vars.coding_category_table,i),vars.Qno_conversion)
     end
+
+    vars.big5_coding_system=vars.Qnil
 end
 function M.init_syms()
     vars.defsym('QCcategory',':category')
