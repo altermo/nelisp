@@ -645,7 +645,20 @@ function F.define_coding_system_internal.fa(args)
                         tmp=lisp.list(tmp,lisp.xcar(tail))
                     end
                 else
-                    error('TODO')
+                    local tmp2=tmp
+                    while lisp.consp(tmp2) do
+                        dim2=vars.charset_table[lisp.fixnum(lisp.xcar(tmp2))].dimension
+                        if dim<dim2 then
+                            break
+                        end
+                        tmp2=lisp.xcdr(tmp2)
+                    end
+                    if lisp.nilp(tmp2) then
+                        tmp=vars.F.nconc{tmp,lisp.list(lisp.xcar(tail))}
+                    else
+                        lisp.xsetcdr(tmp2,vars.F.cons(lisp.xcar(tail),lisp.xcdr(tmp2)))
+                        lisp.xsetcar(tmp2,lisp.xcar(tmp2))
+                    end
                 end
                 lisp.aset(val,i,tmp)
             end
