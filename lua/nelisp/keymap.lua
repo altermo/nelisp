@@ -7,6 +7,7 @@ local fns=require'nelisp.fns'
 local alloc=require'nelisp.alloc'
 local chartab=require'nelisp.chartab'
 local chars=require'nelisp.chars'
+local specpdl=require'nelisp.specpdl'
 
 local current_global_map
 
@@ -910,6 +911,34 @@ function F.key_description.f(keys,prefix)
         return vars.F.concat(args)
     end
 end
+F.recursive_edit={'recursive-edit',0,0,'',[[Invoke the editor command loop recursively.
+To get out of the recursive edit, a command can throw to `exit' -- for
+instance (throw \\='exit nil).
+
+The following values (last argument to `throw') can be used when
+throwing to \\='exit:
+
+- t causes `recursive-edit' to quit, so that control returns to the
+  command loop one level up.
+
+- A string causes `recursive-edit' to signal an error, printing that
+  string as the error message.
+
+- A function causes `recursive-edit' to call that function with no
+  arguments, and then return normally.
+
+- Any other value causes `recursive-edit' to return normally to the
+  function that called it.
+
+This function is called by the editor initialization to begin editing.]]}
+function F.recursive_edit.f()
+    if _G.nelisp_later then
+        local count=specpdl.index()
+        error('TODO: temporarily_switch_to_single_kboard')
+    end
+    require'nelisp.main_thread'.recursive_edit()
+    return vars.Qnil
+end
 
 function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,lisp.make_fixnum(0))
@@ -948,6 +977,7 @@ function M.init_syms()
     vars.defsubr(F,'map_keymap')
     vars.defsubr(F,'single_key_description')
     vars.defsubr(F,'key_description')
+    vars.defsubr(F,'recursive_edit')
 
     vars.defvar_lisp('minibuffer_local_map','minibuffer-local-map',[[Default keymap to use when reading from the minibuffer.]])
 
