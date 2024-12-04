@@ -441,6 +441,20 @@ Return value is undefined if the last search failed.]]}
 function F.match_end.f(subexp)
     return match_limit(subexp,false)
 end
+F.match_data__translate={'match-data--translate',1,1,0,[[Add N to all positions in the match data.  Internal.]]}
+function F.match_data__translate.f(n)
+    lisp.check_fixnum(n)
+    local delta=lisp.fixnum(n)
+    if not lisp.nilp(last_search_thing) then
+        for i=1,#search_regs.start do
+            if search_regs.start[i]>=0 then
+                search_regs.start[i]=math.max(search_regs.start[i]+delta,0)
+                search_regs.end_[i]=math.max(search_regs.end_[i]+delta,0)
+            end
+        end
+    end
+    return vars.Qnil
+end
 
 function M.init_syms()
     vars.defsubr(F,'string_match')
@@ -448,6 +462,7 @@ function M.init_syms()
     vars.defsubr(F,'set_match_data')
     vars.defsubr(F,'match_beginning')
     vars.defsubr(F,'match_end')
+    vars.defsubr(F,'match_data__translate')
 
     vars.defvar_lisp('search_spaces_regexp','search-spaces-regexp',[[Regexp to substitute for bunches of spaces in regexp search.
 Some commands use this for user-specified regexps.
