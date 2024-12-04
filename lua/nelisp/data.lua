@@ -592,6 +592,15 @@ function F.minus.fa(args)
     if #args==0 then
         return lisp.make_fixnum(0)
     elseif #args==1 then
+        local a=lisp.check_number_coerce_marker(args[1])
+        if lisp.fixnump(a) then
+            local ret=assert(overflow.sub(0,lisp.fixnum(a)))
+            if ret~=nil then
+                return lisp.make_fixnum(ret)
+            end
+        elseif lisp.floatp(a) then
+            error('TODO')
+        end
         error('TODO')
     end
     return arith_driver('-',args)
