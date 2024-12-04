@@ -15,8 +15,9 @@ end
 ---@field [3] nelisp.obj|nil
 
 ---@param form string|nelisp.obj
+---@param callback fun(ret:nelisp.obj?)?
 ---@return nelisp.obj|nelisp.eval.promise?
-function M.eval(form)
+function M.eval(form,callback)
     ---@type nelisp.eval.promise?
     local promise
     local done
@@ -43,6 +44,9 @@ function M.eval(form)
         else
             ret=eval.eval_sub(form)
             is_error=false
+        end
+        if callback then
+            callback(ret)
         end
         specpdl.unbind_to(count,nil)
     end)
