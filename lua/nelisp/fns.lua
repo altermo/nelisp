@@ -1368,7 +1368,7 @@ function F.substring.f(s,from,to)
     if lisp.stringp(s) then
         local from_byte=f~=0 and M.string_char_to_byte(s,f) or 0
         local to_byte=t==size and lisp.sbytes(s) or M.string_char_to_byte(s,t)
-        res=alloc.make_specified_string(lisp.sdata(s):sub(from_byte+1,to_byte),to_byte-from_byte,lisp.string_multibyte(s))
+        res=alloc.make_specified_string(lisp.sdata(s):sub(from_byte+1,to_byte),t-f,lisp.string_multibyte(s))
         textprop.copy_textprop(lisp.make_fixnum(f),lisp.make_fixnum(t),s,lisp.make_fixnum(0),res,vars.Qnil)
     else
         error('TODO')
