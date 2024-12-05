@@ -223,11 +223,7 @@ local function string_match_1(regexp,s,start,posix,modify_data)
         elseif pos>0 and pos>len then
             signal.args_out_of_range(s,start)
         end
-        if lisp.string_multibyte(s) then
-            pos_bytes=fns.string_char_to_byte(s,pos)
-        else
-            pos_bytes=pos
-        end
+        pos_bytes=fns.string_char_to_byte(s,pos)
     end
     local vregex,data,parens_overflow=eregex_to_vimregex(regexp)
     if data.start_match and pos_bytes>0 then
@@ -265,8 +261,16 @@ local function string_match_1(regexp,s,start,posix,modify_data)
             idx=idx+1
         end
     end
+    if lisp.string_multibyte(s) and not search_regs.parens_overflow then
+        for i=1,#search_regs.start do
+            if search_regs.start[i]>=0 then
+                search_regs.start[i]=vim.str_utfindex(lisp.sdata(s),search_regs.start[i])
+                search_regs.end_[i]=vim.str_utfindex(lisp.sdata(s),search_regs.end_[i])
+            end
+        end
+    end
     last_search_thing=vars.Qt
-    return lisp.make_fixnum(pat_start)
+    return lisp.make_fixnum(search_regs.start[1])
 end
 F.string_match={'string-match',2,4,0,[[Return index of start of first match for REGEXP in STRING, or nil.
 Matching ignores case if `case-fold-search' is non-nil.
