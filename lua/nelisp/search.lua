@@ -5,6 +5,7 @@ local b=require'nelisp.bytes'
 local print_=require'nelisp.print'
 local signal=require'nelisp.signal'
 local alloc=require'nelisp.alloc'
+local fns=require'nelisp.fns'
 local M={}
 local function at_endline_loc_p(...)
     if _G.nelisp_later then
@@ -223,9 +224,7 @@ local function string_match_1(regexp,s,start,posix,modify_data)
             signal.args_out_of_range(s,start)
         end
         if lisp.string_multibyte(s) then
-            if lisp.sbytes(s)~=lisp.schars(s) then
-                error('TODO')
-            end
+            pos_bytes=fns.string_char_to_byte(s,pos)
         else
             pos_bytes=pos
         end
