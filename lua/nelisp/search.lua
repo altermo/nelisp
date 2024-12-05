@@ -455,6 +455,87 @@ function F.match_data__translate.f(n)
     end
     return vars.Qnil
 end
+F.replace_match={'replace-match',1,5,0,[[Replace text matched by last search with NEWTEXT.
+Leave point at the end of the replacement text.
+
+If optional second arg FIXEDCASE is non-nil, do not alter the case of
+the replacement text.  Otherwise, maybe capitalize the whole text, or
+maybe just word initials, based on the replaced text.  If the replaced
+text has only capital letters and has at least one multiletter word,
+convert NEWTEXT to all caps.  Otherwise if all words are capitalized
+in the replaced text, capitalize each word in NEWTEXT.  Note that
+what exactly is a word is determined by the syntax tables in effect
+in the current buffer.
+
+If optional third arg LITERAL is non-nil, insert NEWTEXT literally.
+Otherwise treat `\\' as special:
+  `\\&' in NEWTEXT means substitute original matched text.
+  `\\N' means substitute what matched the Nth `\\(...\\)'.
+       If Nth parens didn't match, substitute nothing.
+  `\\\\' means insert one `\\'.
+  `\\?' is treated literally
+       (for compatibility with `query-replace-regexp').
+  Any other character following `\\' signals an error.
+Case conversion does not apply to these substitutions.
+
+If optional fourth argument STRING is non-nil, it should be a string
+to act on; this should be the string on which the previous match was
+done via `string-match'.  In this case, `replace-match' creates and
+returns a new string, made by copying STRING and replacing the part of
+STRING that was matched (the original STRING itself is not altered).
+
+The optional fifth argument SUBEXP specifies a subexpression;
+it says to replace just that subexpression with NEWTEXT,
+rather than replacing the entire matched text.
+This is, in a vague sense, the inverse of using `\\N' in NEWTEXT;
+`\\N' copies subexp N into NEWTEXT, but using N as SUBEXP puts
+NEWTEXT in place of subexp N.
+This is useful only after a regular expression search or match,
+since only regular expressions have distinguished subexpressions.]]}
+function F.replace_match.f(newtext,fixedcase,literal,str,subexp)
+    lisp.check_string(newtext)
+    if not lisp.nilp(str) then
+        lisp.check_string(str)
+    end
+    if lisp.nilp(literal) and (not lisp.sdata(newtext):find('\\')) then
+        literal=vars.Qt
+    end
+    if #search_regs.start<=0 then
+        signal.error("`replace-match' called before any match found")
+    end
+
+    local sub=(not lisp.nilp(subexp) and error('TODO') or 0)+1
+    local sub_start=search_regs.start[sub]
+    local sub_end=search_regs.end_[sub]
+    assert(sub_start<=sub_end)
+
+    if not ((lisp.nilp(str) and error('TODO'))
+        or ((not lisp.nilp(str)) and (0<=sub_start and sub_end<=lisp.schars(str)))) then
+        if sub_start<0 then
+            signal.xsignal(vars.Qerror,alloc.make_string('replace-match subexpression does not exist'),subexp)
+        end
+        signal.args_out_of_range(lisp.make_fixnum(sub_start),lisp.make_fixnum(sub_end))
+    end
+
+    local case_action='nochange'
+    if lisp.nilp(fixedcase) then
+        error('TODO')
+    end
+
+    if lisp.nilp(str) then
+        error('TODO')
+    end
+    local before=vars.F.substring(str,lisp.make_fixnum(0),lisp.make_fixnum(sub_start))
+    local after=vars.F.substring(str,lisp.make_fixnum(sub_end),vars.Qnil)
+    if lisp.nilp(literal) then
+        error('TODO')
+    end
+    if case_action=='nochange' then
+    else
+        error('TODO')
+    end
+    return vars.F.concat{before,newtext,after}
+end
 
 function M.init_syms()
     vars.defsubr(F,'string_match')
@@ -463,6 +544,7 @@ function M.init_syms()
     vars.defsubr(F,'match_beginning')
     vars.defsubr(F,'match_end')
     vars.defsubr(F,'match_data__translate')
+    vars.defsubr(F,'replace_match')
 
     vars.defvar_lisp('search_spaces_regexp','search-spaces-regexp',[[Regexp to substitute for bunches of spaces in regexp search.
 Some commands use this for user-specified regexps.
