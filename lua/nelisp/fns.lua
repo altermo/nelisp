@@ -1599,6 +1599,71 @@ function F.string_lessp.f(string1,string2)
         error('TODO')
     end
 end
+F.compare_strings={'compare-strings',6,7,0,[[Compare the contents of two strings, converting to multibyte if needed.
+The arguments START1, END1, START2, and END2, if non-nil, are
+positions specifying which parts of STR1 or STR2 to compare.  In
+string STR1, compare the part between START1 (inclusive) and END1
+\(exclusive).  If START1 is nil, it defaults to 0, the beginning of
+the string; if END1 is nil, it defaults to the length of the string.
+Likewise, in string STR2, compare the part between START2 and END2.
+Like in `substring', negative values are counted from the end.
+
+The strings are compared by the numeric values of their characters.
+For instance, STR1 is "less than" STR2 if its first differing
+character has a smaller numeric value.  If IGNORE-CASE is non-nil,
+characters are converted to upper-case before comparing them.  Unibyte
+strings are converted to multibyte for comparison.
+
+The value is t if the strings (or specified portions) match.
+If string STR1 is less, the value is a negative number N;
+  - 1 - N is the number of characters that match at the beginning.
+If string STR1 is greater, the value is a positive number N;
+  N - 1 is the number of characters that match at the beginning.]]}
+function F.compare_strings.f(str1,start1,end1,str2,start2,end2,ignore_case)
+    lisp.check_string(str1)
+    lisp.check_string(str2)
+
+    if lisp.fixnump(end1) and lisp.schars(str1)<lisp.fixnum(end1) then
+        end1=lisp.make_fixnum(lisp.schars(str1))
+    end
+    if lisp.fixnump(end2) and lisp.schars(str2)<lisp.fixnum(end2) then
+        end2=lisp.make_fixnum(lisp.schars(str2))
+    end
+    local from1,to1=validate_subarray(str1,start1,end1,lisp.schars(str1))
+    local from2,to2=validate_subarray(str2,start2,end2,lisp.schars(str2))
+    local i1=from1
+    local i2=from2
+    local i1_bytes=string_byte_to_char(str1,i1)
+    local i2_bytes=string_byte_to_char(str2,i2)
+
+    while i1<to1 and i2<to2 do
+        local c1,c2,len
+        c1,len=chars.fetchstringcharadvance(str1,i1_bytes)
+        i1_bytes=i1_bytes+len
+        i1=i1+1
+        c2,len=chars.fetchstringcharadvance(str2,i2_bytes)
+        i2_bytes=i2_bytes+len
+        i2=i2+1
+        if c1~=c2 and not lisp.nilp(ignore_case) then
+            c1=lisp.fixnum(vars.F.upcase(lisp.make_fixnum(c1)))
+            c2=lisp.fixnum(vars.F.upcase(lisp.make_fixnum(c2)))
+        end
+
+        if c1==c2 then
+        elseif c1<c2 then
+            return lisp.make_fixnum(-i1+from1)
+        else
+            return lisp.make_fixnum(i1-from1)
+        end
+    end
+
+    if i1<to1 then
+        return lisp.make_fixnum(i1-from1+1)
+    elseif i2<to2 then
+        return lisp.make_fixnum(-i1+from1-1)
+    end
+    return vars.Qt
+end
 
 function M.init()
     vars.V.features=lisp.list(vars.Qemacs)
@@ -1650,6 +1715,7 @@ function M.init_syms()
     vars.defsubr(F,'identity')
     vars.defsubr(F,'sort')
     vars.defsubr(F,'string_lessp')
+    vars.defsubr(F,'compare_strings')
 
     vars.defvar_lisp('features','features',[[A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.]])
