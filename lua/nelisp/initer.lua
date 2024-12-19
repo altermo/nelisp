@@ -41,6 +41,7 @@ require'nelisp.syntax'.init_syms()
 require'nelisp.category'.init_syms()
 require'nelisp.composite'.init_syms()
 require'nelisp.xdisp'.init_syms()
+require'nelisp.dispnew'.init_syms()
 
 vars.commit_qsymbols()
 
