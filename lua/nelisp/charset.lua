@@ -1095,5 +1095,10 @@ function M.init_syms()
 
     vars.defvar_lisp('charset_map_path','charset-map-path',[[List of directories to search for charset map files.]])
     vars.V.charset_map_path=vars.Qnil
+
+    vars.defvar_lisp('current_iso639_language','current-iso639-language',[[ISO639 language mnemonic symbol for the current language environment.
+If the current language environment is for multiple languages (e.g. "Latin-1"),
+the value may be a list of mnemonics.]])
+    vars.V.current_iso639_language=vars.Qnil
 end
 return M
