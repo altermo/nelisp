@@ -103,5 +103,17 @@ function M.init_syms()
     vars.defsubr(F,'register_ccl_program')
 
     vars.defsym('Qccl_program_idx','ccl-program-idx')
+
+    vars.defvar_lisp('font_ccl_encoder_alist','font-ccl-encoder-alist',[[Alist of fontname patterns vs corresponding CCL program.
+Each element looks like (REGEXP . CCL-CODE),
+ where CCL-CODE is a compiled CCL program.
+When a font whose name matches REGEXP is used for displaying a character,
+ CCL-CODE is executed to calculate the code point in the font
+ from the charset number and position code(s) of the character which are set
+ in CCL registers R0, R1, and R2 before the execution.
+The code point in the font is set in CCL registers R1 and R2
+ when the execution terminated.
+ If the font is single-byte font, the register R2 is not used.]])
+    vars.V.font_ccl_encoder_alist=vars.Qnil
 end
 return M
