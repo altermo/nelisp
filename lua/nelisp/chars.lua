@@ -226,6 +226,8 @@ function M.init()
 
     vars.F.put(vars.Qchar_script_table,vars.Qchar_table_extra_slots,lisp.make_fixnum(1))
     vars.V.char_script_table=vars.F.make_char_table(vars.Qchar_script_table,vars.Qnil)
+
+    vars.V.translation_table_vector=alloc.make_vector(16,'nil')
 end
 function M.init_syms()
     vars.defsubr(F,'max_char')
@@ -243,5 +245,10 @@ Such characters have value t in this table.]])
 
     vars.defvar_lisp('char_script_table','char-script-table',[[Char table of script symbols.
 It has one extra slot whose value is a list of script symbols.]])
+
+    vars.defvar_lisp('translation_table_vector','translation-table-vector',[[
+Vector recording all translation tables ever defined.
+Each element is a pair (SYMBOL . TABLE) relating the table to the
+symbol naming it.  The ID of a translation table is an index into this vector.]])
 end
 return M
