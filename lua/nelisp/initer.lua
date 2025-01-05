@@ -42,6 +42,7 @@ require'nelisp.category'.init_syms()
 require'nelisp.composite'.init_syms()
 require'nelisp.xdisp'.init_syms()
 require'nelisp.dispnew'.init_syms()
+require'nelisp.ccl'.init_syms()
 
 vars.commit_qsymbols()
 
@@ -64,6 +65,7 @@ require'nelisp.frame'.init()
 require'nelisp.chars'.init()
 require'nelisp.composite'.init()
 require'nelisp.xdisp'.init()
+require'nelisp.ccl'.init()
 
 local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,1)
 assert(name=='Vsymbols',name)
