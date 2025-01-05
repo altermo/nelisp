@@ -1178,6 +1178,8 @@ function M.init()
     end
 
     vars.big5_coding_system=vars.Qnil
+
+    vars.F.put(vars.Qtranslation_table,vars.Qchar_table_extra_slots,lisp.make_fixnum(2))
 end
 function M.init_syms()
     vars.defsym('QCcategory',':category')
@@ -1208,6 +1210,8 @@ function M.init_syms()
     vars.defsym('Qbig5','big5')
 
     vars.defsym('Qcoding_system_define_form','coding-system-define-form')
+
+    vars.defsym('Qtranslation_table','translation-table')
 
     vars.defvar_lisp('coding_system_list','coding-system-list',[[List of coding systems.
 
