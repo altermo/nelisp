@@ -907,6 +907,8 @@ function M.init()
     put_error(vars.Qquit,vars.Qnil,'Quit')
     put_error(vars.Qvoid_variable,error_tail,"Symbol's value as variable is void")
     put_error(vars.Qvoid_function,error_tail,"Symbol's function definition is void")
+    put_error(vars.Qwrong_type_argument,error_tail,'Wrong type argument')
+    put_error(vars.Qargs_out_of_range,error_tail,'Args out of range')
 end
 function M.init_syms()
     ---These are errors and should have corresponding `put_error`
@@ -914,6 +916,8 @@ function M.init_syms()
     vars.defsym('Qquit','quit')
     vars.defsym('Qvoid_variable','void-variable')
     vars.defsym('Qvoid_function','void-function')
+    vars.defsym('Qwrong_type_argument','wrong-type-argument')
+    vars.defsym('Qargs_out_of_range','args-out-of-range')
 
     vars.defsubr(F,'symbol_value')
     vars.defsubr(F,'default_value')
