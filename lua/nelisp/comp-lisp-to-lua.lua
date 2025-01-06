@@ -66,8 +66,9 @@ local compiled_globals;compiled_globals={
 local M={}
 ---@param fun nelisp.obj
 ---@param no_bin boolean?
+---@param name string?
 ---@return string
-local function compile_compiled(fun,no_bin)
+local function compile_compiled(fun,no_bin,name)
     if _G.nelisp_later then
         error('TODO: parse and compile the whole .elc file instead, allows for more optimizations')
         error('TODO: speed inprovement')
@@ -521,6 +522,9 @@ local function compile_compiled(fun,no_bin)
         out[#out+1]=ret
     end
     if no_bin then
+        if name then
+            table.insert(out,1,'-- file:'..name)
+        end
         return table.concat(out,'\n')
     end
     return string.dump(assert(loadstring(table.concat(out,'\n'))),true)
@@ -533,8 +537,9 @@ local function escapestr(obj)
 end
 ---@param obj nelisp.obj
 ---@param printcharfun nelisp.print.printcharfun
+---@param name string?
 ---@return "DONT RETURN"
-local function compile(obj,printcharfun)
+local function compile(obj,printcharfun,name)
     printcharfun.print_depth=printcharfun.print_depth+1
     if _G.nelisp_later then
         error('TODO: recursive/circular check')
@@ -579,24 +584,24 @@ local function compile(obj,printcharfun)
             end
             elems[1]=vars.QXbyte_code
             local fun=vars.F.make_byte_code({vars.Qnil,elems[2],elems[3],elems[4]})
-            table.insert(elems,2,alloc.make_unibyte_string(compile_compiled(fun)))
+            table.insert(elems,2,alloc.make_unibyte_string(compile_compiled(fun,nil,name)))
         end
         printcharfun.write('C{')
         for _,elem in ipairs(elems) do
-            compile(elem,printcharfun)
+            compile(elem,printcharfun,name)
             printcharfun.write(',')
         end
-        compile(tail,printcharfun)
+        compile(tail,printcharfun,name)
         printcharfun.write('}')
     elseif typ==lisp.type.vectorlike then
         if lisp.compiledp(obj) then
             printcharfun.write('COMP(')
             if true then
-                printcharfun.write(('%q'):format(compile_compiled(obj)))
+                printcharfun.write(('%q'):format(compile_compiled(obj,nil,name)))
             end
             for i=0,lisp.asize(obj)-1 do
                 printcharfun.write(',')
-                compile(lisp.aref(obj,i),printcharfun)
+                compile(lisp.aref(obj,i),printcharfun,name)
             end
             printcharfun.write(')')
         elseif lisp.vectorp(obj) then
@@ -605,7 +610,7 @@ local function compile(obj,printcharfun)
                 if i~=0 then
                     printcharfun.write(',')
                 end
-                compile(lisp.aref(obj,i),printcharfun)
+                compile(lisp.aref(obj,i),printcharfun,name)
             end
             printcharfun.write('}')
         elseif lisp.hashtablep(obj) then
@@ -616,19 +621,19 @@ local function compile(obj,printcharfun)
             printcharfun.write(',')
             if not lisp.nilp(ht.test.name) then
                 printcharfun.write('TEST=')
-                compile(ht.test.name,printcharfun)
+                compile(ht.test.name,printcharfun,name)
                 printcharfun.write(',')
             end
             if not lisp.nilp(ht.weak) then
                 printcharfun.write('WEAK=')
-                compile(ht.weak,printcharfun)
+                compile(ht.weak,printcharfun,name)
                 printcharfun.write(',')
             end
             printcharfun.write('REHASH_SIZE=')
-            compile(vars.F.hash_table_rehash_size(obj),printcharfun)
+            compile(vars.F.hash_table_rehash_size(obj),printcharfun,name)
             printcharfun.write(',')
             printcharfun.write('REHASH_THRESHOLD=')
-            compile(vars.F.hash_table_rehash_threshold(obj),printcharfun)
+            compile(vars.F.hash_table_rehash_threshold(obj),printcharfun,name)
             printcharfun.write(',')
             printcharfun.write('DATA={')
             local idx=0
@@ -636,9 +641,9 @@ local function compile(obj,printcharfun)
                 while lisp.aref(ht.key_and_value,idx*2)==vars.Qunique do
                     idx=idx+1
                 end
-                compile(lisp.aref(ht.key_and_value,idx*2),printcharfun)
+                compile(lisp.aref(ht.key_and_value,idx*2),printcharfun,name)
                 printcharfun.write(',')
-                compile(lisp.aref(ht.key_and_value,idx*2+1),printcharfun)
+                compile(lisp.aref(ht.key_and_value,idx*2+1),printcharfun,name)
                 printcharfun.write(',')
                 idx=idx+1
             end
@@ -647,32 +652,32 @@ local function compile(obj,printcharfun)
         elseif lisp.chartablep(obj) then
             local ct=(obj --[[@as nelisp._char_table]])
             printcharfun.write('CHARTABLE{')
-            compile(ct.default,printcharfun)
+            compile(ct.default,printcharfun,name)
             printcharfun.write(',')
-            compile(ct.parent,printcharfun)
+            compile(ct.parent,printcharfun,name)
             printcharfun.write(',')
-            compile(ct.purpose,printcharfun)
+            compile(ct.purpose,printcharfun,name)
             printcharfun.write(',')
-            compile(ct.ascii,printcharfun)
+            compile(ct.ascii,printcharfun,name)
             printcharfun.write(',')
             for i=1,ct.size do
-                compile(ct.contents[i],printcharfun)
+                compile(ct.contents[i],printcharfun,name)
                 printcharfun.write(',')
             end
             for i=0,lisp.asize(ct.extras)-1 do
-                compile(lisp.aref(ct.extras,i),printcharfun)
+                compile(lisp.aref(ct.extras,i),printcharfun,name)
                 printcharfun.write(',')
             end
             printcharfun.write('}')
         elseif lisp.subchartablep(obj) then
             local sct=(obj --[[@as nelisp._sub_char_table]])
             printcharfun.write('SUBCHARTABLE{')
-            compile(lisp.make_fixnum(sct.depth),printcharfun)
+            compile(lisp.make_fixnum(sct.depth),printcharfun,name)
             printcharfun.write(',')
-            compile(lisp.make_fixnum(sct.min_char),printcharfun)
+            compile(lisp.make_fixnum(sct.min_char),printcharfun,name)
             printcharfun.write(',')
             for i=1,sct.size do
-                compile(sct.contents[i],printcharfun)
+                compile(sct.contents[i],printcharfun,name)
                 printcharfun.write(',')
             end
             printcharfun.write('}')
@@ -684,19 +689,21 @@ local function compile(obj,printcharfun)
     return 'DONT RETURN'
 end
 ---@param obj nelisp.obj
+---@param name string?
 ---@return string
-local function compile_obj(obj)
+local function compile_obj(obj,name)
     local printcharfun=require'nelisp.print'.make_printcharfun()
-    compile(obj,printcharfun)
+    compile(obj,printcharfun,name)
     return printcharfun.out()
 end
 ---@param objs nelisp.obj[]
+---@param name string?
 ---@return string[]
-function M.compiles(objs)
+function M.compiles(objs,name)
     local out={}
     table.insert(out,'return {')
     for _,v in ipairs(objs) do
-        table.insert(out,compile_obj(v)..',')
+        table.insert(out,compile_obj(v,name)..',')
     end
     table.insert(out,'}')
     return out

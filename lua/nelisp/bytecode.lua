@@ -226,6 +226,7 @@ function M.exec_byte_code(fun,args_template,args)
     if M._cache[fun] then
         return M._cache[fun](vectorp,stack)
     end
+    --TODO: include file name
     return require'nelisp.comp-lisp-to-lua'.compiled_to_fun(fun)(vectorp,stack)
 end
 ---@type nelisp.F
