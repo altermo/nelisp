@@ -469,7 +469,7 @@ local function arith_driver(code,args)
             error('TODO: a number being negative is treated as it having infinite ones at the left side')
         end
         local f=(code=='and' and bit.band) or (code=='or' and bit.bor) or error('TODO')
-        local acc=0
+        local acc=(code=='and' and -1) or (code=='or' and 0) or error('TODO')
         for _,v in ipairs(args) do
             if type(v)=='number' then
                 acc=f(acc,v)
