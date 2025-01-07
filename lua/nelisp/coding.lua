@@ -474,7 +474,10 @@ local function setup_coding_system(coding_system,coding)
         coding.spec_emacs_mule.state=coding_composition_state.no
         coding.spec_emacs_mule.method=coding_composition_method.no
     elseif lisp.eq(coding_type,vars.Qshift_jis) then
-        error('TODO')
+        coding.detector=detect_coding_sjis
+        coding.decoder=decode_coding_sjis
+        coding.encoder=encode_coding_sjis
+        coding.common_flags=bit.bor(coding.common_flags,coding_mask.require_decoding,coding_mask.require_encoding)
     elseif lisp.eq(coding_type,vars.Qbig5) then
         coding.detector=detect_coding_big5
         coding.decoder=decode_coding_big5
@@ -768,7 +771,36 @@ function F.define_coding_system_internal.fa(args)
         lisp.aset(attrs,coding_attr.ascii_compat,vars.Qt)
         category=coding_category.emacs_mule
     elseif lisp.eq(coding_type,vars.Qshift_jis) then
-        error('TODO')
+        local charset_list_len=lisp.list_length(charset_list)
+        if charset_list_len~=3 and charset_list_len~=4 then
+            signal.error('There should be three or four charsets')
+        end
+        local cs=vars.charset_table[lisp.fixnum(lisp.xcar(charset_list))]
+        if cs.dimension~=1 then
+            signal.error('Dimension of charset %s is not one',lisp.sdata(lisp.symbol_name(charset.charset_name(cs))))
+        end
+        if cs.ascii_compatible_p then
+            lisp.aset(attrs,coding_attr.ascii_compat,vars.Qt)
+        end
+        charset_list=lisp.xcdr(charset_list)
+        cs=vars.charset_table[lisp.fixnum(lisp.xcar(charset_list))]
+        if cs.dimension~=1 then
+            signal.error('Dimension of charset %s is not one',lisp.sdata(lisp.symbol_name(charset.charset_name(cs))))
+        end
+        charset_list=lisp.xcdr(charset_list)
+        cs=vars.charset_table[lisp.fixnum(lisp.xcar(charset_list))]
+        if cs.dimension~=2 then
+            signal.error('Dimension of charset %s is not two',lisp.sdata(lisp.symbol_name(charset.charset_name(cs))))
+        end
+        charset_list=lisp.xcdr(charset_list)
+        if not lisp.nilp(charset_list) then
+            cs=vars.charset_table[lisp.fixnum(lisp.xcar(charset_list))]
+            if cs.dimension~=2 then
+                signal.error('Dimension of charset %s is not two',lisp.sdata(lisp.symbol_name(charset.charset_name(cs))))
+            end
+        end
+        category=coding_category.sjis
+        vars.sjis_coding_system=name
     elseif lisp.eq(coding_type,vars.Qbig5) then
         if lisp.list_length(charset_list)~=2 then
             signal.error('There should be just two charsets')
@@ -1178,6 +1210,7 @@ function M.init()
     end
 
     vars.big5_coding_system=vars.Qnil
+    vars.sjis_coding_system=vars.Qnil
 
     vars.F.put(vars.Qtranslation_table,vars.Qchar_table_extra_slots,lisp.make_fixnum(2))
 end
