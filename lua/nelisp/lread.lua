@@ -1228,6 +1228,14 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
     end
     local count=specpdl.index()
     lisp.check_string(file)
+    if _G.nelisp_later then
+        error('TODO: these files require a really long time to load (5+ seconds), so just skip them for now')
+    else
+        local name=lisp.sdata(file):gsub('^.*/','')
+        if name=='eucjp-ms' then
+            return vars.Qnil
+        end
+    end
     local handler_=vars.F.find_file_name_handler(file,vars.Qload)
     if not lisp.nilp(handler_) then
         error('TODO')
