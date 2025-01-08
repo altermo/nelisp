@@ -1,10 +1,28 @@
 local vars=require'nelisp.vars'
+local lisp=require'nelisp.lisp'
+
+---@type nelisp.obj
+local gstring_hash_table
+
+---@type nelisp.F
+local F={}
+F.clear_composition_cache={'clear-composition-cache',0,0,0,[[Internal use only.
+Clear composition cache.]]}
+function F.clear_composition_cache.f()
+    gstring_hash_table=vars.F.make_hash_table(vars.QCtest,vars.Qequal,vars.QCsize,lisp.make_fixnum(311))
+    return vars.F.clear_face_cache(vars.Qt)
+end
 
 local M={}
 function M.init()
     vars.V.composition_function_table=vars.F.make_char_table(vars.Qnil,vars.Qnil)
+
+    local args={vars.QCtest,vars.Qequal,vars.QCsize,lisp.make_fixnum(311)}
+    gstring_hash_table=vars.F.make_hash_table(unpack(args))
 end
 function M.init_syms()
+    vars.defsubr(F,'clear_composition_cache')
+
     vars.defvar_lisp('composition_function_table','composition-function-table',[[Char-table of functions for automatic character composition.
 For each character that has to be composed automatically with
 preceding and/or following characters, this char-table contains
