@@ -1110,6 +1110,12 @@ function F.display_supports_face_attributes_p.f(attributes,display)
     end
     return supports and vars.Qt or vars.Qnil
 end
+F.clear_face_cache={'clear-face-cache',0,1,0,[[Clear face caches on all frames.
+Optional THOROUGHLY non-nil means try to free unused fonts, too.]]}
+function F.clear_face_cache.f(thoroughly)
+    --Only does stuff if windowing system
+    return vars.Qnil
+end
 
 function M.init()
     vars.V.face_new_frame_defaults=vars.F.make_hash_table(vars.QCtest,vars.Qeq,vars.QCsize,lisp.make_fixnum(33))
@@ -1124,6 +1130,7 @@ function M.init_syms()
     vars.defsubr(F,'internal_set_alternative_font_family_alist')
     vars.defsubr(F,'internal_set_alternative_font_registry_alist')
     vars.defsubr(F,'display_supports_face_attributes_p')
+    vars.defsubr(F,'clear_face_cache')
 
     vars.defsym('Qface','face')
     vars.defsym('Qface_no_inherit','face-no-inherit')
