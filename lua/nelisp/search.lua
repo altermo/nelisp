@@ -133,10 +133,10 @@ local function eregex_to_vimregex(s)
             out_buf.write('\\%(\\$\\|\\n\\@=\\)')
             error('TODO')
         elseif c==b'$' then
-            if in_buf.read()==-1 or at_endline_loc_p(in_buf,in_buf.idx) then
+            if not (in_buf.read()==-1 or at_endline_loc_p(in_buf,in_buf.idx)) then
                 goto normal_char
             end
-            error('TODO')
+            out_buf.write('\\%(\\$\\|\\n\\@=\\)')
         elseif c==b'+' or c==b'*' or c==b'?' then
             if _G.nelisp_later then
                 error('TODO: if previous expression is not valid the treat it as a literal')
