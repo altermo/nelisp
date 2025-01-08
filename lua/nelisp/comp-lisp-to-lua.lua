@@ -242,6 +242,8 @@ local function compile_compiled(fun,no_bin,name)
             code[current_pc]={'call','vars.F.preceding_char',0}
         elseif op==ins.current_column then
             code[current_pc]={'todo','current_column'}
+        elseif op==ins.indent_to then
+            code[current_pc]={'todo','indent_to'}
         elseif op==ins.eolp then
             code[current_pc]={'call','vars.F.eolp',0}
         elseif op==ins.eobp then
