@@ -539,6 +539,12 @@ function F.replace_match.f(newtext,fixedcase,literal,str,subexp)
     end
     return vars.F.concat{before,newtext,after}
 end
+F.regexp_quote={'regexp-quote',1,1,0,[[Return a regexp string which matches exactly STRING and nothing else.]]}
+function F.regexp_quote.f(str)
+    lisp.check_string(str)
+    local out=lisp.sdata(str):gsub('[[*.\\?+^$]','\\%0')
+    return #out==lisp.sbytes(str) and str or alloc.make_specified_string(out,-1,lisp.string_multibyte(str))
+end
 
 function M.init_syms()
     vars.defsubr(F,'string_match')
@@ -548,6 +554,7 @@ function M.init_syms()
     vars.defsubr(F,'match_end')
     vars.defsubr(F,'match_data__translate')
     vars.defsubr(F,'replace_match')
+    vars.defsubr(F,'regexp_quote')
 
     vars.defvar_lisp('search_spaces_regexp','search-spaces-regexp',[[Regexp to substitute for bunches of spaces in regexp search.
 Some commands use this for user-specified regexps.
