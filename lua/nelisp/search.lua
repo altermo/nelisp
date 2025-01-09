@@ -22,9 +22,8 @@ end
 local search_regs={start={},end_={}}
 local last_search_thing=vars.Qnil
 ---@param s nelisp.obj
----@return string
+---@return [string,number][]
 ---@return table
----@return boolean
 local function eregex_to_vimregex(s)
     local signal_err=function (msg)
         signal.xsignal(vars.Qinvalid_regexp,alloc.make_string(msg))
@@ -35,9 +34,9 @@ local function eregex_to_vimregex(s)
     local data={}
     local in_buf=lread.make_readcharfun(s,0)
     local out_buf=print_.make_printcharfun()
-    local parens=0 --vim doesn't have a way to get the position of a sub-match, so this is the current workaround
-    local parens_overflow=false --vim only supports max 10 parens
-    local depth=0
+    --vim doesn't have a way to get the position of a sub-match, so this is the current workaround
+    local tokens={}
+    local parens_stack={}
     while true do
         local c=in_buf.read()
         if c==-1 then
@@ -59,27 +58,19 @@ local function eregex_to_vimregex(s)
                         error('TODO')
                     end
                 end
-                depth=depth+1
-                if _G.nelisp_later then
-                    error('TODO')
-                elseif parens==4 or parens_overflow then
-                    out_buf.write('\\%(')
-                    parens_overflow=true
-                else
-                    if depth==1 then
-                        parens=parens+1
-                        out_buf.write('\\)')
-                        data.sub_patterns=(data.sub_patterns or 0)+1
-                    else
-                        parens_overflow=true
-                    end
-                    out_buf.write('\\(')
+                table.insert(tokens,out_buf.out())
+                out_buf=print_.make_printcharfun()
+                local parents={}
+                for _,v in ipairs(parens_stack) do
+                    parents[v]=true
                 end
+                table.insert(tokens,{start=true,parents=parents})
+                table.insert(parens_stack,tokens[#tokens])
             elseif c==b')' then
-                if depth==0 then
+                if #parens_stack==0 then
                     signal_err('Unmatched ) or \\)')
                 end
-                depth=depth-1
+                table.remove(parens_stack)
                 out_buf.write('\\)')
             elseif c==b'|' then
                 out_buf.write('\\|')
@@ -201,8 +192,38 @@ local function eregex_to_vimregex(s)
         out_buf.write(c)
         ::continue::
     end
-    assert(parens<=4)
-    return '\\V'..('\\('):rep(parens)..out_buf.out(),data,parens_overflow
+    assert(#parens_stack==0)
+    table.insert(tokens,out_buf.out())
+    if #tokens>1 then
+        local patterns={}
+        data.sub_patterns=true
+        for k,v in ipairs(tokens) do
+            if (k%2)==0 then
+                local pattern=print_.make_printcharfun()
+                pattern.write('\\V\\(')
+                local parents=0
+                for tk,t in ipairs(tokens) do
+                    if type(t)=='table' then
+                        if v==t then
+                            assert(tk==k)
+                            pattern.write('\\)\\(')
+                        elseif v.parents[t] then
+                            pattern.write('\\)\\%(\\(')
+                            parents=parents+1
+                        else
+                            pattern.write('\\%(')
+                        end
+                    else
+                        pattern.write(t)
+                    end
+                end
+                table.insert(patterns,{pattern.out(),parents})
+            end
+        end
+        return patterns,data
+    else
+        return {{'\\V'..tokens[1],0}},data
+    end
 end
 
 ---@type nelisp.F
@@ -225,11 +246,11 @@ local function string_match_1(regexp,s,start,posix,modify_data)
         end
         pos_bytes=fns.string_char_to_byte(s,pos)
     end
-    local vregex,data,parens_overflow=eregex_to_vimregex(regexp)
+    local vregex,data=eregex_to_vimregex(regexp)
     if data.start_match and pos_bytes>0 then
         return vars.Qnil
     end
-    local _,pat_start,pat_end=unpack(vim.fn.matchstrpos(lisp.sdata(s),vregex,pos_bytes))
+    local _,pat_start,pat_end=unpack(vim.fn.matchstrpos(lisp.sdata(s),vregex[1][1],pos_bytes))
     if _G.nelisp_later then
         error('TODO: somehow also return the positions of the submatches (or nil if they didn\'t match)')
     end
@@ -239,18 +260,21 @@ local function string_match_1(regexp,s,start,posix,modify_data)
     search_regs={
         start={pat_start},
         end_={pat_end},
-        parens_overflow=parens_overflow,
     }
     if data.sub_patterns then
-        local idx=2
-        local list=vim.fn.matchlist(lisp.sdata(s),vregex,pos_bytes)
-        local sub_patterns=data.sub_patterns
-        while idx<=data.sub_patterns+1 do
-            local sub_start=#list[idx]
-            local sub_end=#list[idx+sub_patterns]+sub_start
-            if list[idx+sub_patterns]=='' then
+        for _,v in ipairs(vregex) do
+            local list=vim.fn.matchlist(lisp.sdata(s),v[1],pos_bytes)
+            local offset=0
+            for i=2,v[2]+2 do
+                offset=offset+#list[i]
+            end
+            local match=list[v[2]+3]
+            local sub_start=offset
+            local sub_end=offset+#match
+            if match=='' then
                 if _G.nelisp_later then
-                    error('TODO: empty matches are trimmed')
+                    error('TODO: non-matches are trimmed')
+                    error('TODO: empty matches should not be treated as non-matches')
                 end
                 table.insert(search_regs.start,-1)
                 table.insert(search_regs.end_,-1)
@@ -258,10 +282,9 @@ local function string_match_1(regexp,s,start,posix,modify_data)
                 table.insert(search_regs.start,sub_start)
                 table.insert(search_regs.end_,sub_end)
             end
-            idx=idx+1
         end
     end
-    if lisp.string_multibyte(s) and not search_regs.parens_overflow then
+    if lisp.string_multibyte(s) then
         for i=1,#search_regs.start do
             if search_regs.start[i]>=0 then
                 search_regs.start[i]=vim.str_utfindex(lisp.sdata(s),search_regs.start[i])
@@ -324,12 +347,6 @@ Return value is undefined if the last search failed.]]}
 function F.match_data.f(integers,reuse,reseat)
     if not lisp.nilp(reseat) then
         error('TODO')
-    end
-    if search_regs.parens_overflow then
-        if _G.nelisp_later then
-            error('TODO')
-        end
-        return lisp.list(alloc.make_string('Error: match parens can\'t be converted to position'))
     end
     if lisp.nilp(last_search_thing) then
         return vars.Qnil
