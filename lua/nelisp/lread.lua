@@ -976,7 +976,13 @@ function M.read0(readcharfun,locate_syms)
             table.remove(stack)
             local placeholder=t.placeholder
             if lisp.consp(obj) then
-                error('TODO')
+                if obj==placeholder then
+                    invalid_syntax('nonsensical self-reference',readcharfun)
+                end
+                vars.F.setcar(placeholder,lisp.xcar(obj))
+                vars.F.setcdr(placeholder,lisp.xcdr(obj))
+                readcharfun.read_object_map[t.number]=placeholder
+                obj=placeholder
             else
                 vars.F.lread__substitute_object_in_subtree(obj,placeholder,vars.Qt)
                 readcharfun.read_object_map[t.number]=obj
