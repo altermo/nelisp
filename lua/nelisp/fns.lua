@@ -550,7 +550,7 @@ function F.length.f(sequence)
         val=0
     elseif lisp.stringp(sequence) then
         val=lisp.schars(sequence)
-    elseif lisp.vectorp(sequence) then
+    elseif lisp.vectorp(sequence) or lisp.compiledp(sequence) then
         val=lisp.asize(sequence)
     else
         error('TODO')
