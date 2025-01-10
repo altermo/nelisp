@@ -158,7 +158,7 @@ M.pvec={
     ---@class nelisp._record: nelisp._normal_vector
     ---@field contents nelisp.obj[] --(1-indexed)
 
-    font=36,
+    font=36, --NOTE: this should also be a `nelisp._normal_vector`
 }
 
 

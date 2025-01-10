@@ -43,7 +43,24 @@ local function sxhash(obj,_depth)
     elseif typ==lisp.type.string then
         return M.hash_string(lisp.sdata(obj))
     elseif typ==lisp.type.vectorlike then
-        error('TODO')
+        local pvec=lisp.pseudovector_type(obj)
+        if pvec==lisp.pvec.normal_vector
+            or pvec==lisp.pvec.char_table
+            or pvec==lisp.pvec.sub_char_table
+            or pvec==lisp.pvec.compiled
+            or pvec==lisp.pvec.record
+            or pvec==lisp.pvec.font then
+            if lisp.subchartablep(obj) then
+                return 42
+            end
+            local hash=lisp.asize(obj)
+            for i=0,math.min(7,hash)-1 do
+                hash=hash_combine(hash,sxhash(lisp.aref(obj,i),depth+1))
+            end
+            return hash
+        else
+            error('TODO')
+        end
     elseif typ==lisp.type.cons then
         local hash=0
         local i=0
