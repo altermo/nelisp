@@ -301,7 +301,10 @@ end
 ---@overload fun(x:nelisp.obj):boolean
 function M.functionp(x)
     if M.symbolp(x) and not M.nilp(vars.F.fboundp(x)) then
-        error('TODO')
+        x=vars.F.indirect_function(x,vars.Qt)
+        if M.consp(x) and M.eq(M.xcar(x),vars.Qautoload) then
+            error('TODO')
+        end
     end
     if M.subrp(x) then
         error('TODO')
