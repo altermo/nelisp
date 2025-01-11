@@ -108,6 +108,10 @@ function F.file_name_directory.f(filename)
     local dir=vim.fs.dirname(lisp.sdata(filename))..'/'
     return alloc.make_specified_string(dir,-1,lisp.string_multibyte(filename))
 end
+F.car_less_than_car={'car-less-than-car',2,2,0,[[Return t if (car A) is numerically less than (car B).]]}
+function F.car_less_than_car.f(a,b)
+    return vars.F.lss{vars.F.car(a),vars.F.car(b)}
+end
 
 function M.init_syms()
     vars.defsubr(F,'find_file_name_handler')
@@ -115,6 +119,7 @@ function M.init_syms()
     vars.defsubr(F,'expand_file_name')
     vars.defsubr(F,'file_directory_p')
     vars.defsubr(F,'file_name_directory')
+    vars.defsubr(F,'car_less_than_car')
 
     vars.defsym('Qfile_exists_p','file-exists-p')
 
