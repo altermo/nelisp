@@ -43,8 +43,24 @@ function F.downcase.f(arg)
     end
     return alloc.make_string(vim.fn.tolower(lisp.sdata(arg)))
 end
+F.upcase={'upcase',1,1,0,[[Convert argument to upper case and return that.
+The argument may be a character or string.  The result has the same
+type.  (See `downcase' for further details about the type.)
+
+The argument object is not altered--the value is a copy.  If argument
+is a character, characters which map to multiple code points when
+cased, e.g. ﬁ, are returned unchanged.
+
+See also `capitalize', `downcase' and `upcase-initials'.]]}
+function F.upcase.f(obj)
+    if _G.nelisp_later then
+        error('TODO')
+    end
+    return alloc.make_string(vim.fn.toupper(lisp.sdata(obj)))
+end
 function M.init_syms()
     vars.defsubr(F,'capitalize')
     vars.defsubr(F,'downcase')
+    vars.defsubr(F,'upcase')
 end
 return M
