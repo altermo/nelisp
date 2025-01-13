@@ -971,6 +971,18 @@ function F.condition_case.f(args)
     local handlers=lisp.xcdr(lisp.xcdr(args))
     return handler.internal_lisp_condition_case(var,bodyform,handlers)
 end
+F.catch={'catch',1,-1,0,[[Eval BODY allowing nonlocal exits using `throw'.
+TAG is evalled to get the tag to use; it must not be nil.
+
+Then the BODY is executed.
+Within BODY, a call to `throw' with the same TAG exits BODY and this `catch'.
+If no throw happens, `catch' returns the value of the last BODY form.
+If a throw happens, it specifies the value to return from `catch'.
+usage: (catch TAG BODY...)]]}
+function F.catch.f(args)
+    local tag=M.eval_sub(lisp.xcar(args))
+    return handler.internal_catch(tag,vars.F.progn,lisp.xcdr(args))
+end
 local function ensure_room(n)
     local sum=overflow.add(vars.lisp_eval_depth,n) or overflow.max
     if sum>lisp.fixnum(vars.V.max_lisp_eval_depth) then
@@ -1212,6 +1224,7 @@ function M.init_syms()
     vars.defsubr(F,'autoload_do_load')
     vars.defsubr(F,'throw')
     vars.defsubr(F,'unwind_protect')
+    vars.defsubr(F,'catch')
     vars.defsubr(F,'condition_case')
     vars.defsubr(F,'backtrace_frame_internal')
     vars.defsubr(F,'signal')
