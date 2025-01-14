@@ -687,7 +687,6 @@ end
 ---@param ht table
 ---@return boolean
 local function internal_equal(a,b,kind,depth,ht)
-    ::tail_recursion::
     if depth>10 then
         assert(kind~='no_quit')
         if depth>200 then
@@ -725,22 +724,13 @@ local function internal_equal(a,b,kind,depth,ht)
         if kind=='no_quit' then
             error('TODO')
         else
-            local o2=b
-            local ret=lisp.for_each_tail(a,function (o1)
-                if not lisp.consp(o2) then
-                    return false
-                end
-                if not internal_equal(lisp.xcar(o1),lisp.xcar(o2),kind,depth+1,ht) then
-                    return false
-                end
-                o2=lisp.xcdr(o2)
-                if lisp.eq(lisp.xcdr(o1),o2) then
-                    return true
-                end
-            end)
-            if ret then return ret end
-            depth=depth+1
-            goto tail_recursion
+            if not internal_equal(lisp.xcar(a),lisp.xcar(b),kind,depth+1,ht) then
+                return false
+            end
+            if not internal_equal(lisp.xcdr(a),lisp.xcdr(b),kind,depth+1,ht) then
+                return false
+            end
+            return true
         end
     elseif t==lisp.type.vectorlike then
         local pvec=lisp.pseudovector_type(a)
