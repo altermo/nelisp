@@ -311,7 +311,8 @@ function M.functionp(x)
     elseif M.compiledp(x) or M.module_functionp(x) then
         return true
     elseif M.consp(x) then
-        error('TODO')
+        local car=M.xcar(x)
+        return M.eq(car,vars.Qlambda) or M.eq(car,vars.Qclosure)
     end
     return false
 end
