@@ -1,5 +1,6 @@
 local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
+local lread=require'nelisp.lread'
 local M={}
 function M.init()
     vars.F.put(vars.Qglyphless_char_display,vars.Qchar_table_extra_slots,lisp.make_fixnum(1))
@@ -35,5 +36,11 @@ are displayed using the face `glyphless-char'.
 If a character has a non-nil entry in an active display table, the
 display table takes effect; in this case, Emacs does not consult
 `glyphless-char-display' at all.]])
+
+    vars.defvar_lisp('overlay_arrow_variable_list','overlay-arrow-variable-list',[[List of variables (symbols) which hold markers for overlay arrows.
+The symbols on this list are examined during redisplay to determine
+where to display overlay arrows.
+See also `overlay-arrow-string'.]])
+    vars.V.overlay_arrow_variable_list=lisp.list(lread.intern_c_string('overlay-arrow-position'))
 end
 return M
