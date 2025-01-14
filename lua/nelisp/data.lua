@@ -712,6 +712,12 @@ usage: (max NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
 function F.max.fa(args)
     return minmax_driver(args,'>')
 end
+F.min={'min',1,-2,0,[[Return smallest of all the arguments (which must be numbers or markers).
+The value is always a number; markers are converted to numbers.
+usage: (min NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)]]}
+function F.min.fa(args)
+    return minmax_driver(args,'<')
+end
 F.local_variable_if_set_p={'local-variable-if-set-p',1,2,0,[[Non-nil if VARIABLE is local in buffer BUFFER when set there.
 BUFFER defaults to the current buffer.
 
@@ -959,6 +965,7 @@ function M.init_syms()
     vars.defsubr(F,'eqlsign')
     vars.defsubr(F,'neq')
     vars.defsubr(F,'max')
+    vars.defsubr(F,'min')
 
     vars.defsubr(F,'string_to_number')
     vars.defsubr(F,'type_of')
