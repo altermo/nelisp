@@ -362,6 +362,8 @@ function F.make_variable_buffer_local.f(var)
     local blv
     if s.redirect==lisp.symbol_redirect.plainval then
         val=lisp.symbol_val(s) or vars.Qnil
+    elseif s.redirect==lisp.symbol_redirect.localized then
+        blv=lisp.symbol_blv(s)
     else
         error('TODO')
     end
