@@ -61,7 +61,13 @@ function M.buffer_name(buffer)
         return vars.Qnil
     end
     local name=vim.api.nvim_buf_get_name(id)
-    assert(name~='','TODO: what should be the name of a nameless buffers')
+    if name=='' then
+        if _G.nelisp_later then
+            error('TODO: what should be the name of a nameless buffers')
+        else
+            return alloc.make_string('')
+        end
+    end
     return alloc.make_string(name)
 end
 ---@param buffer nelisp._buffer
