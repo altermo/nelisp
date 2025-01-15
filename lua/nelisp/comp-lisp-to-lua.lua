@@ -6,6 +6,7 @@ local bytecode=require'nelisp.bytecode'
 local signal=require'nelisp.signal'
 local specpdl=require'nelisp.specpdl'
 local eval=require'nelisp.eval'
+local buffer=require'nelisp.buffer'
 local ins=bytecode.ins
 local compiled_globals;compiled_globals={
     table=table,
@@ -61,6 +62,11 @@ local compiled_globals;compiled_globals={
         end
         specpdl.unbind_to(specpdl.index()-1,nil)
         return val
+    end,
+    set_buffer_if_live=function (buf)
+        if buffer.BUFFERLIVEP(buf) then
+            vars.F.set_buffer(buf)
+        end
     end,
 }
 local M={}
@@ -257,7 +263,7 @@ local function compile_compiled(fun,no_bin,name)
         elseif op==ins.set_buffer then
             code[current_pc]={'call','vars.F.set_buffer',1}
         elseif op==ins.save_current_buffer then
-            code[current_pc]={'todo','save_current_buffer'}
+            code[current_pc]={'save_current_buffer'}
         elseif op==ins.forward_char then
             code[current_pc]={'call','vars.F.forward_char',1}
         elseif op==ins.forward_word then
@@ -497,6 +503,11 @@ local function compile_compiled(fun,no_bin,name)
             table.insert(out,'else error("TODO") end')
         elseif op=='return' then
             table.insert(out,'do return stack[#stack] end')
+        elseif op=='save_current_buffer' then
+            table.insert(out,'do')
+            table.insert(out,'local buf=vars.F.current_buffer()')
+            table.insert(out,'specpdl.record_unwind_protect(function () set_buffer_if_live(buf) end)')
+            table.insert(out,'end')
         elseif op=='pass' then
         elseif op=='todo' then
             table.insert(out,'error("TODO(nelisp-compiler): '..v[2]..'")')
