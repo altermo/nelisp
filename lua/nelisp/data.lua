@@ -86,6 +86,9 @@ local function default_value(sym)
     local s=sym --[[@as nelisp._symbol]]
     if s.redirect==lisp.symbol_redirect.plainval then
         return lisp.symbol_val(s)
+    elseif s.redirect==lisp.symbol_redirect.localized then
+        local blv=lisp.symbol_blv(s)
+        return blv.default_value
     else
         error('TODO')
     end
