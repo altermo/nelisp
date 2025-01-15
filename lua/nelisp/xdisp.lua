@@ -42,5 +42,11 @@ The symbols on this list are examined during redisplay to determine
 where to display overlay arrows.
 See also `overlay-arrow-string'.]])
     vars.V.overlay_arrow_variable_list=lisp.list(lread.intern_c_string('overlay-arrow-position'))
+
+    vars.defvar_lisp('pre_redisplay_function','pre-redisplay-function',[[Function run just before redisplay.
+It is called with one argument, which is the set of windows that are to
+be redisplayed.  This set can be nil (meaning, only the selected window),
+or t (meaning all windows).]])
+    vars.V.pre_redisplay_function=lread.intern('ignore')
 end
 return M
