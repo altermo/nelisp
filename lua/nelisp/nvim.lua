@@ -232,7 +232,7 @@ function M.frame_buffer_list(f)
     for _,win_id in ipairs(vim.api.nvim_tabpage_list_wins((f --[[@as nelisp.vim.frame]]).tabpage_id)) do
         buffers[vim.api.nvim_win_get_buf(win_id)]=true
     end
-    return lisp.list(unpack(vim.tbl_keys(buffers)))
+    return lisp.list(unpack(vim.tbl_map(get_or_create_buf_obj,vim.tbl_keys(buffers))))
 end
 ---@param f nelisp._frame
 ---@return nelisp.obj
