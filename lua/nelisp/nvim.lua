@@ -103,6 +103,10 @@ function M.buffer_syntax_table(buffer)
     ---@cast buffer nelisp.vim.buffer
     return buffer.syntax_table
 end
+---@return nelisp.obj
+function M.buffer_list()
+    return lisp.list(unpack(vim.tbl_map(get_or_create_buf_obj,vim.api.nvim_list_bufs())))
+end
 
 --- ;; Terminal (UI)
 

@@ -95,6 +95,16 @@ function F.force_mode_line_update.f(all)
     end
     return all
 end
+F.buffer_list={'buffer-list',0,1,0,[[Return a list of all live buffers.
+If the optional arg FRAME is a frame, return the buffer list in the
+proper order for that frame: the buffers shown in FRAME come first,
+followed by the rest of the buffers.]]}
+function F.buffer_list.f(frame)
+    if _G.nelisp_later then
+        error('TODO')
+    end
+    return nvim.buffer_list()
+end
 
 function M.init()
     defvar_per_buffer('enable_multibyte_characters','enable-multibyte-characters',vars.Qnil,[[Non-nil means the buffer contents are regarded as multi-byte characters.
@@ -115,5 +125,6 @@ function M.init_syms()
     vars.defsubr(F,'get_buffer')
     vars.defsubr(F,'set_buffer')
     vars.defsubr(F,'force_mode_line_update')
+    vars.defsubr(F,'buffer_list')
 end
 return M
