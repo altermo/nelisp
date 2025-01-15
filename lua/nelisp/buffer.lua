@@ -105,6 +105,10 @@ function F.buffer_list.f(frame)
     end
     return nvim.buffer_list()
 end
+F.current_buffer={'current-buffer',0,0,0,[[Return the current buffer as a Lisp object.]]}
+function F.current_buffer.f()
+    return nvim.get_current_buffer()
+end
 
 function M.init()
     defvar_per_buffer('enable_multibyte_characters','enable-multibyte-characters',vars.Qnil,[[Non-nil means the buffer contents are regarded as multi-byte characters.
@@ -126,5 +130,6 @@ function M.init_syms()
     vars.defsubr(F,'set_buffer')
     vars.defsubr(F,'force_mode_line_update')
     vars.defsubr(F,'buffer_list')
+    vars.defsubr(F,'current_buffer')
 end
 return M
