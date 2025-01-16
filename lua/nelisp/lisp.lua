@@ -80,6 +80,8 @@ M.pvec={
     ---@class nelisp._marker: nelisp._pvec_special
 
     overlay=4,
+    ---@class nelisp._overlay: nelisp._pvec_special
+
     finalizer=5,
     symbol_with_pos=6,
     _misc_ptr=7,
@@ -416,6 +418,13 @@ end
 function M.xhash(key)
     return tonumber(tostring(key):sub(8)) or -1
 end
+---@param lower number
+---@param num number
+---@param upper number
+---@return number
+function M.clip_to_bounds(lower,num,upper)
+    return num<lower and lower or num<=upper and num or upper
+end
 
 
 --- ;; Checkers
@@ -453,6 +462,8 @@ function M.check_vector(x) M.check_type(M.vectorp(x),vars.Qvectorp,x) end
 function M.check_hash_table(x) M.check_type(M.hashtablep(x),vars.Qhash_table_p,x) end
 ---@overload fun(x:nelisp.obj)
 function M.check_frame(x) M.check_type(M.framep(x),vars.Qframep,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_buffer(x) M.check_type(M.bufferp(x),vars.Qbufferp,x) end
 ---@param x nelisp.obj
 ---@return number
 function M.check_vector_or_string(x)

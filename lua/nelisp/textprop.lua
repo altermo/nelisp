@@ -2,6 +2,7 @@ local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
 local signal=require'nelisp.signal'
 local intervals=require'nelisp.intervals'
+local buffer=require'nelisp.buffer'
 
 local M={}
 function M.copy_textprop(start,end_,src,pos,dest,props)
@@ -30,18 +31,6 @@ local function validate_plist(list)
     end
     return lisp.list(list,vars.Qnil)
 end
----@param x nelisp.obj
----@return nelisp.obj
----@nodiscard
-local function check_fixnum_coerce_marker(x)
-    if lisp.markerp(x) then
-        error('TODO')
-    elseif lisp.bignump(x) then
-        error('TODO')
-    end
-    lisp.check_fixnum(x)
-    return x
-end
 ---@param begin nelisp.ptr
 ---@param end_ nelisp.ptr
 ---@return nelisp.intervals?
@@ -49,8 +38,8 @@ local function validate_interval_range(obj,begin,end_,force)
     lisp.check_type(lisp.stringp(obj) or lisp.bufferp(obj),vars.Qbuffer_or_string_p,obj)
     local begin0=begin[1]
     local end0=end_[1]
-    begin[1]=check_fixnum_coerce_marker(begin[1])
-    end_[1]=check_fixnum_coerce_marker(end_[1])
+    begin[1]=buffer.check_fixnum_coerce_marker(begin[1])
+    end_[1]=buffer.check_fixnum_coerce_marker(end_[1])
     if lisp.eq(begin[1],end_[1]) and begin~=end_ then
         return nil
     end

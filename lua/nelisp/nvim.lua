@@ -113,6 +113,16 @@ end
 function M.buffer_list()
     return lisp.list(unpack(vim.tbl_map(get_or_create_buf_obj,vim.api.nvim_list_bufs())))
 end
+---@param buffer nelisp._buffer
+---@return number
+function M.get_buffer_z(buffer)
+    ---@cast buffer nelisp.vim.buffer
+    local ret
+    vim.api.nvim_buf_call(buffer.bufid,function ()
+        ret=vim.fn.wordcount().chars
+    end)
+    return ret
+end
 
 --- ;; Terminal (UI)
 
@@ -284,5 +294,65 @@ end
 ---@return nelisp.obj
 function M.get_current_cursor_byte_pos()
     return lisp.make_fixnum(vim.fn.wordcount().cursor_bytes)
+end
+
+--- ;; overlay
+
+---@class nelisp.vim.overlay:nelisp._overlay
+---@field buffer nelisp._buffer
+---@field id number
+---@field plist nelisp.obj
+
+---@param char number
+---@return number
+local function char2byte(char)
+    if _G.nelisp_later then
+        error('TODO')
+    end
+    return char
+end
+--- (0-indexed)
+---@param byte number
+---@return number,number
+local function byte2pos(byte)
+    local row=vim.fn.byte2line(byte)
+    if row==-1 and byte==1 then
+        return 0,0
+    end
+    assert(row~=-1)
+    assert(vim.fn.line2byte(row)~=-1)
+    local col=byte-vim.fn.line2byte(row)+1
+    return row-1,col-1
+end
+---@param buffer nelisp._buffer
+---@param beg number
+---@param end_ number
+---@param front_advance boolean
+---@param rear_advance boolean
+---@return nelisp.obj
+function M.make_overlay(buffer,beg,end_,front_advance,rear_advance)
+    ---@cast buffer nelisp.vim.buffer
+    local bufid=buffer.bufid
+    local beg_row,beg_col,end_row,end_col
+    vim.api.nvim_buf_call(bufid,function()
+        local beg_byte=char2byte(beg)
+        local end_byte=char2byte(end_)
+        beg_row,beg_col=byte2pos(beg_byte)
+        end_row,end_col=byte2pos(end_byte)
+    end)
+    local ns_id=vim.api.nvim_create_namespace('nelisp')
+    local id=vim.api.nvim_buf_set_extmark(bufid,ns_id,beg_row,beg_col,{
+        end_row=end_row,
+        end_col=end_col,
+        right_gravity=not rear_advance, -- TODO: is this correct(always)?
+        end_right_gravity=front_advance, -- TODO: is this correct(always)?
+    })
+    ---@type nelisp.vim.overlay
+    local overlay={
+        buffer=buffer,
+        id=id,
+        plist=vars.Qnil,
+    }
+    return lisp.make_vectorlike_ptr(overlay,lisp.pvec.overlay)
 end
 return M

@@ -5,6 +5,18 @@ local signal=require'nelisp.signal'
 local alloc=require'nelisp.alloc'
 
 local M={}
+---@param x nelisp.obj
+---@return nelisp.obj
+---@nodiscard
+function M.check_fixnum_coerce_marker(x)
+    if lisp.markerp(x) then
+        error('TODO')
+    elseif lisp.bignump(x) then
+        error('TODO')
+    end
+    lisp.check_fixnum(x)
+    return x
+end
 local function defvar_per_buffer(name,symname,defval,doc)
     ---@type nelisp.buffer_local_value
     local blv={
@@ -109,6 +121,40 @@ F.current_buffer={'current-buffer',0,0,0,[[Return the current buffer as a Lisp o
 function F.current_buffer.f()
     return nvim.get_current_buffer()
 end
+F.make_overlay={'make-overlay',2,5,0,[[Create a new overlay with range BEG to END in BUFFER and return it.
+If omitted, BUFFER defaults to the current buffer.
+BEG and END may be integers or markers.
+The fourth arg FRONT-ADVANCE, if non-nil, makes the marker
+for the front of the overlay advance when text is inserted there
+\(which means the text *is not* included in the overlay).
+The fifth arg REAR-ADVANCE, if non-nil, makes the marker
+for the rear of the overlay advance when text is inserted there
+\(which means the text *is* included in the overlay).]]}
+F.make_overlay.f=function (beg,end_,buffer,front_advance,rear_advance)
+    if lisp.nilp(buffer) then
+        buffer=nvim.get_current_buffer()
+    else
+        lisp.check_buffer(buffer)
+    end
+    local b=(buffer --[[@as nelisp._buffer]])
+    if not M.BUFFERLIVEP(b) then
+        signal.error('Attempt to create overlay in a dead buffer')
+    end
+    if lisp.markerp(beg) and error('TODO') then
+        error('TODO')
+    end
+    if lisp.markerp(end_) and error('TODO') then
+        error('TODO')
+    end
+    beg=M.check_fixnum_coerce_marker(beg)
+    end_=M.check_fixnum_coerce_marker(end_)
+    if lisp.fixnum(beg)>lisp.fixnum(end_) then
+        beg,end_=end_,beg
+    end
+    local obeg=lisp.clip_to_bounds(1,lisp.fixnum(beg),nvim.get_buffer_z(b))
+    local oend=lisp.clip_to_bounds(obeg,lisp.fixnum(end_),nvim.get_buffer_z(b))
+    return nvim.make_overlay(b,obeg,oend,not lisp.nilp(front_advance),not lisp.nilp(rear_advance))
+end
 
 function M.init()
     defvar_per_buffer('enable_multibyte_characters','enable-multibyte-characters',vars.Qnil,[[Non-nil means the buffer contents are regarded as multi-byte characters.
@@ -131,5 +177,6 @@ function M.init_syms()
     vars.defsubr(F,'force_mode_line_update')
     vars.defsubr(F,'buffer_list')
     vars.defsubr(F,'current_buffer')
+    vars.defsubr(F,'make_overlay')
 end
 return M
