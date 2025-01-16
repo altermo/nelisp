@@ -266,7 +266,7 @@ end
 --- ;; Marker
 
 ---@class nelisp.vim.marker:nelisp._marker
----@field bufid number?
+---@field buffer nelisp._buffer?
 ---@field id number?
 
 ---@return nelisp.obj
