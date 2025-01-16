@@ -275,4 +275,17 @@ function M.make_marker()
     local m={}
     return lisp.make_vectorlike_ptr(m,lisp.pvec.marker)
 end
+
+--- ;; cursor
+---@return nelisp.obj
+function M.get_current_cursor_char_pos()
+    if _G.nelisp_later then
+        error('TODO: implement getting cursor position in chars')
+    end
+    return M.get_current_cursor_byte_pos()
+end
+---@return nelisp.obj
+function M.get_current_cursor_byte_pos()
+    return lisp.make_fixnum(vim.fn.wordcount().cursor_bytes)
+end
 return M

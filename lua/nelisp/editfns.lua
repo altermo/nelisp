@@ -6,6 +6,7 @@ local signal=require'nelisp.signal'
 local alloc=require'nelisp.alloc'
 local overflow=require'nelisp.overflow'
 local chars=require'nelisp.chars'
+local nvim=require'nelisp.nvim'
 
 local M={}
 
@@ -397,6 +398,11 @@ function F.current_message.f()
     end
     return vars.Qnil
 end
+F.point={'point',0,0,0,[[Return value of point, as an integer.
+Beginning of buffer is position (point-min).]]}
+function F.point.f()
+    return nvim.get_current_cursor_char_pos()
+end
 
 function M.init_syms()
     vars.defsubr(F,'format')
@@ -406,6 +412,7 @@ function M.init_syms()
     vars.defsubr(F,'propertize')
     vars.defsubr(F,'char_to_string')
     vars.defsubr(F,'current_message')
+    vars.defsubr(F,'point')
 
     vars.defvar_lisp('system_name','system-name',[[The host name of the machine Emacs is running on.]])
     vars.V.system_name=vars.Qnil

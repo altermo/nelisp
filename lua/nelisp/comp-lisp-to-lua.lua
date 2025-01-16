@@ -231,7 +231,7 @@ local function compile_compiled(fun,no_bin,name)
         elseif op==ins.mult then
             code[current_pc]={'callt','vars.F.times',2}
         elseif op==ins.point then
-            code[current_pc]={'todo','point'}
+            code[current_pc]={'call','vars.F.point',0}
         elseif op==ins.goto_char then
             code[current_pc]={'call','vars.F.goto_char',1}
         elseif op==ins.insert then
