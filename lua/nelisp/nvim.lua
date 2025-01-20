@@ -299,8 +299,8 @@ end
 --- ;; overlay
 
 ---@class nelisp.vim.overlay:nelisp._overlay
----@field buffer nelisp._buffer
----@field id number
+---@field buffer nelisp._buffer?
+---@field id number?
 ---@field plist nelisp.obj
 
 ---@param char number
@@ -372,5 +372,17 @@ end
 function M.overlay_set_plist(overlay,plist)
     ---@cast overlay nelisp.vim.overlay
     overlay.plist=plist
+end
+---@param overlay nelisp._overlay
+function M.drop_overlay(overlay)
+    ---@cast overlay nelisp.vim.overlay
+    if not overlay.buffer then
+        return
+    end
+    local buffer=overlay.buffer
+    ---@cast buffer nelisp.vim.buffer
+    vim.api.nvim_buf_del_extmark(buffer.bufid,overlay.id,vim.api.nvim_create_namespace('nelisp'))
+    overlay.buffer=nil
+    overlay.id=nil
 end
 return M

@@ -185,6 +185,12 @@ function F.overlay_put.f(overlay,prop,value)
     end
     return value
 end
+F.delete_overlay={'delete-overlay',1,1,0,[[Delete the overlay OVERLAY from its buffer.]]}
+function F.delete_overlay.f(overlay)
+    lisp.check_overlay(overlay)
+    nvim.drop_overlay(overlay)
+    return vars.Qnil
+end
 
 function M.init()
     defvar_per_buffer('enable_multibyte_characters','enable-multibyte-characters',vars.Qnil,[[Non-nil means the buffer contents are regarded as multi-byte characters.
@@ -209,5 +215,6 @@ function M.init_syms()
     vars.defsubr(F,'current_buffer')
     vars.defsubr(F,'make_overlay')
     vars.defsubr(F,'overlay_put')
+    vars.defsubr(F,'delete_overlay')
 end
 return M
