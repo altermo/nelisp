@@ -355,4 +355,22 @@ function M.make_overlay(buffer,beg,end_,front_advance,rear_advance)
     }
     return lisp.make_vectorlike_ptr(overlay,lisp.pvec.overlay)
 end
+---@param overlay nelisp._overlay
+---@return nelisp._buffer
+function M.overlay_buffer(overlay)
+    ---@cast overlay nelisp.vim.overlay
+    return overlay.buffer
+end
+---@param overlay nelisp._overlay
+---@return nelisp.obj
+function M.overlay_plist(overlay)
+    ---@cast overlay nelisp.vim.overlay
+    return overlay.plist
+end
+---@param overlay nelisp._overlay
+---@param plist nelisp.obj
+function M.overlay_set_plist(overlay,plist)
+    ---@cast overlay nelisp.vim.overlay
+    overlay.plist=plist
+end
 return M

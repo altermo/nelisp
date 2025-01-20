@@ -155,6 +155,36 @@ F.make_overlay.f=function (beg,end_,buffer,front_advance,rear_advance)
     local oend=lisp.clip_to_bounds(obeg,lisp.fixnum(end_),nvim.get_buffer_z(b))
     return nvim.make_overlay(b,obeg,oend,not lisp.nilp(front_advance),not lisp.nilp(rear_advance))
 end
+F.overlay_put={'overlay-put',3,3,0,[[Set one property of overlay OVERLAY: give property PROP value VALUE.
+VALUE will be returned.]]}
+function F.overlay_put.f(overlay,prop,value)
+    if _G.nelisp_later then
+        error('TODO: some of the prop are special and should change the underlying extmark')
+    end
+    lisp.check_overlay(overlay)
+    local ov=overlay --[[@as nelisp._overlay]]
+    local b=nvim.overlay_buffer(ov)
+    local plist=nvim.overlay_plist(ov)
+    local tail=plist
+    local changed
+    while lisp.consp(tail) and lisp.consp(lisp.xcdr(tail)) do
+        if lisp.eq(lisp.xcar(tail),prop) then
+            changed=not lisp.eq(lisp.xcar(lisp.xcdr(tail)),value)
+            lisp.xsetcar(lisp.xcdr(tail),value)
+            goto found
+        end
+        tail=lisp.xcdr(lisp.xcdr(tail))
+    end
+    changed=not lisp.nilp(value)
+    nvim.overlay_set_plist(ov,vars.F.cons(prop,vars.F.cons(value,plist)))
+    ::found::
+    if b then
+        if _G.nelisp_later then
+            error('TODO')
+        end
+    end
+    return value
+end
 
 function M.init()
     defvar_per_buffer('enable_multibyte_characters','enable-multibyte-characters',vars.Qnil,[[Non-nil means the buffer contents are regarded as multi-byte characters.
@@ -178,5 +208,6 @@ function M.init_syms()
     vars.defsubr(F,'buffer_list')
     vars.defsubr(F,'current_buffer')
     vars.defsubr(F,'make_overlay')
+    vars.defsubr(F,'overlay_put')
 end
 return M

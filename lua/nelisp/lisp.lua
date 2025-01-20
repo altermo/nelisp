@@ -388,6 +388,8 @@ function M.boolvectorp(x) return M.pseudovectorp(x,M.pvec.bool_vector) end
 function M.framep(x) return M.pseudovectorp(x,M.pvec.frame) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.fontp(x) return M.pseudovectorp(x,M.pvec.font) end
+---@overload fun(x:nelisp.obj):boolean
+function M.overlayp(x) return M.pseudovectorp(x,M.pvec.overlay) end
 
 --- ;; Other
 ---@param x nelisp.obj
@@ -464,6 +466,8 @@ function M.check_hash_table(x) M.check_type(M.hashtablep(x),vars.Qhash_table_p,x
 function M.check_frame(x) M.check_type(M.framep(x),vars.Qframep,x) end
 ---@overload fun(x:nelisp.obj)
 function M.check_buffer(x) M.check_type(M.bufferp(x),vars.Qbufferp,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_overlay(x) M.check_type(M.overlayp(x),vars.Qbufferp,x) end
 ---@param x nelisp.obj
 ---@return number
 function M.check_vector_or_string(x)
