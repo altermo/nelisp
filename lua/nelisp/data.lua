@@ -1098,6 +1098,7 @@ function M.init_syms()
     vars.defsym('Qbyte_code_function_p','byte-code-function-p')
     vars.defsym('Qbuffer_or_string_p','buffer-or-string-p')
     vars.defsym('Qframe_live_p','frame-live-p')
+    vars.defsym('Qbufferp','bufferp')
 
     vars.defsym('QCtest',':test')
     vars.defsym('QCsize',':size')
@@ -1144,6 +1145,7 @@ function M.init_syms()
     vars.defsym('Qsqlite','sqlite')
     vars.defsym('Qbyte_code','byte-code')
 
+    vars.defsym('Qwatchers','watchers')
     vars.Qunique=alloc.make_symbol(alloc.make_pure_c_string'unbound')
 end
 return M
