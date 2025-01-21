@@ -246,6 +246,12 @@ function M.symbol_blv(sym)
     assert(sym.redirect==M.symbol_redirect.localized)
     return (sym --[[@as nelisp._symbol]]).value --[[@as nelisp.buffer_local_value]]
 end
+---@param sym nelisp._symbol
+---@return nelisp._symbol
+function M.symbol_alias(sym)
+    assert(sym.redirect==M.symbol_redirect.varalias)
+    return (sym --[[@as nelisp._symbol]]).value --[[@as nelisp._symbol]]
+end
 ---@enum nelisp.symbol_redirect
 M.symbol_redirect={
     plainval=1,

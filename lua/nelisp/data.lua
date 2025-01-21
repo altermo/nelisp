@@ -825,14 +825,37 @@ function F.default_boundp.f(sym)
     local value=default_value(sym)
     return value==nil and vars.Qnil or vars.Qt
 end
+---@param sym nelisp._symbol
+---@return nelisp._symbol
+local function indirect_variable(sym)
+    local hare=sym
+    local tortoise=hare
+    while hare.redirect==lisp.symbol_redirect.varalias do
+        hare=lisp.symbol_alias(hare)
+        if hare.redirect~=lisp.symbol_redirect.varalias then
+            break
+        end
+        hare=lisp.symbol_alias(hare)
+        tortoise=lisp.symbol_alias(tortoise)
+        if hare==tortoise then
+            -- Hmm: sym is a nelisp._symbol, but xsignal expects a nelisp.obj
+            signal.xsignal(vars.Qcyclic_variable_indirection,sym)
+        end
+    end
+    return hare
+end
 F.boundp={'boundp',1,1,0,[[Return t if SYMBOL's value is not void.
 Note that if `lexical-binding' is in effect, this refers to the
 global value outside of any lexical scope.]]}
 function F.boundp.f(sym)
     lisp.check_symbol(sym)
     local s=(sym --[[@as nelisp._symbol]])
+    ::start::
     if s.redirect==lisp.symbol_redirect.plainval then
         return lisp.symbol_val(s)==nil and vars.Qnil or vars.Qt
+    elseif s.redirect==lisp.symbol_redirect.varalias then
+        s=indirect_variable(s)
+        goto start
     else
         error('TODO')
     end
