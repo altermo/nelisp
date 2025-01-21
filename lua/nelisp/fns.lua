@@ -108,7 +108,9 @@ function M.concat_to_string(args)
     for _,arg in ipairs(args) do
         if lisp.stringp(arg) then
             if lisp.string_intervals(arg) then
-                error('TODO')
+                if _G.nelisp_later then
+                    error('TODO')
+                end
             end
             if lisp.string_multibyte(arg)==dest_multibyte then
                 buf.write(lisp.sdata(arg))
