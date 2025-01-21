@@ -132,6 +132,23 @@ function M.intern(name)
     end
     return tem
 end
+---@param obarray nelisp.obj
+---@param fn fun(sym:nelisp.obj):nil
+function M.map_obarray(obarray,fn)
+    lisp.check_vector(obarray)
+    for i=lisp.asize(obarray)-1,0,-1 do
+        local tail=lisp.aref(obarray,i)
+        if lisp.symbolp(tail) then
+            while true do
+                fn(tail)
+                if (tail --[[@as nelisp._symbol]]).next==nil then
+                    break
+                end
+                tail=(tail --[[@as nelisp._symbol]]).next
+            end
+        end
+    end
+end
 
 local function end_of_file_error()
     if lisp.stringp(vars.V.load_true_file_name) then

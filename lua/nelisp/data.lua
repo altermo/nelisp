@@ -146,6 +146,42 @@ function F.bare_symbol.f(sym)
     end
     error('TODO')
 end
+---@param obarray nelisp.obj
+---@param symbol nelisp.obj
+local function harmonize_variable_watchers(obarray,symbol)
+    local trap=(symbol --[[@as nelisp._symbol]]).trapped_write
+    lread.map_obarray(obarray,function(alias)
+        if not lisp.eq(alias,symbol)
+            and lisp.eq(symbol,vars.F.indirect_variable(alias))
+        then
+            lisp.set_symbol_trapped_write(alias,trap)
+        end
+    end)
+end
+F.add_variable_watcher={'add-variable-watcher',2,2,0,[[Cause WATCH-FUNCTION to be called when SYMBOL is about to be set.
+
+It will be called with 4 arguments: (SYMBOL NEWVAL OPERATION WHERE).
+SYMBOL is the variable being changed.
+NEWVAL is the value it will be changed to.  (The variable still has
+the old value when WATCH-FUNCTION is called.)
+OPERATION is a symbol representing the kind of change, one of: `set',
+`let', `unlet', `makunbound', and `defvaralias'.
+WHERE is a buffer if the buffer-local value of the variable is being
+changed, nil otherwise.
+
+All writes to aliases of SYMBOL will call WATCH-FUNCTION too.]]}
+function F.add_variable_watcher.f(symbol,watch_function)
+    symbol=vars.F.indirect_variable(symbol)
+    lisp.check_symbol(symbol)
+    lisp.set_symbol_trapped_write(symbol,lisp.symbol_trapped_write.trapped)
+    harmonize_variable_watchers(vars.V.obarray,symbol)
+    local watchers=vars.F.get(symbol,vars.Qwatchers)
+    local member=vars.F.member(watch_function,watchers)
+    if lisp.nilp(member) then
+        vars.F.put(symbol,vars.Qwatchers,vars.F.cons(watch_function,watchers))
+    end
+    return vars.Qnil
+end
 F.indirect_variable={'indirect-variable',1,1,0,[[Return the variable at the end of OBJECT's variable chain.
 If OBJECT is a symbol, follow its variable indirections (if any), and
 return the variable at the end of the chain of aliases.  See Info node
@@ -976,6 +1012,7 @@ function M.init_syms()
     vars.defsubr(F,'symbol_function')
     vars.defsubr(F,'symbol_name')
     vars.defsubr(F,'bare_symbol')
+    vars.defsubr(F,'add_variable_watcher')
     vars.defsubr(F,'indirect_variable')
     vars.defsubr(F,'indirect_function')
     vars.defsubr(F,'fmakunbound')

@@ -228,6 +228,14 @@ end
 function M.make_symbol_constant(sym)
     (sym --[[@as nelisp._symbol]]).trapped_write=M.symbol_trapped_write.nowrite
 end
+---@param sym nelisp.obj
+---@param trap nelisp.symbol_trapped_write
+function M.set_symbol_trapped_write(sym,trap)
+    if (sym --[[@as nelisp._symbol]]).trapped_write==M.symbol_trapped_write.nowrite then
+        require'nelisp.signal'.xsignal(vars.Qtrapping_constant,sym)
+    end
+    (sym --[[@as nelisp._symbol]]).trapped_write=trap
+end
 ---@param sym nelisp._symbol
 ---@param alias nelisp._symbol
 function M.set_symbol_alias(sym,alias)
