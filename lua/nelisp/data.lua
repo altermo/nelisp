@@ -146,6 +146,20 @@ function F.bare_symbol.f(sym)
     end
     error('TODO')
 end
+F.indirect_variable={'indirect-variable',1,1,0,[[Return the variable at the end of OBJECT's variable chain.
+If OBJECT is a symbol, follow its variable indirections (if any), and
+return the variable at the end of the chain of aliases.  See Info node
+`(elisp)Variable Aliases'.
+
+If OBJECT is not a symbol, just return it.  If there is a loop in the
+chain of aliases, signal a `cyclic-variable-indirection' error.]]}
+function F.indirect_variable.f(object)
+    if lisp.symbolp(object) then
+        local sym=indirect_variable(object --[[@as nelisp._symbol]])
+        return sym --[[@as nelisp.obj]]
+    end
+    return object
+end
 ---@param obj nelisp.obj
 ---@return nelisp.obj
 function M.indirect_function(obj)
@@ -962,6 +976,7 @@ function M.init_syms()
     vars.defsubr(F,'symbol_function')
     vars.defsubr(F,'symbol_name')
     vars.defsubr(F,'bare_symbol')
+    vars.defsubr(F,'indirect_variable')
     vars.defsubr(F,'indirect_function')
     vars.defsubr(F,'fmakunbound')
     vars.defsubr(F,'aref')
