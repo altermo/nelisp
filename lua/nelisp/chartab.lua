@@ -518,7 +518,14 @@ function M.map_char_table(c_fun,fun,ctable)
     end
     val=map_sub_char_table(c_fun,fun,ctable,val,range,ctable)
     while lisp.nilp(val) and not lisp.nilp((ctable --[[@as nelisp._char_table]]).parent) do
-        error('TODO')
+        local from=lisp.fixnum(lisp.xcar(range))
+        local parent=(ctable --[[@as nelisp._char_table]]).parent
+        local tmp=(parent --[[@as nelisp._char_table]]).parent
+        ;(parent --[[@as nelisp._char_table]]).parent=vars.Qnil
+        val=M.ref(parent,from)
+        ;(parent --[[@as nelisp._char_table]]).parent=tmp
+        val=map_sub_char_table(c_fun,fun,parent,val,range,parent)
+        ctable=parent
     end
     if lisp.nilp(val) then return end
     if lisp.eq(lisp.xcar(range),lisp.xcdr(range)) then
