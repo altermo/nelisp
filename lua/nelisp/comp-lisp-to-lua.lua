@@ -239,7 +239,7 @@ local function compile_compiled(fun,no_bin,name)
         elseif op==ins.point_max then
             code[current_pc]={'todo','point_max'}
         elseif op==ins.point_min then
-            code[current_pc]={'todo','point_min'}
+            code[current_pc]={'call','vars.F.point_min',0}
         elseif op==ins.char_after then
             code[current_pc]={'call','vars.F.char_after',1}
         elseif op==ins.following_char then

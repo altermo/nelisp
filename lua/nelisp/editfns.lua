@@ -403,6 +403,11 @@ Beginning of buffer is position (point-min).]]}
 function F.point.f()
     return nvim.get_current_cursor_char_pos()
 end
+F.point_min={'point-min',0,0,0,[[Return the minimum permissible value of point in the current buffer.
+This is 1, unless narrowing (a buffer restriction) is in effect.]]}
+function F.point_min.f()
+    return lisp.make_fixnum(nvim.get_buffer_begv(nvim.get_current_buffer() --[[@as nelisp._buffer]]))
+end
 
 function M.init_syms()
     vars.defsubr(F,'format')
@@ -413,6 +418,7 @@ function M.init_syms()
     vars.defsubr(F,'char_to_string')
     vars.defsubr(F,'current_message')
     vars.defsubr(F,'point')
+    vars.defsubr(F,'point_min')
 
     vars.defvar_lisp('system_name','system-name',[[The host name of the machine Emacs is running on.]])
     vars.V.system_name=vars.Qnil

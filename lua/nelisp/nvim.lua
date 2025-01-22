@@ -123,6 +123,14 @@ function M.get_buffer_z(buffer)
     end)
     return ret==0 and 1 or ret
 end
+---@param buffer nelisp._buffer
+---@return number
+function M.get_buffer_begv(buffer)
+    if _G.nelisp_later then
+        error('TODO')
+    end
+    return 1
+end
 
 --- ;; Terminal (UI)
 
