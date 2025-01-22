@@ -958,10 +958,12 @@ function M.init()
 
     vars.V.minibuffer_local_map=vars.F.make_sparse_keymap(vars.Qnil)
     vars.V.function_key_map=vars.F.make_sparse_keymap(vars.Qnil)
+    vars.V.key_translation_map=vars.F.make_sparse_keymap(vars.Qnil)
     current_global_map=vars.Qnil
     vars.V.special_event_map=lisp.list(vars.Qkeymap)
 
     vars.V.command_error_function=lread.intern('command-error-default-function')
+
 end
 
 function M.init_syms()
@@ -1037,5 +1039,9 @@ you could say something like:
 
 Also see `set-message-function' (which controls how non-error messages
 are displayed).]])
+
+    vars.defvar_lisp('key_translation_map','key-translation-map',[[Keymap of key translations that can override keymaps.
+This keymap works like `input-decode-map', but comes after `function-key-map'.
+Another difference is that it is global rather than terminal-local.]])
 end
 return M
