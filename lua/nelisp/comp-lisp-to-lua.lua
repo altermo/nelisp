@@ -9,6 +9,7 @@ local eval=require'nelisp.eval'
 local buffer=require'nelisp.buffer'
 local ins=bytecode.ins
 local compiled_globals;compiled_globals={
+    assert=assert,
     table=table,
     unpack=unpack,
     error=error,
@@ -390,7 +391,14 @@ local function compile_compiled(fun,no_bin,name)
         end
         last_pc=current_pc
     end
-    for _,v in vim.spairs(code) do
+    local out={
+        'local vectorp,stack=...',
+        'local goto_',
+        'local function main()',
+        '::gotos::',
+        'if not goto_ then',
+    }
+    for k,v in vim.spairs(code) do
         if v[1]=='goto' then
             assert(code[v[2]])
             code[v[2]-0.5]={'goto_label',v[2]}
@@ -399,15 +407,20 @@ local function compile_compiled(fun,no_bin,name)
                 code[l-0.5]={'goto_label',l}
             end
         elseif v[1]=='handler' then
-            if _G.nelisp_later then
-                error('TODO: error if goto out of handler function')
-            end
+            local n=k+1
+            code[n-0.5]={'goto_label',n}
             code[v[3]-0.5]={'goto_label',v[3]}
+            table.insert(out,('elseif goto_==%s then'):format(n))
+            table.insert(out,'goto _'..n..'_')
+        elseif v[1]=='pophandler' then
+            local n=k+1
+            code[n-0.5]={'goto_label',n}
+            table.insert(out,('elseif goto_==%s then'):format(n))
+            table.insert(out,'goto _'..n..'_')
         end
     end
-    local handlers={}
-    local out={'local vectorp,stack=...'}
-    for _,v in vim.spairs(code) do
+    table.insert(out,'end')
+    for k,v in vim.spairs(code) do
         local op=v[1]
         if op=='goto_label' then
             table.insert(out,'::_'..v[2]..'_::')
@@ -431,15 +444,20 @@ local function compile_compiled(fun,no_bin,name)
             table.insert(out,'local tag_ch_val=table.remove(stack)')
             table.insert(out,'local bytecode_top=#stack')
             table.insert(out,'local noerr,msg=handler.with_handler(tag_ch_val,typ,function ()')
-            table.insert(handlers,v[3])
-        elseif op=='pophandler' then
+            table.insert(out,('goto_=%s'):format(k+1))
+            table.insert(out,('assert(main()==nil)'):format(k+1))
             table.insert(out,'end)')
-            table.insert(out,'if noerr then else')
+            table.insert(out,'if noerr then')
+            table.insert(out,'goto gotos')
+            table.insert(out,'else')
             table.insert(out,'discard(bytecode_top-bytecode_top)')
             table.insert(out,'table.insert(stack,msg.val)')
-            table.insert(out,'goto _'..assert(table.remove(handlers))..'_')
+            table.insert(out,'goto _'..v[3]..'_')
             table.insert(out,'end')
             table.insert(out,'end')
+        elseif op=='pophandler' then
+            table.insert(out,('goto_=%s'):format(k+1))
+            table.insert(out,'do return end')
         elseif op=='unwind_protect' then
             table.insert(out,'do')
             table.insert(out,'local handler=table.remove(stack)')
@@ -457,8 +475,8 @@ local function compile_compiled(fun,no_bin,name)
             table.insert(out,'local i=fns.hash_lookup(jmp_table,table.remove(stack))')
             table.insert(out,'if i>=0 then')
             table.insert(out,'local op=lisp.fixnum(lisp.aref(jmp_table.key_and_value,2*i+1))')
-            for k,l in ipairs(v[2]) do
-                table.insert(out,('%sif op==%d then'):format(k==1 and '' or 'else',l))
+            for k2,l in ipairs(v[2]) do
+                table.insert(out,('%sif op==%d then'):format(k2==1 and '' or 'else',l))
                 table.insert(out,'goto _'..l..'_')
             end
             table.insert(out,'else error("unreachable") end')
@@ -516,24 +534,8 @@ local function compile_compiled(fun,no_bin,name)
         end
     end
     table.insert(out,'error("unreachable")')
-    if next(handlers) then
-        if _G.nelisp_later then
-            error('TODO: The emacs source code is unclear about what happens here, so I am just guessing')
-        end
-        assert(code[table.maxn(code)][1]=='return')
-        local ret=out[#out]
-        out[#out]=nil
-        while table.remove(handlers) do
-            table.insert(out,'end)')
-            table.insert(out,'if noerr then else')
-            table.insert(out,'discard(bytecode_top-bytecode_top)')
-            table.insert(out,'table.insert(stack,msg.val)')
-            table.insert(out,'error("TODO")')
-            table.insert(out,'end')
-            table.insert(out,'end')
-        end
-        out[#out+1]=ret
-    end
+    table.insert(out,'end')
+    table.insert(out,'return assert(main())')
     if no_bin then
         if name then
             table.insert(out,1,'-- file:'..name)
