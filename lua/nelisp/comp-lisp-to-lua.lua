@@ -713,15 +713,19 @@ local function compile_obj(obj,name)
 end
 ---@param objs nelisp.obj[]
 ---@param name string?
----@return string[]
-function M.compiles(objs,name)
+---@param no_bin boolean?
+---@return string
+function M.compiles(objs,name,no_bin)
     local out={}
     table.insert(out,'return {')
     for _,v in ipairs(objs) do
         table.insert(out,compile_obj(v,name)..',')
     end
     table.insert(out,'}')
-    return out
+    if no_bin then
+        return table.concat(out,'\n')
+    end
+    return string.dump(assert(loadstring(table.concat(out,'\n'))),true)
 end
 ---@param str string
 ---@return fun(vectorp:nelisp.obj[],stack:nelisp.obj[]):nelisp.obj
