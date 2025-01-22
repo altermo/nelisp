@@ -121,7 +121,7 @@ function M.get_buffer_z(buffer)
     vim.api.nvim_buf_call(buffer.bufid,function ()
         ret=vim.fn.wordcount().chars
     end)
-    return ret
+    return ret==0 and 1 or ret
 end
 
 --- ;; Terminal (UI)
