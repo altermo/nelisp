@@ -297,7 +297,7 @@ local function load_charset_map_from_file(charset,mapfile,control_flag)
                 table.insert(lua_code,string.format('{%d,%d,%d},',e[1],e[2],e[3]))
             end
             table.insert(lua_code,'}')
-            return table.concat(lua_code,'\n')
+            return string.dump(assert(loadstring(table.concat(lua_code,'\n'))),true)
         end,function ()
             local entries={}
             while true do
