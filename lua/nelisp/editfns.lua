@@ -7,6 +7,7 @@ local alloc=require'nelisp.alloc'
 local overflow=require'nelisp.overflow'
 local chars=require'nelisp.chars'
 local nvim=require'nelisp.nvim'
+local buffer=require'nelisp.buffer'
 
 local M={}
 
@@ -408,6 +409,24 @@ This is 1, unless narrowing (a buffer restriction) is in effect.]]}
 function F.point_min.f()
     return lisp.make_fixnum(nvim.get_buffer_begv(nvim.get_current_buffer() --[[@as nelisp._buffer]]))
 end
+F.char_equal={'char-equal',2,2,0,[[Return t if two characters match, optionally ignoring case.
+Both arguments must be characters (i.e. integers).
+Case is ignored if `case-fold-search' is non-nil in the current buffer.]]}
+function F.char_equal.f(c1,c2)
+    chars.check_character(c1)
+    chars.check_character(c2)
+    if lisp.fixnum(c1)==lisp.fixnum(c2) then
+        return vars.Qt
+    elseif _G.nelisp_later then
+        error('TODO: NILP(BVAR(current_buffer,case_fold_search)), specifically the BVAR part needs to be implemented first')
+    end
+    local i1=lisp.fixnum(c1)
+    local i2=lisp.fixnum(c2)
+    if _G.nelisp_later then
+        error('TODO: NILP(BVAR(current_buffer,enable_multibyte_characters)),again needs BVAR')
+    end
+    return buffer.downcase(i1)==buffer.downcase(i2) and vars.Qt or vars.Qnil
+end
 
 function M.init_syms()
     vars.defsubr(F,'format')
@@ -419,6 +438,7 @@ function M.init_syms()
     vars.defsubr(F,'current_message')
     vars.defsubr(F,'point')
     vars.defsubr(F,'point_min')
+    vars.defsubr(F,'char_equal')
 
     vars.defvar_lisp('system_name','system-name',[[The host name of the machine Emacs is running on.]])
     vars.V.system_name=vars.Qnil

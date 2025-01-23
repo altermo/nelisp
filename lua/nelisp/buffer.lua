@@ -31,6 +31,15 @@ end
 function M.BUFFERLIVEP(buffer)
     return not lisp.nilp(nvim.buffer_name(buffer))
 end
+---@param c number
+---@return number
+function M.downcase(c)
+    if _G.nelisp_later then
+        error('TODO: BVAR(current_buffer,downcase_table), needs BVAR to be implemented first')
+    else
+        return string.byte(vim.fn.tolower(string.char(c)))
+    end
+end
 
 ---@type nelisp.F
 local F={}
