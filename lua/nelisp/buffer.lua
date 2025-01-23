@@ -5,6 +5,87 @@ local signal=require'nelisp.signal'
 local alloc=require'nelisp.alloc'
 
 local M={}
+
+---@enum nelisp.bvar
+M.bvar={
+    name='name',
+    filename='filename',
+    directory='directory',
+    backed_up='backed_up',
+    save_length='save_length',
+    auto_save_file_name='auto_save_file_name',
+    read_only='read_only',
+    mark='mark',
+    local_var_alist='local_var_alist',
+    major_mode='major_mode',
+    local_minor_modes='local_minor_modes',
+    mode_name='mode_name',
+    mode_line_format='mode_line_format',
+    header_line_format='header_line_format',
+    tab_line_format='tab_line_format',
+    keymap='keymap',
+    abbrev_table='abbrev_table',
+    syntax_table='syntax_table',
+    category_table='category_table',
+    case_fold_search='case_fold_search',
+    tab_width='tab_width',
+    fill_column='fill_column',
+    left_margin='left_margin',
+    auto_fill_function='auto_fill_function',
+    downcase_table='downcase_table',
+    upcase_table='upcase_table',
+    case_canon_table='case_canon_table',
+    case_eqv_table='case_eqv_table',
+    truncate_lines='truncate_lines',
+    word_wrap='word_wrap',
+    ctl_arrow='ctl_arrow',
+    bidi_display_reordering='bidi_display_reordering',
+    bidi_paragraph_direction='bidi_paragraph_direction',
+    bidi_paragraph_separate_re='bidi_paragraph_separate_re',
+    bidi_paragraph_start_re='bidi_paragraph_start_re',
+    selective_display='selective_display',
+    selective_display_ellipses='selective_display_ellipses',
+    overwrite_mode='overwrite_mode',
+    abbrev_mode='abbrev_mode',
+    display_table='display_table',
+    mark_active='mark_active',
+    enable_multibyte_characters='enable_multibyte_characters',
+    buffer_file_coding_system='buffer_file_coding_system',
+    file_format='file_format',
+    auto_save_file_format='auto_save_file_format',
+    cache_long_scans='cache_long_scans',
+    width_table='width_table',
+    pt_marker='pt_marker',
+    begv_marker='begv_marker',
+    zv_marker='zv_marker',
+    point_before_scroll='point_before_scroll',
+    file_truename='file_truename',
+    invisibility_spec='invisibility_spec',
+    last_selected_window='last_selected_window',
+    display_count='display_count',
+    left_margin_cols='left_margin_cols',
+    right_margin_cols='right_margin_cols',
+    left_fringe_width='left_fringe_width',
+    right_fringe_width='right_fringe_width',
+    fringes_outside_margins='fringes_outside_margins',
+    scroll_bar_width='scroll_bar_width',
+    scroll_bar_height='scroll_bar_height',
+    vertical_scroll_bar_type='vertical_scroll_bar_type',
+    horizontal_scroll_bar_type='horizontal_scroll_bar_type',
+    indicate_empty_lines='indicate_empty_lines',
+    indicate_buffer_boundaries='indicate_buffer_boundaries',
+    fringe_indicator_alist='fringe_indicator_alist',
+    fringe_cursor_alist='fringe_cursor_alist',
+    display_time='display_time',
+    scroll_up_aggressively='scroll_up_aggressively',
+    scroll_down_aggressively='scroll_down_aggressively',
+    cursor_type='cursor_type',
+    extra_line_spacing='extra_line_spacing',
+    ts_parser_list='ts_parser_list',
+    cursor_in_non_selected_windows='cursor_in_non_selected_windows',
+    undo_list='undo_list',
+}
+
 ---@param x nelisp.obj
 ---@return nelisp.obj
 ---@nodiscard
@@ -29,7 +110,7 @@ end
 ---@param buffer nelisp._buffer
 ---@return boolean
 function M.BUFFERLIVEP(buffer)
-    return not lisp.nilp(nvim.buffer_name(buffer))
+    return not lisp.nilp(nvim.bvar(buffer,M.bvar.name))
 end
 ---@param c number
 ---@return number

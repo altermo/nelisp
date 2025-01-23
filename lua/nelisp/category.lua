@@ -20,7 +20,7 @@ local function check_category(c)
 end
 local function check_category_table(tbl)
     if lisp.nilp(tbl) then
-        return nvim.buffer_category_table(nvim.get_current_buffer() --[[@as nelisp._buffer]])
+        return nvim.bvar(true,'category_table')
     end
     error('TODO')
 end

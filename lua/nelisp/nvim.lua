@@ -54,7 +54,7 @@ function M.create_buffer(name)
 end
 ---@param buffer nelisp._buffer
 ---@return nelisp.obj
-function M.buffer_name(buffer)
+local function buffer_name(buffer)
     ---@cast buffer nelisp.vim.buffer
     local id=buffer.bufid
     if not vim.api.nvim_buf_is_valid(id) then
@@ -96,19 +96,6 @@ function M.set_buffer_var(buffer,sym,val)
     ---@cast buffer nelisp.vim.buffer
     buffer.vars[sym]=val
 end
---TODO: instead implement a general BVAR like function
----@param buffer nelisp._buffer
----@return nelisp.obj
-function M.buffer_category_table(buffer)
-    ---@cast buffer nelisp.vim.buffer
-    return buffer.category_table
-end
----@param buffer nelisp._buffer
----@return nelisp.obj
-function M.buffer_syntax_table(buffer)
-    ---@cast buffer nelisp.vim.buffer
-    return buffer.syntax_table
-end
 ---@return nelisp.obj
 function M.buffer_list()
     return lisp.list(unpack(vim.tbl_map(get_or_create_buf_obj,vim.api.nvim_list_bufs())))
@@ -130,6 +117,25 @@ function M.get_buffer_begv(buffer)
         error('TODO')
     end
     return 1
+end
+---@param buf nelisp._buffer|true
+---@param field nelisp.bvar
+function M.bvar(buf,field)
+    if buf==true then
+        buf=M.get_current_buffer() --[[@as nelisp._buffer]]
+    end
+    local vbuf=buf --[[@as nelisp.vim.buffer]]
+    local buffer_=require'nelisp.buffer'
+    local bvar=buffer_.bvar
+    if field==bvar.name then
+        return buffer_name(buf)
+    elseif field==bvar.category_table then
+        return vbuf.category_table
+    elseif field==bvar.syntax_table then
+        return vbuf.syntax_table
+    else
+        error('TODO')
+    end
 end
 
 --- ;; Terminal (UI)

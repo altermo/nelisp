@@ -109,7 +109,7 @@ function F.modify_syntax_entry.f(c,newentry,syntax_table)
         chars.check_character(c)
     end
     if lisp.nilp(syntax_table) then
-        syntax_table=nvim.buffer_syntax_table(nvim.get_current_buffer() --[[@as nelisp._buffer]])
+        syntax_table=nvim.bvar(true,'syntax_table')
     else
         check_syntax_table(syntax_table)
     end
