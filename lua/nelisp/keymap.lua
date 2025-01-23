@@ -8,6 +8,7 @@ local alloc=require'nelisp.alloc'
 local chartab=require'nelisp.chartab'
 local chars=require'nelisp.chars'
 local specpdl=require'nelisp.specpdl'
+local lread=require'nelisp.lread'
 
 local current_global_map
 
@@ -715,7 +716,47 @@ function F.lookup_key.f(keymap,key,accept_default)
     else
         return found
     end
-    error('TODO')
+    local key_len=lisp.asize(key)
+    local new_key=alloc.make_vector(key_len,vars.Qnil)
+    local function f(tbl)
+        for i=0,key_len-1 do
+            local item=lisp.aref(key,i)
+            if not lisp.symbolp(item) then
+                lisp.aset(new_key,i,item)
+            else
+                local key_item=vars.F.symbol_name(item)
+                local new_item
+                if not lisp.string_multibyte(key_item) then
+                    new_item=vars.F.downcase(item)
+                else
+                    error('TODO')
+                end
+                lisp.aset(new_key,i,vars.F.intern(new_item,vars.Qnil))
+            end
+        end
+        found=lookup_key_1(keymap,new_key,accept_default)
+        if not lisp.nilp(found) and not lisp.numberp(found) then
+            return true
+        end
+        for i=0,key_len-1 do
+            if not lisp.symbolp(lisp.aref(new_key,i)) then
+                goto continue
+            end
+            local lc_key=vars.F.symbol_name(lisp.aref(new_key,i))
+            if not lisp.sdata(lc_key):find(' ') then
+                goto continue
+            end
+            error('TODO')
+            ::continue::
+        end
+        found=lookup_key_1(keymap,new_key,accept_default)
+        if not lisp.nilp(found) and not lisp.numberp(found) then
+            return true
+        end
+    end
+    if f(--[[unicode_case_table]]) then return found end
+    if f(--[[vars.F.current_case_table()]]) then return found end
+    return found
 end
 local function map_keymap_call(key,val,fun)
     vars.F.funcall({fun,key,val})
