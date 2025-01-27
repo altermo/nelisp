@@ -100,6 +100,10 @@ end
 function M.buffer_list()
     return lisp.list(unpack(vim.tbl_map(get_or_create_buf_obj,vim.api.nvim_list_bufs())))
 end
+---@return nelisp.obj[]
+function M.get_all_bufs()
+    return vim.tbl_map(get_or_create_buf_obj,vim.api.nvim_list_bufs())
+end
 ---@param buffer nelisp._buffer
 ---@return number
 function M.get_buffer_z(buffer)
@@ -120,6 +124,7 @@ function M.get_buffer_begv(buffer)
 end
 ---@param buf nelisp._buffer|true
 ---@param field nelisp.bvar
+---@return nelisp.obj
 function M.bvar(buf,field)
     if buf==true then
         buf=M.get_current_buffer() --[[@as nelisp._buffer]]
@@ -127,12 +132,15 @@ function M.bvar(buf,field)
     local vbuf=buf --[[@as nelisp.vim.buffer]]
     local buffer_=require'nelisp.buffer'
     local bvar=buffer_.bvar
+    local bufid=vbuf.bufid
     if field==bvar.name then
         return buffer_name(buf)
     elseif field==bvar.category_table then
         return vbuf.category_table
     elseif field==bvar.syntax_table then
         return vbuf.syntax_table
+    elseif field==bvar.read_only then
+        return vim.bo[bufid].readonly and vars.Qt or vars.Qnil
     else
         error('TODO')
     end
@@ -226,6 +234,7 @@ end
 function M.get_current_frame()
     return get_or_create_frame(vim.api.nvim_get_current_tabpage())
 end
+---@return nelisp.obj[]
 function M.get_all_frames()
     local frames={}
     for _,tab_id in ipairs(vim.api.nvim_list_tabpages()) do
@@ -265,7 +274,10 @@ end
 ---@param f nelisp._frame
 ---@return nelisp.obj
 function M.frame_name(f)
-    return alloc.make_string('F'..(f --[[@as nelisp.vim.frame]]).tabpage_id)
+    if _G.nelisp_later then
+        error('TODO')
+    end
+    return vars.Qnil
 end
 ---@param f nelisp._frame
 ---@return number

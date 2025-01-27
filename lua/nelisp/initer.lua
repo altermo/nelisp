@@ -66,6 +66,7 @@ require'nelisp.chars'.init()
 require'nelisp.composite'.init()
 require'nelisp.xdisp'.init()
 require'nelisp.ccl'.init()
+require'nelisp.dispnew'.init()
 
 local name,val=debug.getupvalue(getmetatable(vars.V).__newindex,1)
 assert(name=='Vsymbols',name)
