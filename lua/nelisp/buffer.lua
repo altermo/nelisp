@@ -133,7 +133,7 @@ function F.get_buffer.f(buffer_or_name)
         return buffer_or_name
     end
     lisp.check_string(buffer_or_name)
-    return nvim.get_buffer_by_name(buffer_or_name)
+    return nvim.buffer_get_by_name(buffer_or_name)
 end
 local function nsberror(spec)
     if lisp.stringp(spec) then
@@ -156,7 +156,7 @@ function F.set_buffer.f(buf)
     if not M.BUFFERLIVEP(buffer --[[@as nelisp._buffer]]) then
         signal.error('Selecting deleted buffer')
     end
-    nvim.set_current_buffer(buffer --[[@as nelisp._buffer]])
+    nvim.buffer_set_current(buffer --[[@as nelisp._buffer]])
     return buffer
 end
 F.get_buffer_create={'get-buffer-create',1,2,0,[[Return the buffer specified by BUFFER-OR-NAME, creating a new one if needed.
@@ -181,7 +181,7 @@ function F.get_buffer_create.f(buffer_or_name,inhibit_buffer_hooks)
     if lisp.schars(buffer_or_name)==0 then
         signal.error('Empty string for buffer name is not allowed')
     end
-    return nvim.create_buffer(buffer_or_name)
+    return nvim.buffer_create(buffer_or_name)
 end
 F.force_mode_line_update={'force-mode-line-update',0,1,0,[[Force redisplay of the current buffer's mode line and header line.
 With optional non-nil ALL, force redisplay of all mode lines, tab lines and
@@ -205,17 +205,17 @@ function F.buffer_list.f(frame)
     if _G.nelisp_later then
         error('TODO')
     end
-    return nvim.buffer_list()
+    return nvim.buffer_clist()
 end
 F.current_buffer={'current-buffer',0,0,0,[[Return the current buffer as a Lisp object.]]}
 function F.current_buffer.f()
-    return nvim.get_current_buffer()
+    return nvim.buffer_get_current()
 end
 ---@param buffer nelisp.obj
 ---@return nelisp._buffer
 local function decode_buffer(buffer)
     if lisp.nilp(buffer) then
-        return nvim.get_current_buffer() --[[@as nelisp._buffer]]
+        return nvim.buffer_get_current() --[[@as nelisp._buffer]]
     end
     lisp.check_buffer(buffer)
     return buffer --[[@as nelisp._buffer]]
@@ -246,7 +246,7 @@ for the rear of the overlay advance when text is inserted there
 \(which means the text *is* included in the overlay).]]}
 F.make_overlay.f=function (beg,end_,buffer,front_advance,rear_advance)
     if lisp.nilp(buffer) then
-        buffer=nvim.get_current_buffer()
+        buffer=nvim.buffer_get_current()
     else
         lisp.check_buffer(buffer)
     end
@@ -265,9 +265,9 @@ F.make_overlay.f=function (beg,end_,buffer,front_advance,rear_advance)
     if lisp.fixnum(beg)>lisp.fixnum(end_) then
         beg,end_=end_,beg
     end
-    local obeg=lisp.clip_to_bounds(1,lisp.fixnum(beg),nvim.get_buffer_z(b))
-    local oend=lisp.clip_to_bounds(obeg,lisp.fixnum(end_),nvim.get_buffer_z(b))
-    return nvim.make_overlay(b,obeg,oend,not lisp.nilp(front_advance),not lisp.nilp(rear_advance))
+    local obeg=lisp.clip_to_bounds(1,lisp.fixnum(beg),nvim.buffer_z(b))
+    local oend=lisp.clip_to_bounds(obeg,lisp.fixnum(end_),nvim.buffer_z(b))
+    return nvim.overlay_make(b,obeg,oend,not lisp.nilp(front_advance),not lisp.nilp(rear_advance))
 end
 F.overlay_put={'overlay-put',3,3,0,[[Set one property of overlay OVERLAY: give property PROP value VALUE.
 VALUE will be returned.]]}
@@ -302,7 +302,7 @@ end
 F.delete_overlay={'delete-overlay',1,1,0,[[Delete the overlay OVERLAY from its buffer.]]}
 function F.delete_overlay.f(overlay)
     lisp.check_overlay(overlay)
-    nvim.drop_overlay(overlay)
+    nvim.overlay_drop(overlay)
     return vars.Qnil
 end
 

@@ -402,12 +402,12 @@ end
 F.point={'point',0,0,0,[[Return value of point, as an integer.
 Beginning of buffer is position (point-min).]]}
 function F.point.f()
-    return nvim.get_current_cursor_char_pos()
+    return nvim.cursor_current_char_pos()
 end
 F.point_min={'point-min',0,0,0,[[Return the minimum permissible value of point in the current buffer.
 This is 1, unless narrowing (a buffer restriction) is in effect.]]}
 function F.point_min.f()
-    return lisp.make_fixnum(nvim.get_buffer_begv(nvim.get_current_buffer() --[[@as nelisp._buffer]]))
+    return lisp.make_fixnum(nvim.buffer_begv(nvim.buffer_get_current() --[[@as nelisp._buffer]]))
 end
 F.char_equal={'char-equal',2,2,0,[[Return t if two characters match, optionally ignoring case.
 Both arguments must be characters (i.e. integers).

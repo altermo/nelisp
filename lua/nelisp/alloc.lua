@@ -273,7 +273,7 @@ end
 F.make_marker={'make-marker',0,0,0,[[Return a newly allocated marker which does not point at any place.]]}
 function F.make_marker.f()
     local nvim=require'nelisp.nvim'
-    return nvim.make_marker()
+    return nvim.marker_make()
 end
 function M.make_bool_vector(length,init)
     local v={}

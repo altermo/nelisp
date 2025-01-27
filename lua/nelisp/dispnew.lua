@@ -35,8 +35,8 @@ function F.frame_or_buffer_changed_p.f(variable)
     else
         state=frame_and_buffer_state
     end
-    local buflist=nvim.get_all_bufs()
-    local framelist=nvim.get_all_frames()
+    local buflist=nvim.buffer_list()
+    local framelist=nvim.frame_list()
     local idx=0
     for _,frame in ipairs(framelist) do
         if idx==lisp.asize(state) then

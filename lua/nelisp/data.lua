@@ -30,13 +30,13 @@ function M.set_internal(sym,newval,where,bindflag)
         lisp.set_symbol_val(s,newval)
     elseif s.redirect==lisp.symbol_redirect.localized then
         if lisp.nilp(where) then
-            where=nvim.get_current_buffer()
+            where=nvim.buffer_get_current()
         end
         local blv=s.value --[[@as nelisp.buffer_local_value]]
         local buffer=where --[[@as nelisp._buffer]]
-        if nvim.get_buffer_var(buffer,s)
+        if nvim.buffer_get_var(buffer,s)
             or blv.local_if_set then
-            nvim.set_buffer_var(buffer,s,newval)
+            nvim.buffer_set_var(buffer,s,newval)
         else
             blv.default_value=newval
         end
@@ -53,7 +53,7 @@ function M.find_symbol_value(sym)
     elseif s.redirect==lisp.symbol_redirect.forwarded then
         return s.value[1]()
     elseif s.redirect==lisp.symbol_redirect.localized then
-        local var=nvim.get_buffer_var(nvim.get_current_buffer() --[[@as nelisp._buffer]],s)
+        local var=nvim.buffer_get_var(nvim.buffer_get_current() --[[@as nelisp._buffer]],s)
         if var then
             return var
         end

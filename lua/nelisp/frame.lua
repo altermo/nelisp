@@ -16,13 +16,13 @@ local F={}
 F.frame_list={'frame-list',0,0,0,[[Return a list of all live frames.
 The return value does not include any tooltip frame.]]}
 function F.frame_list.f()
-    return lisp.list(unpack(nvim.get_all_frames()))
+    return lisp.list(unpack(nvim.frame_list()))
 end
 ---@param f nelisp.obj
 ---@return nelisp._frame
 local function decode_any_frame(f)
     if lisp.nilp(f) then
-        f=nvim.get_current_frame()
+        f=nvim.frame_get_current()
     end
     lisp.check_frame(f)
     return (f --[[@as nelisp._frame]])
@@ -138,7 +138,7 @@ use `display-graphic-p' or any of the other `display-*-p'
 predicates which report frame's specific UI-related capabilities.]]}
 function F.window_system.f(frame)
     if lisp.nilp(frame) then
-        frame=nvim.get_current_frame()
+        frame=nvim.frame_get_current()
     end
     local typ=vars.F.framep(frame)
     if lisp.nilp(typ) then

@@ -481,7 +481,7 @@ function F.internal_set_lisp_face_attribute.f(face,attr,value,frame)
         error('TODO')
     else
         if lisp.nilp(frame) then
-            frame=nvim.get_current_frame()
+            frame=nvim.frame_get_current()
         end
         frame_.check_live_frame(frame)
         local f=(frame --[[@as nelisp._frame]])
@@ -1085,7 +1085,7 @@ face for italic.]]}
 function F.display_supports_face_attributes_p.f(attributes,display)
     local frame
     if lisp.nilp(display) then
-        frame=nvim.get_current_frame()
+        frame=nvim.frame_get_current()
     elseif lisp.framep(display) then
         frame=display
     else

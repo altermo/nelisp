@@ -14,7 +14,7 @@ local M={}
 local ref_to_buf=setmetatable({},{__mode='k'})
 ---@param bufid number
 ---@return nelisp.obj
-local function get_or_create_buf_obj(bufid)
+local function buf_to_obj(bufid)
     if not vim.b[bufid].nelisp_reference then
         vim.b[bufid].nelisp_reference=function() end
     end
@@ -33,28 +33,31 @@ local function get_or_create_buf_obj(bufid)
 end
 ---@param name nelisp.obj
 ---@return nelisp.obj
-function M.get_buffer_by_name(name)
+function M.buffer_get_by_name(name)
     local vname=lisp.sdata(name)
     local bufid=vim.fn.bufnr(vname)
     if bufid==-1 then
         return vars.Qnil
     end
-    return get_or_create_buf_obj(bufid)
+    return buf_to_obj(bufid)
 end
 ---@param name nelisp.obj
 ---@return nelisp.obj
-function M.create_buffer(name)
+function M.buffer_create(name)
     local vname=lisp.sdata(name)
     local bufid=vim.api.nvim_create_buf(true,false)
     vim.api.nvim_buf_set_name(bufid,vname)
     if _G.nelisp_later then
         error('TODO: what if name is multibyte which looks like unibyte or vice versa?')
     end
-    return get_or_create_buf_obj(bufid)
+    return buf_to_obj(bufid)
 end
 ---@param buffer nelisp._buffer
 ---@return nelisp.obj
 local function buffer_name(buffer)
+    if _G.nelisp_later then
+        error('TODO: the returned string should always be the same until name changed')
+    end
     ---@cast buffer nelisp.vim.buffer
     local id=buffer.bufid
     if not vim.api.nvim_buf_is_valid(id) then
@@ -71,7 +74,7 @@ local function buffer_name(buffer)
     return alloc.make_string(name)
 end
 ---@param buffer nelisp._buffer
-function M.set_current_buffer(buffer)
+function M.buffer_set_current(buffer)
     if _G.nelisp_later then
         error('TODO: what about unsetting buffer local variables, and other things?')
     end
@@ -79,34 +82,34 @@ function M.set_current_buffer(buffer)
     vim.api.nvim_set_current_buf(buffer.bufid)
 end
 ---@return nelisp.obj
-function M.get_current_buffer()
-    return get_or_create_buf_obj(vim.api.nvim_get_current_buf())
+function M.buffer_get_current()
+    return buf_to_obj(vim.api.nvim_get_current_buf())
 end
 ---@param buffer nelisp._buffer
 ---@param sym nelisp._symbol
 ---@return nelisp.obj?
-function M.get_buffer_var(buffer,sym)
+function M.buffer_get_var(buffer,sym)
     ---@cast buffer nelisp.vim.buffer
     return buffer.vars[sym]
 end
 ---@param buffer nelisp._buffer
 ---@param sym nelisp._symbol
 ---@param val nelisp.obj|nil
-function M.set_buffer_var(buffer,sym,val)
+function M.buffer_set_var(buffer,sym,val)
     ---@cast buffer nelisp.vim.buffer
     buffer.vars[sym]=val
 end
 ---@return nelisp.obj
-function M.buffer_list()
-    return lisp.list(unpack(vim.tbl_map(get_or_create_buf_obj,vim.api.nvim_list_bufs())))
+function M.buffer_clist()
+    return lisp.list(unpack(vim.tbl_map(buf_to_obj,vim.api.nvim_list_bufs())))
 end
 ---@return nelisp.obj[]
-function M.get_all_bufs()
-    return vim.tbl_map(get_or_create_buf_obj,vim.api.nvim_list_bufs())
+function M.buffer_list()
+    return vim.tbl_map(buf_to_obj,vim.api.nvim_list_bufs())
 end
 ---@param buffer nelisp._buffer
 ---@return number
-function M.get_buffer_z(buffer)
+function M.buffer_z(buffer)
     ---@cast buffer nelisp.vim.buffer
     local ret
     vim.api.nvim_buf_call(buffer.bufid,function ()
@@ -116,7 +119,7 @@ function M.get_buffer_z(buffer)
 end
 ---@param buffer nelisp._buffer
 ---@return number
-function M.get_buffer_begv(buffer)
+function M.buffer_begv(buffer)
     if _G.nelisp_later then
         error('TODO')
     end
@@ -127,7 +130,7 @@ end
 ---@return nelisp.obj
 function M.bvar(buf,field)
     if buf==true then
-        buf=M.get_current_buffer() --[[@as nelisp._buffer]]
+        buf=M.buffer_get_current() --[[@as nelisp._buffer]]
     end
     local vbuf=buf --[[@as nelisp.vim.buffer]]
     local buffer_=require'nelisp.buffer'
@@ -178,7 +181,7 @@ end
 local ref_to_terminal=setmetatable({},{__mode='v'})
 ---@param chan_id integer
 ---@return nelisp.obj
-function M.get_or_create_terminal(chan_id)
+function M.chan_to_terminal_obj(chan_id)
     if ref_to_terminal[chan_id] then
         return ref_to_terminal[chan_id]
     end
@@ -193,10 +196,10 @@ function M.get_or_create_terminal(chan_id)
     return lisp.make_vectorlike_ptr(t,lisp.pvec.terminal)
 end
 ---@return nelisp.obj[]
-function M.list_live_terminals()
+function M.terminals_list_live()
     local terminals={}
     for _,chan_info in ipairs(vim.api.nvim_list_uis()) do
-        table.insert(terminals,M.get_or_create_terminal(chan_info.chan))
+        table.insert(terminals,M.chan_to_terminal_obj(chan_info.chan))
     end
     return terminals
 end
@@ -211,7 +214,7 @@ end
 local ref_to_frame=setmetatable({},{__mode='k'})
 ---@param tab_id number
 ---@return nelisp.obj
-local function get_or_create_frame(tab_id)
+local function tab_to_frame_obj(tab_id)
     if not vim.t[tab_id].nelisp_reference then
         vim.t[tab_id].nelisp_reference=function() end
     end
@@ -231,14 +234,14 @@ local function get_or_create_frame(tab_id)
     return obj
 end
 ---@return nelisp.obj
-function M.get_current_frame()
-    return get_or_create_frame(vim.api.nvim_get_current_tabpage())
+function M.frame_get_current()
+    return tab_to_frame_obj(vim.api.nvim_get_current_tabpage())
 end
 ---@return nelisp.obj[]
-function M.get_all_frames()
+function M.frame_list()
     local frames={}
     for _,tab_id in ipairs(vim.api.nvim_list_tabpages()) do
-        table.insert(frames,get_or_create_frame(tab_id))
+        table.insert(frames,tab_to_frame_obj(tab_id))
     end
     return frames
 end
@@ -301,7 +304,7 @@ function M.frame_buffer_list(f)
     for _,win_id in ipairs(vim.api.nvim_tabpage_list_wins((f --[[@as nelisp.vim.frame]]).tabpage_id)) do
         buffers[vim.api.nvim_win_get_buf(win_id)]=true
     end
-    return lisp.list(unpack(vim.tbl_map(get_or_create_buf_obj,vim.tbl_keys(buffers))))
+    return lisp.list(unpack(vim.tbl_map(buf_to_obj,vim.tbl_keys(buffers))))
 end
 ---@param f nelisp._frame
 ---@return nelisp.obj
@@ -329,7 +332,7 @@ end
 ---@field id number?
 
 ---@return nelisp.obj
-function M.make_marker()
+function M.marker_make()
     ---@type nelisp.vim.marker
     local m={}
     return lisp.make_vectorlike_ptr(m,lisp.pvec.marker)
@@ -337,11 +340,11 @@ end
 
 --- ;; cursor
 ---@return nelisp.obj
-function M.get_current_cursor_char_pos()
+function M.cursor_current_char_pos()
     return lisp.make_fixnum(vim.fn.wordcount().cursor_chars)
 end
 ---@return nelisp.obj
-function M.get_current_cursor_byte_pos()
+function M.cursor_current_byte_pos()
     return lisp.make_fixnum(vim.fn.wordcount().cursor_bytes)
 end
 
@@ -379,7 +382,7 @@ end
 ---@param front_advance boolean
 ---@param rear_advance boolean
 ---@return nelisp.obj
-function M.make_overlay(buffer,beg,end_,front_advance,rear_advance)
+function M.overlay_make(buffer,beg,end_,front_advance,rear_advance)
     ---@cast buffer nelisp.vim.buffer
     local bufid=buffer.bufid
     local beg_row,beg_col,end_row,end_col
@@ -423,7 +426,7 @@ function M.overlay_set_plist(overlay,plist)
     overlay.plist=plist
 end
 ---@param overlay nelisp._overlay
-function M.drop_overlay(overlay)
+function M.overlay_drop(overlay)
     ---@cast overlay nelisp.vim.overlay
     if not overlay.buffer then
         return
