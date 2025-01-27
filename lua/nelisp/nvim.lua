@@ -137,6 +137,29 @@ function M.bvar(buf,field)
         error('TODO')
     end
 end
+---@param buffer nelisp._buffer
+---@return number
+function M.buf_modiff(buffer)
+    ---@cast buffer nelisp.vim.buffer
+    local bufid=buffer.bufid
+    local changedtick=vim.b[bufid].changedtick
+    return changedtick
+end
+---@param buffer nelisp._buffer
+---@return number
+function M.buf_save_modiff(buffer)
+    if _G.nelisp_later then
+        error('TODO: is there a way to detect at which tick the buffer was saved?')
+    end
+    ---@cast buffer nelisp.vim.buffer
+    local bufid=buffer.bufid
+    local modified=vim.bo[bufid].modified
+    local changedtick=vim.b[bufid].changedtick
+    if modified then
+        return changedtick-1
+    end
+    return changedtick
+end
 
 --- ;; Terminal (UI)
 

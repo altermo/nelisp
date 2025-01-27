@@ -211,6 +211,30 @@ F.current_buffer={'current-buffer',0,0,0,[[Return the current buffer as a Lisp o
 function F.current_buffer.f()
     return nvim.get_current_buffer()
 end
+---@param buffer nelisp.obj
+---@return nelisp._buffer
+local function decode_buffer(buffer)
+    if lisp.nilp(buffer) then
+        return nvim.get_current_buffer() --[[@as nelisp._buffer]]
+    end
+    lisp.check_buffer(buffer)
+    return buffer --[[@as nelisp._buffer]]
+end
+F.buffer_modified_p={'buffer-modified-p',0,1,0,[[Return non-nil if BUFFER was modified since its file was last read or saved.
+No argument or nil as argument means use current buffer as BUFFER.
+
+If BUFFER was autosaved since it was last modified, this function
+returns the symbol `autosaved'.]]}
+function F.buffer_modified_p.f(buffer)
+    local buf=decode_buffer(buffer)
+    if nvim.buf_save_modiff(buf)<nvim.buf_modiff(buf) then
+        if _G.nelisp_later then
+            error('TODO: how to detect autosaved buffer?')
+        end
+        return vars.Qt
+    end
+    return vars.Qnil
+end
 F.make_overlay={'make-overlay',2,5,0,[[Create a new overlay with range BEG to END in BUFFER and return it.
 If omitted, BUFFER defaults to the current buffer.
 BEG and END may be integers or markers.
@@ -303,6 +327,7 @@ function M.init_syms()
     vars.defsubr(F,'force_mode_line_update')
     vars.defsubr(F,'buffer_list')
     vars.defsubr(F,'current_buffer')
+    vars.defsubr(F,'buffer_modified_p')
     vars.defsubr(F,'make_overlay')
     vars.defsubr(F,'overlay_put')
     vars.defsubr(F,'delete_overlay')
