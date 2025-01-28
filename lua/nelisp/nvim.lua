@@ -74,6 +74,25 @@ local function buffer_name(buffer)
     return alloc.make_string(name)
 end
 ---@param buffer nelisp._buffer
+---@return nelisp.obj
+local function buffer_filename(buffer)
+    if _G.nelisp_later then
+        error('TODO: the returned string should always be the same until filename changed')
+    end
+    ---@cast buffer nelisp.vim.buffer
+    local id=buffer.bufid
+    if not vim.api.nvim_buf_is_valid(id) then
+        return vars.Qnil
+    end
+    local name=vim.api.nvim_buf_get_name(id)
+    if name=='' then
+        return vars.Qnil
+    elseif vim.bo[id].buftype~='' then
+        return vars.Qnil
+    end
+    return alloc.make_string(vim.fn.fnamemodify(name,':p'))
+end
+---@param buffer nelisp._buffer
 function M.buffer_set_current(buffer)
     if _G.nelisp_later then
         error('TODO: what about unsetting buffer local variables, and other things?')
@@ -144,6 +163,8 @@ function M.bvar(buf,field)
         return vbuf.syntax_table
     elseif field==bvar.read_only then
         return vim.bo[bufid].readonly and vars.Qt or vars.Qnil
+    elseif field==bvar.filename then
+        return buffer_filename(buf)
     else
         error('TODO')
     end

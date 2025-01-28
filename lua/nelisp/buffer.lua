@@ -241,6 +241,11 @@ Return nil if BUFFER has been killed.]]}
 function F.buffer_name.f(buffer)
     return nvim.bvar(decode_buffer(buffer),M.bvar.name)
 end
+F.buffer_file_name={'buffer-file-name',0,1,0,[[Return name of file BUFFER is visiting, or nil if none.
+No argument or nil as argument means use the current buffer.]]}
+function F.buffer_file_name.f(buffer)
+    return nvim.bvar(decode_buffer(buffer),M.bvar.filename)
+end
 F.make_overlay={'make-overlay',2,5,0,[[Create a new overlay with range BEG to END in BUFFER and return it.
 If omitted, BUFFER defaults to the current buffer.
 BEG and END may be integers or markers.
@@ -335,6 +340,7 @@ function M.init_syms()
     vars.defsubr(F,'current_buffer')
     vars.defsubr(F,'buffer_modified_p')
     vars.defsubr(F,'buffer_name')
+    vars.defsubr(F,'buffer_file_name')
     vars.defsubr(F,'make_overlay')
     vars.defsubr(F,'overlay_put')
     vars.defsubr(F,'delete_overlay')
