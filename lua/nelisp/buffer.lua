@@ -235,6 +235,12 @@ function F.buffer_modified_p.f(buffer)
     end
     return vars.Qnil
 end
+F.buffer_name={'buffer-name',0,1,0,[[Return the name of BUFFER, as a string.
+BUFFER defaults to the current buffer.
+Return nil if BUFFER has been killed.]]}
+function F.buffer_name.f(buffer)
+    return nvim.bvar(decode_buffer(buffer),M.bvar.name)
+end
 F.make_overlay={'make-overlay',2,5,0,[[Create a new overlay with range BEG to END in BUFFER and return it.
 If omitted, BUFFER defaults to the current buffer.
 BEG and END may be integers or markers.
@@ -328,6 +334,7 @@ function M.init_syms()
     vars.defsubr(F,'buffer_list')
     vars.defsubr(F,'current_buffer')
     vars.defsubr(F,'buffer_modified_p')
+    vars.defsubr(F,'buffer_name')
     vars.defsubr(F,'make_overlay')
     vars.defsubr(F,'overlay_put')
     vars.defsubr(F,'delete_overlay')
