@@ -24,9 +24,8 @@ The **N**eovim **E**macs **LISP** interpreter.
 
 --- OPTIONS
 
---- The emacs lisp runtime dir
---- Defaults to `/usr/share/emacs/29.4/`
-local emacs_path -- = '/SOME/EMACS/PATH'
+--- The (29.4) emacs runtime dir
+local emacs_path='/usr/share/emacs/29.4/'
 
 --- Assert that at least some elisp code has been bytecompiled
 --- It is STRONGLY recommended that you use byte-compiled elisp code:
@@ -34,7 +33,7 @@ local emacs_path -- = '/SOME/EMACS/PATH'
 local assert_elisp_bytecode_found = true
 
 --- Disable the jit optimization in specific functions
---- It is between 2-4x faster (for unknown reasons)
+--- It is between 1.5-2x faster (for unknown reasons)
 _G.nelisp_optimize_jit = true
 
 --- Path to use for lua compiled elisp source code
@@ -47,10 +46,6 @@ _G.nelisp_compile_lisp_to_lua_path = '/tmp/nelisp'
 
 assert(vim.fn.has('nvim-0.10')==1,'Requires at least version nvim-0.10')
 
-if emacs_path then
-elseif vim.fn.isdirectory('/usr/share/emacs/29.4/')==1 then
-    emacs_path='/usr/share/emacs/29.4/'
-end
 assert(vim.fn.isdirectory(emacs_path)==1,'`emacs_path` is not a directory')
 
 local elisp_path=vim.fs.joinpath(emacs_path,'lisp')
