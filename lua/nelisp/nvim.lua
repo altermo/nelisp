@@ -175,9 +175,24 @@ end
 --- ;; Terminal (UI)
 
 ---@class nelisp.vim.terminal: nelisp._terminal
----@field chan_id number
+---@field chan_id number|true
 ----- No more fields, gets cleaned up if no references remain.
 
+local terminal_sentinel_
+---@return nelisp.obj
+local function terminal_sentinel()
+    -- If channel 1 is open, it is always the main ui. (is this correct?)
+    if next(vim.api.nvim_get_chan_info(1)) then
+        return M.chan_to_terminal_obj(1)
+    end
+    -- Otherwise, we have no guarantees that any ui will be open, so return a dummy terminal.
+    if not terminal_sentinel_ then
+        terminal_sentinel_=lisp.make_vectorlike_ptr({
+            chan_id=true,
+        } --[[@as nelisp.vim.terminal]],lisp.pvec.terminal)
+    end
+    return terminal_sentinel_
+end
 local ref_to_terminal=setmetatable({},{__mode='v'})
 ---@param chan_id integer
 ---@return nelisp.obj
@@ -197,7 +212,8 @@ function M.chan_to_terminal_obj(chan_id)
 end
 ---@return nelisp.obj[]
 function M.terminals_list_live()
-    local terminals={}
+    terminal_sentinel()
+    local terminals={terminal_sentinel_}
     for _,chan_info in ipairs(vim.api.nvim_list_uis()) do
         table.insert(terminals,M.chan_to_terminal_obj(chan_info.chan))
     end
@@ -323,6 +339,14 @@ function M.frame_tab_bar_lines(f)
         return 1
     end
     return vim.o.showtabline==2 and 1 or 0
+end
+---@param f nelisp._frame
+---@return nelisp.obj?
+function M.frame_terminal(f)
+    if not M.frame_live_p(f) then
+        return nil
+    end
+    return terminal_sentinel()
 end
 
 --- ;; Marker
