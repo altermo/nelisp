@@ -404,6 +404,8 @@ function M.framep(x) return M.pseudovectorp(x,M.pvec.frame) end
 function M.fontp(x) return M.pseudovectorp(x,M.pvec.font) end
 ---@overload fun(x:nelisp.obj):boolean
 function M.overlayp(x) return M.pseudovectorp(x,M.pvec.overlay) end
+---@overload fun(x:nelisp.obj):boolean
+function M.terminalp(x) return M.pseudovectorp(x,M.pvec.terminal) end
 
 --- ;; Other
 ---@param x nelisp.obj

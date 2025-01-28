@@ -219,6 +219,32 @@ function M.terminals_list_live()
     end
     return terminals
 end
+---@param t nelisp._terminal
+---@return boolean
+function M.terminal_live_p(t)
+    ---@cast t nelisp.vim.terminal
+    if t.chan_id==true then
+        return true
+    end
+    assert(type(t.chan_id)=='number')
+    return not not next(vim.api.nvim_get_chan_info(t.chan_id --[[@as integer]]))
+end
+---@param t nelisp._terminal
+---@return string?
+function M.terminal_name(t)
+    if not M.terminal_live_p(t) then
+        return nil
+    end
+    ---@cast t nelisp.vim.terminal
+    if t.chan_id==true then
+        return 'sentinel-terminal'
+    end
+    local chan_info=vim.api.nvim_get_chan_info(t.chan_id --[[@as integer]])
+    if chan_info.client and chan_info.client.name then
+        return chan_info.client.name
+    end
+    return 'terminal-'..t.chan_id
+end
 
 --- ;; Frame
 ---@class nelisp.vim.frame: nelisp._frame
