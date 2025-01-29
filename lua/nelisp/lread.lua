@@ -723,6 +723,26 @@ function M.char_table_from_list(elems,readcharfun)
     end
     return lisp.make_vectorlike_ptr(obj,lisp.pvec.char_table)
 end
+---@return nelisp.obj
+local function string_props_from_list(elems,readcharfun)
+    if #elems<1 or not lisp.stringp(elems[1]) then
+        invalid_syntax('#',readcharfun)
+    end
+    local obj=table.remove(elems,1)
+    while #elems>0 do
+        local beg=table.remove(elems,1)
+        if #elems<1 then
+            invalid_syntax('Invalid string property list',readcharfun)
+        end
+        local end_=table.remove(elems,1)
+        if #elems<1 then
+            invalid_syntax('Invalid string property list',readcharfun)
+        end
+        local plist=table.remove(elems,1)
+        vars.F.set_text_properties(beg,end_,plist,obj)
+    end
+    return obj
+end
 ---@param readcharfun nelisp.lread.readcharfun
 ---@param locate_syms boolean
 ---@return nelisp.obj
@@ -760,6 +780,10 @@ function M.read0(readcharfun,locate_syms)
             else
                 error('TODO')
             end
+        elseif t.t=='string_props' then
+            t=table.remove(stack)
+            locate_syms=t.old_locate_syms
+            obj=string_props_from_list(t.elems,readcharfun)
         else
             error('TODO')
         end
@@ -905,6 +929,14 @@ function M.read0(readcharfun,locate_syms)
             else
                 obj=M.read_symbol(readcharfun,true,false,locate_syms)
             end
+        elseif ch==b'(' then
+            table.insert(stack,{
+                t='string_props',
+                elems={},
+                old_locate_syms=locate_syms
+            })
+            locate_syms=false
+            goto read_obj
         else
             error('TODO')
         end
@@ -974,7 +1006,7 @@ function M.read0(readcharfun,locate_syms)
             table.remove(stack)
             obj=alloc.cons(t.sym,alloc.cons(obj,vars.Qnil))
         elseif t.t=='vector' or t.t=='record' or t.t=='byte_code'
-            or t.t=='char_table' or t.t=='sub_char_table' then
+            or t.t=='char_table' or t.t=='sub_char_table' or t.t=='string_props' then
             table.insert(t.elems,obj)
             goto read_obj
         elseif t.t=='list_dot' then
