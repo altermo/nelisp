@@ -365,6 +365,8 @@ See also Info node `(elisp)Text Representations'.]])
     local lread=require'nelisp.lread'
     lisp.make_symbol_constant(lread.intern_c_string('enable-multibyte-characters'))
 
+    defvar_per_buffer('buffer-read-only',M.bvar.read_only,vars.Qnil,[[Non-nil if this buffer is read-only.]])
+
     --This should be last, after all per buffer variables are defined
     vars.F.get_buffer_create(alloc.make_unibyte_string('*scratch*'),vars.Qnil)
 end
