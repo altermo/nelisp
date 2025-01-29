@@ -794,6 +794,20 @@ Symbols must match exactly.]]}
 function F.equal.f(a,b)
     return internal_equal(a,b,'plain',0,{}) and vars.Qt or vars.Qnil
 end
+F.eql={'eql',2,2,0,[[Return t if the two args are `eq' or are indistinguishable numbers.
+Integers with the same value are `eql'.
+Floating-point values with the same sign, exponent and fraction are `eql'.
+This differs from numeric comparison: (eql 0.0 -0.0) returns nil and
+\(eql 0.0e+NaN 0.0e+NaN) returns t, whereas `=' does the opposite.]]}
+function F.eql.f(obj1,obj2)
+    if lisp.floatp(obj1) then
+        error('TODO')
+    elseif lisp.bignump(obj1) then
+        error('TODO')
+    else
+        return lisp.eq(obj1,obj2) and vars.Qt or vars.Qnil
+    end
+end
 function M.plist_put(plist,prop,val)
     local prev=vars.Qnil
     local tail=plist
@@ -1697,6 +1711,7 @@ function M.init_syms()
     vars.defsubr(F,'length')
     vars.defsubr(F,'safe_length')
     vars.defsubr(F,'equal')
+    vars.defsubr(F,'eql')
     vars.defsubr(F,'plist_put')
     vars.defsubr(F,'put')
     vars.defsubr(F,'plist_get')
