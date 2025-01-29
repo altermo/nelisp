@@ -23,13 +23,6 @@
 ---@alias nelisp.F table<string,nelisp.F.entry>
 
 ---@class nelisp.vars
----@field defsym fun(name:string,symname:string)
----@field commit_qsymbols fun()
----@field defvar_lisp fun(name:string,symname:string?,doc:string?):nelisp.obj
----@field defvar_forward fun(name:string,symname:string?,doc:string,get:(fun():nelisp.obj),set:(fun(v:nelisp.obj)))
----@field defvar_bool fun(name:string,symname:string,doc:string?)
----@field defvar_localized fun(name:string,symname:string,doc:string,blv:nelisp.buffer_local_value)
----@field defsubr fun(map:nelisp.F,name:string)
 ---@field F table<string,nelisp.F_fun>
 ---@field V table<string,nelisp.obj>
 ---@field modifier_symbols (0|nelisp.obj)[]
