@@ -70,7 +70,7 @@ local function buffer_name(buffer)
         if _G.nelisp_later then
             error('TODO: what should be the name of a nameless buffers')
         else
-            return alloc.make_string('')
+            return alloc.make_string(' ')
         end
     end
     return alloc.make_string(name)
