@@ -9,6 +9,7 @@ function M.init()
 end
 function M.init_syms()
     vars.defsym('Qempty_box','empty-box')
+    vars.defsym('Qdisplay','display')
 
     vars.defsym('Qglyphless_char_display','glyphless-char-display')
     vars.defvar_lisp('glyphless_char_display','glyphless-char-display',[[Char-table defining glyphless characters.

@@ -191,7 +191,18 @@ function F.add_text_properties.f(start,end_,properties,obj)
     return add_text_properties_1(start,end_,properties,obj,'REPLACE',true)
 end
 
+function M.init()
+    vars.V.text_property_default_nonsticky=lisp.list(vars.F.cons(vars.Qsyntax_table,vars.Qt),vars.F.cons(vars.Qdisplay,vars.Qt))
+end
 function M.init_syms()
     vars.defsubr(F,'add_text_properties')
+
+    vars.defvar_lisp('text_property_default_nonsticky','text-property-default-nonsticky',[[Alist of properties vs the corresponding non-stickiness.
+Each element has the form (PROPERTY . NONSTICKINESS).
+
+If a character in a buffer has PROPERTY, new text inserted adjacent to
+the character doesn't inherit PROPERTY if NONSTICKINESS is non-nil,
+inherits it if NONSTICKINESS is nil.  The `front-sticky' and
+`rear-nonsticky' properties of the character override NONSTICKINESS.]])
 end
 return M
