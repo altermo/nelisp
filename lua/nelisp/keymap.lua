@@ -985,7 +985,6 @@ function M.init()
     vars.F.put(vars.Qkeymap,vars.Qchar_table_extra_slots,lisp.make_fixnum(0))
 
     vars.modifier_symbols={}
-    local lread=require'nelisp.lread'
     for _,v in ipairs({'up','dow','drag','click','double','triple',0,0,
         0,0,0,0,0,0,0,0,0,0,0,0,0,0,'alt','super','hyper','shift','control','meta'}) do
         if v==0 then

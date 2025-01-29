@@ -359,7 +359,7 @@ end
 ---@return nelisp.obj
 function M.tty_color_name(f,idx)
     if idx>=0 then
-        _=f
+        local _=f
         error('TODO')
     end
     if idx==-2 then

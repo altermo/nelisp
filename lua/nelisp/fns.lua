@@ -521,7 +521,7 @@ function F.nconc.fa(args)
             break
         end
         lisp.check_cons(tem)
-        local tail
+        local tail,_
         _,tem=lisp.for_each_tail(tem,function(t)
             tail=t
         end)
