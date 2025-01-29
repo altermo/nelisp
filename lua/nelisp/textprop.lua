@@ -190,12 +190,108 @@ Return t if any property value actually changed, nil otherwise.]]}
 function F.add_text_properties.f(start,end_,properties,obj)
     return add_text_properties_1(start,end_,properties,obj,'REPLACE',true)
 end
+---@param properties nelisp.obj
+---@param i nelisp.intervals
+---@param obj nelisp.obj
+local function set_properties(properties,i,obj)
+    if lisp.bufferp(obj) then
+        error('TODO')
+    end
+    i.plist=vars.F.copy_sequence(properties)
+end
+---@param start nelisp.obj
+---@param end_ nelisp.obj
+---@param properties nelisp.obj
+---@param object nelisp.obj
+---@param i nelisp.intervals
+local function set_text_properties_1(start,end_,properties,object,i)
+    if lisp.bufferp(object) then
+        error('TODO')
+    end
+    local s=lisp.fixnum(start)
+    local len=lisp.fixnum(end_)-s
+    if len==0 then
+        return
+    end
+    assert(len>0)
+    if i.position~=s then
+        error('TODO')
+    end
+    while true do
+        assert(i)
+        if intervals.length(i)>=len then
+            if intervals.length(i)>len then
+                error('TODO')
+            end
+            set_properties(properties,i,object)
+            return
+        end
+        len=len-intervals.length(i)
+        set_properties(properties,i,object)
+        i=intervals.next_interval(i)
+        if len<=0 then
+            break
+        end
+    end
+end
+---@param start nelisp.obj
+---@param end_ nelisp.obj
+---@param properties nelisp.obj
+---@param object nelisp.obj
+---@param coherent_change_p nelisp.obj
+---@return nelisp.obj
+local function set_text_properties(start,end_,properties,object,coherent_change_p)
+    if lisp.bufferp(object) then
+        error('TODO')
+    end
+    properties=validate_plist(properties)
+    if lisp.nilp(properties) then
+        error('TODO')
+    end
+    if lisp.nilp(properties) and lisp.stringp(object)
+        and start==lisp.make_fixnum(0) and end_==lisp.make_fixnum(lisp.schars(object)) then
+        error('TODO')
+    end
+    ---@type nelisp.ptr
+    local sstart={start}
+    ---@type nelisp.ptr
+    local send={end_}
+    local i=validate_interval_range(object,sstart,send,false)
+    if not i then
+        if lisp.nilp(properties) then
+            return vars.Qnil
+        end
+        i=validate_interval_range(object,sstart,send,true)
+        if not i then
+            return vars.Qnil
+        end
+    end
+    if lisp.bufferp(object) and not lisp.nilp(coherent_change_p) then
+        error('TODO')
+    end
+    set_text_properties_1(sstart[1],send[1],properties,object,i)
+    if lisp.bufferp(object) and not lisp.nilp(coherent_change_p) then
+        error('TODO')
+    end
+    return vars.Qt
+end
+F.set_text_properties={'set-text-properties',3,4,0,[[Completely replace properties of text from START to END.
+The third argument PROPERTIES is the new property list.
+If the optional fourth argument OBJECT is a buffer (or nil, which means
+the current buffer), START and END are buffer positions (integers or
+markers).  If OBJECT is a string, START and END are 0-based indices into it.
+If PROPERTIES is nil, the effect is to remove all properties from
+the designated part of OBJECT.]]}
+function F.set_text_properties.f(start,end_,properties,object)
+    return set_text_properties(start,end_,properties,object,vars.Qt)
+end
 
 function M.init()
     vars.V.text_property_default_nonsticky=lisp.list(vars.F.cons(vars.Qsyntax_table,vars.Qt),vars.F.cons(vars.Qdisplay,vars.Qt))
 end
 function M.init_syms()
     vars.defsubr(F,'add_text_properties')
+    vars.defsubr(F,'set_text_properties')
 
     vars.defvar_lisp('text_property_default_nonsticky','text-property-default-nonsticky',[[Alist of properties vs the corresponding non-stickiness.
 Each element has the form (PROPERTY . NONSTICKINESS).
