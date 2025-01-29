@@ -51,7 +51,7 @@ function M.find_symbol_value(sym)
     if s.redirect==lisp.symbol_redirect.plainval then
         return lisp.symbol_val(sym)
     elseif s.redirect==lisp.symbol_redirect.forwarded then
-        return s.value[1]()
+        return s.value[1]({})
     elseif s.redirect==lisp.symbol_redirect.localized then
         local var=nvim.buffer_get_var(nvim.buffer_get_current() --[[@as nelisp._buffer]],s)
         if var then

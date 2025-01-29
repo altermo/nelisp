@@ -84,15 +84,17 @@ end
 
 ---@type table<string,nelisp.obj>
 local Vsymbols={}
----@param name string
+---@param name string?
 ---@param symname string?
 ---@param doc string?
 ---@return nelisp.obj
 function vars.defvar_lisp(name,symname,doc)
-    assert(not name:match('%-'),'DEV: Internal variable names must not contain -')
+    if name then
+        assert(not name:match('%-'),'DEV: Internal variable names must not contain -')
+        assert(name:sub(1,1)~='V','DEV: Internal variable names must not start with V')
+        assert(not Vsymbols[name],'DEV: Internal variable already defined: '..name)
+    end
     assert(not symname or not symname:match('_'),'DEV: Internal variable symbol names must should probably not contain _')
-    assert(name:sub(1,1)~='V','DEV: Internal variable names must not start with V')
-    assert(not Vsymbols[name],'DEV: Internal variable already defined: '..name)
     local lread=require'nelisp.lread'
     local lisp=require'nelisp.lisp'
     local sym
@@ -105,11 +107,14 @@ function vars.defvar_lisp(name,symname,doc)
             sym=found
         end
     else
+        assert(name,'DEV: Internal variable must have a name or a symbol name')
         sym=lisp.make_empty_ptr(lisp.type.symbol)
         local alloc=require'nelisp.alloc'
         alloc.init_symbol(sym,alloc.make_pure_c_string(name))
     end
-    Vsymbols[name]=sym
+    if name then
+        Vsymbols[name]=sym
+    end
     if doc then
         if _G.nelisp_later then
             error('TODO')
@@ -128,10 +133,10 @@ function vars.defvar_bool(name,symname,doc)
         alloc.cons(Vsymbols[name],lisp.symbol_val(vars.Qbyte_boolean_vars --[[@as nelisp._symbol]])))
 end
 ---@param doc string
----@param name string
+---@param name string?
 ---@param symname string
----@param get fun():nelisp.obj
----@param set fun(v:nelisp.obj)
+---@param get nelisp.forward.getfn
+---@param set nelisp.forward.setfn
 vars.defvar_forward=function (name,symname,doc,get,set)
     local sym=vars.defvar_lisp(name,symname,doc)
     local p=(sym --[[@as nelisp._symbol]])
@@ -139,25 +144,13 @@ vars.defvar_forward=function (name,symname,doc,get,set)
     p.redirect=lisp.symbol_redirect.forwarded
     p.value={get,set} --[[@as nelisp.forward]]
 end
----@param doc string
----@param name string
----@param symname string
----@param blv nelisp.buffer_local_value
-vars.defvar_localized=function (name,symname,doc,blv)
-    local sym=vars.defvar_lisp(name,symname,doc)
-    local p=(sym --[[@as nelisp._symbol]])
-    local lisp=require'nelisp.lisp'
-    p.redirect=lisp.symbol_redirect.localized
-    assert(blv.default_value)
-    p.value=blv
-end
 vars.V=setmetatable({},{__index=function (_,k)
     local sym=assert(Vsymbols[k],'DEV: Not an internal variable: '..tostring(k)) --[[@as nelisp._symbol]]
     local lisp=require'nelisp.lisp'
     if sym.redirect==lisp.symbol_redirect.plainval then
         return assert(lisp.symbol_val(sym),'DEV: Internal variable not set: '..tostring(k))
     elseif sym.redirect==lisp.symbol_redirect.forwarded then
-        return sym.value[1]()
+        return sym.value[1]({})
     elseif sym.redirect==lisp.symbol_redirect.localized then
         local data=require'nelisp.data'
         return data.find_symbol_value(sym)
@@ -171,7 +164,7 @@ end,__newindex=function (_,k,v)
         if sym.redirect==lisp.symbol_redirect.plainval then
             lisp.set_symbol_val(sym,v)
         elseif sym.redirect==lisp.symbol_redirect.forwarded then
-            return sym.value[2](v)
+            return sym.value[2](v,{})
         else
             error('TODO')
         end

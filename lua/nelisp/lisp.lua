@@ -33,9 +33,13 @@ M.type={
     ---@field trapped_write nelisp.symbol_trapped_write
     ---@field declared_special boolean?
     ---@field next nelisp.obj?
+    ---@class nelisp.forward.context
+    ---@field buffer nelisp._buffer?
+    ---@alias nelisp.forward.getfn fun(context:nelisp.forward.context):nelisp.obj
+    ---@alias nelisp.forward.setfn fun(v:nelisp.obj,context:nelisp.forward.context)
     ---@class nelisp.forward
-    ---@field [1] fun():nelisp.obj
-    ---@field [2] fun(v:nelisp.obj)
+    ---@field [1] nelisp.forward.getfn
+    ---@field [2] nelisp.forward.setfn
 
     int0=2,
     ---@class nelisp._fixnum

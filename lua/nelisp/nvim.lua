@@ -10,6 +10,7 @@ local M={}
 ---@field vars table<nelisp._symbol,nelisp.obj>
 ---@field category_table nelisp.obj
 ---@field syntax_table nelisp.obj
+---@field enable_multibyte_characters nelisp.obj
 
 local ref_to_buf=setmetatable({},{__mode='k'})
 ---@param bufid number
@@ -27,6 +28,7 @@ local function buf_to_obj(bufid)
         vars={},
         category_table=vars.standard_category_table,
         syntax_table=vars.standard_syntax_table,
+        enable_multibyte_characters=vars.Qt,
     }
     ref_to_buf[vim.b[bufid].nelisp_reference]=b
     return lisp.make_vectorlike_ptr(b,lisp.pvec.buffer)
@@ -165,6 +167,8 @@ function M.bvar(buf,field)
         return vim.bo[bufid].readonly and vars.Qt or vars.Qnil
     elseif field==bvar.filename then
         return buffer_filename(buf)
+    elseif field==bvar.enable_multibyte_characters then
+        return vbuf.enable_multibyte_characters
     else
         error('TODO')
     end

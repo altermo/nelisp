@@ -98,13 +98,17 @@ function M.check_fixnum_coerce_marker(x)
     lisp.check_fixnum(x)
     return x
 end
-local function defvar_per_buffer(name,symname,defval,doc)
-    ---@type nelisp.buffer_local_value
-    local blv={
-        local_if_set=true,
-        default_value=defval,
-    }
-    vars.defvar_localized(name,symname,doc,blv)
+---@param symname string
+---@param bvar nelisp.bvar
+---@param predicate nelisp.obj
+---@param doc string
+local function defvar_per_buffer(symname,bvar,predicate,doc)
+    vars.defvar_forward(nil,symname,doc,function (con)
+        local buffer=con.buffer or (nvim.buffer_get_current() --[[@as nelisp._buffer]])
+        return nvim.bvar(buffer,bvar)
+    end,function (val,con)
+        error('TODO')
+    end)
 end
 
 ---@param buffer nelisp._buffer
@@ -343,7 +347,7 @@ function F.delete_overlay.f(overlay)
 end
 
 function M.init()
-    defvar_per_buffer('enable_multibyte_characters','enable-multibyte-characters',vars.Qnil,[[Non-nil means the buffer contents are regarded as multi-byte characters.
+    defvar_per_buffer('enable-multibyte-characters',M.bvar.enable_multibyte_characters,vars.Qnil,[[Non-nil means the buffer contents are regarded as multi-byte characters.
 Otherwise they are regarded as unibyte.  This affects the display,
 file I/O and the behavior of various editing commands.
 
@@ -352,6 +356,8 @@ use the function `set-buffer-multibyte' to change a buffer's representation.
 To prevent any attempts to set it or make it buffer-local, Emacs will
 signal an error in those cases.
 See also Info node `(elisp)Text Representations'.]])
+    local lread=require'nelisp.lread'
+    lisp.make_symbol_constant(lread.intern_c_string('enable-multibyte-characters'))
 
     --This should be last, after all per buffer variables are defined
     vars.F.get_buffer_create(alloc.make_unibyte_string('*scratch*'),vars.Qnil)
