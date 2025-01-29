@@ -40,6 +40,7 @@ M.type={
     ---@class nelisp.forward
     ---@field [1] nelisp.forward.getfn
     ---@field [2] nelisp.forward.setfn
+    ---@field isbuffer boolean
 
     int0=2,
     ---@class nelisp._fixnum

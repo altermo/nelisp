@@ -108,7 +108,7 @@ local function defvar_per_buffer(symname,bvar,predicate,doc)
         return nvim.bvar(buffer,bvar)
     end,function (val,con)
         error('TODO')
-    end)
+    end,true)
 end
 
 ---@param buffer nelisp._buffer
@@ -260,6 +260,12 @@ local function buffer_local_value(variable,buffer)
     local sym=variable --[[@as nelisp._symbol]]
     if sym.redirect==lisp.symbol_redirect.plainval then
         return sym.value --[[@as nelisp.obj?]]
+    elseif sym.redirect==lisp.symbol_redirect.forwarded then
+        local fwd=sym.value --[[@as nelisp.forward]]
+        if fwd.isbuffer then
+            return fwd[1]({buffer=buf})
+        end
+        return vars.F.default_value(variable)
     else
         error('TODO')
     end

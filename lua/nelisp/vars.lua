@@ -137,12 +137,13 @@ end
 ---@param symname string
 ---@param get nelisp.forward.getfn
 ---@param set nelisp.forward.setfn
-vars.defvar_forward=function (name,symname,doc,get,set)
+---@param inbuffer boolean?
+vars.defvar_forward=function (name,symname,doc,get,set,inbuffer)
     local sym=vars.defvar_lisp(name,symname,doc)
     local p=(sym --[[@as nelisp._symbol]])
     local lisp=require'nelisp.lisp'
     p.redirect=lisp.symbol_redirect.forwarded
-    p.value={get,set} --[[@as nelisp.forward]]
+    p.value={get,set,isbuffer=inbuffer} --[[@as nelisp.forward]]
 end
 vars.V=setmetatable({},{__index=function (_,k)
     local sym=assert(Vsymbols[k],'DEV: Not an internal variable: '..tostring(k)) --[[@as nelisp._symbol]]
