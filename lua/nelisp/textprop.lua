@@ -215,6 +215,18 @@ local function set_text_properties_1(start,end_,properties,object,i)
     end
     assert(len>0)
     if i.position~=s then
+        local old=i
+        i=intervals.split_right(old,s-old.position)
+        if intervals.length(i)>len then
+            intervals.copy_properties(old,i)
+            i=intervals.split_left(i,len)
+            set_properties(properties,i,object)
+            return
+        end
+        set_properties(properties,i,object)
+        if intervals.length(i)==len then
+            return
+        end
         error('TODO')
     end
     while true do
