@@ -550,11 +550,40 @@ local function escapestr(obj)
     local s=lisp.sdata(obj)
     return ('%q'):format(s)
 end
+local compile
+---@param interval nelisp.intervals
+---@param name string?
+---@return string
+local function interval_compile(interval,name)
+    local printcharfun=require'nelisp.print'.make_printcharfun()
+    printcharfun.write('{')
+    for k,v in pairs(interval) do
+        printcharfun.write(k..'=')
+        if k=='left' or k=='right' then
+            assert(v.total_length)
+            printcharfun.write(interval_compile(v,name))
+        elseif k=='plist' then
+            compile(v,printcharfun,name)
+        elseif k=='up' then
+            if interval.up_is_obj then
+                printcharfun.write('true')
+            else
+                printcharfun.write('false')
+            end
+        else
+            assert(type(v)=='number' or type(v)=='boolean')
+            printcharfun.write(tostring(v))
+        end
+        printcharfun.write(',')
+    end
+    printcharfun.write('}')
+    return printcharfun.out()
+end
 ---@param obj nelisp.obj
 ---@param printcharfun nelisp.print.printcharfun
 ---@param name string?
 ---@return "DONT RETURN"
-local function compile(obj,printcharfun,name)
+function compile(obj,printcharfun,name)
     printcharfun.print_depth=printcharfun.print_depth+1
     if _G.nelisp_later then
         error('TODO: recursive/circular check')
@@ -580,10 +609,15 @@ local function compile(obj,printcharfun,name)
     elseif typ==lisp.type.float then
         printcharfun.write('FLOAT('..('%f'):format(lisp.xfloat_data(obj))..')')
     elseif typ==lisp.type.string then
-        assert(lisp.string_intervals(obj)==nil)
         printcharfun.write('STR('..escapestr(obj))
         if lisp.string_multibyte(obj) then
             printcharfun.write(','..lisp.schars(obj))
+        end
+        if lisp.string_intervals(obj)~=nil then
+            if not lisp.string_multibyte(obj) then
+                printcharfun.write(',nil')
+            end
+            printcharfun.write(','..interval_compile(assert(lisp.string_intervals(obj)),name))
         end
         printcharfun.write(')')
     elseif typ==lisp.type.cons then
@@ -740,6 +774,30 @@ function M.compiled_to_fun(fun)
     local str=compile_compiled(fun)
     return M._str_to_fun(str)
 end
+---@param parent nelisp.obj|nelisp.intervals
+---@param interval table
+---@return nelisp.intervals
+local function decomp_interval(interval,parent)
+    local new={up=parent}
+    for k,v in pairs(interval) do
+        assert(k~='parent')
+        if k=='up' then
+            if v then
+                assert(parent[1])
+            else
+                assert(parent.up)
+            end
+        elseif k=='left' or k=='right' then
+            new[k]=decomp_interval(v,new)
+        elseif k=='plist' then
+            new[k]=v
+        else
+            assert(type(v)=='number' or type(v)=='boolean')
+            new[k]=v
+        end
+    end
+    return new
+end
 local globals={
     C=function (args)
         local val=args[#args]
@@ -754,11 +812,17 @@ local globals={
     US=function (s)
         return vars.F.make_symbol(alloc.make_specified_string(s,-1,false))
     end,
-    STR=function (s,nchars)
+    STR=function (s,nchars,interval)
+        local str
         if nchars then
-            return alloc.make_multibyte_string(s,nchars)
+            str=alloc.make_multibyte_string(s,nchars)
+        else
+            str=alloc.make_unibyte_string(s)
         end
-        return alloc.make_unibyte_string(s)
+        if interval then
+            (str --[[@as nelisp._string]]).intervals=decomp_interval(interval,str)
+        end
+        return str
     end,
     INT=function (n)
         return lisp.make_fixnum(n)
