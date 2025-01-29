@@ -164,7 +164,7 @@ function M.bvar(buf,field)
     elseif field==bvar.syntax_table then
         return vbuf.syntax_table
     elseif field==bvar.read_only then
-        return vim.bo[bufid].readonly and vars.Qt or vars.Qnil
+        return vim.bo[bufid].modifiable and vars.Qnil or vars.Qt
     elseif field==bvar.filename then
         return buffer_filename(buf)
     elseif field==bvar.enable_multibyte_characters then
