@@ -246,6 +246,31 @@ No argument or nil as argument means use the current buffer.]]}
 function F.buffer_file_name.f(buffer)
     return nvim.bvar(decode_buffer(buffer),M.bvar.filename)
 end
+---@param variable nelisp.obj
+---@param buffer nelisp.obj
+---@return nelisp.obj?
+local function buffer_local_value(variable,buffer)
+    lisp.check_symbol(variable)
+    lisp.check_buffer(buffer)
+    local buf=buffer --[[@as nelisp._buffer]]
+    local sym=variable --[[@as nelisp._symbol]]
+    if sym.redirect==lisp.symbol_redirect.plainval then
+        return sym.value --[[@as nelisp.obj?]]
+    else
+        error('TODO')
+    end
+end
+F.buffer_local_value={'buffer-local-value',2,2,0,[[Return the value of VARIABLE in BUFFER.
+If VARIABLE does not have a buffer-local binding in BUFFER, the value
+is the default binding of the variable.]]}
+function F.buffer_local_value.f(variable,buffer)
+    local result=buffer_local_value(variable,buffer)
+    if result==nil then
+        signal.xsignal(vars.Qvoid_variable,variable)
+        error('unreachable')
+    end
+    return result
+end
 F.make_overlay={'make-overlay',2,5,0,[[Create a new overlay with range BEG to END in BUFFER and return it.
 If omitted, BUFFER defaults to the current buffer.
 BEG and END may be integers or markers.
@@ -341,6 +366,7 @@ function M.init_syms()
     vars.defsubr(F,'buffer_modified_p')
     vars.defsubr(F,'buffer_name')
     vars.defsubr(F,'buffer_file_name')
+    vars.defsubr(F,'buffer_local_value')
     vars.defsubr(F,'make_overlay')
     vars.defsubr(F,'overlay_put')
     vars.defsubr(F,'delete_overlay')
