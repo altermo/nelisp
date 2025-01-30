@@ -25,8 +25,15 @@ function F.atan.f(y,x)
     end
     return alloc.make_float(d)
 end
+F.exp={'exp',1,1,0,[[Return the exponential base e of ARG.]]}
+function F.exp.f(arg)
+    local d=extract_float(arg)
+    d=math.exp(d)
+    return alloc.make_float(d)
+end
 
 function M.init_syms()
     vars.defsubr(F,'atan')
+    vars.defsubr(F,'exp')
 end
 return M
