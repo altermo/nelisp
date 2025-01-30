@@ -152,6 +152,9 @@ local function eregex_to_vimregex(s)
                 c=in_buf.read()
             end
             while c~=b']' do
+                if c==b'\\' then
+                    p.write('\\')
+                end
                 p.write(c)
                 if c==-1 then
                     signal_err('Unmatched [ or [^')
