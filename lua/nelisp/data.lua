@@ -1099,6 +1099,7 @@ function M.init_syms()
     vars.defsym('Qbuffer_or_string_p','buffer-or-string-p')
     vars.defsym('Qframe_live_p','frame-live-p')
     vars.defsym('Qbufferp','bufferp')
+    vars.defsym('Qnumberp','numberp')
 
     vars.defsym('QCtest',':test')
     vars.defsym('QCsize',':size')

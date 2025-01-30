@@ -44,6 +44,7 @@ require'nelisp.xdisp'.init_syms()
 require'nelisp.dispnew'.init_syms()
 require'nelisp.ccl'.init_syms()
 require'nelisp.terminal'.init_syms()
+require'nelisp.floatfns'.init_syms()
 
 vars.commit_qsymbols()
 

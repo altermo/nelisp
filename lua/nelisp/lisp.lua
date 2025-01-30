@@ -489,6 +489,8 @@ function M.check_frame(x) M.check_type(M.framep(x),vars.Qframep,x) end
 function M.check_buffer(x) M.check_type(M.bufferp(x),vars.Qbufferp,x) end
 ---@overload fun(x:nelisp.obj)
 function M.check_overlay(x) M.check_type(M.overlayp(x),vars.Qbufferp,x) end
+---@overload fun(x:nelisp.obj)
+function M.check_number(x) M.check_type(M.numberp(x),vars.Qnumberp,x) end
 ---@param x nelisp.obj
 ---@return number
 function M.check_vector_or_string(x)
@@ -683,6 +685,19 @@ end
 ---@return number (float)
 function M.xfloat_data(f)
     return (f --[[@as nelisp._float]])[2]
+end
+---@param f nelisp.obj
+---@return number (float)
+function M.xfloatint(f)
+    if M.floatp(f) then
+        return M.xfloat_data(f)
+    elseif M.fixnump(f) then
+        return M.fixnum(f)
+    elseif M.bignump(f) then
+        error('TODO')
+    else
+        error('unreachable')
+    end
 end
 
 

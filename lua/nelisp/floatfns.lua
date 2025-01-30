@@ -1,0 +1,32 @@
+local vars=require'nelisp.vars'
+local lisp=require'nelisp.lisp'
+local alloc=require'nelisp.alloc'
+local M={}
+
+---@type nelisp.F
+local F={}
+---@param num nelisp.obj
+---@return number (float)
+local function extract_float(num)
+    lisp.check_number(num)
+    return lisp.xfloatint(num)
+end
+F.atan={'atan',1,2,0,[[Return the inverse tangent of the arguments.
+If only one argument Y is given, return the inverse tangent of Y.
+If two arguments Y and X are given, return the inverse tangent of Y
+divided by X, i.e. the angle in radians between the vector (X, Y)
+and the x-axis.]]}
+function F.atan.f(y,x)
+    local d=extract_float(y)
+    if lisp.nilp(x) then
+        d=math.atan(d)
+    else
+        error('TODO')
+    end
+    return alloc.make_float(d)
+end
+
+function M.init_syms()
+    vars.defsubr(F,'atan')
+end
+return M
