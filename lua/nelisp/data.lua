@@ -497,6 +497,9 @@ local function arith_driver(code,args)
                     acc=v
                 elseif lisp.fixnump(v) then
                     acc=lisp.fixnum(v)
+                elseif lisp.floatp(v) then
+                    assert(is_float)
+                    acc=lisp.xfloat_data(v)
                 else
                     error('TODO')
                 end
