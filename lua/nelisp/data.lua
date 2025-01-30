@@ -508,7 +508,7 @@ local function arith_driver(code,args)
                 acc=over(acc,lisp.fixnum(v))
             elseif lisp.floatp(v) then
                 assert(is_float)
-                error('TODO')
+                acc=over(acc,lisp.xfloat_data(v))
             else
                 error('TODO')
             end
@@ -517,7 +517,7 @@ local function arith_driver(code,args)
             end
         end
         if is_float then
-            error('TODO')
+            return alloc.make_float(acc)
         end
         return lisp.make_fixnum(acc)
     end
