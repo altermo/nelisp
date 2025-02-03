@@ -828,6 +828,64 @@ function F.function_.f(args)
     end
     return quoted
 end
+F.commandp={'commandp',1,2,0,[[Non-nil if FUNCTION makes provisions for interactive calling.
+This means it contains a description for how to read arguments to give it.
+The value is nil for an invalid function or a symbol with no function
+definition.
+
+Interactively callable functions include strings and vectors (treated
+as keyboard macros), lambda-expressions that contain a top-level call
+to `interactive', autoload definitions made by `autoload' with non-nil
+fourth argument, and some of the built-in functions of Lisp.
+
+Also, a symbol satisfies `commandp' if its function definition does so.
+
+If the optional argument FOR-CALL-INTERACTIVELY is non-nil,
+then strings and vectors are not accepted.]]}
+function F.commandp.f(function_,for_call_interactively)
+    local fun=function_
+    fun=data.indirect_function(fun)
+    if lisp.nilp(fun) then
+        return vars.Qnil
+    end
+    local genfun=false
+    if lisp.subrp(fun) then
+        if (fun --[[@as nelisp._subr]]).intspec then
+            return vars.Qt
+        end
+    elseif lisp.compiledp(fun) then
+        if lisp.asize(fun)>=lisp.compiled_idx.interactive then
+            return vars.Qt
+        elseif lisp.asize(fun)>=lisp.compiled_idx.doc_string then
+            local doc=(fun --[[@as nelisp._compiled]]).contents[lisp.compiled_idx.doc_string]
+            genfun=not (lisp.nilp(doc) or lisp.valid_docstring_p(doc))
+        end
+    elseif lisp.stringp(fun) or lisp.vectorp(fun) then
+        return lisp.nilp(for_call_interactively) and vars.Qt or vars.Qnil
+    elseif not lisp.consp(fun) then
+        return vars.Qnil
+    else
+        local funcar=lisp.xcar(fun)
+        if lisp.eq(funcar,vars.Qautoload) then
+            if not lisp.nilp(vars.F.car(vars.F.cdr(vars.F.cdr(lisp.xcdr(fun))))) then
+                return vars.Qt
+            end
+        else
+            local body=vars.F.cdr_safe(lisp.xcdr(fun))
+            if lisp.eq(funcar,vars.Qclosure) then
+                body=vars.F.cdr_safe(body)
+            elseif not lisp.eq(funcar,vars.Qlambda) then
+                return vars.Qnil
+            end
+            if not lisp.nilp(vars.Fassq(vars.Qinteractive,body)) then
+                return vars.Qt
+            elseif lisp.valid_docstring_p(vars.F.car_safe(body)) then
+                genfun=true
+            end
+        end
+    end
+    error('TODO')
+end
 F.autoload={'autoload',2,5,0,[[Define FUNCTION to autoload from FILE.
 FUNCTION is a symbol; FILE is a file name string to pass to `load'.
 
@@ -1220,6 +1278,7 @@ function M.init_syms()
     vars.defsubr(F,'funcall')
     vars.defsubr(F,'apply')
     vars.defsubr(F,'function_')
+    vars.defsubr(F,'commandp')
     vars.defsubr(F,'autoload')
     vars.defsubr(F,'autoload_do_load')
     vars.defsubr(F,'throw')
@@ -1267,6 +1326,8 @@ function M.init_syms()
     vars.defsym('Qlexical_binding','lexical-binding')
     vars.defsym('QCsuccess',':success')
     vars.defsym('QCdocumentation',':documentation')
+
+    vars.defsym('Qinteractive','interactive')
 
     vars.run_hooks=lread.intern_c_string('run-hooks')
 
