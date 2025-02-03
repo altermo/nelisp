@@ -1328,6 +1328,7 @@ function M.init_syms()
     vars.defsym('QCdocumentation',':documentation')
 
     vars.defsym('Qinteractive','interactive')
+    vars.defsym('Qcommandp','commandp')
 
     vars.run_hooks=lread.intern_c_string('run-hooks')
 
