@@ -913,6 +913,8 @@ function F.boundp.f(sym)
     elseif s.redirect==lisp.symbol_redirect.varalias then
         s=indirect_variable(s)
         goto start
+    elseif s.redirect==lisp.symbol_redirect.localized then
+        return nvim.buffer_get_var(nvim.buffer_get_current() --[[@as nelisp._buffer]],s)==nil and vars.Qnil or vars.Qt
     else
         error('TODO')
     end
