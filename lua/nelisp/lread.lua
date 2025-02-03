@@ -486,6 +486,16 @@ function M.read_char_literal(readcharfun)
     end
     ch=bit.bor(ch,mods)
     local nch=readcharfun.read()
+    if _G.nelisp_later then
+        error('TODO: remove once multibyte read is implemented')
+    elseif nch>=128 then
+        local s=string.char(ch)
+        while nch>=128 do
+            s=s..string.char(nch)
+            nch=readcharfun.read()
+        end
+        ch=chars.stringchar(s)
+    end
     readcharfun.unread()
     if (nch<=32 or nch==b.no_break_space or string.char(nch):match'[]"\';()[#?`,.]') then
         return lisp.make_fixnum(ch)
