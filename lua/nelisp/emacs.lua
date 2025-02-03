@@ -47,5 +47,9 @@ component .BUILD is present.  This is now stored separately in
 
     vars.defvar_bool('noninteractive','noninteractive',[[Non-nil means Emacs is running without interactive terminal.]])
     vars.V.noninteractive=vars.Qnil
+
+    vars.defvar_lisp('after_init_time','after-init-time',[[Value of `current-time' after loading the init files.
+This is nil during initialization.]])
+    vars.V.after_init_time=vars.Qnil
 end
 return M
