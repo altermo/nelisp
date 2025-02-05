@@ -239,6 +239,17 @@ function F.buffer_modified_p.f(buffer)
     end
     return vars.Qnil
 end
+F.set_buffer_modified_p={'set-buffer-modified-p',1,1,0,[[Mark current buffer as modified or unmodified according to FLAG.
+A non-nil FLAG means mark the buffer modified.
+In addition, this function unconditionally forces redisplay of the
+mode lines of the windows that display the current buffer, and also
+locks or unlocks the file visited by the buffer, depending on whether
+the function's argument is non-nil, but only if both `buffer-file-name'
+and `buffer-file-truename' are non-nil.]]}
+function F.set_buffer_modified_p.f(flag)
+    nvim.buf_set_modiff(true,not lisp.nilp(flag))
+    return vars.F.force_mode_line_update(vars.Qnil)
+end
 F.buffer_name={'buffer-name',0,1,0,[[Return the name of BUFFER, as a string.
 BUFFER defaults to the current buffer.
 Return nil if BUFFER has been killed.]]}
@@ -378,6 +389,7 @@ function M.init_syms()
     vars.defsubr(F,'buffer_list')
     vars.defsubr(F,'current_buffer')
     vars.defsubr(F,'buffer_modified_p')
+    vars.defsubr(F,'set_buffer_modified_p')
     vars.defsubr(F,'buffer_name')
     vars.defsubr(F,'buffer_file_name')
     vars.defsubr(F,'buffer_local_value')

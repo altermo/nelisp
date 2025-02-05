@@ -196,6 +196,16 @@ function M.buf_save_modiff(buffer)
     end
     return changedtick
 end
+---@param buffer nelisp._buffer|true
+---@param flag boolean
+function M.buf_set_modiff(buffer,flag)
+    if buffer==true then
+        buffer=M.buffer_get_current() --[[@as nelisp._buffer]]
+    end
+    ---@cast buffer nelisp.vim.buffer
+    local bufid=buffer.bufid
+    vim.bo[bufid].modified=flag
+end
 
 --- ;; Terminal (UI)
 
