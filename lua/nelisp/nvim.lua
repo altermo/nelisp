@@ -508,7 +508,7 @@ function M.overlay_drop(overlay)
     end
     local buffer=overlay.buffer
     ---@cast buffer nelisp.vim.buffer
-    vim.api.nvim_buf_del_extmark(buffer.bufid,overlay.id,vim.api.nvim_create_namespace('nelisp'))
+    vim.api.nvim_buf_del_extmark(buffer.bufid,vim.api.nvim_create_namespace('nelisp'),overlay.id)
     overlay.buffer=nil
     overlay.id=nil
 end
