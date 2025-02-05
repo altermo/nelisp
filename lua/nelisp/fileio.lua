@@ -1,6 +1,7 @@
 local vars=require'nelisp.vars'
 local lisp=require'nelisp.lisp'
 local alloc=require'nelisp.alloc'
+local coding=require'nelisp.coding'
 local M={}
 
 ---@type nelisp.F
@@ -144,6 +145,32 @@ function F.file_name_nondirectory.f(filename)
     end
     return alloc.make_specified_string(lisp.sdata(filename):sub(p+1),-1,lisp.string_multibyte(filename))
 end
+---@param filename nelisp.obj
+---@param operation nelisp.obj
+---@param mode 'f'
+---@return nelisp.obj
+local function check_file_access(filename,operation,mode)
+    local file=vars.F.expand_file_name(filename,vars.Qnil)
+    local handler=vars.F.find_file_name_handler(file,operation)
+    if not lisp.nilp(handler) then
+        error('TODO')
+    end
+    local encoded_filename=lisp.sdata(coding.encode_file_name(file))
+    if mode=='f' then
+        return vim.uv.fs_stat(encoded_filename) and vars.Qt or vars.Qnil
+    else
+        error('TODO')
+    end
+end
+F.file_exists_p={'file-exists-p',1,1,0,[[Return t if file FILENAME exists (whether or not you can read it).
+Return nil if FILENAME does not exist, or if there was trouble
+determining whether the file exists.
+See also `file-readable-p' and `file-attributes'.
+This returns nil for a symlink to a nonexistent file.
+Use `file-symlink-p' to test for such links.]]}
+function F.file_exists_p.f(filename)
+    return check_file_access(filename,vars.Qfile_exists_p,'f')
+end
 
 function M.init_syms()
     vars.defsubr(F,'find_file_name_handler')
@@ -154,6 +181,7 @@ function M.init_syms()
     vars.defsubr(F,'car_less_than_car')
     vars.defsubr(F,'file_name_absolute_p')
     vars.defsubr(F,'file_name_nondirectory')
+    vars.defsubr(F,'file_exists_p')
 
     vars.defsym('Qfile_exists_p','file-exists-p')
     vars.defsym('Qfile_name_nondirectory','file-name-nondirectory')
