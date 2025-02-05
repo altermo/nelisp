@@ -41,6 +41,20 @@ function M.set_internal(sym,newval,where,bindflag)
         else
             blv.default_value=newval
         end
+    elseif s.redirect==lisp.symbol_redirect.forwarded then
+        local fwd=s.value --[[@as nelisp.forward]]
+        if newval==nil then
+            error('TODO')
+        end
+        if fwd.isbuffer then
+            local buf
+            if lisp.bufferp(where) then
+                buf=where --[[@as nelisp._buffer]]
+            end
+            fwd[2](newval,{buffer=buf})
+        else
+            error('TODO')
+        end
     else
         error('TODO')
     end
