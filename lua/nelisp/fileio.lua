@@ -171,6 +171,28 @@ Use `file-symlink-p' to test for such links.]]}
 function F.file_exists_p.f(filename)
     return check_file_access(filename,vars.Qfile_exists_p,'f')
 end
+F.directory_file_name={'directory-file-name',1,1,0,[[Returns the file name of the directory named DIRECTORY.
+This is the name of the file that holds the data for the directory DIRECTORY.
+This operation exists because a directory is also a file, but its name as
+a directory is different from its name as a file.
+In Unix-syntax, this function just removes the final slash.]]}
+function F.directory_file_name.f(directory)
+    lisp.check_string(directory)
+    local handler=vars.F.find_file_name_handler(directory,vars.Qdirectory_file_name)
+    if not lisp.nilp(handler) then
+        error('TODO')
+    end
+    local name=lisp.sdata(directory)
+    local out
+    if name=='//' then
+        out='//'
+    elseif name:match('^/+$') then
+        out='/'
+    else
+        out=name:gsub('/+$','')
+    end
+    return alloc.make_specified_string(out,-1,lisp.string_multibyte(directory))
+end
 
 function M.init_syms()
     vars.defsubr(F,'find_file_name_handler')
@@ -182,8 +204,10 @@ function M.init_syms()
     vars.defsubr(F,'file_name_absolute_p')
     vars.defsubr(F,'file_name_nondirectory')
     vars.defsubr(F,'file_exists_p')
+    vars.defsubr(F,'directory_file_name')
 
     vars.defsym('Qfile_exists_p','file-exists-p')
+    vars.defsym('Qdirectory_file_name','directory-file-name')
     vars.defsym('Qfile_name_nondirectory','file-name-nondirectory')
 
     vars.defvar_lisp('file_name_handler_alist','file-name-handler-alist',[[Alist of elements (REGEXP . HANDLER) for file names handled specially.
