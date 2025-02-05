@@ -107,8 +107,9 @@ local function defvar_per_buffer(symname,bvar,predicate,doc)
         local buffer=con.buffer or (nvim.buffer_get_current() --[[@as nelisp._buffer]])
         return nvim.bvar(buffer,bvar)
     end,function (val,con)
-        error('TODO')
-    end,true)
+            local buffer=con.buffer or (nvim.buffer_get_current() --[[@as nelisp._buffer]])
+            nvim.bvar_set(buffer,bvar,val)
+        end,true)
 end
 
 ---@param buffer nelisp._buffer
@@ -377,6 +378,51 @@ See also Info node `(elisp)Text Representations'.]])
     lisp.make_symbol_constant(lread.intern_c_string('enable-multibyte-characters'))
 
     defvar_per_buffer('buffer-read-only',M.bvar.read_only,vars.Qnil,[[Non-nil if this buffer is read-only.]])
+
+    defvar_per_buffer('buffer-undo-list',M.bvar.undo_list,vars.Qnil,[[List of undo entries in current buffer.
+Recent changes come first; older changes follow newer.
+
+An entry (BEG . END) represents an insertion which begins at
+position BEG and ends at position END.
+
+An entry (TEXT . POSITION) represents the deletion of the string TEXT
+from (abs POSITION).  If POSITION is positive, point was at the front
+of the text being deleted; if negative, point was at the end.
+
+An entry (t . TIMESTAMP), where TIMESTAMP is in the style of
+`current-time', indicates that the buffer was previously unmodified;
+TIMESTAMP is the visited file's modification time, as of that time.
+If the modification time of the most recent save is different, this
+entry is obsolete.
+
+An entry (t . 0) means the buffer was previously unmodified but
+its time stamp was unknown because it was not associated with a file.
+An entry (t . -1) is similar, except that it means the buffer's visited
+file did not exist.
+
+An entry (nil PROPERTY VALUE BEG . END) indicates that a text property
+was modified between BEG and END.  PROPERTY is the property name,
+and VALUE is the old value.
+
+An entry (apply FUN-NAME . ARGS) means undo the change with
+\(apply FUN-NAME ARGS).
+
+An entry (apply DELTA BEG END FUN-NAME . ARGS) supports selective undo
+in the active region.  BEG and END is the range affected by this entry
+and DELTA is the number of characters added or deleted in that range by
+this change.
+
+An entry (MARKER . DISTANCE) indicates that the marker MARKER
+was adjusted in position by the offset DISTANCE (an integer).
+
+An entry of the form POSITION indicates that point was at the buffer
+location given by the integer.  Undoing an entry of this form places
+point at POSITION.
+
+Entries with value nil mark undo boundaries.  The undo command treats
+the changes between two undo boundaries as a single step to be undone.
+
+If the value of the variable is t, undo information is not recorded.]])
 
     --This should be last, after all per buffer variables are defined
     vars.F.get_buffer_create(alloc.make_unibyte_string('*scratch*'),vars.Qnil)

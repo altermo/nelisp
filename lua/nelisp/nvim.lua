@@ -173,6 +173,32 @@ function M.bvar(buf,field)
         error('TODO')
     end
 end
+---@param buf nelisp._buffer
+---@param field nelisp.bvar
+---@param val nelisp.obj
+function M.bvar_set(buf,field,val)
+    if buf==true then
+        buf=M.buffer_get_current() --[[@as nelisp._buffer]]
+    end
+    local buffer_=require'nelisp.buffer'
+    local bvar=buffer_.bvar
+    local vbuf=buf --[[@as nelisp.vim.buffer]]
+    local bufid=vbuf.bufid
+    if field==bvar.undo_list then
+        if lisp.nilp(val) then
+            vim.bo[bufid].undolevels=vbuf.undo_level or vim.bo[bufid].undolevels
+        elseif lisp.eq(val,vars.Qt) then
+            if vim.bo[bufid].undolevels~=-1 then
+                vbuf.undo_level=vim.bo[bufid].undolevels
+            end
+            vim.bo[bufid].undolevels=-1
+        else
+            error('TODO')
+        end
+    else
+        error('TODO')
+    end
+end
 ---@param buffer nelisp._buffer
 ---@return number
 function M.buf_modiff(buffer)
