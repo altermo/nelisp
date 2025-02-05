@@ -1673,5 +1673,24 @@ the .eln filename.]])
 
     vars.defvar_lisp('read_circle','read-circle',[[Non-nil means read recursive structures using #N= and #N# syntax.]])
     vars.V.read_circle=vars.Qt
+
+    vars.defvar_lisp('load_history','load-history',[[Alist mapping loaded file names to symbols and features.
+Each alist element should be a list (FILE-NAME ENTRIES...), where
+FILE-NAME is the name of a file that has been loaded into Emacs.
+The file name is absolute and true (i.e. it doesn't contain symlinks).
+As an exception, one of the alist elements may have FILE-NAME nil,
+for symbols and features not associated with any file.
+
+The remaining ENTRIES in the alist element describe the functions and
+variables defined in that file, the features provided, and the
+features required.  Each entry has the form `(provide . FEATURE)',
+`(require . FEATURE)', `(defun . FUNCTION)', `(defface . SYMBOL)',
+ `(define-type . SYMBOL)', or `(cl-defmethod METHOD SPECIALIZERS)'.
+In addition, entries may also be single symbols,
+which means that symbol was defined by `defvar' or `defconst'.
+
+During preloading, the file name recorded is relative to the main Lisp
+directory.  These file names are converted to absolute at startup.]])
+    vars.V.load_history=vars.Qnil
 end
 return M
