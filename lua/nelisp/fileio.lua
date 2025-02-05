@@ -112,6 +112,22 @@ F.car_less_than_car={'car-less-than-car',2,2,0,[[Return t if (car A) is numerica
 function F.car_less_than_car.f(a,b)
     return vars.F.lss{vars.F.car(a),vars.F.car(b)}
 end
+---@param filename string
+---@return boolean
+local function file_name_absolute_p(filename)
+    if filename:sub(1,1)=='~' then
+        error('TODO')
+    end
+    return filename:sub(1,1)=='/'
+end
+F.file_name_absolute_p={'file-name-absolute-p',1,1,0,[[Return t if FILENAME is an absolute file name.
+On Unix, absolute file names start with `/'.  In Emacs, an absolute
+file name can also start with an initial `~' or `~USER' component,
+where USER is a valid login name.]]}
+function F.file_name_absolute_p.f(filename)
+    lisp.check_string(filename)
+    return file_name_absolute_p(lisp.sdata(filename)) and vars.Qt or vars.Qnil
+end
 
 function M.init_syms()
     vars.defsubr(F,'find_file_name_handler')
@@ -120,6 +136,7 @@ function M.init_syms()
     vars.defsubr(F,'file_directory_p')
     vars.defsubr(F,'file_name_directory')
     vars.defsubr(F,'car_less_than_car')
+    vars.defsubr(F,'file_name_absolute_p')
 
     vars.defsym('Qfile_exists_p','file-exists-p')
 
