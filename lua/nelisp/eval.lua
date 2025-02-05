@@ -823,7 +823,8 @@ function F.function_.f(args)
         if lisp.nilp(vars.V.internal_make_interpreted_closure_function) then
             return vars.F.cons(vars.Qclosure,vars.F.cons(vars.V.internal_interpreter_environment,cdr))
         else
-            error('TODO')
+            return vars.F.funcall{vars.V.internal_make_interpreted_closure_function,
+                vars.F.cons(vars.Qlambda,cdr),vars.V.internal_interpreter_environment}
         end
     end
     return quoted
