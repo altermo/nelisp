@@ -128,6 +128,22 @@ function F.file_name_absolute_p.f(filename)
     lisp.check_string(filename)
     return file_name_absolute_p(lisp.sdata(filename)) and vars.Qt or vars.Qnil
 end
+F.file_name_nondirectory={'file-name-nondirectory',1,1,0,[[Return file name FILENAME sans its directory.
+For example, in a Unix-syntax file name,
+this is everything after the last slash,
+or the entire name if it contains no slash.]]}
+function F.file_name_nondirectory.f(filename)
+    lisp.check_string(filename)
+    local handler=vars.F.find_file_name_handler(filename,vars.Qfile_name_nondirectory)
+    if not lisp.nilp(handler) then
+        error('TODO')
+    end
+    local p=lisp.sbytes(filename)-1
+    while p>0 and not lisp.IS_DIRECTORY_SEP(lisp.sref(filename,p-1)) do
+        p=p-1
+    end
+    return alloc.make_specified_string(lisp.sdata(filename):sub(p+1),-1,lisp.string_multibyte(filename))
+end
 
 function M.init_syms()
     vars.defsubr(F,'find_file_name_handler')
@@ -137,8 +153,10 @@ function M.init_syms()
     vars.defsubr(F,'file_name_directory')
     vars.defsubr(F,'car_less_than_car')
     vars.defsubr(F,'file_name_absolute_p')
+    vars.defsubr(F,'file_name_nondirectory')
 
     vars.defsym('Qfile_exists_p','file-exists-p')
+    vars.defsym('Qfile_name_nondirectory','file-name-nondirectory')
 
     vars.defvar_lisp('file_name_handler_alist','file-name-handler-alist',[[Alist of elements (REGEXP . HANDLER) for file names handled specially.
 If a file name matches REGEXP, all I/O on that file is done by calling
