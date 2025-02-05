@@ -1340,7 +1340,10 @@ function F.load.f(file,noerror,nomessage,nosuffix,mustsuffix)
         fd=M.openp(vars.V.load_path,file,suffixes,found,vars.Qnil,not lisp.nilp(vars.V.load_prefer_newer),no_native)
     end
     if fd==-1 then
-        error('TODO')
+        if lisp.nilp(noerror) then
+            error('TODO')
+        end
+        return vars.Qnil
     end
     if lisp.eq(vars.Qt,vars.V.user_init_file) then
         vars.V.user_init_file=found[1]
