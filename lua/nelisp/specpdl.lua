@@ -18,6 +18,10 @@ local vars=require'nelisp.vars'
 ---@field symbol nelisp.obj
 ---@field old_value nelisp.obj?
 
+---@class nelisp.specpdl.let_local_entry: nelisp.specpdl.let_entry
+---@field type nelisp.specpdl.type.let_local
+---@field where nelisp.obj
+
 ---@class nelisp.specpdl.unwind_entry: nelisp.specpdl.entry
 ---@field type nelisp.specpdl.type.unwind
 ---@field func function
@@ -35,7 +39,7 @@ M.type={
     backtrace=1,
     unwind=2,
     let=100,
-    let_default=101,
+    let_local=101,
 }
 
 ---@return nelisp.specpdl.index
@@ -60,7 +64,14 @@ function M.unbind_to(index,val,assert_ignore)
             else
                 error('TODO')
             end
-        elseif entry.type==M.type.let or entry.type==M.type.let_default then
+        elseif entry.type==M.type.let_local and lisp.symbolp(entry.symbol) and
+            (entry.symbol --[[@as nelisp._symbol]]).redirect==lisp.symbol_redirect.forwarded then
+            if (entry.symbol --[[@as nelisp._symbol]]).trapped_write==lisp.symbol_trapped_write.untrapped then
+                require'nelisp.data'.set_internal(entry.symbol,entry.old_value,vars.Qnil,'UNBIND')
+            else
+                error('TODO')
+            end
+        elseif entry.type==M.type.let or entry.type==M.type.let_local then
             error('TODO')
         elseif entry.type==M.type.backtrace then
         elseif entry.type==M.type.unwind then
@@ -128,6 +139,16 @@ function M.bind(sym,val)
         else
             error('TODO')
         end
+    elseif s.redirect==lisp.symbol_redirect.forwarded then
+        local data=require'nelisp.data'
+        local ovalue=data.find_symbol_value(s)
+        table.insert(specpdl,{
+            type=M.type.let_local --[[@as nelisp.specpdl.type.let_local]],
+            symbol=sym,
+            old_value=ovalue,
+            where=vars.F.current_buffer()
+        })
+        data.set_internal(sym,val,vars.Qnil,'BIND')
     else
         error('TODO')
     end
