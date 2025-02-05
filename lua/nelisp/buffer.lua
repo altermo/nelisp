@@ -441,6 +441,11 @@ the changes between two undo boundaries as a single step to be undone.
 
 If the value of the variable is t, undo information is not recorded.]])
 
+    defvar_per_buffer('default-directory',M.bvar.directory,vars.Qstringp,[[Name of default directory of current buffer.
+It should be an absolute directory name; on GNU and Unix systems,
+these names start with "/" or "~" and end with "/".
+To interactively change the default directory, use the command `cd'.]])
+
     --This should be last, after all per buffer variables are defined
     vars.F.get_buffer_create(alloc.make_unibyte_string('*scratch*'),vars.Qnil)
 end

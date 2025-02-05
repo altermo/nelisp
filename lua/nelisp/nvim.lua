@@ -202,6 +202,11 @@ function M.bvar_set(buf,field,val)
         else
             error('TODO')
         end
+    elseif field==bvar.directory then
+        if _G.nelisp_later then
+            error('TODO: how to handle window local as buffer local')
+        end
+        vim.fn.chdir(lisp.sdata(val))
     else
         error('TODO')
     end
