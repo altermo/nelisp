@@ -171,6 +171,11 @@ function M.bvar(buf,field)
         return vbuf.enable_multibyte_characters
     elseif field==bvar.undo_list then
         return vim.bo[bufid].undolevels==-1 and vars.Qt or error('TODO')
+    elseif field==bvar.directory then
+        if _G.nelisp_later then
+            error('TODO: how to handle window local as buffer local')
+        end
+        return alloc.make_string(vim.fn.getcwd())
     else
         error('TODO')
     end

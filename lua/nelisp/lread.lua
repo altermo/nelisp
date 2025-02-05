@@ -9,6 +9,7 @@ local overflow=require'nelisp.overflow'
 local alloc=require'nelisp.alloc'
 local handler=require'nelisp.handler'
 local caching=require'nelisp.caching'
+local nvim=require'nelisp.nvim'
 
 local M={}
 
@@ -1160,7 +1161,10 @@ function M.openp(path,s,suffixes,storep,predicate,newer,no_native)
             filename=vars.F.expand_file_name(s,lisp.xcar(p))
         end
         if not complete_filename_p(filename) then
-            error('TODO')
+            filename=vars.F.expand_file_name(filename,nvim.bvar(true,require'nelisp.buffer'.bvar.directory))
+            if not complete_filename_p(filename) then
+                return 'continue'
+            end
         end
         local ofn=lisp.sdata(filename):gsub('^:/','')
         local ret=lisp.for_each_tail_safe(lisp.nilp(suffixes) and lisp.list(alloc.make_unibyte_string('')) or suffixes,function (tail)
