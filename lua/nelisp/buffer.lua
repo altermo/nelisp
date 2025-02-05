@@ -293,6 +293,23 @@ function F.buffer_local_value.f(variable,buffer)
     end
     return result
 end
+F.buffer_enable_undo={'buffer-enable-undo',0,1,'',[[Start keeping undo information for buffer BUFFER.
+No argument or nil as argument means do this for the current buffer.]]}
+function F.buffer_enable_undo.f(buffer)
+    local real_buffer
+    if lisp.nilp(buffer) then
+        real_buffer=nvim.buffer_get_current()
+    else
+        real_buffer=vars.F.get_buffer(buffer)
+        if lisp.nilp(real_buffer) then
+            nsberror(buffer)
+        end
+    end
+    if lisp.eq(nvim.bvar(real_buffer --[[@as nelisp._buffer]],M.bvar.undo_list),vars.Qt) then
+        nvim.bvar_set(real_buffer --[[@as nelisp._buffer]],M.bvar.undo_list,vars.Qnil)
+    end
+    return vars.Qnil
+end
 F.make_overlay={'make-overlay',2,5,0,[[Create a new overlay with range BEG to END in BUFFER and return it.
 If omitted, BUFFER defaults to the current buffer.
 BEG and END may be integers or markers.
@@ -439,6 +456,7 @@ function M.init_syms()
     vars.defsubr(F,'buffer_name')
     vars.defsubr(F,'buffer_file_name')
     vars.defsubr(F,'buffer_local_value')
+    vars.defsubr(F,'buffer_enable_undo')
     vars.defsubr(F,'make_overlay')
     vars.defsubr(F,'overlay_put')
     vars.defsubr(F,'delete_overlay')

@@ -169,6 +169,8 @@ function M.bvar(buf,field)
         return buffer_filename(buf)
     elseif field==bvar.enable_multibyte_characters then
         return vbuf.enable_multibyte_characters
+    elseif field==bvar.undo_list then
+        return vim.bo[bufid].undolevels==-1 and vars.Qt or error('TODO')
     else
         error('TODO')
     end
