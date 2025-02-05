@@ -217,7 +217,7 @@ function F.current_buffer.f()
 end
 ---@param buffer nelisp.obj
 ---@return nelisp._buffer
-local function decode_buffer(buffer)
+function M.decode_buffer(buffer)
     if lisp.nilp(buffer) then
         return nvim.buffer_get_current() --[[@as nelisp._buffer]]
     end
@@ -230,7 +230,7 @@ No argument or nil as argument means use current buffer as BUFFER.
 If BUFFER was autosaved since it was last modified, this function
 returns the symbol `autosaved'.]]}
 function F.buffer_modified_p.f(buffer)
-    local buf=decode_buffer(buffer)
+    local buf=M.decode_buffer(buffer)
     if nvim.buf_save_modiff(buf)<nvim.buf_modiff(buf) then
         if _G.nelisp_later then
             error('TODO: how to detect autosaved buffer?')
@@ -254,12 +254,12 @@ F.buffer_name={'buffer-name',0,1,0,[[Return the name of BUFFER, as a string.
 BUFFER defaults to the current buffer.
 Return nil if BUFFER has been killed.]]}
 function F.buffer_name.f(buffer)
-    return nvim.bvar(decode_buffer(buffer),M.bvar.name)
+    return nvim.bvar(M.decode_buffer(buffer),M.bvar.name)
 end
 F.buffer_file_name={'buffer-file-name',0,1,0,[[Return name of file BUFFER is visiting, or nil if none.
 No argument or nil as argument means use the current buffer.]]}
 function F.buffer_file_name.f(buffer)
-    return nvim.bvar(decode_buffer(buffer),M.bvar.filename)
+    return nvim.bvar(M.decode_buffer(buffer),M.bvar.filename)
 end
 ---@param variable nelisp.obj
 ---@param buffer nelisp.obj

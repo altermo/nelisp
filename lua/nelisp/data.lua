@@ -8,6 +8,7 @@ local chartab=require'nelisp.chartab'
 local nvim=require'nelisp.nvim'
 local fns=require'nelisp.fns'
 local chars=require'nelisp.chars'
+local buffer_=require'nelisp.buffer'
 
 ---@class nelisp.buffer_local_value
 ---@field local_if_set boolean?
@@ -813,6 +814,20 @@ function F.local_variable_if_set_p.f(variable,buffer)
     end
     error('TODO')
 end
+F.local_variable_p={'local-variable-p',1,2,0,[[Non-nil if VARIABLE has a local binding in buffer BUFFER.
+BUFFER defaults to the current buffer.
+
+Also see `buffer-local-boundp'.]]}
+function F.local_variable_p.f(variable,buffer)
+    local buf=buffer_.decode_buffer(buffer)
+    lisp.check_symbol(variable)
+    local sym=variable --[[@as nelisp._symbol]]
+    if sym.redirect==lisp.symbol_redirect.plainval then
+        return vars.Qnil
+    else
+        error('TODO')
+    end
+end
 F.string_to_number={'string-to-number',1,2,0,[[Parse STRING as a decimal number and return the number.
 Ignore leading spaces and tabs, and all trailing chars.  Return 0 if
 STRING cannot be parsed as an integer or floating point number.
@@ -1060,6 +1075,7 @@ function M.init_syms()
     vars.defsubr(F,'type_of')
 
     vars.defsubr(F,'local_variable_if_set_p')
+    vars.defsubr(F,'local_variable_p')
     vars.defsubr(F,'default_boundp')
     vars.defsubr(F,'boundp')
     vars.defsubr(F,'fboundp')
