@@ -55,14 +55,24 @@ local function eregex_to_vimregex(s)
                 in_buf.unread()
                 if c~=-1 then
                     if c==b'?' then
-                        error('TODO')
+                        in_buf.read()
+                        c=in_buf.read()
+                        if c==b':' then
+                            out_buf.write('\\%(')
+                            table.insert(parens_stack,true)
+                            goto continue
+                        else
+                            error('TODO')
+                        end
                     end
                 end
                 table.insert(tokens,out_buf.out())
                 out_buf=print_.make_printcharfun()
                 local parents={}
                 for _,v in ipairs(parens_stack) do
-                    parents[v]=true
+                    if v~=true then
+                        parents[v]=true
+                    end
                 end
                 table.insert(tokens,{start=true,parents=parents})
                 table.insert(parens_stack,tokens[#tokens])
