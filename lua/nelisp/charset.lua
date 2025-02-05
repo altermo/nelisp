@@ -1027,6 +1027,16 @@ function F.encode_char.f(ch,charset)
     end
     return lisp.make_fixnum(code)
 end
+F.clear_charset_maps={'clear-charset-maps',0,0,0,[[
+Internal use only.
+Clear temporary charset mapping tables.
+It should be called only from temacs invoked for dumping.]]}
+function F.clear_charset_maps.f()
+    if lisp.chartablep(vars.char_unify_table) then
+        vars.F.optimize_char_table(vars.char_unify_table,vars.Qnil)
+    end
+    return vars.Qnil
+end
 
 function M.init()
     vars.charset_hash_table=vars.F.make_hash_table({vars.QCtest,vars.Qeq})
@@ -1081,6 +1091,7 @@ function M.init_syms()
     vars.defsubr(F,'map_charset_chars')
     vars.defsubr(F,'decode_char')
     vars.defsubr(F,'encode_char')
+    vars.defsubr(F,'clear_charset_maps')
 
     vars.defsym('Qemacs','emacs')
     vars.defsym('Qiso_8859_1','iso-8859-1')
