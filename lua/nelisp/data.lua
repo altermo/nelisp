@@ -53,7 +53,7 @@ function M.set_internal(sym,newval,where,bindflag)
             end
             fwd[2](newval,{buffer=buf})
         else
-            error('TODO')
+            fwd[2](newval,{})
         end
     else
         error('TODO')

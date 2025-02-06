@@ -51,5 +51,10 @@ component .BUILD is present.  This is now stored separately in
     vars.defvar_lisp('after_init_time','after-init-time',[[Value of `current-time' after loading the init files.
 This is nil during initialization.]])
     vars.V.after_init_time=vars.Qnil
+
+    vars.defvar_forward('top_level','top-level',[[Form to evaluate when Emacs starts up.
+Useful to set before you dump a modified Emacs.]],function ()
+            return vars.Qnil
+        end,function () end)
 end
 return M
