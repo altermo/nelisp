@@ -95,7 +95,7 @@ require'nelisp.api'.init()
 + Performant(fast) loading of elisp-stdlib (100-200ms)
 
 ## Roadmap
-+ Implement all functions(/other features) to be able to load all of `loadup.el` without errors
++ [x] Implement all functions(/other features) to be able to load all of `loadup.el` without errors
 + Implement dumping
 + Rewrite in C (if lua is too slow)
 + Implement a bridge between nelisp and neovim
