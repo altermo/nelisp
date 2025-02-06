@@ -9,7 +9,7 @@ The **N**eovim **E**macs **LISP** interpreter.
 ---
 --- If you want to run emacs stdlib, use:
 ---  `require'nelisp.api'.load('loadup')`
---- note: this will most likely error in some way
+--- note: this may error
 ---
 --- If you want to run elisp code, use:
 ---  `require'nelisp.api'.eval('(message "Hello world!")')`
