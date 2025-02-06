@@ -96,7 +96,7 @@ require'nelisp.api'.init()
 
 ## Roadmap
 + [x] Implement all functions(/other features) to be able to load all of `loadup.el` without errors
++ Rewrite in C
 + Implement dumping
-+ Rewrite in C (if lua is too slow)
 + Implement a bridge between nelisp and neovim
 + Implement the rest of the functions(/other features); make all emacs test pass
