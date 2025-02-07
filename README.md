@@ -2,6 +2,10 @@
 The **N**eovim **E**macs **LISP** interpreter.
 > [!NOTE]
 > This is a work in progress.
+
+> [!NOTE]
+> The project is currently being rewritten in C. See [branch](https://github.com/altermo/nelisp/tree/c)
+
 ## Initialization-script
 ~~~lua
 --- !IMPORTANT
