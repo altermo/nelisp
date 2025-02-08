@@ -44,7 +44,7 @@ static void push_obj_as_userdata(lua_State *L, Lisp_Object obj){
     if (lua_isuserdata(L,-1)){
         // (-2)memtbl, (-1)obj
         Lisp_Object* ptr=lua_touserdata(L,-1);
-        eassert(ptr==&obj);
+        eassert(*ptr==obj);
         lua_remove(L,-2);
         // (-1)obj
         return;
@@ -53,7 +53,7 @@ static void push_obj_as_userdata(lua_State *L, Lisp_Object obj){
     lua_pop(L,2);
     //
     Lisp_Object* ptr=lua_newuserdata(L,sizeof(Lisp_Object));
-    ptr=&obj;
+    *ptr=obj;
     // (-1)obj
     lua_getfield(L,LUA_ENVIRONINDEX,"memtbl");
     eassert(lua_istable(L,-1));
@@ -127,5 +127,15 @@ int fixnum_to_number(lua_State *L){
         luaL_error(L,"Expected fixnum");
     EMACS_INT i = XFIXNUM(obj);
     lua_pushinteger(L, i);
+    return 1;
+};
+
+int float_to_number(lua_State *L){
+    eassert(lua_isuserdata(L,-1));
+    Lisp_Object obj = userdata_to_obj(L);
+    if (!FLOATP(obj))
+        luaL_error(L,"Expected float");
+    double i = XFLOAT_DATA(obj);
+    lua_pushnumber(L, i);
     return 1;
 };

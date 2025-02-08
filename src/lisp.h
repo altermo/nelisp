@@ -206,5 +206,10 @@ XFLOAT (Lisp_Object a)
     eassert (FLOATP (a));
     return XUNTAG (a, Lisp_Float, struct Lisp_Float);
 }
+INLINE double
+XFLOAT_DATA (Lisp_Object f)
+{
+  return XFLOAT (f)->u.data;
+}
 
 #endif /* EMACS_LISP_H */
