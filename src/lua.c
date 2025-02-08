@@ -1,7 +1,7 @@
 #include <luajit-2.1/lua.h>
 #include <luajit-2.1/lauxlib.h>
-#include "../lisp.h"
-#include "../alloc.c"
+#include "lisp.h"
+#include "alloc.c"
 
 static void push_fixnum_as_lightuserdata(lua_State *L, Lisp_Object obj){
     if (!lua_checkstack(L,lua_gettop(L)+5))
