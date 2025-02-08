@@ -170,6 +170,13 @@ typedef uintptr_t Lisp_Word_tag;
 #define TAG_PTR(tag, ptr) \
 LISP_INITIALLY ((Lisp_Word) ((untagged_ptr) (ptr) + LISP_WORD_TAG (tag)))
 
+INLINE EMACS_INT
+XFIXNUM (Lisp_Object a)
+{
+  eassert (FIXNUMP (a));
+  return XFIXNUM_RAW (a);
+}
+
 INLINE Lisp_Object
 make_lisp_ptr (void *ptr, enum Lisp_Type type)
 {
