@@ -33,9 +33,7 @@ static struct gcstat
 
 void
 memory_full (size_t nbytes) {
-#ifdef NELISP_LATER
-    #error "TODO"
-#endif
+    TODO_NELISP_LATER
 }
 
 /* --- C stack management -- */
@@ -180,9 +178,7 @@ mem_insert_fixup (struct mem_node *x)
 
 static struct mem_node *
 mem_insert (void *start, void *end, enum mem_type type){
-#ifdef NELISP_LATER
-    #error "TODO"
-#else
+# if TODO_NELISP_LATER_ELSE
     if (mem_root == NULL) {
         mem_init();
     }
@@ -201,9 +197,7 @@ mem_insert (void *start, void *end, enum mem_type type){
         parent = c;
         c = start < c->start ? c->left : c->right;
     }
-#ifdef NELISP_LATER
-    #error "TODO"
-#else
+    #if TODO_NELISP_LATER_ELSE
     x = malloc (sizeof *x);
 #endif
     x->start = start;
@@ -364,9 +358,7 @@ mem_delete (struct mem_node *z)
     if (y->color == MEM_BLACK)
         mem_delete_fixup (x);
 
-#ifdef NELISP_LATER
-    #error "TODO"
-#else
+    #if TODO_NELISP_LATER_ELSE
     free (y);
 #endif
 }
@@ -488,9 +480,7 @@ lisp_align_free (void *block) {
 void *
 xpalloc (void *pa, ptrdiff_t *nitems, ptrdiff_t nitems_incr_min,
          ptrdiff_t nitems_max, ptrdiff_t item_size) {
-#ifdef NELISP_LATER
-    #error "TODO"
-#endif
+    TODO_NELISP_LATER
     pa=realloc(pa,(*nitems+1)*item_size*2);
     *nitems=(*nitems+1)*2;
     return pa;
@@ -571,7 +561,7 @@ make_float (double float_value)
         float_block_index++;
     }
     XFLOAT_INIT (val, float_value);
-#ifdef NELISP_LATER
+#if TODO_NELISP_LATER_AND
     eassert (!XFLOAT_MARKED_P (XFLOAT (val)));
     tally_consing (sizeof (struct Lisp_Float));
     floats_consed++;
@@ -641,29 +631,27 @@ mark_stack_pop (void)
 
 static void
 process_mark_stack (ptrdiff_t base_sp) {
-#ifdef NELISP_LATER
-    #error "TODO"
-#endif
+    TODO_NELISP_LATER
     eassume (mark_stk.sp >= base_sp && base_sp >= 0);
 
     while (mark_stk.sp > base_sp) {
         Lisp_Object obj = mark_stack_pop ();
         switch (XTYPE (obj)) {
             case Lisp_String:
-                luaL_error(global_lua_state,"TODO");
+                TODO
                 break;
             case Lisp_Vectorlike:
-                luaL_error(global_lua_state,"TODO");
+                TODO
                 break;
             case Lisp_Symbol:
-                luaL_error(global_lua_state,"TODO");
+                TODO
                 break;
             case Lisp_Cons:
-                luaL_error(global_lua_state,"TODO");
+                TODO
                 break;
             case Lisp_Float:
                 if (pdumper_object_p(XFLOAT(obj)))
-                    luaL_error(global_lua_state,"TODO");
+                    TODO
                 else if (!XFLOAT_MARKED_P(XFLOAT(obj)))
                     XFLOAT_MARK(XFLOAT(obj));
                 break;
@@ -745,17 +733,13 @@ sweep_floats (void) {
 
 static void
 gc_sweep(){
-#ifdef NELISP_LATER
-    #error "TODO"
-#endif
+    TODO_NELISP_LATER
     sweep_floats ();
 }
 
 void
 garbage_collect_ (void) {
-#ifdef NELISP_LATER
-    #error "TODO"
-#endif
+    TODO_NELISP_LATER
     eassert(mark_stack_empty_p ());
 
     mark_lua();

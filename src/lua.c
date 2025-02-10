@@ -105,6 +105,7 @@ static Lisp_Object userdata_to_obj(lua_State *L){
 };
 
 int number_to_fixnum(lua_State *L){
+    global_lua_state = L;
     eassert(lua_isnumber(L,-1));
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
     push_fixnum_as_lightuserdata(L,obj);
@@ -112,6 +113,7 @@ int number_to_fixnum(lua_State *L){
 };
 
 int number_to_float(lua_State *L){
+    global_lua_state = L;
     eassert(lua_isnumber(L,-1));
     Lisp_Object obj = make_float(lua_tonumber(L,-1));
     push_obj_as_userdata(L,obj);
@@ -119,6 +121,7 @@ int number_to_float(lua_State *L){
 };
 
 int fixnum_to_number(lua_State *L){
+    global_lua_state = L;
     eassert(lua_isuserdata(L,-1));
     Lisp_Object obj = userdata_to_obj(L);
     if (!FIXNUMP(obj))
@@ -129,6 +132,7 @@ int fixnum_to_number(lua_State *L){
 };
 
 int float_to_number(lua_State *L){
+    global_lua_state = L;
     eassert(lua_isuserdata(L,-1));
     Lisp_Object obj = userdata_to_obj(L);
     if (!FLOATP(obj))
