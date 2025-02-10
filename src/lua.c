@@ -1,5 +1,3 @@
-#include <luajit-2.1/lua.h>
-#include <luajit-2.1/lauxlib.h>
 #include "lisp.h"
 #include "alloc.c"
 
@@ -138,4 +136,10 @@ int float_to_number(lua_State *L){
     double i = XFLOAT_DATA(obj);
     lua_pushnumber(L, i);
     return 1;
+};
+
+int collectgarbage(lua_State *L){
+    global_lua_state = L;
+    garbage_collect_();
+    return 0;
 };

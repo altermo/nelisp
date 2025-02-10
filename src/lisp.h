@@ -8,6 +8,11 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include <luajit-2.1/lua.h>
+#include <luajit-2.1/lauxlib.h>
+
+static lua_State *global_lua_state;
+
 // LSP being anyoing about them existing and not existing, so just define them here
 #ifndef LONG_WIDTH
 #define LONG_WIDTH   __LONG_WIDTH__
@@ -17,12 +22,21 @@
 #define SIZE_WIDTH   __WORDSIZE
 #endif
 
+# define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
 // Taken from conf_post.h
 #define INLINE EXTERN_INLINE
 #define EXTERN_INLINE static inline
+#define NO_INLINE __attribute__ ((__noinline__))
 
 //!IMPORTANT: just to get things started, a lot of things will be presumed (like 64-bit ptrs) or not optimized
 
+INLINE bool
+pdumper_object_p (const void *obj) {
+#ifdef NELISP_LATER
+    #error "TODO"
+#endif
+    return false;
+}
 
 #undef min
 #undef max
@@ -173,8 +187,8 @@ LISP_INITIALLY ((Lisp_Word) ((untagged_ptr) (ptr) + LISP_WORD_TAG (tag)))
 INLINE EMACS_INT
 XFIXNUM (Lisp_Object a)
 {
-  eassert (FIXNUMP (a));
-  return XFIXNUM_RAW (a);
+    eassert (FIXNUMP (a));
+    return XFIXNUM_RAW (a);
 }
 
 INLINE Lisp_Object
@@ -209,7 +223,7 @@ XFLOAT (Lisp_Object a)
 INLINE double
 XFLOAT_DATA (Lisp_Object f)
 {
-  return XFLOAT (f)->u.data;
+    return XFLOAT (f)->u.data;
 }
 
 #endif /* EMACS_LISP_H */
