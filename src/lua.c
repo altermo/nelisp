@@ -104,7 +104,9 @@ static Lisp_Object userdata_to_obj(lua_State *L){
     }
 }
 
-int number_to_fixnum(lua_State *L){
+#define pub __attribute__((visibility("default")))
+
+int pub number_to_fixnum(lua_State *L){
     global_lua_state = L;
     eassert(lua_isnumber(L,-1));
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
@@ -112,7 +114,7 @@ int number_to_fixnum(lua_State *L){
     return 1;
 }
 
-int number_to_float(lua_State *L){
+int pub number_to_float(lua_State *L){
     global_lua_state = L;
     eassert(lua_isnumber(L,-1));
     Lisp_Object obj = make_float(lua_tonumber(L,-1));
@@ -120,7 +122,7 @@ int number_to_float(lua_State *L){
     return 1;
 }
 
-int fixnum_to_number(lua_State *L){
+int pub fixnum_to_number(lua_State *L){
     global_lua_state = L;
     eassert(lua_isuserdata(L,-1));
     Lisp_Object obj = userdata_to_obj(L);
@@ -131,7 +133,7 @@ int fixnum_to_number(lua_State *L){
     return 1;
 }
 
-int float_to_number(lua_State *L){
+int pub float_to_number(lua_State *L){
     global_lua_state = L;
     eassert(lua_isuserdata(L,-1));
     Lisp_Object obj = userdata_to_obj(L);
@@ -142,7 +144,7 @@ int float_to_number(lua_State *L){
     return 1;
 }
 
-int collectgarbage(lua_State *L){
+int pub collectgarbage(lua_State *L){
     global_lua_state = L;
     garbage_collect_();
     return 0;
