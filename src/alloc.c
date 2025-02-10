@@ -14,7 +14,7 @@ enum mem_type
     MEM_TYPE_SPARE
 };
 
-typedef intptr_t object_ct;
+typedef uintptr_t object_ct;
 typedef uintptr_t byte_ct;
 
 static struct gcstat
@@ -33,6 +33,7 @@ static struct gcstat
 
 void
 memory_full (size_t nbytes) {
+    UNUSED(nbytes);
     TODO_NELISP_LATER
 }
 
@@ -480,6 +481,8 @@ lisp_align_free (void *block) {
 void *
 xpalloc (void *pa, ptrdiff_t *nitems, ptrdiff_t nitems_incr_min,
          ptrdiff_t nitems_max, ptrdiff_t item_size) {
+    UNUSED(nitems_incr_min);
+    UNUSED(nitems_max);
     TODO_NELISP_LATER
     pa=realloc(pa,(*nitems+1)*item_size*2);
     *nitems=(*nitems+1)*2;
@@ -732,7 +735,7 @@ sweep_floats (void) {
 }
 
 static void
-gc_sweep(){
+gc_sweep(void){
     TODO_NELISP_LATER
     sweep_floats ();
 }

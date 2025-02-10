@@ -18,7 +18,7 @@ static void push_fixnum_as_lightuserdata(lua_State *L, Lisp_Object obj){
         // (-1)obj
     }
 #endif
-};
+}
 
 static void push_obj_as_userdata(lua_State *L, Lisp_Object obj){
     if (!lua_checkstack(L,lua_gettop(L)+10))
@@ -102,7 +102,7 @@ static Lisp_Object userdata_to_obj(lua_State *L){
         eassert(!FIXNUMP(obj));
         return obj;
     }
-};
+}
 
 int number_to_fixnum(lua_State *L){
     global_lua_state = L;
@@ -110,7 +110,7 @@ int number_to_fixnum(lua_State *L){
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
     push_fixnum_as_lightuserdata(L,obj);
     return 1;
-};
+}
 
 int number_to_float(lua_State *L){
     global_lua_state = L;
@@ -118,7 +118,7 @@ int number_to_float(lua_State *L){
     Lisp_Object obj = make_float(lua_tonumber(L,-1));
     push_obj_as_userdata(L,obj);
     return 1;
-};
+}
 
 int fixnum_to_number(lua_State *L){
     global_lua_state = L;
@@ -129,7 +129,7 @@ int fixnum_to_number(lua_State *L){
     EMACS_INT i = XFIXNUM(obj);
     lua_pushinteger(L, i);
     return 1;
-};
+}
 
 int float_to_number(lua_State *L){
     global_lua_state = L;
@@ -140,10 +140,10 @@ int float_to_number(lua_State *L){
     double i = XFLOAT_DATA(obj);
     lua_pushnumber(L, i);
     return 1;
-};
+}
 
 int collectgarbage(lua_State *L){
     global_lua_state = L;
     garbage_collect_();
     return 0;
-};
+}

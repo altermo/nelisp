@@ -12,10 +12,11 @@
 #include <luajit-2.1/lauxlib.h>
 
 static lua_State *global_lua_state;
-#define TODO_NELISP_LATER 0;
+#define TODO_NELISP_LATER (void)0;
 #define TODO_NELISP_LATER_ELSE true
 #define TODO_NELISP_LATER_AND false
 #define TODO if (global_lua_state==NULL) printf("TODO at %s:%d\n",__FILE__,__LINE__);else luaL_error(global_lua_state,"TODO at %s:%d",__FILE__,__LINE__);
+#define UNUSED(x) (void)x
 
 // LSP being anyoing about them existing and not existing, so just define them here
 #ifndef LONG_WIDTH
@@ -36,6 +37,7 @@ static lua_State *global_lua_state;
 
 INLINE bool
 pdumper_object_p (const void *obj) {
+    UNUSED(obj);
     TODO_NELISP_LATER
     return false;
 }
