@@ -144,6 +144,16 @@ int pub float_to_number(lua_State *L){
     return 1;
 }
 
+int pub string_to_unibyte_lstring(lua_State *L){
+    global_lua_state = L;
+    eassert(lua_isstring(L,-1));
+    size_t len;
+    const char* str = lua_tolstring(L,-1,&len);
+    Lisp_Object obj = make_unibyte_string(str,len);
+    push_obj_as_userdata(L,obj);
+    return 1;
+}
+
 int pub collectgarbage(lua_State *L){
     global_lua_state = L;
     garbage_collect_();

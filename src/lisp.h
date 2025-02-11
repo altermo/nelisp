@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdalign.h>
 
 #include <luajit-2.1/lua.h>
 #include <luajit-2.1/lauxlib.h>
@@ -32,6 +33,11 @@ static lua_State *global_lua_state;
 #define INLINE EXTERN_INLINE
 #define EXTERN_INLINE static inline
 #define NO_INLINE __attribute__ ((__noinline__))
+#define FLEXIBLE_ARRAY_MEMBER /**/
+#define FLEXALIGNOF(type) (sizeof (type) & ~ (sizeof (type) - 1))
+#define FLEXSIZEOF(type, member, n) \
+   ((offsetof (type, member) + FLEXALIGNOF (type) - 1 + (n)) \
+    & ~ (FLEXALIGNOF (type) - 1))
 
 //!IMPORTANT: just to get things started, a lot of things will be presumed (like 64-bit ptrs) or not optimized
 
@@ -46,6 +52,10 @@ pdumper_object_p (const void *obj) {
 #undef max
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
+#define POWER_OF_2(n) (((n) & ((n) - 1)) == 0)
+#define ROUNDUP(x, y) (POWER_OF_2 (y)					\
+    ? ((y) - 1 + (x)) & ~ ((y) - 1)			\
+    : ((y) - 1 + (x)) - ((y) - 1 + (x)) % (y))
 #define ARRAYELTS(arr) (sizeof (arr) / sizeof (arr)[0])
 #define GCTYPEBITS 3
 typedef long int EMACS_INT;
@@ -67,6 +77,8 @@ enum Lisp_Bits
 #define VAL_MAX (EMACS_INT_MAX >> (GCTYPEBITS - 1))
 #define USE_LSB_TAG 1
 #define VALMASK (USE_LSB_TAG ? - (1 << GCTYPEBITS) : VAL_MAX)
+#define GCALIGNMENT 8
+#define GCALIGNED_UNION_MEMBER char alignas (GCALIGNMENT) gcaligned;
 typedef struct Lisp_X *Lisp_Word;
 #define lisp_h_XLI(o) ((EMACS_INT) (o))
 #define lisp_h_XIL(i) ((Lisp_Object) (i))
@@ -229,5 +241,64 @@ XFLOAT_DATA (Lisp_Object f)
 {
     return XFLOAT (f)->u.data;
 }
+
+INLINE void
+memclear (void *p, ptrdiff_t nbytes)
+{
+  eassert (0 <= nbytes);
+  memset (p, 0, nbytes);
+}
+# define ARRAY_MARK_FLAG PTRDIFF_MIN
+
+typedef struct interval *INTERVAL;
+struct Lisp_String
+{
+    union
+    {
+        struct
+        {
+            ptrdiff_t size;
+            ptrdiff_t size_byte;
+            INTERVAL intervals;
+            unsigned char *data;
+        } s;
+        struct Lisp_String *next;
+    } u;
+};
+INLINE bool
+STRINGP (Lisp_Object x)
+{
+    return TAGGEDP (x, Lisp_String);
+}
+INLINE struct Lisp_String *
+XSTRING (Lisp_Object a)
+{
+    eassert (STRINGP (a));
+    return XUNTAG (a, Lisp_String, struct Lisp_String);
+}
+INLINE unsigned char *
+SDATA (Lisp_Object string)
+{
+    return XSTRING (string)->u.s.data;
+}
+INLINE ptrdiff_t
+STRING_BYTES (struct Lisp_String *s)
+{
+  ptrdiff_t nbytes = s->u.s.size_byte < 0 ? s->u.s.size : s->u.s.size_byte;
+  eassume (0 <= nbytes);
+  return nbytes;
+}
+#if TODO_NELISP_LATER_AND
+#define STRING_SET_UNIBYTE(STR)				\
+do {							\
+    if (XSTRING (STR)->u.s.size == 0)			\
+        (STR) = empty_unibyte_string;			\
+    else						\
+        XSTRING (STR)->u.s.size_byte = -1;		\
+} while (false)
+#else
+#define STRING_SET_UNIBYTE(STR)				\
+XSTRING (STR)->u.s.size_byte = -1;
+#endif
 
 #endif /* EMACS_LISP_H */

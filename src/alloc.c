@@ -2,6 +2,31 @@
 
 #include "lisp.h"
 
+union emacs_align_type
+{
+    // struct frame frame;
+    // struct Lisp_Bignum Lisp_Bignum;
+    // struct Lisp_Bool_Vector Lisp_Bool_Vector;
+    // struct Lisp_Char_Table Lisp_Char_Table;
+    // struct Lisp_CondVar Lisp_CondVar;
+    // struct Lisp_Finalizer Lisp_Finalizer;
+    struct Lisp_Float Lisp_Float;
+    // struct Lisp_Hash_Table Lisp_Hash_Table;
+    // struct Lisp_Marker Lisp_Marker;
+    // struct Lisp_Misc_Ptr Lisp_Misc_Ptr;
+    // struct Lisp_Mutex Lisp_Mutex;
+    // struct Lisp_Overlay Lisp_Overlay;
+    // struct Lisp_Sub_Char_Table Lisp_Sub_Char_Table;
+    // struct Lisp_Subr Lisp_Subr;
+    // struct Lisp_Sqlite Lisp_Sqlite;
+    // struct Lisp_User_Ptr Lisp_User_Ptr;
+    // struct Lisp_Vector Lisp_Vector;
+    // struct terminal terminal;
+    // struct thread_state thread_state;
+    // struct window window;
+
+};
+
 enum mem_type
 {
     MEM_TYPE_NON_LISP,
@@ -13,6 +38,12 @@ enum mem_type
     MEM_TYPE_VECTOR_BLOCK,
     MEM_TYPE_SPARE
 };
+
+#define MALLOC_0_IS_NONNULL 1
+
+#define MALLOC_SIZE_NEAR(n) \
+(ROUNDUP (max (n, sizeof (size_t)), MALLOC_ALIGNMENT) - sizeof (size_t))
+enum { MALLOC_ALIGNMENT = max (2 * sizeof (size_t), alignof (long double)) };
 
 typedef uintptr_t object_ct;
 typedef uintptr_t byte_ct;
@@ -198,7 +229,7 @@ mem_insert (void *start, void *end, enum mem_type type){
         parent = c;
         c = start < c->start ? c->left : c->right;
     }
-    #if TODO_NELISP_LATER_ELSE
+#if TODO_NELISP_LATER_ELSE
     x = malloc (sizeof *x);
 #endif
     x->start = start;
@@ -359,13 +390,71 @@ mem_delete (struct mem_node *z)
     if (y->color == MEM_BLACK)
         mem_delete_fixup (x);
 
-    #if TODO_NELISP_LATER_ELSE
+#if TODO_NELISP_LATER_ELSE
     free (y);
 #endif
 }
 
 /* --- malloc -- */
 
+enum { LISP_ALIGNMENT = alignof (union { union emacs_align_type x;
+    GCALIGNED_UNION_MEMBER }) };
+enum { MALLOC_IS_LISP_ALIGNED = alignof (max_align_t) % LISP_ALIGNMENT == 0 };
+static bool
+laligned (void *p, size_t size)
+{
+    return (MALLOC_IS_LISP_ALIGNED || (intptr_t) p % LISP_ALIGNMENT == 0
+    || size % LISP_ALIGNMENT != 0);
+}
+static void *
+lmalloc (size_t size, bool clearit)
+{
+    if (! MALLOC_IS_LISP_ALIGNED && size % LISP_ALIGNMENT == 0)
+    {
+        void *p = aligned_alloc (LISP_ALIGNMENT, size);
+        if (p)
+        {
+            if (clearit)
+                memclear (p, size);
+        }
+        else if (! (MALLOC_0_IS_NONNULL || size))
+            return aligned_alloc (LISP_ALIGNMENT, LISP_ALIGNMENT);
+        return p;
+    }
+
+    while (true)
+    {
+        void *p = clearit ? calloc (1, size) : malloc (size);
+        if (laligned (p, size) && (MALLOC_0_IS_NONNULL || size || p))
+            return p;
+        free (p);
+        size_t bigger = size + LISP_ALIGNMENT;
+        if (size < bigger)
+            size = bigger;
+    }
+}
+static void *
+lisp_malloc (size_t nbytes, bool clearit, enum mem_type type)
+{
+    register void *val;
+
+    val = lmalloc (nbytes, clearit);
+
+    if (val && type != MEM_TYPE_NON_LISP)
+        mem_insert (val, (char *) val + nbytes, type);
+    if (!val)
+        memory_full (nbytes);
+    return val;
+}
+static void
+lisp_free (void *block)
+{
+  if (pdumper_object_p (block))
+    return;
+  struct mem_node *m = mem_find (block);
+  free (block);
+  mem_delete (m);
+}
 #define BLOCK_ALIGN (1 << 10)
 #define BLOCK_PADDING 0
 #define BLOCK_BYTES \
@@ -572,6 +661,230 @@ make_float (double float_value)
     return val;
 }
 
+/* --- string allocation -- */
+
+
+struct sdata
+{
+    struct Lisp_String *string;
+    unsigned char data[FLEXIBLE_ARRAY_MEMBER];
+};
+typedef union
+{
+    struct Lisp_String *string;
+    struct
+    {
+        struct Lisp_String *string;
+        ptrdiff_t nbytes;
+    } n;
+} sdata;
+struct sblock
+{
+    struct sblock *next;
+    sdata *next_free;
+    sdata data[FLEXIBLE_ARRAY_MEMBER];
+};
+
+enum { SDATA_DATA_OFFSET = offsetof (struct sdata, data) };
+
+enum { SBLOCK_SIZE = MALLOC_SIZE_NEAR (8192) };
+#define LARGE_STRING_BYTES 1024
+
+#define GC_STRING_EXTRA GC_STRING_OVERRUN_COOKIE_SIZE
+#define GC_STRING_OVERRUN_COOKIE_SIZE 0
+
+static ptrdiff_t
+sdata_size (ptrdiff_t n)
+{
+    /* Reserve space for the nbytes union member even when N + 1 is less
+     than the size of that member.  */
+    ptrdiff_t unaligned_size = max ((unsigned long)(SDATA_DATA_OFFSET + n + 1),
+                                    sizeof (sdata));
+    int sdata_align = max (FLEXALIGNOF (struct sdata), alignof (sdata));
+    return (unaligned_size + sdata_align - 1) & ~(sdata_align - 1);
+}
+
+enum { STRING_BLOCK_SIZE
+    = ((MALLOC_SIZE_NEAR (1024) - sizeof (struct string_block *))
+    / sizeof (struct Lisp_String)) };
+
+struct string_block
+{
+    /* Place `strings' first, to preserve alignment.  */
+    struct Lisp_String strings[STRING_BLOCK_SIZE];
+    struct string_block *next;
+};
+
+static struct sblock *oldest_sblock, *current_sblock;
+static struct string_block *string_blocks;
+static struct Lisp_String *string_free_list;
+static struct sblock *large_sblocks;
+#define NEXT_FREE_LISP_STRING(S) ((S)->u.next)
+#define SDATA_OF_STRING(S) ((sdata *) ((S)->u.s.data - SDATA_DATA_OFFSET))
+
+#define SDATA_DATA(S)	((struct sdata *) (S))->data
+
+static struct Lisp_String *
+allocate_string (void) {
+    struct Lisp_String *s;
+    if (string_free_list == NULL){
+        struct string_block *b = lisp_malloc (sizeof *b, false, MEM_TYPE_STRING);
+        int i;
+        b->next = string_blocks;
+        string_blocks = b;
+        for (i = STRING_BLOCK_SIZE - 1; i >= 0; --i) {
+            s = b->strings + i;
+            s->u.s.data = NULL;
+            NEXT_FREE_LISP_STRING (s) = string_free_list;
+            string_free_list = s;
+        }
+    }
+    s = string_free_list;
+    string_free_list = NEXT_FREE_LISP_STRING (s);
+#if TODO_NELISP_LATER_AND
+    ++strings_consed;
+    tally_consing (sizeof *s);
+#endif
+    return s;
+}
+
+static void
+allocate_string_data (struct Lisp_String *s,
+                      EMACS_INT nchars, EMACS_INT nbytes, bool clearit,
+                      bool immovable)
+{
+    sdata *data;
+    struct sblock *b;
+
+#if TODO_NELISP_LATER_AND
+    if (STRING_BYTES_MAX < nbytes)
+        string_overflow ();
+#endif
+    ptrdiff_t needed = sdata_size (nbytes);
+
+    if (nbytes > LARGE_STRING_BYTES || immovable) {
+        size_t size = FLEXSIZEOF (struct sblock, data, needed);
+        b = lisp_malloc (size + GC_STRING_EXTRA, clearit, MEM_TYPE_NON_LISP);
+        data = b->data;
+        b->next = large_sblocks;
+        b->next_free = data;
+        large_sblocks = b;
+    } else {
+        b = current_sblock;
+        if (b == NULL
+            || (SBLOCK_SIZE - GC_STRING_EXTRA
+            < (char *) b->next_free - (char *) b + needed)) {
+            /* Not enough room in the current sblock.  */
+            b = lisp_malloc (SBLOCK_SIZE, false, MEM_TYPE_NON_LISP);
+            data = b->data;
+            b->next = NULL;
+            b->next_free = data;
+
+            if (current_sblock)
+                current_sblock->next = b;
+            else
+                oldest_sblock = b;
+            current_sblock = b;
+        }
+
+        data = b->next_free;
+        if (clearit)
+            memset (SDATA_DATA (data), 0, nbytes);
+    }
+
+    data->string = s;
+    b->next_free = (sdata *) ((char *) data + needed + GC_STRING_EXTRA);
+    eassert ((uintptr_t) b->next_free % alignof (sdata) == 0);
+
+    s->u.s.data = SDATA_DATA (data);
+    s->u.s.size = nchars;
+    s->u.s.size_byte = nbytes;
+    s->u.s.data[nbytes] = '\0';
+#if TODO_NELISP_LATER_AND
+    tally_consing (needed);
+#endif
+}
+
+static Lisp_Object
+make_clear_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes, bool clearit)
+{
+    Lisp_Object string;
+    struct Lisp_String *s;
+
+#if TODO_NELISP_LATER_AND
+    if (nchars < 0)
+        emacs_abort ();
+    if (!nbytes)
+        return empty_multibyte_string;
+#endif
+
+    s = allocate_string ();
+    s->u.s.intervals = NULL;
+    allocate_string_data (s, nchars, nbytes, clearit, false);
+    XSETSTRING (string, s);
+#if TODO_NELISP_LATER_AND
+    string_chars_consed += nbytes;
+#endif
+    return string;
+}
+
+static Lisp_Object
+make_clear_string (EMACS_INT length, bool clearit)
+{
+    Lisp_Object val;
+
+#if TODO_NELISP_LATER_AND
+    if (!length)
+        return empty_unibyte_string;
+#endif
+    val = make_clear_multibyte_string (length, length, clearit);
+    STRING_SET_UNIBYTE (val);
+    return val;
+}
+
+Lisp_Object
+make_uninit_string (EMACS_INT length)
+{
+    return make_clear_string (length, false);
+}
+
+Lisp_Object
+make_unibyte_string (const char *contents, ptrdiff_t length){
+    register Lisp_Object val;
+    val = make_uninit_string (length);
+    memcpy (SDATA (val), contents, length);
+    return val;
+}
+
+/* --- mark bit functions -- */
+
+#define XSTRING_MARKED_P(S)	(((S)->u.s.size & ARRAY_MARK_FLAG) != 0)
+#define XMARK_STRING(S)		((S)->u.s.size |= ARRAY_MARK_FLAG)
+#define XUNMARK_STRING(S)	((S)->u.s.size &= ~ARRAY_MARK_FLAG)
+
+static bool
+string_marked_p (const struct Lisp_String *s)
+{
+#if TODO_NELISP_LATER_AND
+    return pdumper_object_p (s)
+    ? pdumper_marked_p (s)
+    : XSTRING_MARKED_P (s);
+#else
+    return XSTRING_MARKED_P (s);
+#endif
+}
+static void
+set_string_marked (struct Lisp_String *s)
+{
+#if TODO_NELISP_LATER_AND
+    if (pdumper_object_p (s))
+        pdumper_set_marked (s);
+    else
+#else
+    XMARK_STRING (s);
+#endif
+}
+
 /* --- garbage collector -- */
 
 struct mark_entry
@@ -641,7 +954,15 @@ process_mark_stack (ptrdiff_t base_sp) {
         Lisp_Object obj = mark_stack_pop ();
         switch (XTYPE (obj)) {
             case Lisp_String:
-                TODO
+                ;register struct Lisp_String *ptr = XSTRING (obj);
+                if (string_marked_p (ptr))
+                    break;
+                set_string_marked (ptr);
+                if (ptr->u.s.intervals){
+#if TODO_NELISP_LATER_AND
+                    mark_interval_tree (ptr->u.s.intervals);
+#endif
+                }
                 break;
             case Lisp_Vectorlike:
                 TODO
@@ -653,9 +974,9 @@ process_mark_stack (ptrdiff_t base_sp) {
                 TODO
                 break;
             case Lisp_Float:
-                if (pdumper_object_p(XFLOAT(obj)))
+                if (pdumper_object_p(XFLOAT(obj))) {
                     TODO
-                else if (!XFLOAT_MARKED_P(XFLOAT(obj)))
+                } else if (!XFLOAT_MARKED_P(XFLOAT(obj)))
                     XFLOAT_MARK(XFLOAT(obj));
                 break;
             case_Lisp_Int:
@@ -733,10 +1054,94 @@ sweep_floats (void) {
     gcstat.total_floats = num_used;
     gcstat.total_free_floats = num_free;
 }
+static void
+free_large_strings (void)
+{
+    struct sblock *b, *next;
+    struct sblock *live_blocks = NULL;
+
+    for (b = large_sblocks; b; b = next)
+    {
+        next = b->next;
+
+        if (b->data[0].string == NULL)
+            lisp_free (b);
+        else {
+            b->next = live_blocks;
+            live_blocks = b;
+        }
+    }
+
+    large_sblocks = live_blocks;
+}
+
+NO_INLINE static void
+sweep_strings (void) {
+    struct string_block *b, *next;
+    struct string_block *live_blocks = NULL;
+    string_free_list = NULL;
+    gcstat.total_strings = gcstat.total_free_strings = 0;
+    gcstat.total_string_bytes = 0;
+    for (b = string_blocks; b; b = next)
+    {
+        int i, nfree = 0;
+        struct Lisp_String *free_list_before = string_free_list;
+        next = b->next;
+        for (i = 0; i < STRING_BLOCK_SIZE; ++i)
+        {
+            struct Lisp_String *s = b->strings + i;
+
+            if (s->u.s.data)
+            {
+                if (XSTRING_MARKED_P (s))
+                {
+                    XUNMARK_STRING (s);
+                    if (s->u.s.intervals){
+#if TODO_NELISP_LATER_AND
+                        s->u.s.intervals = balance_intervals (s->u.s.intervals);
+#endif
+                    }
+                    gcstat.total_strings++;
+                    gcstat.total_string_bytes += STRING_BYTES (s);
+                } else {
+                    sdata *data = SDATA_OF_STRING (s);
+                    data->n.nbytes = STRING_BYTES (s);
+                    data->string = NULL;
+                    s->u.s.data = NULL;
+                    NEXT_FREE_LISP_STRING (s) = string_free_list;
+                    string_free_list = s;
+                    ++nfree;
+                }
+            } else {
+                NEXT_FREE_LISP_STRING (s) = string_free_list;
+                string_free_list = s;
+                ++nfree;
+            }
+        }
+
+        if (nfree == STRING_BLOCK_SIZE
+            && gcstat.total_free_strings > STRING_BLOCK_SIZE)
+        {
+            lisp_free (b);
+            string_free_list = free_list_before;
+        } else {
+            gcstat.total_free_strings += nfree;
+            b->next = live_blocks;
+            live_blocks = b;
+        }
+    }
+
+    string_blocks = live_blocks;
+    free_large_strings ();
+#if TODO_NELISP_LATER_AND
+    compact_small_strings ();
+#endif
+}
 
 static void
 gc_sweep(void){
     TODO_NELISP_LATER
+    sweep_strings ();
     sweep_floats ();
 }
 

@@ -23,6 +23,10 @@ function M.fixnum_to_number(n) end
 ---@return number
 function M.float_to_number(n) end
 
+---@param str string
+---@return nelisp.obj
+function M.string_to_unibyte_lstring(str) end
+
 function M.collectgarbage() end
 
 return M
