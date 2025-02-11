@@ -449,11 +449,11 @@ lisp_malloc (size_t nbytes, bool clearit, enum mem_type type)
 static void
 lisp_free (void *block)
 {
-  if (pdumper_object_p (block))
-    return;
-  struct mem_node *m = mem_find (block);
-  free (block);
-  mem_delete (m);
+    if (pdumper_object_p (block))
+        return;
+    struct mem_node *m = mem_find (block);
+    free (block);
+    mem_delete (m);
 }
 #define BLOCK_ALIGN (1 << 10)
 #define BLOCK_PADDING 0
@@ -853,6 +853,56 @@ make_unibyte_string (const char *contents, ptrdiff_t length){
     register Lisp_Object val;
     val = make_uninit_string (length);
     memcpy (SDATA (val), contents, length);
+    return val;
+}
+
+/* --- cons allocation -- */
+#define CONS_BLOCK_SIZE						\
+  (((BLOCK_BYTES - sizeof (struct cons_block *)			\
+     /* The compiler might add padding at the end.  */		\
+     - (sizeof (struct Lisp_Cons) - sizeof (bits_word))) * CHAR_BIT)	\
+   / (sizeof (struct Lisp_Cons) * CHAR_BIT + 1))
+
+struct cons_block
+{
+  /* Place `conses' at the beginning, to ease up CONS_INDEX's job.  */
+  struct Lisp_Cons conses[CONS_BLOCK_SIZE];
+  bits_word gcmarkbits[1 + CONS_BLOCK_SIZE / BITS_PER_BITS_WORD];
+  struct cons_block *next;
+};
+
+static struct cons_block *cons_block;
+static int cons_block_index = CONS_BLOCK_SIZE;
+static struct Lisp_Cons *cons_free_list;
+
+DEFUN ("cons", Fcons, Scons, 2, 2, 0,
+       doc: /* Create a new cons, give it CAR and CDR as components, and return it.  */)
+    (Lisp_Object car, Lisp_Object cdr) {
+    register Lisp_Object val;
+    if (cons_free_list)
+    {
+        XSETCONS (val, cons_free_list);
+        cons_free_list = cons_free_list->u.s.u.chain;
+    } else {
+        if (cons_block_index == CONS_BLOCK_SIZE)
+        {
+            struct cons_block *new
+                = lisp_align_malloc (sizeof *new, MEM_TYPE_CONS);
+            memset (new->gcmarkbits, 0, sizeof new->gcmarkbits);
+            new->next = cons_block;
+            cons_block = new;
+            cons_block_index = 0;
+        }
+        XSETCONS (val, &cons_block->conses[cons_block_index]);
+        cons_block_index++;
+    }
+    XSETCAR (val, car);
+    XSETCDR (val, cdr);
+#if TODO_NELISP_LATER_AND
+    eassert (!XCONS_MARKED_P (XCONS (val)));
+    consing_until_gc -= sizeof (struct Lisp_Cons);
+    cons_cells_consed++;
+#endif
     return val;
 }
 

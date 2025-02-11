@@ -36,7 +36,7 @@ static lua_State *global_lua_state;
 #define FLEXIBLE_ARRAY_MEMBER /**/
 #define FLEXALIGNOF(type) (sizeof (type) & ~ (sizeof (type) - 1))
 #define FLEXSIZEOF(type, member, n) \
-   ((offsetof (type, member) + FLEXALIGNOF (type) - 1 + (n)) \
+((offsetof (type, member) + FLEXALIGNOF (type) - 1 + (n)) \
     & ~ (FLEXALIGNOF (type) - 1))
 
 //!IMPORTANT: just to get things started, a lot of things will be presumed (like 64-bit ptrs) or not optimized
@@ -190,6 +190,25 @@ enum Lisp_Type
 typedef Lisp_Word Lisp_Object;
 #define LISP_INITIALLY(w) (w)
 
+#define DEFUN_ARGS_MANY		(ptrdiff_t, Lisp_Object *)
+#define DEFUN_ARGS_UNEVALLED	(Lisp_Object)
+#define DEFUN_ARGS_0	(void)
+#define DEFUN_ARGS_1	(Lisp_Object)
+#define DEFUN_ARGS_2	(Lisp_Object, Lisp_Object)
+#define DEFUN_ARGS_3	(Lisp_Object, Lisp_Object, Lisp_Object)
+#define DEFUN_ARGS_4	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object)
+#define DEFUN_ARGS_5	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, \
+    Lisp_Object)
+#define DEFUN_ARGS_6	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, \
+    Lisp_Object, Lisp_Object)
+#define DEFUN_ARGS_7	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, \
+    Lisp_Object, Lisp_Object, Lisp_Object)
+#define DEFUN_ARGS_8	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, \
+    Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object)
+#define EXFUN(fnname, maxargs) \
+extern Lisp_Object fnname DEFUN_ARGS_ ## maxargs
+#include "globals.h"
+
 #define XUNTAG(a, type, ctype) ((ctype *) \
     ((char *) XLP (a) - LISP_WORD_TAG (type)))
 
@@ -242,13 +261,95 @@ XFLOAT_DATA (Lisp_Object f)
     return XFLOAT (f)->u.data;
 }
 
+struct Lisp_Cons {
+    union {
+        struct {
+            Lisp_Object car;
+            union {
+                Lisp_Object cdr;
+                struct Lisp_Cons *chain;
+            } u;
+        } s;
+    } u;
+};
+INLINE Lisp_Object *
+xcar_addr (Lisp_Object c)
+{
+  return &XCONS (c)->u.s.car;
+}
+INLINE Lisp_Object *
+xcdr_addr (Lisp_Object c)
+{
+  return &XCONS (c)->u.s.u.cdr;
+}
+INLINE void
+XSETCAR (Lisp_Object c, Lisp_Object n)
+{
+  *xcar_addr (c) = n;
+}
+INLINE void
+XSETCDR (Lisp_Object c, Lisp_Object n)
+{
+  *xcdr_addr (c) = n;
+}
+
+union vectorlike_header {
+    ptrdiff_t size;
+};
 INLINE void
 memclear (void *p, ptrdiff_t nbytes)
 {
-  eassert (0 <= nbytes);
-  memset (p, 0, nbytes);
+    eassert (0 <= nbytes);
+    memset (p, 0, nbytes);
 }
 # define ARRAY_MARK_FLAG PTRDIFF_MIN
+enum pvec_type {
+    PVEC_NORMAL_VECTOR,
+    PVEC_FREE,
+    PVEC_BIGNUM,
+    PVEC_MARKER,
+    PVEC_OVERLAY,
+    PVEC_FINALIZER,
+    PVEC_SYMBOL_WITH_POS,
+    PVEC_MISC_PTR,
+    PVEC_USER_PTR,
+    PVEC_PROCESS,
+    PVEC_FRAME,
+    PVEC_WINDOW,
+    PVEC_BOOL_VECTOR,
+    PVEC_BUFFER,
+    PVEC_HASH_TABLE,
+    PVEC_TERMINAL,
+    PVEC_WINDOW_CONFIGURATION,
+    PVEC_SUBR,
+    PVEC_OTHER,
+    PVEC_XWIDGET,
+    PVEC_XWIDGET_VIEW,
+    PVEC_THREAD,
+    PVEC_MUTEX,
+    PVEC_CONDVAR,
+    PVEC_MODULE_FUNCTION,
+    PVEC_NATIVE_COMP_UNIT,
+    PVEC_TS_PARSER,
+    PVEC_TS_NODE,
+    PVEC_TS_COMPILED_QUERY,
+    PVEC_SQLITE,
+    PVEC_COMPILED,
+    PVEC_CHAR_TABLE,
+    PVEC_SUB_CHAR_TABLE,
+    PVEC_RECORD,
+    PVEC_FONT
+};
+enum More_Lisp_Bits
+{
+    PSEUDOVECTOR_SIZE_BITS = 12,
+    PSEUDOVECTOR_SIZE_MASK = (1 << PSEUDOVECTOR_SIZE_BITS) - 1,
+    PSEUDOVECTOR_REST_BITS = 12,
+    PSEUDOVECTOR_REST_MASK = (((1 << PSEUDOVECTOR_REST_BITS) - 1)
+    << PSEUDOVECTOR_SIZE_BITS),
+    PSEUDOVECTOR_AREA_BITS = PSEUDOVECTOR_SIZE_BITS + PSEUDOVECTOR_REST_BITS,
+    PVEC_TYPE_MASK = 0x3f << PSEUDOVECTOR_AREA_BITS
+};
 
 typedef struct interval *INTERVAL;
 struct Lisp_String
@@ -279,7 +380,7 @@ XSTRING (Lisp_Object a)
 INLINE bool
 STRING_MULTIBYTE (Lisp_Object str)
 {
-  return 0 <= XSTRING (str)->u.s.size_byte;
+    return 0 <= XSTRING (str)->u.s.size_byte;
 }
 INLINE unsigned char *
 SDATA (Lisp_Object string)
@@ -289,14 +390,14 @@ SDATA (Lisp_Object string)
 INLINE ptrdiff_t
 STRING_BYTES (struct Lisp_String *s)
 {
-  ptrdiff_t nbytes = s->u.s.size_byte < 0 ? s->u.s.size : s->u.s.size_byte;
-  eassume (0 <= nbytes);
-  return nbytes;
+    ptrdiff_t nbytes = s->u.s.size_byte < 0 ? s->u.s.size : s->u.s.size_byte;
+    eassume (0 <= nbytes);
+    return nbytes;
 }
 INLINE ptrdiff_t
 SBYTES (Lisp_Object string)
 {
-  return STRING_BYTES (XSTRING (string));
+    return STRING_BYTES (XSTRING (string));
 }
 #if TODO_NELISP_LATER_AND
 #define STRING_SET_UNIBYTE(STR)				\
@@ -310,5 +411,45 @@ do {							\
 #define STRING_SET_UNIBYTE(STR)				\
 XSTRING (STR)->u.s.size_byte = -1;
 #endif
+
+struct Lisp_Subr {
+    union vectorlike_header header;
+    union {
+        Lisp_Object (*a0) (void);
+        Lisp_Object (*a1) (Lisp_Object);
+        Lisp_Object (*a2) (Lisp_Object, Lisp_Object);
+        Lisp_Object (*a3) (Lisp_Object, Lisp_Object, Lisp_Object);
+        Lisp_Object (*a4) (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
+        Lisp_Object (*a5) (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
+        Lisp_Object (*a6) (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
+        Lisp_Object (*a7) (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
+        Lisp_Object (*a8) (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
+        Lisp_Object (*aUNEVALLED) (Lisp_Object args);
+        Lisp_Object (*aMANY) (ptrdiff_t, Lisp_Object *);
+    } function;
+    short min_args, max_args;
+    const char *symbol_name;
+    union {
+        const char *string;
+        Lisp_Object native;
+    } intspec;
+    Lisp_Object command_modes;
+    EMACS_INT doc;
+#ifdef HAVE_NATIVE_COMP
+    Lisp_Object native_comp_u;
+    char *native_c_name;
+    Lisp_Object lambda_list;
+    Lisp_Object type;
+#endif
+};
+union Aligned_Lisp_Subr {
+    struct Lisp_Subr s;
+};
+#define DEFUN(lname, fnname, sname, minargs, maxargs, intspec, doc) \
+static union Aligned_Lisp_Subr sname =                            \
+    {{{ PVEC_SUBR << PSEUDOVECTOR_AREA_BITS },			    \
+        { .a ## maxargs = fnname },				    \
+        minargs, maxargs, lname, {intspec}, lisp_h_Qnil, 0}};	    \
+Lisp_Object fnname
 
 #endif /* EMACS_LISP_H */
