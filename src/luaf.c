@@ -12,10 +12,6 @@ int pub F_cons(lua_State *L) {
     // cdr(-2), car(-1)
     Lisp_Object car=userdata_to_obj(L);
     Lisp_Object obj=Fcons(car,cdr);
-    if (FIXNUMP(obj)){
-        push_fixnum_as_lightuserdata(L,obj);
-    } else {
-        push_obj_as_userdata(L,obj);
-    }
+    push_obj(L,obj);
     return 1;
 }

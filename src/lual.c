@@ -103,4 +103,11 @@ static Lisp_Object userdata_to_obj(lua_State *L){
     }
 }
 
+static void push_obj(lua_State *L, Lisp_Object obj){
+    if (FIXNUMP(obj))
+        push_fixnum_as_lightuserdata(L,obj);
+    else
+        push_obj_as_userdata(L,obj);
+}
+
 #define pub __attribute__((visibility("default")))

@@ -31,6 +31,10 @@ function M.string_to_unibyte_lstring(str) end
 ---@return string
 function M.unibyte_lstring_to_string(str) end
 
+---@param cons nelisp.obj
+---@return [nelisp.obj,nelisp.obj]
+function M.cons_to_table(cons) end
+
 function M.collectgarbage() end
 
 return M

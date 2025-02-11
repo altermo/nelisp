@@ -60,6 +60,27 @@ int pub unibyte_lstring_to_string(lua_State *L){
     return 1;
 }
 
+int pub cons_to_table(lua_State *L){
+    global_lua_state = L;
+    eassert(lua_isuserdata(L,-1));
+    Lisp_Object obj = userdata_to_obj(L);
+    if (!CONSP(obj))
+        luaL_error(L,"Expected cons");
+    Lisp_Object car=XCAR(obj);
+    Lisp_Object cdr=XCDR(obj);
+    lua_newtable(L);
+    // (-1)tbl
+    push_obj(L,car);
+    // (-2)tbl,(-1)car
+    lua_rawseti(L,-2,1);
+    // (-1)tbl
+    push_obj(L,cdr);
+    // (-2)tbl,(-1)cdr
+    lua_rawseti(L,-2,2);
+    // (-1)tbl
+    return 1;
+}
+
 int pub collectgarbage(lua_State *L){
     global_lua_state = L;
     garbage_collect_();
