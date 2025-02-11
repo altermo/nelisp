@@ -2,10 +2,10 @@
 
 #include "lual.c"
 
-int pub F_cons(lua_State *L) {
+int pub ret(LObj) F_cons(lua_State *L) {
+    VALIDATE(L,LObj,LObj);
     global_lua_state = L;
-    eassert(lua_isuserdata(L,-1));
-    eassert(lua_isuserdata(L,-2));
+
     // car(-2), cdr(-1)
     Lisp_Object cdr=userdata_to_obj(L);
     lua_insert(L,-2);

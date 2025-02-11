@@ -79,19 +79,6 @@ static Lisp_Object userdata_to_obj(lua_State *L){
     if (!lua_checkstack(L,lua_gettop(L)+5))
         luaL_error(L,"Lua stack overflow");
 
-    // (-1)obj
-#ifdef ENABLE_CHECKING
-    if (!suppress_checking){
-        lua_getfield(L,LUA_ENVIRONINDEX,"obj_mt");
-        eassert(lua_istable(L,-1));
-        // (-2)obj, (-1)mt
-        lua_getmetatable(L,-1);
-        // (-3)obj, (-2)mt, (-1)mt
-        eassert(lua_equal(L,-1,-2));
-        lua_pop(L,2);
-        // (-1)obj
-    }
-#endif
     if (lua_islightuserdata(L,-1)){
         Lisp_Object obj=lua_touserdata(L,-1);
         eassert(FIXNUMP(obj));
@@ -111,3 +98,68 @@ static void push_obj(lua_State *L, Lisp_Object obj){
 }
 
 #define pub __attribute__((visibility("default")))
+
+enum LType {
+    LObj,
+    LEND,
+    LNum,
+    LStr,
+    LNO_ARG=LEND
+};
+#define ret(...)
+#define VALIDATE(L,...) validate(L,0,__VA_ARGS__,LEND)
+static void validate(lua_State *L,int count,...){
+#define error(...) do {\
+    va_end(ap);\
+    luaL_error(L,__VA_ARGS__);\
+    return;\
+} while(0)
+
+    va_list ap;
+    va_start(ap, count);
+    int nargs=0;
+    while (va_arg(ap, enum LType) != LEND) {
+        nargs++;
+    };
+    va_end(ap);
+
+    if (nargs != lua_gettop(L))
+        luaL_error(L,"Wrong number of arguments: expected %d, got %d",nargs,lua_gettop(L));
+
+    enum LType type;
+    va_start(ap, count);
+    int n=0;
+    while ((type=va_arg(ap, enum LType)) != LEND) {
+        n++;
+        switch (type){
+            case LObj:
+                if (!lua_isuserdata(L,n))
+                    error("Wrong argument #%d: expected userdata(lisp object), got %s",n,lua_typename(L,lua_type(L,n)));
+#ifdef ENABLE_CHECKING
+            if (!suppress_checking){
+                lua_getfield(L,LUA_ENVIRONINDEX,"obj_mt");
+                eassert(lua_istable(L,-1));
+                lua_getmetatable(L,n);
+                if (!lua_equal(L,-1,-2)){
+                    error("Wrong argument #%d: userdata not marked as lisp object",n));
+                };
+                lua_pop(L,2);
+            }
+#endif
+            break;
+            case LNum:
+                if (!lua_isnumber(L,n))
+                    error("Wrong argument #%d: expected number, got %s",n,lua_typename(L,lua_type(L,n)));
+                break;
+            case LStr:
+                if (!lua_isstring(L,n))
+                    error("Wrong argument #%d: expected string, got %s",n,lua_typename(L,lua_type(L,n)));
+                break;
+            case LEND:
+                eassert(0);
+        }
+    };
+    va_end(ap);
+    return;
+    #undef error
+}

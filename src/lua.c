@@ -1,25 +1,28 @@
 #include "alloc.c"
 #include "lual.c"
 
-int pub number_to_fixnum(lua_State *L){
+int pub ret(LObj) number_to_fixnum(lua_State *L){
+    VALIDATE(L,LNum);
     global_lua_state = L;
-    eassert(lua_isnumber(L,-1));
+
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
     push_fixnum_as_lightuserdata(L,obj);
     return 1;
 }
 
-int pub number_to_float(lua_State *L){
+int pub ret(LObj) number_to_float(lua_State *L){
+    VALIDATE(L,LNum);
     global_lua_state = L;
-    eassert(lua_isnumber(L,-1));
+
     Lisp_Object obj = make_float(lua_tonumber(L,-1));
     push_obj_as_userdata(L,obj);
     return 1;
 }
 
-int pub fixnum_to_number(lua_State *L){
+int pub ret(LNum) fixnum_to_number(lua_State *L){
+    VALIDATE(L,LObj);
     global_lua_state = L;
-    eassert(lua_isuserdata(L,-1));
+
     Lisp_Object obj = userdata_to_obj(L);
     if (!FIXNUMP(obj))
         luaL_error(L,"Expected fixnum");
@@ -28,9 +31,10 @@ int pub fixnum_to_number(lua_State *L){
     return 1;
 }
 
-int pub float_to_number(lua_State *L){
+int pub ret(LNum) float_to_number(lua_State *L){
+    VALIDATE(L,LObj);
     global_lua_state = L;
-    eassert(lua_isuserdata(L,-1));
+
     Lisp_Object obj = userdata_to_obj(L);
     if (!FLOATP(obj))
         luaL_error(L,"Expected float");
@@ -39,9 +43,10 @@ int pub float_to_number(lua_State *L){
     return 1;
 }
 
-int pub string_to_unibyte_lstring(lua_State *L){
+int pub ret(LObj) string_to_unibyte_lstring(lua_State *L){
+    VALIDATE(L,LStr);
     global_lua_state = L;
-    eassert(lua_isstring(L,-1));
+
     size_t len;
     const char* str = lua_tolstring(L,-1,&len);
     Lisp_Object obj = make_unibyte_string(str,len);
@@ -49,9 +54,10 @@ int pub string_to_unibyte_lstring(lua_State *L){
     return 1;
 }
 
-int pub unibyte_lstring_to_string(lua_State *L){
+int pub ret(LStr) unibyte_lstring_to_string(lua_State *L){
+    VALIDATE(L,LObj);
     global_lua_state = L;
-    eassert(lua_isuserdata(L,-1));
+
     Lisp_Object obj = userdata_to_obj(L);
     if (!STRINGP(obj) || STRING_MULTIBYTE(obj))
         luaL_error(L,"Expected unibyte string");
@@ -60,9 +66,10 @@ int pub unibyte_lstring_to_string(lua_State *L){
     return 1;
 }
 
-int pub cons_to_table(lua_State *L){
+int pub ret(LTbl[LObj,LObj]) cons_to_table(lua_State *L){
+    VALIDATE(L,LObj);
     global_lua_state = L;
-    eassert(lua_isuserdata(L,-1));
+
     Lisp_Object obj = userdata_to_obj(L);
     if (!CONSP(obj))
         luaL_error(L,"Expected cons");
@@ -81,8 +88,10 @@ int pub cons_to_table(lua_State *L){
     return 1;
 }
 
-int pub collectgarbage(lua_State *L){
+int pub ret(LNO_ARG) collectgarbage(lua_State *L){
+    VALIDATE(L,LNO_ARG);
     global_lua_state = L;
+
     garbage_collect_();
     return 0;
 }
