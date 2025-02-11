@@ -154,6 +154,17 @@ int pub string_to_unibyte_lstring(lua_State *L){
     return 1;
 }
 
+int pub unibyte_lstring_to_string(lua_State *L){
+    global_lua_state = L;
+    eassert(lua_isuserdata(L,-1));
+    Lisp_Object obj = userdata_to_obj(L);
+    if (!STRINGP(obj) || STRING_MULTIBYTE(obj))
+        luaL_error(L,"Expected unibyte string");
+    const char* str = (const char*)SDATA(obj);
+    lua_pushlstring(L,str,SBYTES(obj));
+    return 1;
+}
+
 int pub collectgarbage(lua_State *L){
     global_lua_state = L;
     garbage_collect_();

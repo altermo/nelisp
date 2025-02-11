@@ -276,6 +276,11 @@ XSTRING (Lisp_Object a)
     eassert (STRINGP (a));
     return XUNTAG (a, Lisp_String, struct Lisp_String);
 }
+INLINE bool
+STRING_MULTIBYTE (Lisp_Object str)
+{
+  return 0 <= XSTRING (str)->u.s.size_byte;
+}
 INLINE unsigned char *
 SDATA (Lisp_Object string)
 {
@@ -287,6 +292,11 @@ STRING_BYTES (struct Lisp_String *s)
   ptrdiff_t nbytes = s->u.s.size_byte < 0 ? s->u.s.size : s->u.s.size_byte;
   eassume (0 <= nbytes);
   return nbytes;
+}
+INLINE ptrdiff_t
+SBYTES (Lisp_Object string)
+{
+  return STRING_BYTES (XSTRING (string));
 }
 #if TODO_NELISP_LATER_AND
 #define STRING_SET_UNIBYTE(STR)				\

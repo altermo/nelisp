@@ -27,6 +27,10 @@ function M.float_to_number(n) end
 ---@return nelisp.obj
 function M.string_to_unibyte_lstring(str) end
 
+---@param str nelisp.obj
+---@return string
+function M.unibyte_lstring_to_string(str) end
+
 function M.collectgarbage() end
 
 return M
