@@ -1,26 +1,29 @@
 #include "alloc.c"
 #include "lual.h"
 
-int pub ret(LObj) number_to_fixnum(lua_State *L){
-    VALIDATE(L,LNum);
+int pub ret(/*nelisp.obj*/) number_to_fixnum(lua_State *L){
+    check_nargs(L,1);
+    check_isnumber(L,1);
     global_lua_state = L;
 
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
-    push_fixnum_as_lightuserdata(L,obj);
+    push_obj(L,obj);
     return 1;
 }
 
-int pub ret(LObj) number_to_float(lua_State *L){
-    VALIDATE(L,LNum);
+int pub ret(/*nelisp.obj*/) number_to_float(lua_State *L){
+    check_nargs(L,1);
+    check_isnumber(L,1);
     global_lua_state = L;
 
     Lisp_Object obj = make_float(lua_tonumber(L,-1));
-    push_obj_as_userdata(L,obj);
+    push_obj(L,obj);
     return 1;
 }
 
-int pub ret(LNum) fixnum_to_number(lua_State *L){
-    VALIDATE(L,LObj);
+int pub ret(/*number*/) fixnum_to_number(lua_State *L){
+    check_nargs(L,1);
+    check_isobject(L,1);
     global_lua_state = L;
 
     Lisp_Object obj = userdata_to_obj(L);
@@ -31,8 +34,9 @@ int pub ret(LNum) fixnum_to_number(lua_State *L){
     return 1;
 }
 
-int pub ret(LNum) float_to_number(lua_State *L){
-    VALIDATE(L,LObj);
+int pub ret(/*number*/) float_to_number(lua_State *L){
+    check_nargs(L,1);
+    check_isobject(L,1);
     global_lua_state = L;
 
     Lisp_Object obj = userdata_to_obj(L);
@@ -43,19 +47,21 @@ int pub ret(LNum) float_to_number(lua_State *L){
     return 1;
 }
 
-int pub ret(LObj) string_to_unibyte_lstring(lua_State *L){
-    VALIDATE(L,LStr);
+int pub ret(/*nelisp.obj*/) string_to_unibyte_lstring(lua_State *L){
+    check_nargs(L,1);
+    check_isstring(L,1);
     global_lua_state = L;
 
     size_t len;
     const char* str = lua_tolstring(L,-1,&len);
     Lisp_Object obj = make_unibyte_string(str,len);
-    push_obj_as_userdata(L,obj);
+    push_obj(L,obj);
     return 1;
 }
 
-int pub ret(LStr) unibyte_lstring_to_string(lua_State *L){
-    VALIDATE(L,LObj);
+int pub ret(/*string*/) unibyte_lstring_to_string(lua_State *L){
+    check_nargs(L,1);
+    check_isobject(L,1);
     global_lua_state = L;
 
     Lisp_Object obj = userdata_to_obj(L);
@@ -66,8 +72,9 @@ int pub ret(LStr) unibyte_lstring_to_string(lua_State *L){
     return 1;
 }
 
-int pub ret(LTbl[LObj,LObj]) cons_to_table(lua_State *L){
-    VALIDATE(L,LObj);
+int pub ret(/*[nelisp.obj,nelisp.obj]*/) cons_to_table(lua_State *L){
+    check_nargs(L,1);
+    check_isobject(L,1);
     global_lua_state = L;
 
     Lisp_Object obj = userdata_to_obj(L);
@@ -88,8 +95,8 @@ int pub ret(LTbl[LObj,LObj]) cons_to_table(lua_State *L){
     return 1;
 }
 
-int pub ret(LNO_ARG) collectgarbage(lua_State *L){
-    VALIDATE(L,LNO_ARG);
+int pub ret() collectgarbage(lua_State *L){
+    check_nargs(L,0);
     global_lua_state = L;
 
     garbage_collect_();

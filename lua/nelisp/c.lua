@@ -1,5 +1,4 @@
 local env={
-    obj_mt={},
     memtbl=setmetatable({},{__mode='v'}),
 }
 

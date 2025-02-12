@@ -2,8 +2,10 @@
 
 #include "lual.h"
 
-int pub ret(LObj) F_cons(lua_State *L) {
-    VALIDATE(L,LObj,LObj);
+int pub ret(/*nelisp.obj*/) F_cons(lua_State *L) {
+    check_nargs(L,2);
+    check_isobject(L,1);
+    check_isobject(L,2);
     global_lua_state = L;
 
     // car(-2), cdr(-1)
