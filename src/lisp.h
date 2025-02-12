@@ -636,10 +636,10 @@ inline static void check_istable(lua_State *L,int n){
 }
 #define DEFUN_LUA_2(fname)\
     int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
+        global_lua_state = L;\
         check_nargs(L,2);\
         check_isobject(L,1);\
         check_isobject(L,2);\
-        global_lua_state = L;\
         Lisp_Object obj=fname(userdata_to_obj(L,1),userdata_to_obj(L,2));\
         push_obj(L,obj);\
         return 1;\
