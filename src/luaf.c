@@ -17,3 +17,17 @@ int pub ret(/*nelisp.obj*/) F_cons(lua_State *L) {
     push_obj(L,obj);
     return 1;
 }
+
+int pub ret(/*nelisp.obj*/) F_make_vector(lua_State *L) {
+    check_nargs(L,2);
+    check_isobject(L,1);
+    check_isobject(L,2);
+    global_lua_state = L;
+
+    Lisp_Object init=userdata_to_obj(L);
+    lua_insert(L,-2);
+    Lisp_Object length=userdata_to_obj(L);
+    Lisp_Object obj=Fmake_vector(length,init);
+    push_obj(L,obj);
+    return 1;
+}

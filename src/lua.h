@@ -94,3 +94,8 @@ inline static void check_isobject(lua_State *L,int n){
         luaL_error(L,"Wrong argument #%d: expected userdata(lisp object), got %s",n,lua_typename(L,lua_type(L,n)));
     check_obj(L,n);
 }
+
+inline static void check_istable(lua_State *L,int n){
+    if (!lua_istable(L,n))
+        luaL_error(L,"Wrong argument #%d: expected table, got %s",n,lua_typename(L,lua_type(L,n)));
+}

@@ -5,3 +5,4 @@
 #endif
 
 EXFUN (Fcons, 2);
+EXFUN (Fmake_vector, 2);

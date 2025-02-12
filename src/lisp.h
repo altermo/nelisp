@@ -91,9 +91,9 @@ typedef struct Lisp_X *Lisp_Word;
 #define lisp_h_Qnil 0
 #define lisp_h_PSEUDOVECTORP(a,code)                            \
 (lisp_h_VECTORLIKEP((a)) &&                                   \
-    ((XUNTAG ((a), Lisp_Vectorlike, union vectorlike_header)->size     \
-    & (PSEUDOVECTOR_FLAG | PVEC_TYPE_MASK))                    \
-    == (PSEUDOVECTOR_FLAG | ((code) << PSEUDOVECTOR_AREA_BITS))))
+((XUNTAG ((a), Lisp_Vectorlike, union vectorlike_header)->size     \
+& (PSEUDOVECTOR_FLAG | PVEC_TYPE_MASK))                    \
+== (PSEUDOVECTOR_FLAG | ((code) << PSEUDOVECTOR_AREA_BITS))))
 
 #define lisp_h_CHECK_FIXNUM(x) CHECK_TYPE (FIXNUMP (x), Qfixnump, x)
 #define lisp_h_CHECK_SYMBOL(x) CHECK_TYPE (SYMBOLP (x), Qsymbolp, x)
@@ -103,32 +103,32 @@ typedef struct Lisp_X *Lisp_Word;
 #define lisp_h_BASE_EQ(x, y) (XLI (x) == XLI (y))
 #define lisp_h_BASE2_EQ(x, y)				    \
 (BASE_EQ (x, y)					    \
-    || (symbols_with_pos_enabled				    \
-    && SYMBOL_WITH_POS_P (x)				    \
-    && BASE_EQ (XSYMBOL_WITH_POS (x)->sym, y)))
+|| (symbols_with_pos_enabled				    \
+&& SYMBOL_WITH_POS_P (x)				    \
+&& BASE_EQ (XSYMBOL_WITH_POS (x)->sym, y)))
 
 #define lisp_h_EQ(x, y)                                     \
 ((XLI ((x)) == XLI ((y)))                                 \
-    || (symbols_with_pos_enabled                             \
-    && (SYMBOL_WITH_POS_P ((x))                          \
-    ? (BARE_SYMBOL_P ((y))                           \
-    ? XLI (XSYMBOL_WITH_POS((x))->sym) == XLI (y) \
-    : SYMBOL_WITH_POS_P((y))                      \
-    && (XLI (XSYMBOL_WITH_POS((x))->sym)        \
-    == XLI (XSYMBOL_WITH_POS((y))->sym)))   \
-    : (SYMBOL_WITH_POS_P ((y))                       \
-    && BARE_SYMBOL_P ((x))                        \
-    && (XLI (x) == XLI ((XSYMBOL_WITH_POS ((y)))->sym))))))
+|| (symbols_with_pos_enabled                             \
+&& (SYMBOL_WITH_POS_P ((x))                          \
+? (BARE_SYMBOL_P ((y))                           \
+? XLI (XSYMBOL_WITH_POS((x))->sym) == XLI (y) \
+: SYMBOL_WITH_POS_P((y))                      \
+&& (XLI (XSYMBOL_WITH_POS((x))->sym)        \
+== XLI (XSYMBOL_WITH_POS((y))->sym)))   \
+: (SYMBOL_WITH_POS_P ((y))                       \
+&& BARE_SYMBOL_P ((x))                        \
+&& (XLI (x) == XLI ((XSYMBOL_WITH_POS ((y)))->sym))))))
 
 #define lisp_h_FIXNUMP(x) \
 (! (((unsigned) (XLI (x) >> (USE_LSB_TAG ? 0 : FIXNUM_BITS)) \
-    - (unsigned) (Lisp_Int0 >> !USE_LSB_TAG)) \
-    & ((1 << INTTYPEBITS) - 1)))
+- (unsigned) (Lisp_Int0 >> !USE_LSB_TAG)) \
+& ((1 << INTTYPEBITS) - 1)))
 #define lisp_h_FLOATP(x) TAGGEDP (x, Lisp_Float)
 #define lisp_h_NILP(x)  BASE_EQ (x, Qnil)
 #define lisp_h_SET_SYMBOL_VAL(sym, v) \
 (eassert ((sym)->u.s.redirect == SYMBOL_PLAINVAL), \
-    (sym)->u.s.val.value = (v))
+(sym)->u.s.val.value = (v))
 #define lisp_h_SYMBOL_CONSTANT_P(sym) \
 (XSYMBOL (sym)->u.s.trapped_write == SYMBOL_NOWRITE)
 #define lisp_h_SYMBOL_TRAPPED_WRITE_P(sym) (XSYMBOL (sym)->u.s.trapped_write)
@@ -137,11 +137,11 @@ typedef struct Lisp_X *Lisp_Word;
 #define lisp_h_SYMBOL_WITH_POS_P(x) PSEUDOVECTORP ((x), PVEC_SYMBOL_WITH_POS)
 #define lisp_h_BARE_SYMBOL_P(x) TAGGEDP ((x), Lisp_Symbol)
 #define lisp_h_SYMBOLP(x) ((BARE_SYMBOL_P ((x)) ||               \
-    (symbols_with_pos_enabled && (SYMBOL_WITH_POS_P ((x))))))
+(symbols_with_pos_enabled && (SYMBOL_WITH_POS_P ((x))))))
 #define lisp_h_TAGGEDP(a, tag) \
 (! (((unsigned) (XLI (a) >> (USE_LSB_TAG ? 0 : VALBITS)) \
-    - (unsigned) (tag)) \
-    & ((1 << GCTYPEBITS) - 1)))
+- (unsigned) (tag)) \
+& ((1 << GCTYPEBITS) - 1)))
 #define lisp_h_VECTORLIKEP(x) TAGGEDP (x, Lisp_Vectorlike)
 #define lisp_h_XCAR(c) XCONS (c)->u.s.car
 #define lisp_h_XCDR(c) XCONS (c)->u.s.u.cdr
@@ -203,19 +203,19 @@ typedef Lisp_Word Lisp_Object;
 #define DEFUN_ARGS_3	(Lisp_Object, Lisp_Object, Lisp_Object)
 #define DEFUN_ARGS_4	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object)
 #define DEFUN_ARGS_5	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, \
-    Lisp_Object)
+Lisp_Object)
 #define DEFUN_ARGS_6	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, \
-    Lisp_Object, Lisp_Object)
+Lisp_Object, Lisp_Object)
 #define DEFUN_ARGS_7	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, \
-    Lisp_Object, Lisp_Object, Lisp_Object)
+Lisp_Object, Lisp_Object, Lisp_Object)
 #define DEFUN_ARGS_8	(Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, \
-    Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object)
+Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object)
 #define EXFUN(fnname, maxargs) \
 extern Lisp_Object fnname DEFUN_ARGS_ ## maxargs
 #include "globals.h"
 
 #define XUNTAG(a, type, ctype) ((ctype *) \
-    ((char *) XLP (a) - LISP_WORD_TAG (type)))
+((char *) XLP (a) - LISP_WORD_TAG (type)))
 
 typedef char *untagged_ptr;
 typedef uintptr_t Lisp_Word_tag;
@@ -229,6 +229,15 @@ XFIXNUM (Lisp_Object a)
 {
     eassert (FIXNUMP (a));
     return XFIXNUM_RAW (a);
+}
+INLINE EMACS_INT
+XFIXNAT (Lisp_Object a)
+{
+    eassert (FIXNUMP (a));
+    EMACS_INT int0 = Lisp_Int0;
+    EMACS_INT result = USE_LSB_TAG ? XFIXNUM (a) : XLI (a) - (int0 << VALBITS);
+    eassume (0 <= result);
+    return result;
 }
 
 INLINE Lisp_Object
@@ -301,6 +310,7 @@ XSETCDR (Lisp_Object c, Lisp_Object n)
 union vectorlike_header {
     ptrdiff_t size;
 };
+enum { NIL_IS_ZERO = 1 };
 INLINE void
 memclear (void *p, ptrdiff_t nbytes)
 {
@@ -407,10 +417,10 @@ SBYTES (Lisp_Object string)
 #if TODO_NELISP_LATER_AND
 #define STRING_SET_UNIBYTE(STR)				\
 do {							\
-    if (XSTRING (STR)->u.s.size == 0)			\
-        (STR) = empty_unibyte_string;			\
-    else						\
-        XSTRING (STR)->u.s.size_byte = -1;		\
+if (XSTRING (STR)->u.s.size == 0)			\
+(STR) = empty_unibyte_string;			\
+else						\
+XSTRING (STR)->u.s.size_byte = -1;		\
 } while (false)
 #else
 #define STRING_SET_UNIBYTE(STR)				\
@@ -424,6 +434,60 @@ dead_object (void)
 #endif
     // Workaround for compiling with `zig cc` causing a crash.
     return (Lisp_Word)((Lisp_Word_tag)NULL+(Lisp_Word_tag)Lisp_String);
+}
+
+struct Lisp_Vector
+{
+    union vectorlike_header header;
+    Lisp_Object contents[FLEXIBLE_ARRAY_MEMBER];
+};
+struct Lisp_Bool_Vector
+{
+    union vectorlike_header header;
+    EMACS_INT size;
+    bits_word data[FLEXIBLE_ARRAY_MEMBER];
+};
+enum
+{
+    header_size = offsetof (struct Lisp_Vector, contents),
+    bool_header_size = offsetof (struct Lisp_Bool_Vector, data),
+    word_size = sizeof (Lisp_Object)
+};
+# define PSEUDOVECTOR_FLAG (PTRDIFF_MAX - PTRDIFF_MAX / 2)
+#define MOST_POSITIVE_FIXNUM (EMACS_INT_MAX >> INTTYPEBITS)
+#define MOST_NEGATIVE_FIXNUM (-1 - MOST_POSITIVE_FIXNUM)
+#define XSETPVECTYPE(v, code)						\
+((v)->header.size |= PSEUDOVECTOR_FLAG | ((code) << PSEUDOVECTOR_AREA_BITS))
+#define PVECHEADERSIZE(code, lispsize, restsize) \
+(PSEUDOVECTOR_FLAG | ((code) << PSEUDOVECTOR_AREA_BITS) \
+| ((restsize) << PSEUDOVECTOR_SIZE_BITS) | (lispsize))
+#define XSETPVECTYPESIZE(v, code, lispsize, restsize)		\
+((v)->header.size = PVECHEADERSIZE (code, lispsize, restsize))
+INLINE struct Lisp_Vector *
+XVECTOR (Lisp_Object a)
+{
+    eassert (VECTORLIKEP (a));
+    return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Vector);
+}
+INLINE enum pvec_type
+PSEUDOVECTOR_TYPE (const struct Lisp_Vector *v)
+{
+    ptrdiff_t size = v->header.size;
+    return (enum pvec_type)(size & PSEUDOVECTOR_FLAG
+    ? (size & PVEC_TYPE_MASK) >> PSEUDOVECTOR_AREA_BITS
+    : PVEC_NORMAL_VECTOR);
+}
+extern ptrdiff_t vectorlike_nbytes (const union vectorlike_header *hdr);
+INLINE ptrdiff_t
+vector_nbytes (const struct Lisp_Vector *v)
+{
+    return vectorlike_nbytes (&v->header);
+}
+INLINE bool
+PSEUDOVECTOR_TYPEP (const union vectorlike_header *a, enum pvec_type code)
+{
+    return ((a->size & (PSEUDOVECTOR_FLAG | PVEC_TYPE_MASK))
+    == (PSEUDOVECTOR_FLAG | (code << PSEUDOVECTOR_AREA_BITS)));
 }
 
 struct Lisp_Subr {

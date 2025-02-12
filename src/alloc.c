@@ -6,7 +6,7 @@ union emacs_align_type
 {
     // struct frame frame;
     // struct Lisp_Bignum Lisp_Bignum;
-    // struct Lisp_Bool_Vector Lisp_Bool_Vector;
+    struct Lisp_Bool_Vector Lisp_Bool_Vector;
     // struct Lisp_Char_Table Lisp_Char_Table;
     // struct Lisp_CondVar Lisp_CondVar;
     // struct Lisp_Finalizer Lisp_Finalizer;
@@ -17,10 +17,10 @@ union emacs_align_type
     // struct Lisp_Mutex Lisp_Mutex;
     // struct Lisp_Overlay Lisp_Overlay;
     // struct Lisp_Sub_Char_Table Lisp_Sub_Char_Table;
-    // struct Lisp_Subr Lisp_Subr;
+    struct Lisp_Subr Lisp_Subr;
     // struct Lisp_Sqlite Lisp_Sqlite;
     // struct Lisp_User_Ptr Lisp_User_Ptr;
-    // struct Lisp_Vector Lisp_Vector;
+    struct Lisp_Vector Lisp_Vector;
     // struct terminal terminal;
     // struct thread_state thread_state;
     // struct window window;
@@ -922,6 +922,283 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
     return val;
 }
 
+/* --- vector allocation -- */
+
+#define VECTOR_IN_BLOCK(vector, block)		\
+((char *) (vector) <= (block)->data		\
+    + VECTOR_BLOCK_BYTES - VBLOCK_BYTES_MIN)
+struct large_vector
+{
+    struct large_vector *next;
+};
+#define COMMON_MULTIPLE(a, b) \
+((a) % (b) == 0 ? (a) : (b) % (a) == 0 ? (b) : (a) * (b))
+enum { roundup_size = COMMON_MULTIPLE (LISP_ALIGNMENT, word_size) };
+#define vroundup_ct(x) ROUNDUP (x, roundup_size)
+enum { VECTOR_BLOCK_SIZE = 4096 };
+enum {VECTOR_BLOCK_BYTES = VECTOR_BLOCK_SIZE - vroundup_ct (sizeof (void *))};
+enum { VBLOCK_BYTES_MAX = vroundup_ct ((VECTOR_BLOCK_BYTES / 2) - word_size) };
+enum { VBLOCK_BYTES_MIN = vroundup_ct (header_size + sizeof (Lisp_Object)) };
+struct vector_block
+{
+    char data[VECTOR_BLOCK_BYTES];
+    struct vector_block *next;
+};
+static ptrdiff_t
+VINDEX (ptrdiff_t nbytes)
+{
+    eassume (VBLOCK_BYTES_MIN <= nbytes);
+    return (nbytes - VBLOCK_BYTES_MIN) / roundup_size;
+}
+enum
+{
+    large_vector_offset = ROUNDUP (sizeof (struct large_vector), LISP_ALIGNMENT)
+};
+#define VECTOR_ELTS_MAX \
+((ptrdiff_t) \
+    min (((min (PTRDIFF_MAX, SIZE_MAX) - header_size - large_vector_offset) \
+         / word_size), \
+         MOST_POSITIVE_FIXNUM))
+enum { VECTOR_MAX_FREE_LIST_INDEX =
+    (VECTOR_BLOCK_BYTES - VBLOCK_BYTES_MIN) / roundup_size + 1 };
+static struct Lisp_Vector *
+ADVANCE (struct Lisp_Vector *v, ptrdiff_t nbytes)
+{
+    void *vv = v;
+    char *cv = vv;
+    void *p = cv + nbytes;
+    return p;
+}
+
+static struct Lisp_Vector *
+next_vector (struct Lisp_Vector *v)
+{
+    return XUNTAG (v->contents[0], Lisp_Int0, struct Lisp_Vector);
+}
+static struct Lisp_Vector *vector_free_lists[VECTOR_MAX_FREE_LIST_INDEX];
+static struct vector_block *vector_blocks;
+static struct large_vector *large_vectors;
+static void
+set_next_vector (struct Lisp_Vector *v, struct Lisp_Vector *p)
+{
+    v->contents[0] = make_lisp_ptr (p, Lisp_Int0);
+}
+static void
+setup_on_free_list (struct Lisp_Vector *v, ptrdiff_t nbytes)
+{
+    eassume (header_size <= nbytes);
+    ptrdiff_t nwords = (nbytes - header_size) / word_size;
+    XSETPVECTYPESIZE (v, PVEC_FREE, 0, nwords);
+    eassert (nbytes % roundup_size == 0);
+    ptrdiff_t vindex = VINDEX (nbytes);
+    eassert (vindex < VECTOR_MAX_FREE_LIST_INDEX);
+    set_next_vector (v, vector_free_lists[vindex]);
+    vector_free_lists[vindex] = v;
+}
+#define vroundup(x) (eassume ((x) >= 0), vroundup_ct (x))
+static struct Lisp_Vector *
+large_vector_vec (struct large_vector *p)
+{
+    return (struct Lisp_Vector *) ((char *) p + large_vector_offset);
+}
+
+ptrdiff_t
+vectorlike_nbytes (const union vectorlike_header *hdr)
+{
+    ptrdiff_t size = hdr->size & ~ARRAY_MARK_FLAG;
+    ptrdiff_t nwords;
+
+    if (size & PSEUDOVECTOR_FLAG) {
+        if (PSEUDOVECTOR_TYPEP (hdr, PVEC_BOOL_VECTOR)) {
+            TODO
+            return 0;
+        } else {
+            nwords = ((size & PSEUDOVECTOR_SIZE_MASK)
+                + ((size & PSEUDOVECTOR_REST_MASK)
+                >> PSEUDOVECTOR_SIZE_BITS));
+        }
+    } else {
+        nwords = size;
+    }
+    return vroundup (header_size + word_size * nwords);
+}
+static void
+cleanup_vector (struct Lisp_Vector *vector)
+{
+    if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_BIGNUM)) {
+        TODO
+    } else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_OVERLAY)) {
+        TODO
+    } else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_FINALIZER)) {
+        TODO
+    } else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_FONT)) {
+        TODO
+    } else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_THREAD)) {
+        TODO
+    } else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_MUTEX)) {
+        TODO
+    } else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_CONDVAR)) {
+        TODO
+    } else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_MARKER)) {
+        TODO
+    } else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_USER_PTR)) {
+        TODO }
+#ifdef HAVE_TREE_SITTER
+    else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_TS_PARSER))
+    treesit_delete_parser (PSEUDOVEC_STRUCT (vector, Lisp_TS_Parser));
+    else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_TS_COMPILED_QUERY))
+    treesit_delete_query (PSEUDOVEC_STRUCT (vector, Lisp_TS_Query));
+#endif
+#ifdef HAVE_MODULES
+    else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_MODULE_FUNCTION))
+    {
+        ATTRIBUTE_MAY_ALIAS struct Lisp_Module_Function *function
+            = (struct Lisp_Module_Function *) vector;
+        module_finalize_function (function);
+    }
+#endif
+#ifdef HAVE_NATIVE_COMP
+    else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_NATIVE_COMP_UNIT))
+    {
+        struct Lisp_Native_Comp_Unit *cu =
+            PSEUDOVEC_STRUCT (vector, Lisp_Native_Comp_Unit);
+        unload_comp_unit (cu);
+    }
+    else if (PSEUDOVECTOR_TYPEP (&vector->header, PVEC_SUBR))
+    {
+        struct Lisp_Subr *subr =
+            PSEUDOVEC_STRUCT (vector, Lisp_Subr);
+        if (!NILP (subr->native_comp_u))
+        {
+            /* FIXME Alternative and non invasive solution to this
+         cast?  */
+            xfree ((char *)subr->symbol_name);
+            xfree (subr->native_c_name);
+        }
+    }
+#endif
+}
+
+static struct vector_block *
+allocate_vector_block (void)
+{
+#if TODO_NELISP_LATER_AND
+    struct vector_block *block = xmalloc (sizeof *block);
+#else
+    struct vector_block *block = malloc (sizeof *block);
+#endif
+
+#ifndef GC_MALLOC_CHECK
+    mem_insert (block->data, block->data + VECTOR_BLOCK_BYTES,
+                MEM_TYPE_VECTOR_BLOCK);
+#endif
+
+    block->next = vector_blocks;
+    vector_blocks = block;
+    return block;
+}
+
+static struct Lisp_Vector *
+allocate_vector_from_block (ptrdiff_t nbytes) {
+    struct Lisp_Vector *vector;
+    struct vector_block *block;
+    size_t index, restbytes;
+
+    eassume (VBLOCK_BYTES_MIN <= nbytes && nbytes <= VBLOCK_BYTES_MAX);
+    eassume (nbytes % roundup_size == 0);
+
+    index = VINDEX (nbytes);
+    if (vector_free_lists[index]) {
+        vector = vector_free_lists[index];
+        vector_free_lists[index] = next_vector (vector);
+        return vector;
+    }
+    for (index = VINDEX (nbytes + VBLOCK_BYTES_MIN);
+        index < VECTOR_MAX_FREE_LIST_INDEX; index++)
+        if (vector_free_lists[index]) {
+            vector = vector_free_lists[index];
+            vector_free_lists[index] = next_vector (vector);
+            restbytes = index * roundup_size + VBLOCK_BYTES_MIN - nbytes;
+            eassert (restbytes % roundup_size == 0);
+            setup_on_free_list (ADVANCE (vector, nbytes), restbytes);
+            return vector;
+        }
+    block = allocate_vector_block ();
+    vector = (struct Lisp_Vector *) block->data;
+    restbytes = VECTOR_BLOCK_BYTES - nbytes;
+    if (restbytes >= VBLOCK_BYTES_MIN) {
+        eassert (restbytes % roundup_size == 0);
+        setup_on_free_list (ADVANCE (vector, nbytes), restbytes);
+    }
+    return vector;
+}
+
+static struct Lisp_Vector *
+allocate_vectorlike (ptrdiff_t len, bool clearit)
+{
+    eassert (0 < len && len <= VECTOR_ELTS_MAX);
+    ptrdiff_t nbytes = header_size + len * word_size;
+    struct Lisp_Vector *p;
+
+    if (nbytes <= VBLOCK_BYTES_MAX)
+    {
+        p = allocate_vector_from_block (vroundup (nbytes));
+        if (clearit)
+            memclear (p, nbytes);
+    } else {
+        struct large_vector *lv = lisp_malloc (large_vector_offset + nbytes,
+                                               clearit, MEM_TYPE_VECTORLIKE);
+        lv->next = large_vectors;
+        large_vectors = lv;
+        p = large_vector_vec (lv);
+    }
+
+#if TODO_NELISP_LATER_AND
+    if (find_suspicious_object_in_range (p, (char *) p + nbytes))
+        emacs_abort ();
+
+    tally_consing (nbytes);
+    vector_cells_consed += len;
+#endif
+
+    return p;
+}
+
+static struct Lisp_Vector *
+allocate_clear_vector (ptrdiff_t len, bool clearit)
+{
+#if TODO_NELISP_LATER_AND
+    if (len == 0)
+        return XVECTOR (zero_vector);
+#endif
+    if (VECTOR_ELTS_MAX < len)
+        memory_full (SIZE_MAX);
+    struct Lisp_Vector *v = allocate_vectorlike (len, clearit);
+    v->header.size = len;
+    return v;
+}
+
+Lisp_Object make_vector (ptrdiff_t length, Lisp_Object init) {
+    bool clearit = NIL_IS_ZERO && NILP (init);
+    struct Lisp_Vector *p = allocate_clear_vector (length, clearit);
+    if (!clearit)
+        for (ptrdiff_t i = 0; i < length; i++)
+            p->contents[i] = init;
+    return make_lisp_ptr (p, Lisp_Vectorlike);
+}
+
+DEFUN ("make-vector", Fmake_vector, Smake_vector, 2, 2, 0,
+       doc: /* Return a newly created vector of length LENGTH, with each element being INIT.
+See also the function `vector'.  */)
+    (Lisp_Object length, Lisp_Object init)
+{
+#if TODO_NELISP_LATER_AND
+    CHECK_TYPE (FIXNATP (length) && XFIXNAT (length) <= PTRDIFF_MAX,
+                Qwholenump, length);
+#endif
+    return make_vector (XFIXNAT (length), init);
+}
+
 /* --- mark bit functions -- */
 
 #define XSTRING_MARKED_P(S)	(((S)->u.s.size & ARRAY_MARK_FLAG) != 0)
@@ -970,6 +1247,28 @@ set_cons_marked (struct Lisp_Cons *c)
 #endif
     XMARK_CONS (c);
 }
+#define XMARK_VECTOR(V)		((V)->header.size |= ARRAY_MARK_FLAG)
+#define XUNMARK_VECTOR(V)	((V)->header.size &= ~ARRAY_MARK_FLAG)
+#define XVECTOR_MARKED_P(V)	(((V)->header.size & ARRAY_MARK_FLAG) != 0)
+static void
+set_vector_marked (struct Lisp_Vector *v)
+{
+    if (pdumper_object_p (v))
+    {
+        TODO
+    }
+    else
+    XMARK_VECTOR (v);
+}
+static bool
+vector_marked_p (const struct Lisp_Vector *v)
+{
+    if (pdumper_object_p (v))
+    {
+        TODO
+    }
+    return XVECTOR_MARKED_P (v);
+}
 
 /* --- garbage collector -- */
 
@@ -1011,6 +1310,17 @@ mark_stack_push_value (Lisp_Object value)
     if (mark_stk.sp >= mark_stk.size)
         grow_mark_stack ();
     mark_stk.stack[mark_stk.sp++] = (struct mark_entry){.n = 0, .u.value = value};
+}
+static inline void
+mark_stack_push_values (Lisp_Object *values, ptrdiff_t n)
+{
+    eassume (n >= 0);
+    if (n == 0)
+        return;
+    if (mark_stk.sp >= mark_stk.size)
+        grow_mark_stack ();
+    mark_stk.stack[mark_stk.sp++] = (struct mark_entry){.n = n,
+        .u.values = values};
 }
 
 static inline Lisp_Object
@@ -1056,9 +1366,66 @@ process_mark_stack (ptrdiff_t base_sp) {
 #endif
                 }
                 break; }
-            case Lisp_Vectorlike:
-                TODO
-                break;
+            case Lisp_Vectorlike: {
+                register struct Lisp_Vector *ptr = XVECTOR (obj);
+
+                if (vector_marked_p (ptr))
+                    break;
+
+                enum pvec_type pvectype
+                    = PSEUDOVECTOR_TYPE (ptr);
+
+                switch (pvectype)
+                {
+                    case PVEC_BUFFER:
+                        TODO
+                        break;
+
+                    case PVEC_FRAME:
+                        TODO
+                        break;
+
+                    case PVEC_WINDOW:
+                        TODO
+                        break;
+
+                    case PVEC_HASH_TABLE:
+                        {
+                            TODO
+                            break;
+                        }
+
+                    case PVEC_CHAR_TABLE:
+                    case PVEC_SUB_CHAR_TABLE:
+                        TODO
+                        break;
+
+                    case PVEC_BOOL_VECTOR:
+                        TODO
+                        break;
+
+                    case PVEC_OVERLAY:
+                        TODO
+                        break;
+
+                    case PVEC_SUBR:
+                        TODO
+                        break;
+
+                    case PVEC_FREE:
+#if TODO_NELISP_LATER_AND
+                    emacs_abort ();
+#endif
+
+                    default: {
+                        ptrdiff_t size = ptr->header.size;
+                        if (size & PSEUDOVECTOR_FLAG)
+                            size &= PSEUDOVECTOR_SIZE_MASK;
+                        set_vector_marked (ptr);
+                        mark_stack_push_values (ptr->contents, size);
+                    } break;
+                }
+                break; }
             case Lisp_Symbol:
                 TODO
                 break;
@@ -1291,12 +1658,94 @@ sweep_conses (void) {
     gcstat.total_free_conses = num_free;
 }
 
+NO_INLINE static void
+sweep_vectors (void) {
+    struct vector_block *block, **bprev = &vector_blocks;
+    struct large_vector *lv, **lvprev = &large_vectors;
+    struct Lisp_Vector *vector, *next;
+    gcstat.total_vectors = 0;
+    gcstat.total_vector_slots = gcstat.total_free_vector_slots = 0;
+    memset (vector_free_lists, 0, sizeof (vector_free_lists));
+    for (block = vector_blocks; block; block = *bprev)
+    {
+        bool free_this_block = false;
+
+        for (vector = (struct Lisp_Vector *) block->data;
+        VECTOR_IN_BLOCK (vector, block); vector = next)
+        {
+            if (XVECTOR_MARKED_P (vector))
+            {
+                XUNMARK_VECTOR (vector);
+                gcstat.total_vectors++;
+                ptrdiff_t nbytes = vector_nbytes (vector);
+                gcstat.total_vector_slots += nbytes / word_size;
+                next = ADVANCE (vector, nbytes);
+            } else {
+                ptrdiff_t total_bytes = 0;
+
+                next = vector;
+                do
+                {
+                    cleanup_vector (next);
+                    ptrdiff_t nbytes = vector_nbytes (next);
+                    total_bytes += nbytes;
+                    next = ADVANCE (next, nbytes);
+                }
+                while (VECTOR_IN_BLOCK (next, block) && !vector_marked_p (next));
+
+                eassert (total_bytes % roundup_size == 0);
+
+                if (vector == (struct Lisp_Vector *) block->data
+                    && !VECTOR_IN_BLOCK (next, block))
+                    /* This block should be freed because all of its
+           space was coalesced into the only free vector.  */
+                    free_this_block = true;
+                else {
+                    setup_on_free_list (vector, total_bytes);
+                    gcstat.total_free_vector_slots += total_bytes / word_size;
+                }
+            }
+        }
+
+        if (free_this_block)
+        {
+            *bprev = block->next;
+            mem_delete (mem_find (block->data));
+#if TODO_NELISP_LATER_AND
+            xfree (block);
+#else
+            free (block);
+#endif
+        } else {
+            bprev = &block->next;
+        }
+    }
+    for (lv = large_vectors; lv; lv = *lvprev)
+    {
+        vector = large_vector_vec (lv);
+        if (XVECTOR_MARKED_P (vector))
+        {
+            XUNMARK_VECTOR (vector);
+            gcstat.total_vectors++;
+            gcstat.total_vector_slots
+                += (vector->header.size & PSEUDOVECTOR_FLAG
+                ? vector_nbytes (vector) / word_size
+                : header_size / word_size + vector->header.size);
+            lvprev = &lv->next;
+        } else {
+            *lvprev = lv->next;
+            lisp_free (lv);
+        }
+    }
+}
+
 static void
 gc_sweep(void){
     TODO_NELISP_LATER
     sweep_strings ();
     sweep_floats ();
     sweep_conses ();
+    sweep_vectors ();
 }
 
 void
