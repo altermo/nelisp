@@ -1,6 +1,6 @@
 // TODO: In the future, this will be auto generated
 
-#include "lual.c"
+#include "lual.h"
 
 int pub ret(LObj) F_cons(lua_State *L) {
     VALIDATE(L,LObj,LObj);

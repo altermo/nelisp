@@ -1,5 +1,5 @@
 #include "alloc.c"
-#include "lual.c"
+#include "lual.h"
 
 int pub ret(LObj) number_to_fixnum(lua_State *L){
     VALIDATE(L,LNum);
