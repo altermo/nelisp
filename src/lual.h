@@ -40,7 +40,7 @@ static void push_obj_as_userdata(lua_State *L, Lisp_Object obj){
     // (-2)memtbl, (-1)nil/obj
     if (lua_isuserdata(L,-1)){
         // (-2)memtbl, (-1)obj
-        Lisp_Object* ptr=lua_touserdata(L,-1);
+        Lisp_Object* ptr=(Lisp_Object*)lua_touserdata(L,-1);
         eassert(*ptr==obj);
         lua_remove(L,-2);
         // (-1)obj
@@ -49,7 +49,7 @@ static void push_obj_as_userdata(lua_State *L, Lisp_Object obj){
     // (-2)memtbl, (-1)nil
     lua_pop(L,2);
     //
-    Lisp_Object* ptr=lua_newuserdata(L,sizeof(Lisp_Object));
+    Lisp_Object* ptr=(Lisp_Object*)lua_newuserdata(L,sizeof(Lisp_Object));
     *ptr=obj;
     // (-1)obj
     lua_getfield(L,LUA_ENVIRONINDEX,"memtbl");
@@ -80,7 +80,7 @@ static Lisp_Object userdata_to_obj(lua_State *L){
         luaL_error(L,"Lua stack overflow");
 
     if (lua_islightuserdata(L,-1)){
-        Lisp_Object obj=lua_touserdata(L,-1);
+        Lisp_Object obj=(Lisp_Object)lua_touserdata(L,-1);
         eassert(FIXNUMP(obj));
         return obj;
     } else {
