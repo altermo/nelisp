@@ -8,12 +8,7 @@ int pub ret(/*nelisp.obj*/) F_cons(lua_State *L) {
     check_isobject(L,2);
     global_lua_state = L;
 
-    // car(-2), cdr(-1)
-    Lisp_Object cdr=userdata_to_obj(L);
-    lua_insert(L,-2);
-    // cdr(-2), car(-1)
-    Lisp_Object car=userdata_to_obj(L);
-    Lisp_Object obj=Fcons(car,cdr);
+    Lisp_Object obj=Fcons(userdata_to_obj(L,1),userdata_to_obj(L,2));
     push_obj(L,obj);
     return 1;
 }
@@ -24,10 +19,7 @@ int pub ret(/*nelisp.obj*/) F_make_vector(lua_State *L) {
     check_isobject(L,2);
     global_lua_state = L;
 
-    Lisp_Object init=userdata_to_obj(L);
-    lua_insert(L,-2);
-    Lisp_Object length=userdata_to_obj(L);
-    Lisp_Object obj=Fmake_vector(length,init);
+    Lisp_Object obj=Fmake_vector(userdata_to_obj(L,1),userdata_to_obj(L,2));
     push_obj(L,obj);
     return 1;
 }

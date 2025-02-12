@@ -8,17 +8,17 @@
 #endif
 
 
-static Lisp_Object userdata_to_obj(lua_State *L){
+static Lisp_Object userdata_to_obj(lua_State *L,int idx){
     if (!lua_checkstack(L,lua_gettop(L)+5))
         luaL_error(L,"Lua stack overflow");
-    check_obj(L,-1);
+    check_obj(L,idx);
 
-    if (lua_islightuserdata(L,-1)){
-        Lisp_Object obj=(Lisp_Object)lua_touserdata(L,-1);
+    if (lua_islightuserdata(L,idx)){
+        Lisp_Object obj=(Lisp_Object)lua_touserdata(L,idx);
         eassert(FIXNUMP(obj));
         return obj;
     } else {
-        Lisp_Object obj=*(Lisp_Object*)lua_touserdata(L,-1);
+        Lisp_Object obj=*(Lisp_Object*)lua_touserdata(L,idx);
         eassert(!FIXNUMP(obj));
         return obj;
     }

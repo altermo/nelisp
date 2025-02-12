@@ -26,7 +26,7 @@ int pub ret(/*number*/) fixnum_to_number(lua_State *L){
     check_isobject(L,1);
     global_lua_state = L;
 
-    Lisp_Object obj = userdata_to_obj(L);
+    Lisp_Object obj = userdata_to_obj(L,1);
     if (!FIXNUMP(obj))
         luaL_error(L,"Expected fixnum");
     EMACS_INT i = XFIXNUM(obj);
@@ -39,7 +39,7 @@ int pub ret(/*number*/) float_to_number(lua_State *L){
     check_isobject(L,1);
     global_lua_state = L;
 
-    Lisp_Object obj = userdata_to_obj(L);
+    Lisp_Object obj = userdata_to_obj(L,1);
     if (!FLOATP(obj))
         luaL_error(L,"Expected float");
     double i = XFLOAT_DATA(obj);
@@ -64,7 +64,7 @@ int pub ret(/*string*/) unibyte_lstring_to_string(lua_State *L){
     check_isobject(L,1);
     global_lua_state = L;
 
-    Lisp_Object obj = userdata_to_obj(L);
+    Lisp_Object obj = userdata_to_obj(L,1);
     if (!STRINGP(obj) || STRING_MULTIBYTE(obj))
         luaL_error(L,"Expected unibyte string");
     const char* str = (const char*)SDATA(obj);
@@ -77,7 +77,7 @@ int pub ret(/*[nelisp.obj,nelisp.obj]*/) cons_to_table(lua_State *L){
     check_isobject(L,1);
     global_lua_state = L;
 
-    Lisp_Object obj = userdata_to_obj(L);
+    Lisp_Object obj = userdata_to_obj(L,1);
     if (!CONSP(obj))
         luaL_error(L,"Expected cons");
     Lisp_Object car=XCAR(obj);
@@ -100,7 +100,7 @@ int pub ret(/*nelisp.obj[]*/) vector_to_table(lua_State *L){
     check_isobject(L,1);
     global_lua_state = L;
 
-    Lisp_Object obj = userdata_to_obj(L);
+    Lisp_Object obj = userdata_to_obj(L,1);
     if (!VECTORP(obj))
         luaL_error(L,"Expected vector");
 
