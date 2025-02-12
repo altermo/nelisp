@@ -95,6 +95,29 @@ int pub ret(/*[nelisp.obj,nelisp.obj]*/) cons_to_table(lua_State *L){
     return 1;
 }
 
+int pub ret(/*nelisp.obj[]*/) vector_to_table(lua_State *L){
+    check_nargs(L,1);
+    check_isobject(L,1);
+    global_lua_state = L;
+
+    Lisp_Object obj = userdata_to_obj(L);
+    if (!VECTORP(obj))
+        luaL_error(L,"Expected vector");
+
+    lua_newtable(L);
+    // (-1)tbl
+    ptrdiff_t len = ASIZE(obj);
+    for (ptrdiff_t i=0; i<len; i++){
+        // (-1)tbl
+        push_obj(L,XVECTOR(obj)->contents[i]);
+        // (-2)tbl,(-1)obj
+        lua_rawseti(L,-2,i+1);
+        // (-1)tbl
+    };
+    // (-1)tbl
+    return 1;
+}
+
 int pub ret() collectgarbage(lua_State *L){
     check_nargs(L,0);
     global_lua_state = L;

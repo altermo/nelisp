@@ -35,6 +35,10 @@ function M.unibyte_lstring_to_string(str) end
 ---@return [nelisp.obj,nelisp.obj]
 function M.cons_to_table(cons) end
 
+---@param vec nelisp.obj
+---@return nelisp.obj[]
+function M.vector_to_table(vec) end
+
 function M.collectgarbage() end
 
 return M

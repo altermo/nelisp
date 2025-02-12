@@ -489,6 +489,18 @@ PSEUDOVECTOR_TYPEP (const union vectorlike_header *a, enum pvec_type code)
     return ((a->size & (PSEUDOVECTOR_FLAG | PVEC_TYPE_MASK))
     == (PSEUDOVECTOR_FLAG | (code << PSEUDOVECTOR_AREA_BITS)));
 }
+INLINE ptrdiff_t
+ASIZE (Lisp_Object array)
+{
+  ptrdiff_t size = XVECTOR (array)->header.size;
+  eassume (0 <= size);
+  return size;
+}
+INLINE bool
+VECTORP (Lisp_Object x)
+{
+  return VECTORLIKEP (x) && ! (ASIZE (x) & PSEUDOVECTOR_FLAG);
+}
 
 struct Lisp_Subr {
     union vectorlike_header header;
