@@ -535,11 +535,28 @@ struct Lisp_Subr {
 union Aligned_Lisp_Subr {
     struct Lisp_Subr s;
 };
+
+inline static void check_nargs(lua_State *L,int nargs);
+inline static void check_isobject(lua_State *L,int n);
+static Lisp_Object userdata_to_obj(lua_State *L,int idx);
+static void push_obj(lua_State *L, Lisp_Object obj);
+#define DEFUN_LUA_2(fname)\
+    int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
+        check_nargs(L,2);\
+        check_isobject(L,1);\
+        check_isobject(L,2);\
+        global_lua_state = L;\
+        Lisp_Object obj=fname(userdata_to_obj(L,1),userdata_to_obj(L,2));\
+        push_obj(L,obj);\
+        return 1;\
+    }
+
 #define DEFUN(lname, fnname, sname, minargs, maxargs, intspec, doc) \
 static union Aligned_Lisp_Subr sname =                            \
     {{{ PVEC_SUBR << PSEUDOVECTOR_AREA_BITS },			    \
         { .a ## maxargs = fnname },				    \
         minargs, maxargs, lname, {intspec}, lisp_h_Qnil, 0}};	    \
+        DEFUN_LUA_##maxargs(fnname)\
 Lisp_Object fnname
 
 #endif /* EMACS_LISP_H */
