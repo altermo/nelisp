@@ -857,18 +857,34 @@ make_unibyte_string (const char *contents, ptrdiff_t length){
 }
 
 /* --- cons allocation -- */
+#define CONS_BLOCK(fptr) \
+(eassert (!pdumper_object_p (fptr)),                                  \
+    ((struct cons_block *) ((uintptr_t) (fptr) & ~(BLOCK_ALIGN - 1))))
+
+#define CONS_INDEX(fptr) \
+(((uintptr_t) (fptr) & (BLOCK_ALIGN - 1)) / sizeof (struct Lisp_Cons))
+
+#define XCONS_MARKED_P(fptr) \
+GETMARKBIT (CONS_BLOCK (fptr), CONS_INDEX ((fptr)))
+
+#define XMARK_CONS(fptr) \
+SETMARKBIT (CONS_BLOCK (fptr), CONS_INDEX ((fptr)))
+
+#define XUNMARK_CONS(fptr) \
+UNSETMARKBIT (CONS_BLOCK (fptr), CONS_INDEX ((fptr)))
+
 #define CONS_BLOCK_SIZE						\
-  (((BLOCK_BYTES - sizeof (struct cons_block *)			\
-     /* The compiler might add padding at the end.  */		\
-     - (sizeof (struct Lisp_Cons) - sizeof (bits_word))) * CHAR_BIT)	\
-   / (sizeof (struct Lisp_Cons) * CHAR_BIT + 1))
+(((BLOCK_BYTES - sizeof (struct cons_block *)			\
+/* The compiler might add padding at the end.  */		\
+- (sizeof (struct Lisp_Cons) - sizeof (bits_word))) * CHAR_BIT)	\
+/ (sizeof (struct Lisp_Cons) * CHAR_BIT + 1))
 
 struct cons_block
 {
-  /* Place `conses' at the beginning, to ease up CONS_INDEX's job.  */
-  struct Lisp_Cons conses[CONS_BLOCK_SIZE];
-  bits_word gcmarkbits[1 + CONS_BLOCK_SIZE / BITS_PER_BITS_WORD];
-  struct cons_block *next;
+    /* Place `conses' at the beginning, to ease up CONS_INDEX's job.  */
+    struct Lisp_Cons conses[CONS_BLOCK_SIZE];
+    bits_word gcmarkbits[1 + CONS_BLOCK_SIZE / BITS_PER_BITS_WORD];
+    struct cons_block *next;
 };
 
 static struct cons_block *cons_block;
@@ -933,6 +949,26 @@ set_string_marked (struct Lisp_String *s)
 #else
     XMARK_STRING (s);
 #endif
+}
+static bool
+cons_marked_p (const struct Lisp_Cons *c)
+{
+#if TODO_NELISP_LATER_AND
+    return pdumper_object_p (c)
+    ? pdumper_marked_p (c)
+    : XCONS_MARKED_P (c);
+#endif
+    return XCONS_MARKED_P (c);
+}
+static void
+set_cons_marked (struct Lisp_Cons *c)
+{
+#if TODO_NELISP_LATER_AND
+    if (pdumper_object_p (c))
+        pdumper_set_marked (c);
+    else
+#endif
+    XMARK_CONS (c);
 }
 
 /* --- garbage collector -- */
@@ -1002,9 +1038,15 @@ process_mark_stack (ptrdiff_t base_sp) {
 
     while (mark_stk.sp > base_sp) {
         Lisp_Object obj = mark_stack_pop ();
+    mark_obj:
+#if TODO_NELISP_LATER_AND
+        void *po = XPNTR (obj);
+        if (PURE_P (po))
+            continue;
+#endif
         switch (XTYPE (obj)) {
-            case Lisp_String:
-                ;register struct Lisp_String *ptr = XSTRING (obj);
+            case Lisp_String: {
+                register struct Lisp_String *ptr = XSTRING (obj);
                 if (string_marked_p (ptr))
                     break;
                 set_string_marked (ptr);
@@ -1013,16 +1055,22 @@ process_mark_stack (ptrdiff_t base_sp) {
                     mark_interval_tree (ptr->u.s.intervals);
 #endif
                 }
-                break;
+                break; }
             case Lisp_Vectorlike:
                 TODO
                 break;
             case Lisp_Symbol:
                 TODO
                 break;
-            case Lisp_Cons:
-                TODO
-                break;
+            case Lisp_Cons: {
+                struct Lisp_Cons *ptr = XCONS (obj);
+                if (cons_marked_p (ptr))
+                    break;
+                set_cons_marked (ptr);
+                if (!NILP (ptr->u.s.u.cdr))
+                    mark_stack_push_value (ptr->u.s.u.cdr);
+                obj = ptr->u.s.car;
+                goto mark_obj; }
             case Lisp_Float:
                 if (pdumper_object_p(XFLOAT(obj))) {
                     TODO
@@ -1168,7 +1216,6 @@ sweep_strings (void) {
                 ++nfree;
             }
         }
-
         if (nfree == STRING_BLOCK_SIZE
             && gcstat.total_free_strings > STRING_BLOCK_SIZE)
         {
@@ -1188,11 +1235,68 @@ sweep_strings (void) {
 #endif
 }
 
+NO_INLINE static void
+sweep_conses (void) {
+    struct cons_block **cprev = &cons_block;
+    int lim = cons_block_index;
+    object_ct num_free = 0, num_used = 0;
+    cons_free_list = 0;
+    for (struct cons_block *cblk; (cblk = *cprev); )
+    {
+        int i = 0;
+        int this_free = 0;
+        int ilim = (lim + BITS_PER_BITS_WORD - 1) / BITS_PER_BITS_WORD;
+        for (i = 0; i < ilim; i++)
+        {
+            if (cblk->gcmarkbits[i] == BITS_WORD_MAX)
+            {
+                cblk->gcmarkbits[i] = 0;
+                num_used += BITS_PER_BITS_WORD;
+            } else {
+                int start, pos, stop;
+                start = i * BITS_PER_BITS_WORD;
+                stop = lim - start;
+                if (stop > BITS_PER_BITS_WORD)
+                    stop = BITS_PER_BITS_WORD;
+                stop += start;
+                for (pos = start; pos < stop; pos++)
+                {
+                    struct Lisp_Cons *acons = &cblk->conses[pos];
+                    if (!XCONS_MARKED_P (acons))
+                    {
+                        this_free++;
+                        cblk->conses[pos].u.s.u.chain = cons_free_list;
+                        cons_free_list = &cblk->conses[pos];
+                        cons_free_list->u.s.car = dead_object ();
+                    } else {
+                        num_used++;
+                        XUNMARK_CONS (acons);
+                    }
+                }
+            }
+        }
+        lim = CONS_BLOCK_SIZE;
+        if (this_free == CONS_BLOCK_SIZE && num_free > CONS_BLOCK_SIZE)
+        {
+            *cprev = cblk->next;
+            /* Unhook from the free list.  */
+            cons_free_list = cblk->conses[0].u.s.u.chain;
+            lisp_align_free (cblk);
+        } else {
+            num_free += this_free;
+            cprev = &cblk->next;
+        }
+    }
+    gcstat.total_conses = num_used;
+    gcstat.total_free_conses = num_free;
+}
+
 static void
 gc_sweep(void){
     TODO_NELISP_LATER
     sweep_strings ();
     sweep_floats ();
+    sweep_conses ();
 }
 
 void

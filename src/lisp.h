@@ -28,6 +28,10 @@ static lua_State *global_lua_state;
 #define SIZE_WIDTH   __WORDSIZE
 #endif
 
+#ifndef Qnil
+#define Qnil lisp_h_Qnil
+#endif
+
 # define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
 // Taken from conf_post.h
 #define INLINE EXTERN_INLINE
@@ -63,6 +67,7 @@ typedef unsigned long EMACS_UINT;
 enum { EMACS_INT_WIDTH = LONG_WIDTH, EMACS_UINT_WIDTH = ULONG_WIDTH };
 #define EMACS_INT_MAX LONG_MAX
 typedef size_t bits_word;
+# define BITS_WORD_MAX SIZE_MAX
 enum { BITS_PER_BITS_WORD = SIZE_WIDTH };
 #define pI "l"
 #define AVOID _Noreturn void
@@ -275,22 +280,22 @@ struct Lisp_Cons {
 INLINE Lisp_Object *
 xcar_addr (Lisp_Object c)
 {
-  return &XCONS (c)->u.s.car;
+    return &XCONS (c)->u.s.car;
 }
 INLINE Lisp_Object *
 xcdr_addr (Lisp_Object c)
 {
-  return &XCONS (c)->u.s.u.cdr;
+    return &XCONS (c)->u.s.u.cdr;
 }
 INLINE void
 XSETCAR (Lisp_Object c, Lisp_Object n)
 {
-  *xcar_addr (c) = n;
+    *xcar_addr (c) = n;
 }
 INLINE void
 XSETCDR (Lisp_Object c, Lisp_Object n)
 {
-  *xcdr_addr (c) = n;
+    *xcdr_addr (c) = n;
 }
 
 union vectorlike_header {
@@ -411,6 +416,15 @@ do {							\
 #define STRING_SET_UNIBYTE(STR)				\
 XSTRING (STR)->u.s.size_byte = -1;
 #endif
+INLINE Lisp_Object
+dead_object (void)
+{
+#if TODO_NELISP_LATER_AND
+    return make_lisp_ptr (NULL, Lisp_String);
+#endif
+    // Workaround for compiling with `zig cc` causing a crash.
+    return (Lisp_Word)((Lisp_Word_tag)NULL+(Lisp_Word_tag)Lisp_String);
+}
 
 struct Lisp_Subr {
     union vectorlike_header header;
