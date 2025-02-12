@@ -1,5 +1,5 @@
 #include "alloc.c"
-#include "lual.h"
+#include "lua.h"
 
 int pub ret(/*nelisp.obj*/) number_to_fixnum(lua_State *L){
     check_nargs(L,1);
