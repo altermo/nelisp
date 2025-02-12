@@ -1199,6 +1199,82 @@ See also the function `vector'.  */)
     return make_vector (XFIXNAT (length), init);
 }
 
+/* --- symbol allocation -- */
+
+#define SYMBOL_BLOCK_SIZE \
+((1020 - sizeof (struct symbol_block *)) / sizeof (struct Lisp_Symbol))
+struct symbol_block
+{
+    struct Lisp_Symbol symbols[SYMBOL_BLOCK_SIZE];
+    struct symbol_block *next;
+};
+
+static struct symbol_block *symbol_block;
+static int symbol_block_index = SYMBOL_BLOCK_SIZE;
+static struct Lisp_Symbol *symbol_free_list;
+
+static void
+set_symbol_name (Lisp_Object sym, Lisp_Object name)
+{
+    XBARE_SYMBOL (sym)->u.s.name = name;
+}
+
+void
+init_symbol (Lisp_Object val, Lisp_Object name)
+{
+    struct Lisp_Symbol *p = XBARE_SYMBOL (val);
+    set_symbol_name (val, name);
+    set_symbol_plist (val, Qnil);
+    p->u.s.redirect = SYMBOL_PLAINVAL;
+    #if TODO_NELISP_LATER_AND
+    SET_SYMBOL_VAL (p, Qunbound);
+    #else
+    SET_SYMBOL_VAL (p, val);
+    #endif
+    set_symbol_function (val, Qnil);
+    set_symbol_next (val, NULL);
+    p->u.s.gcmarkbit = false;
+    p->u.s.interned = SYMBOL_UNINTERNED;
+    p->u.s.trapped_write = SYMBOL_UNTRAPPED_WRITE;
+    p->u.s.declared_special = false;
+    p->u.s.pinned = false;
+}
+
+DEFUN ("make-symbol", Fmake_symbol, Smake_symbol, 1, 1, 0,
+       doc: /* Return a newly allocated uninterned symbol whose name is NAME.
+Its value is void, and its function definition and property list are nil.  */)
+    (Lisp_Object name) {
+    Lisp_Object val;
+
+#if TODO_NELISP_LATER_AND
+    CHECK_STRING (name);
+#endif
+
+    if (symbol_free_list)
+    {
+        XSETSYMBOL (val, symbol_free_list);
+        symbol_free_list = symbol_free_list->u.s.next;
+    } else {
+        if (symbol_block_index == SYMBOL_BLOCK_SIZE)
+        {
+            struct symbol_block *new
+                = lisp_malloc (sizeof *new, false, MEM_TYPE_SYMBOL);
+            new->next = symbol_block;
+            symbol_block = new;
+            symbol_block_index = 0;
+        }
+        XSETSYMBOL (val, &symbol_block->symbols[symbol_block_index]);
+        symbol_block_index++;
+    }
+
+    init_symbol (val, name);
+#if TODO_NELISP_LATER_AND
+    tally_consing (sizeof (struct Lisp_Symbol));
+    symbols_consed++;
+#endif
+    return val;
+}
+
 /* --- mark bit functions -- */
 
 #define XSTRING_MARKED_P(S)	(((S)->u.s.size & ARRAY_MARK_FLAG) != 0)
@@ -1268,6 +1344,26 @@ vector_marked_p (const struct Lisp_Vector *v)
         TODO
     }
     return XVECTOR_MARKED_P (v);
+}
+
+static bool
+symbol_marked_p (const struct Lisp_Symbol *s)
+{
+#if TODO_NELISP_LATER_AND
+    return pdumper_object_p (s)
+    ? pdumper_marked_p (s)
+    : s->u.s.gcmarkbit;
+#endif
+    return s->u.s.gcmarkbit;
+}
+static void
+set_symbol_marked (struct Lisp_Symbol *s)
+{
+    if (pdumper_object_p (s)) {
+        TODO
+    } else {
+        s->u.s.gcmarkbit = true;
+    }
 }
 
 /* --- garbage collector -- */
@@ -1426,9 +1522,51 @@ process_mark_stack (ptrdiff_t base_sp) {
                     } break;
                 }
                 break; }
-            case Lisp_Symbol:
-                TODO
-                break;
+            case Lisp_Symbol: {
+                struct Lisp_Symbol *ptr = XBARE_SYMBOL (obj);
+                nextsym:
+                #if TODO_NELISP_LATER_ELSE
+                if (ptr==lispsym) {
+                    break;
+                }
+                #endif
+                if (symbol_marked_p (ptr))
+                    break;
+                set_symbol_marked (ptr);
+                #if TODO_NELISP_LATER_AND
+                eassert (valid_lisp_object_p (ptr->u.s.function));
+                #endif
+                mark_stack_push_value (ptr->u.s.function);
+                mark_stack_push_value (ptr->u.s.plist);
+                switch (ptr->u.s.redirect)
+                {
+                    case SYMBOL_PLAINVAL:
+                        mark_stack_push_value (SYMBOL_VAL (ptr));
+                        break;
+                    case SYMBOL_VARALIAS:
+                        {
+                            TODO
+                            break;
+                        }
+                    case SYMBOL_LOCALIZED:
+                        TODO
+                        break;
+                    case SYMBOL_FORWARDED:
+                        TODO
+                        break;
+                    default:
+                        TODO
+                }
+                #if TODO_NELISP_LATER_AND
+                if (!PURE_P (XSTRING (ptr->u.s.name)))
+                    set_string_marked (XSTRING (ptr->u.s.name));
+                mark_interval_tree (string_intervals (ptr->u.s.name));
+                po = ptr = ptr->u.s.next;
+                #endif
+                ptr = ptr->u.s.next;
+                if (ptr)
+                    goto nextsym;
+                break; }
             case Lisp_Cons: {
                 struct Lisp_Cons *ptr = XCONS (obj);
                 if (cons_marked_p (ptr))
@@ -1738,6 +1876,71 @@ sweep_vectors (void) {
         }
     }
 }
+NO_INLINE static void
+sweep_symbols (void) {
+  struct symbol_block *sblk;
+  struct symbol_block **sprev = &symbol_block;
+  int lim = symbol_block_index;
+  object_ct num_free = 0, num_used = ARRAYELTS (lispsym);
+
+  symbol_free_list = NULL;
+
+  for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++)
+    lispsym[i].u.s.gcmarkbit = 0;
+
+  for (sblk = symbol_block; sblk; sblk = *sprev)
+    {
+      int this_free = 0;
+      struct Lisp_Symbol *sym = sblk->symbols;
+      struct Lisp_Symbol *end = sym + lim;
+
+      for (; sym < end; ++sym)
+        {
+          if (!sym->u.s.gcmarkbit)
+            {
+              if (sym->u.s.redirect == SYMBOL_LOCALIZED)
+		{
+           #if TODO_NELISP_LATER_AND
+                  xfree (SYMBOL_BLV (sym));
+           #endif
+                  sym->u.s.redirect = SYMBOL_PLAINVAL;
+                }
+              sym->u.s.next = symbol_free_list;
+              symbol_free_list = sym;
+              symbol_free_list->u.s.function = dead_object ();
+              ++this_free;
+            }
+          else
+            {
+              ++num_used;
+              sym->u.s.gcmarkbit = 0;
+              /* Attempt to catch bogus objects.  */
+           #if TODO_NELISP_LATER_AND
+              eassert (valid_lisp_object_p (sym->u.s.function));
+           #endif
+            }
+        }
+
+      lim = SYMBOL_BLOCK_SIZE;
+      /* If this block contains only free symbols and we have already
+         seen more than two blocks worth of free symbols then deallocate
+         this block.  */
+      if (this_free == SYMBOL_BLOCK_SIZE && num_free > SYMBOL_BLOCK_SIZE)
+        {
+          *sprev = sblk->next;
+          /* Unhook from the free list.  */
+          symbol_free_list = sblk->symbols[0].u.s.next;
+          lisp_free (sblk);
+        }
+      else
+        {
+          num_free += this_free;
+          sprev = &sblk->next;
+        }
+    }
+  gcstat.total_symbols = num_used;
+  gcstat.total_free_symbols = num_free;
+}
 
 static void
 gc_sweep(void){
@@ -1746,6 +1949,7 @@ gc_sweep(void){
     sweep_floats ();
     sweep_conses ();
     sweep_vectors ();
+  sweep_symbols ();
 }
 
 void
