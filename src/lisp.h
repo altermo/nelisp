@@ -28,9 +28,6 @@ static lua_State *global_lua_state;
 #define SIZE_WIDTH   __WORDSIZE
 #endif
 
-#ifndef Qnil
-#define Qnil lisp_h_Qnil
-#endif
 #define symbols_with_pos_enabled 0
 
 # define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
@@ -510,13 +507,6 @@ VECTORP (Lisp_Object x)
     return VECTORLIKEP (x) && ! (ASIZE (x) & PSEUDOVECTOR_FLAG);
 }
 
-#define XSETINT(a, b) ((a) = make_fixnum (b))
-#define XSETFASTINT(a, b) ((a) = make_fixed_natnum (b))
-#define XSETCONS(a, b) ((a) = make_lisp_ptr (b, Lisp_Cons))
-#define XSETVECTOR(a, b) ((a) = make_lisp_ptr (b, Lisp_Vectorlike))
-#define XSETSTRING(a, b) ((a) = make_lisp_ptr (b, Lisp_String))
-#define XSETSYMBOL(a, b) ((a) = make_lisp_symbol (b))
-#define XSETFLOAT(a, b) ((a) = make_lisp_ptr (b, Lisp_Float))
 
 #define ENUM_BF(TYPE) enum TYPE
 enum symbol_interned
@@ -576,6 +566,7 @@ struct Lisp_Symbol
         } s;
     } u;
 };
+#include "globals.h"
 INLINE bool
 (SYMBOL_WITH_POS_P) (Lisp_Object x)
 {
@@ -586,7 +577,6 @@ INLINE bool
 {
   return lisp_h_SYMBOLP (x);
 }
-#include "globals.h"
 INLINE struct Lisp_Symbol *
 (XBARE_SYMBOL) (Lisp_Object a)
 {
@@ -616,6 +606,11 @@ make_lisp_symbol (struct Lisp_Symbol *sym)
     Lisp_Object a = TAG_PTR (Lisp_Symbol, symoffset);
     eassert (XSYMBOL (a) == sym);
     return a;
+}
+INLINE Lisp_Object
+builtin_lisp_symbol (int index)
+{
+  return make_lisp_symbol (&lispsym[index]);
 }
 INLINE void
 set_symbol_function (Lisp_Object sym, Lisp_Object function)
