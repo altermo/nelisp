@@ -1,4 +1,5 @@
 #include "alloc.c"
+#include "lread.c"
 
 int pub ret(/*nelisp.obj*/) number_to_fixnum(lua_State *L){
     global_lua_state = L;
@@ -122,5 +123,13 @@ int pub ret() collectgarbage(lua_State *L){
     check_nargs(L,0);
 
     garbage_collect_();
+    return 0;
+}
+int pub ret() init(lua_State *L){
+    global_lua_state = L;
+    check_nargs(L,0);
+
+    init_obarray_once();
+
     return 0;
 }

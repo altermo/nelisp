@@ -1226,11 +1226,7 @@ init_symbol (Lisp_Object val, Lisp_Object name)
     set_symbol_name (val, name);
     set_symbol_plist (val, Qnil);
     p->u.s.redirect = SYMBOL_PLAINVAL;
-    #if TODO_NELISP_LATER_AND
     SET_SYMBOL_VAL (p, Qunbound);
-    #else
-    SET_SYMBOL_VAL (p, val);
-    #endif
     set_symbol_function (val, Qnil);
     set_symbol_next (val, NULL);
     p->u.s.gcmarkbit = false;
@@ -1525,11 +1521,6 @@ process_mark_stack (ptrdiff_t base_sp) {
             case Lisp_Symbol: {
                 struct Lisp_Symbol *ptr = XBARE_SYMBOL (obj);
                 nextsym:
-                #if TODO_NELISP_LATER_ELSE
-                if (ptr==lispsym) {
-                    break;
-                }
-                #endif
                 if (symbol_marked_p (ptr))
                     break;
                 set_symbol_marked (ptr);
