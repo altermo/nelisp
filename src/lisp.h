@@ -33,7 +33,7 @@ static lua_State *global_lua_state;
 # define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
 // Taken from conf_post.h
 #define INLINE EXTERN_INLINE
-#define EXTERN_INLINE static inline
+#define EXTERN_INLINE static inline __attribute__((unused))
 #define NO_INLINE __attribute__ ((__noinline__))
 #define FLEXIBLE_ARRAY_MEMBER /**/
 #define FLEXALIGNOF(type) (sizeof (type) & ~ (sizeof (type) - 1))
@@ -671,7 +671,7 @@ union Aligned_Lisp_Subr {
 #define check_obj(L,idx)
 #endif
 
-static Lisp_Object userdata_to_obj(lua_State *L,int idx){
+INLINE Lisp_Object userdata_to_obj(lua_State *L,int idx){
     if (!lua_checkstack(L,lua_gettop(L)+5))
         luaL_error(L,"Lua stack overflow");
     check_obj(L,idx);
@@ -687,7 +687,7 @@ static Lisp_Object userdata_to_obj(lua_State *L,int idx){
     }
 }
 
-static void push_obj(lua_State *L, Lisp_Object obj){
+INLINE void push_obj(lua_State *L, Lisp_Object obj){
     if (!lua_checkstack(L,lua_gettop(L)+10))
         luaL_error(L,"Lua stack overflow");
     if (FIXNUMP(obj)) {
@@ -740,27 +740,27 @@ static void push_obj(lua_State *L, Lisp_Object obj){
 #define pub __attribute__((visibility("default")))
 #define ret(...)
 
-inline static void check_nargs(lua_State *L,int nargs){
+INLINE void check_nargs(lua_State *L,int nargs){
     if (global_lua_state==NULL)
         luaL_error(L,"Nelisp is not inited (please run `require('nelisp.c').init()`)");
     if (nargs != lua_gettop(L))
         luaL_error(L,"Wrong number of arguments: expected %d, got %d",nargs,lua_gettop(L));
 }
-inline static void check_isnumber(lua_State *L,int n){
+INLINE void check_isnumber(lua_State *L,int n){
     if (!lua_isnumber(L,n))
         luaL_error(L,"Wrong argument #%d: expected number, got %s",n,lua_typename(L,lua_type(L,n)));
 }
-inline static void check_isstring(lua_State *L,int n){
+INLINE void check_isstring(lua_State *L,int n){
     if (!lua_isstring(L,n))
         luaL_error(L,"Wrong argument #%d: expected string, got %s",n,lua_typename(L,lua_type(L,n)));
 }
-inline static void check_isobject(lua_State *L,int n){
+INLINE void check_isobject(lua_State *L,int n){
     if (!lua_isuserdata(L,n))
         luaL_error(L,"Wrong argument #%d: expected userdata(lisp object), got %s",n,lua_typename(L,lua_type(L,n)));
     check_obj(L,n);
 }
 
-inline static void check_istable(lua_State *L,int n){
+INLINE void check_istable(lua_State *L,int n){
     if (!lua_istable(L,n))
         luaL_error(L,"Wrong argument #%d: expected table, got %s",n,lua_typename(L,lua_type(L,n)));
 }
