@@ -2,7 +2,6 @@
 #include "lread.c"
 
 int pub ret(/*nelisp.obj*/) number_to_fixnum(lua_State *L){
-    global_lua_state = L;
     check_nargs(L,1);
     check_isnumber(L,1);
 
@@ -12,7 +11,6 @@ int pub ret(/*nelisp.obj*/) number_to_fixnum(lua_State *L){
 }
 
 int pub ret(/*nelisp.obj*/) number_to_float(lua_State *L){
-    global_lua_state = L;
     check_nargs(L,1);
     check_isnumber(L,1);
 
@@ -22,7 +20,6 @@ int pub ret(/*nelisp.obj*/) number_to_float(lua_State *L){
 }
 
 int pub ret(/*number*/) fixnum_to_number(lua_State *L){
-    global_lua_state = L;
     check_nargs(L,1);
     check_isobject(L,1);
 
@@ -35,7 +32,6 @@ int pub ret(/*number*/) fixnum_to_number(lua_State *L){
 }
 
 int pub ret(/*number*/) float_to_number(lua_State *L){
-    global_lua_state = L;
     check_nargs(L,1);
     check_isobject(L,1);
 
@@ -48,7 +44,6 @@ int pub ret(/*number*/) float_to_number(lua_State *L){
 }
 
 int pub ret(/*nelisp.obj*/) string_to_unibyte_lstring(lua_State *L){
-    global_lua_state = L;
     check_nargs(L,1);
     check_isstring(L,1);
 
@@ -60,7 +55,6 @@ int pub ret(/*nelisp.obj*/) string_to_unibyte_lstring(lua_State *L){
 }
 
 int pub ret(/*string*/) unibyte_lstring_to_string(lua_State *L){
-    global_lua_state = L;
     check_nargs(L,1);
     check_isobject(L,1);
 
@@ -73,7 +67,6 @@ int pub ret(/*string*/) unibyte_lstring_to_string(lua_State *L){
 }
 
 int pub ret(/*[nelisp.obj,nelisp.obj]*/) cons_to_table(lua_State *L){
-    global_lua_state = L;
     check_nargs(L,1);
     check_isobject(L,1);
 
@@ -96,7 +89,6 @@ int pub ret(/*[nelisp.obj,nelisp.obj]*/) cons_to_table(lua_State *L){
 }
 
 int pub ret(/*nelisp.obj[]*/) vector_to_table(lua_State *L){
-    global_lua_state = L;
     check_nargs(L,1);
     check_isobject(L,1);
 
@@ -119,7 +111,6 @@ int pub ret(/*nelisp.obj[]*/) vector_to_table(lua_State *L){
 }
 
 int pub ret() collectgarbage(lua_State *L){
-    global_lua_state = L;
     check_nargs(L,0);
 
     garbage_collect_();

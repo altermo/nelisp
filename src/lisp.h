@@ -741,6 +741,8 @@ static void push_obj(lua_State *L, Lisp_Object obj){
 #define ret(...)
 
 inline static void check_nargs(lua_State *L,int nargs){
+    if (global_lua_state==NULL)
+        luaL_error(L,"Nelisp is not inited (please run `require('nelisp.c').init()`)");
     if (nargs != lua_gettop(L))
         luaL_error(L,"Wrong number of arguments: expected %d, got %d",nargs,lua_gettop(L));
 }
@@ -764,7 +766,6 @@ inline static void check_istable(lua_State *L,int n){
 }
 #define DEFUN_LUA_1(fname)\
 int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
-    global_lua_state = L;\
     check_nargs(L,1);\
     check_isobject(L,1);\
     Lisp_Object obj=fname(userdata_to_obj(L,1));\
@@ -773,7 +774,6 @@ int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
 }
 #define DEFUN_LUA_2(fname)\
 int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
-    global_lua_state = L;\
     check_nargs(L,2);\
     check_isobject(L,1);\
     check_isobject(L,2);\

@@ -41,10 +41,11 @@ local function scan_lua_c(path)
         if ret=='' then
             ret=nil
         end
-        if not readline():match('^%s*global_lua_state%s*=%s*L;$') then
-            err('pub function bad format')
+        local l=readline()
+        if l:match('^%s*global_lua_state%s*=%s*L;$') then
+            l=readline()
         end
-        local nargs=readline():match('^%s*check_nargs%(L,%s*(%d+)%s*%);$')
+        local nargs=l:match('^%s*check_nargs%(L,%s*(%d+)%s*%);$')
         if not nargs then
             err('pub function bad format')
         end
