@@ -239,11 +239,53 @@ local function c_to_globals(c)
     end
     return out
 end
+---@param cfn nelisp.makedoc.cfn
+---@param out string[]
+local function cfn_to_meta(cfn,out)
+    local varnames='abcdefghijklmnopqrstuvwxyz'
+    for name,maxargs in vim.spairs(cfn) do
+        table.insert(out,'')
+        local arg_vars={}
+        for i=1,maxargs do
+            assert(varnames:sub(i,i)~='')
+            table.insert(arg_vars,varnames:sub(i,i))
+            table.insert(out,('---@param %s nelisp.obj'):format(varnames:sub(i,i)))
+        end
+        table.insert(out,'---@return nelisp.obj')
+        table.insert(out,('function M.l%s(%s) end'):format(name,table.concat(arg_vars,',')))
+    end
+end
 if #arg<4 then
     error(('require 4 arguments, got %d'):format(#arg))
 end
 local lua_c_file,lua_out,c_dir,c_out=unpack(arg --[[@as string[] ]])
-if outfile_needs_update(lua_out,lua_c_file) then
+local c
+if outfile_needs_update(c_out,c_dir) then
+    c={f={},s={},v={}}
+    local files={}
+    for file in vim.fs.dir(c_dir) do
+        if vim.endswith(file,'.c') then
+            table.insert(files,vim.fs.normalize(vim.fs.abspath(vim.fs.joinpath(c_dir,file))))
+        end
+    end
+    for _,path in ipairs(files) do
+        scan_c(path,c)
+    end
+    vim.fn.writefile(c_to_globals(c),c_out)
+end
+if outfile_needs_update(lua_out,lua_c_file) or outfile_needs_update(lua_out,c_dir) then
+    if not c then
+        c={f={},s={},v={}}
+        local files={}
+        for file in vim.fs.dir(c_dir) do
+            if vim.endswith(file,'.c') then
+                table.insert(files,vim.fs.normalize(vim.fs.abspath(vim.fs.joinpath(c_dir,file))))
+            end
+        end
+        for _,path in ipairs(files) do
+            scan_c(path,c)
+        end
+    end
     local lfn=scan_lua_c(lua_c_file)
     local out={
         '---@meta nelisp.c',
@@ -254,20 +296,8 @@ if outfile_needs_update(lua_out,lua_c_file) then
         'local M={}',
     }
     lfn_to_meta(lfn,out)
+    cfn_to_meta(c.f,out)
     table.insert(out,'')
     table.insert(out,'return M')
     vim.fn.writefile(out,lua_out)
-end
-if outfile_needs_update(c_out,c_dir) then
-    local files={}
-    for file in vim.fs.dir(c_dir) do
-        if vim.endswith(file,'.c') then
-            table.insert(files,vim.fs.normalize(vim.fs.abspath(vim.fs.joinpath(c_dir,file))))
-        end
-    end
-    local c={f={},s={},v={}}
-    for _,path in ipairs(files) do
-        scan_c(path,c)
-    end
-    vim.fn.writefile(c_to_globals(c),c_out)
 end
