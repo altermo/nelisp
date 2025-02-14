@@ -1610,6 +1610,15 @@ mark_lua (void) {
     };
 }
 
+void mark_roots (void){
+  for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++)
+      mark_object (builtin_lisp_symbol (i));
+#if TODO_NELISP_LATER_AND
+  for (int i = 0; i < staticidx; i++)
+    mark_object(*staticvec[i]);
+#endif
+}
+
 NO_INLINE static void
 sweep_floats (void) {
     struct float_block **fprev = &float_block;
@@ -1947,6 +1956,8 @@ void
 garbage_collect_ (void) {
     TODO_NELISP_LATER
     eassert(mark_stack_empty_p ());
+
+    mark_roots ();
 
     mark_lua();
 
