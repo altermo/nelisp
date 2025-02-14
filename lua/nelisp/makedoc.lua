@@ -259,8 +259,9 @@ if #arg<4 then
     error(('require 4 arguments, got %d'):format(#arg))
 end
 local lua_c_file,lua_out,c_dir,c_out=unpack(arg --[[@as string[] ]])
+local gen_file=arg[0]
 local c
-if outfile_needs_update(c_out,c_dir) then
+if outfile_needs_update(c_out,c_dir) or outfile_needs_update(c_out,gen_file) then
     c={f={},s={},v={}}
     local files={}
     for file in vim.fs.dir(c_dir) do
@@ -273,7 +274,8 @@ if outfile_needs_update(c_out,c_dir) then
     end
     vim.fn.writefile(c_to_globals(c),c_out)
 end
-if outfile_needs_update(lua_out,lua_c_file) or outfile_needs_update(lua_out,c_dir) then
+if outfile_needs_update(lua_out,lua_c_file) or outfile_needs_update(lua_out,c_dir)
+    or outfile_needs_update(lua_out,gen_file) then
     if not c then
         c={f={},s={},v={}}
         local files={}
