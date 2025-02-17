@@ -1520,13 +1520,13 @@ process_mark_stack (ptrdiff_t base_sp) {
                 break; }
             case Lisp_Symbol: {
                 struct Lisp_Symbol *ptr = XBARE_SYMBOL (obj);
-                nextsym:
+            nextsym:
                 if (symbol_marked_p (ptr))
                     break;
                 set_symbol_marked (ptr);
-                #if TODO_NELISP_LATER_AND
+#if TODO_NELISP_LATER_AND
                 eassert (valid_lisp_object_p (ptr->u.s.function));
-                #endif
+#endif
                 mark_stack_push_value (ptr->u.s.function);
                 mark_stack_push_value (ptr->u.s.plist);
                 switch (ptr->u.s.redirect)
@@ -1546,14 +1546,14 @@ process_mark_stack (ptrdiff_t base_sp) {
                         TODO
                         break;
                     default:
-                        TODO
+                    TODO
                 }
-                #if TODO_NELISP_LATER_AND
+#if TODO_NELISP_LATER_AND
                 if (!PURE_P (XSTRING (ptr->u.s.name)))
                     set_string_marked (XSTRING (ptr->u.s.name));
                 mark_interval_tree (string_intervals (ptr->u.s.name));
                 po = ptr = ptr->u.s.next;
-                #endif
+#endif
                 ptr = ptr->u.s.next;
                 if (ptr)
                     goto nextsym;
@@ -1611,13 +1611,89 @@ mark_lua (void) {
 }
 
 void mark_roots (void){
-  for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++)
-      mark_object (builtin_lisp_symbol (i));
+    for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++)
+        mark_object (builtin_lisp_symbol (i));
 #if TODO_NELISP_LATER_AND
-  for (int i = 0; i < staticidx; i++)
-    mark_object(*staticvec[i]);
+    for (int i = 0; i < staticidx; i++)
+        mark_object(*staticvec[i]);
 #endif
 }
+
+
+static void
+mark_maybe_pointer (void *p, bool symbol_only) {
+    if (pdumper_object_p(p)) {
+        TODO
+    }
+    struct mem_node *m=mem_find(p);
+    UNUSED(symbol_only);
+    if (m!=MEM_NIL) {
+        Lisp_Object obj;
+#if TODO_NELISP_LATER_ELSE
+        obj=NULL;
+#endif
+        switch (m->type) {
+            case MEM_TYPE_NON_LISP:
+            case MEM_TYPE_SPARE:
+                return;
+            case MEM_TYPE_CONS: {
+                if (symbol_only) return;
+            } break;
+            case MEM_TYPE_STRING: {
+                if (symbol_only) return;
+                TODO
+            } break;
+            case MEM_TYPE_SYMBOL: {
+                TODO
+            } break;
+            case MEM_TYPE_FLOAT: {
+                if (symbol_only) return;
+                TODO
+            } break;
+            case MEM_TYPE_VECTORLIKE: {
+                if (symbol_only) return;
+                TODO
+            } break;
+            case MEM_TYPE_VECTOR_BLOCK: {
+                if (symbol_only) return;
+                TODO
+            } break;
+            default:
+                eassert(false);
+        }
+#if TODO_NELISP_LATER_ELSE
+        if (obj)
+#endif
+        mark_object(obj);
+    }
+}
+
+extern char *__libc_stack_end;
+
+#define GC_POINTER_ALIGNMENT alignof (void *)
+
+void mark_c_stack(void) {
+    const void *start = __libc_stack_end;
+    const void *end = &start;
+    if (start > end) {
+        const void *tem = start;
+        start = end;
+        end = tem;
+    }
+    eassert (((uintptr_t) start) % GC_POINTER_ALIGNMENT == 0);
+    for (const char *pp=start;(const void*)pp<end;pp+=GC_POINTER_ALIGNMENT) {
+        void *p = *(void *const *) pp;
+        mark_maybe_pointer(p,false);
+        intptr_t ip;
+#if TODO_NELISP_LATER_AND
+        INT_ADD_WRAPV ((intptr_t) p, (intptr_t) lispsym, &ip);
+#else
+        ip=(intptr_t)p+(intptr_t)lispsym;
+#endif
+        mark_maybe_pointer ((void *) ip, true);
+    }
+}
+
 
 NO_INLINE static void
 sweep_floats (void) {
@@ -1878,68 +1954,68 @@ sweep_vectors (void) {
 }
 NO_INLINE static void
 sweep_symbols (void) {
-  struct symbol_block *sblk;
-  struct symbol_block **sprev = &symbol_block;
-  int lim = symbol_block_index;
-  object_ct num_free = 0, num_used = ARRAYELTS (lispsym);
+    struct symbol_block *sblk;
+    struct symbol_block **sprev = &symbol_block;
+    int lim = symbol_block_index;
+    object_ct num_free = 0, num_used = ARRAYELTS (lispsym);
 
-  symbol_free_list = NULL;
+    symbol_free_list = NULL;
 
-  for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++)
-    lispsym[i].u.s.gcmarkbit = 0;
+    for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++)
+        lispsym[i].u.s.gcmarkbit = 0;
 
-  for (sblk = symbol_block; sblk; sblk = *sprev)
+    for (sblk = symbol_block; sblk; sblk = *sprev)
     {
-      int this_free = 0;
-      struct Lisp_Symbol *sym = sblk->symbols;
-      struct Lisp_Symbol *end = sym + lim;
+        int this_free = 0;
+        struct Lisp_Symbol *sym = sblk->symbols;
+        struct Lisp_Symbol *end = sym + lim;
 
-      for (; sym < end; ++sym)
+        for (; sym < end; ++sym)
         {
-          if (!sym->u.s.gcmarkbit)
+            if (!sym->u.s.gcmarkbit)
             {
-              if (sym->u.s.redirect == SYMBOL_LOCALIZED)
-		{
-           #if TODO_NELISP_LATER_AND
-                  xfree (SYMBOL_BLV (sym));
-           #endif
-                  sym->u.s.redirect = SYMBOL_PLAINVAL;
+                if (sym->u.s.redirect == SYMBOL_LOCALIZED)
+                {
+#if TODO_NELISP_LATER_AND
+                    xfree (SYMBOL_BLV (sym));
+#endif
+                    sym->u.s.redirect = SYMBOL_PLAINVAL;
                 }
-              sym->u.s.next = symbol_free_list;
-              symbol_free_list = sym;
-              symbol_free_list->u.s.function = dead_object ();
-              ++this_free;
+                sym->u.s.next = symbol_free_list;
+                symbol_free_list = sym;
+                symbol_free_list->u.s.function = dead_object ();
+                ++this_free;
             }
-          else
-            {
-              ++num_used;
-              sym->u.s.gcmarkbit = 0;
-              /* Attempt to catch bogus objects.  */
-           #if TODO_NELISP_LATER_AND
-              eassert (valid_lisp_object_p (sym->u.s.function));
-           #endif
+            else
+        {
+                ++num_used;
+                sym->u.s.gcmarkbit = 0;
+                /* Attempt to catch bogus objects.  */
+#if TODO_NELISP_LATER_AND
+                eassert (valid_lisp_object_p (sym->u.s.function));
+#endif
             }
         }
 
-      lim = SYMBOL_BLOCK_SIZE;
-      /* If this block contains only free symbols and we have already
+        lim = SYMBOL_BLOCK_SIZE;
+        /* If this block contains only free symbols and we have already
          seen more than two blocks worth of free symbols then deallocate
          this block.  */
-      if (this_free == SYMBOL_BLOCK_SIZE && num_free > SYMBOL_BLOCK_SIZE)
+        if (this_free == SYMBOL_BLOCK_SIZE && num_free > SYMBOL_BLOCK_SIZE)
         {
-          *sprev = sblk->next;
-          /* Unhook from the free list.  */
-          symbol_free_list = sblk->symbols[0].u.s.next;
-          lisp_free (sblk);
+            *sprev = sblk->next;
+            /* Unhook from the free list.  */
+            symbol_free_list = sblk->symbols[0].u.s.next;
+            lisp_free (sblk);
         }
-      else
-        {
-          num_free += this_free;
-          sprev = &sblk->next;
+        else
+    {
+            num_free += this_free;
+            sprev = &sblk->next;
         }
     }
-  gcstat.total_symbols = num_used;
-  gcstat.total_free_symbols = num_free;
+    gcstat.total_symbols = num_used;
+    gcstat.total_free_symbols = num_free;
 }
 
 static void
@@ -1949,7 +2025,7 @@ gc_sweep(void){
     sweep_floats ();
     sweep_conses ();
     sweep_vectors ();
-  sweep_symbols ();
+    sweep_symbols ();
 }
 
 void
@@ -1958,6 +2034,8 @@ garbage_collect_ (void) {
     eassert(mark_stack_empty_p ());
 
     mark_roots ();
+
+    mark_c_stack();
 
     mark_lua();
 
