@@ -13,10 +13,12 @@
 #include <luajit-2.1/lauxlib.h>
 
 static lua_State *global_lua_state;
+static bool unrecoverable_error;
+#define unrecoverable_lua_error(L,...) unrecoverable_error=true,luaL_error(L,__VA_ARGS__)
 #define TODO_NELISP_LATER (void)0;
 #define TODO_NELISP_LATER_ELSE true
 #define TODO_NELISP_LATER_AND false
-#define TODO if (global_lua_state==NULL) printf("TODO at %s:%d\n",__FILE__,__LINE__);else luaL_error(global_lua_state,"TODO at %s:%d",__FILE__,__LINE__);
+#define TODO if (1){eassert(global_lua_state);unrecoverable_lua_error(global_lua_state,"TODO at %s:%d",__FILE__,__LINE__);}
 #define UNUSED(x) (void)x
 
 // LSP being anyoing about them existing and not existing, so just define them here
@@ -673,7 +675,7 @@ union Aligned_Lisp_Subr {
 
 INLINE Lisp_Object userdata_to_obj(lua_State *L,int idx){
     if (!lua_checkstack(L,lua_gettop(L)+5))
-        luaL_error(L,"Lua stack overflow");
+        unrecoverable_lua_error(L,"Lua stack overflow");
     check_obj(L,idx);
 
     if (lua_islightuserdata(L,idx)){
@@ -689,7 +691,7 @@ INLINE Lisp_Object userdata_to_obj(lua_State *L,int idx){
 
 INLINE void push_obj(lua_State *L, Lisp_Object obj){
     if (!lua_checkstack(L,lua_gettop(L)+10))
-        luaL_error(L,"Lua stack overflow");
+        unrecoverable_lua_error(L,"Lua stack overflow");
     if (FIXNUMP(obj)) {
         lua_pushlightuserdata(L,obj);
         set_obj_check(L,-1);
@@ -743,6 +745,8 @@ INLINE void push_obj(lua_State *L, Lisp_Object obj){
 INLINE void check_nargs(lua_State *L,int nargs){
     if (global_lua_state==NULL)
         luaL_error(L,"Nelisp is not inited (please run `require('nelisp.c').init()`)");
+    if (unrecoverable_error)
+        luaL_error(L,"Previous error was unrecoverable, please restart Neovim");
     if (nargs != lua_gettop(L))
         luaL_error(L,"Wrong number of arguments: expected %d, got %d",nargs,lua_gettop(L));
 }
