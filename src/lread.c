@@ -1,5 +1,8 @@
-#include "lisp.h"
+#ifndef EMACS_LREAD_C
+#define EMACS_LREAD_C
 
+#include "lisp.h"
+#include "alloc.c"
 
 static Lisp_Object initial_obarray;
 
@@ -45,3 +48,4 @@ The vector's contents don't make sense if examined from Lisp programs;
 to find all the symbols in an obarray, use `mapatoms'.  * /);
 }
 */
+#endif

@@ -794,7 +794,4 @@ minargs, maxargs, lname, {intspec}, lisp_h_Qnil, 0}};	    \
 DEFUN_LUA_##maxargs(fnname)\
 Lisp_Object fnname
 
-void init_symbol (Lisp_Object val, Lisp_Object name);
-Lisp_Object make_unibyte_string (const char *contents, ptrdiff_t length);
-
 #endif /* EMACS_LISP_H */

@@ -1,3 +1,6 @@
+#ifndef EMACS_ALLOC_C
+#define EMACS_ALLOC_C
+
 #include <stdlib.h>
 
 #include "lisp.h"
@@ -2043,3 +2046,4 @@ garbage_collect_ (void) {
 
     gc_sweep ();
 }
+#endif

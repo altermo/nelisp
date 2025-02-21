@@ -1,3 +1,6 @@
+#ifndef EMACS_LUA_C
+#define EMACS_LUA_C
+
 #include "alloc.c"
 #include "lread.c"
 
@@ -124,3 +127,4 @@ int pub ret() init(lua_State *L){
 
     return 0;
 }
+#endif
