@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdalign.h>
+#include <setjmp.h>
 
 #include <luajit-2.1/lua.h>
 #include <luajit-2.1/lauxlib.h>
@@ -768,21 +769,56 @@ INLINE void check_istable(lua_State *L,int n){
     if (!lua_istable(L,n))
         luaL_error(L,"Wrong argument #%d: expected table, got %s",n,lua_typename(L,lua_type(L,n)));
 }
+
+static jmp_buf mainloop_jmp;
+static jmp_buf mainloop_return_jmp;
+static void (*mainloop_func)(void);
+INLINE void enter_mainloop(void (*f)(void)){
+    mainloop_func=f;
+    if (!setjmp(mainloop_return_jmp)){
+        longjmp(mainloop_jmp,1);
+    };
+}
+static void (*tcall_func_var)(lua_State *L);
+INLINE void tcall_func(void){
+    tcall_func_var(global_lua_state);
+}
+// If this is not a macro, then it will crash
+#define tcall(L,f)\
+    if (global_lua_state!=L)\
+        TODO /*use lua_xmove to move between the states*/ \
+    tcall_func_var=f;\
+    enter_mainloop(tcall_func);
+void mainloop(void){
+    TODO_NELISP_LATER // move function to somewhere else
+    while (1){
+        if (!setjmp(mainloop_jmp))
+            longjmp(mainloop_return_jmp,1);
+        mainloop_func();
+    }
+}
+
 #define DEFUN_LUA_1(fname)\
+void t_l##fname(lua_State *L) {\
+    Lisp_Object obj=fname(userdata_to_obj(L,1));\
+    push_obj(L,obj);\
+}\
 int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
     check_nargs(L,1);\
     check_isobject(L,1);\
-    Lisp_Object obj=fname(userdata_to_obj(L,1));\
-    push_obj(L,obj);\
+    tcall(L,t_l##fname);\
     return 1;\
 }
 #define DEFUN_LUA_2(fname)\
+void t_l##fname(lua_State *L) {\
+    Lisp_Object obj=fname(userdata_to_obj(L,1),userdata_to_obj(L,2));\
+    push_obj(L,obj);\
+}\
 int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
     check_nargs(L,2);\
     check_isobject(L,1);\
     check_isobject(L,2);\
-    Lisp_Object obj=fname(userdata_to_obj(L,1),userdata_to_obj(L,2));\
-    push_obj(L,obj);\
+    tcall(L,t_l##fname);\
     return 1;\
 }
 
