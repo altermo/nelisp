@@ -405,6 +405,11 @@ SDATA (Lisp_Object string)
 {
     return XSTRING (string)->u.s.data;
 }
+INLINE unsigned char
+SREF (Lisp_Object string, ptrdiff_t index)
+{
+  return SDATA (string)[index];
+}
 INLINE ptrdiff_t
 STRING_BYTES (struct Lisp_String *s)
 {
@@ -416,6 +421,13 @@ INLINE ptrdiff_t
 SBYTES (Lisp_Object string)
 {
     return STRING_BYTES (XSTRING (string));
+}
+INLINE ptrdiff_t
+SCHARS (Lisp_Object string)
+{
+  ptrdiff_t nchars = XSTRING (string)->u.s.size;
+  eassume (0 <= nchars);
+  return nchars;
 }
 #if TODO_NELISP_LATER_AND
 #define STRING_SET_UNIBYTE(STR)				\
@@ -499,6 +511,23 @@ ASIZE (Lisp_Object array)
     eassume (0 <= size);
     return size;
 }
+INLINE ptrdiff_t
+gc_asize (Lisp_Object array)
+{
+  return XVECTOR (array)->header.size & ~ARRAY_MARK_FLAG;
+}
+INLINE Lisp_Object
+AREF (Lisp_Object array, ptrdiff_t idx)
+{
+  eassert (0 <= idx && idx < gc_asize (array));
+  return XVECTOR (array)->contents[idx];
+}
+INLINE Lisp_Object *
+aref_addr (Lisp_Object array, ptrdiff_t idx)
+{
+  eassert (0 <= idx && idx <= gc_asize (array));
+  return & XVECTOR (array)->contents[idx];
+}
 INLINE bool
 PSEUDOVECTORP (Lisp_Object a, int code)
 {
@@ -575,6 +604,24 @@ INLINE bool
 {
   return lisp_h_SYMBOL_WITH_POS_P (x);
 }
+struct Lisp_Symbol_With_Pos
+{
+  union vectorlike_header header;
+  Lisp_Object sym;
+  Lisp_Object pos;
+};
+INLINE struct Lisp_Symbol_With_Pos *
+XSYMBOL_WITH_POS (Lisp_Object a)
+{
+    TODO
+    eassert (SYMBOL_WITH_POS_P (a));
+    return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Symbol_With_Pos);
+}
+INLINE bool
+(EQ) (Lisp_Object x, Lisp_Object y)
+{
+  return lisp_h_EQ (x, y);
+}
 INLINE bool
 (SYMBOLP) (Lisp_Object x)
 {
@@ -631,6 +678,16 @@ INLINE void
 set_symbol_next (Lisp_Object sym, struct Lisp_Symbol *next)
 {
   XSYMBOL (sym)->u.s.next = next;
+}
+INLINE Lisp_Object
+SYMBOL_NAME (Lisp_Object sym)
+{
+  return XSYMBOL (sym)->u.s.name;
+}
+INLINE void
+make_symbol_constant (Lisp_Object sym)
+{
+  XSYMBOL (sym)->u.s.trapped_write = SYMBOL_NOWRITE;
 }
 
 struct Lisp_Subr {
