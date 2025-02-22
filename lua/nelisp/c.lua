@@ -9,7 +9,10 @@ local M=vim.defaulttable(function (k)
         path=vim.api.nvim_get_runtime_file('nelisp.so',false)[1]
     end
     assert(path,'nelisp.so not found in runtimepath')
-    local f=package.loadlib(path,k)
+    local f,err=package.loadlib(path,k)
+    if err then
+        error(err)
+    end
     assert(f,k..' not found')
     debug.setfenv(f,env)
     return f
