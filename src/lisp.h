@@ -225,6 +225,66 @@ typedef uintptr_t Lisp_Word_tag;
 #define TAG_PTR(tag, ptr) \
 LISP_INITIALLY ((Lisp_Word) ((untagged_ptr) (ptr) + LISP_WORD_TAG (tag)))
 
+#define ENUM_BF(TYPE) enum TYPE
+enum symbol_interned
+{
+    SYMBOL_UNINTERNED = 0,
+    SYMBOL_INTERNED = 1,
+    SYMBOL_INTERNED_IN_INITIAL_OBARRAY = 2
+};
+
+enum symbol_redirect
+{
+    SYMBOL_PLAINVAL  = 4,
+    SYMBOL_VARALIAS  = 1,
+    SYMBOL_LOCALIZED = 2,
+    SYMBOL_FORWARDED = 3
+};
+
+enum symbol_trapped_write
+{
+    SYMBOL_UNTRAPPED_WRITE = 0,
+    SYMBOL_NOWRITE = 1,
+    SYMBOL_TRAPPED_WRITE = 2
+};
+typedef struct { void const *fwdptr; } lispfwd;
+struct Lisp_Buffer_Local_Value
+{
+    bool_bf local_if_set : 1;
+    bool_bf found : 1;
+    lispfwd fwd;
+    Lisp_Object where;
+    Lisp_Object defcell;
+    Lisp_Object valcell;
+};
+
+struct Lisp_Symbol
+{
+    union
+    {
+        struct
+        {
+            bool_bf gcmarkbit : 1;
+            ENUM_BF (symbol_redirect) redirect : 3;
+            ENUM_BF (symbol_trapped_write) trapped_write : 2;
+            unsigned interned : 2;
+            bool_bf declared_special : 1;
+            bool_bf pinned : 1;
+            Lisp_Object name;
+            union {
+                Lisp_Object value;
+                struct Lisp_Symbol *alias;
+                struct Lisp_Buffer_Local_Value *blv;
+                lispfwd fwd;
+            } val;
+            Lisp_Object function;
+            Lisp_Object plist;
+            struct Lisp_Symbol *next;
+        } s;
+    } u;
+};
+#include "globals.h"
+
 INLINE EMACS_INT
 XFIXNUM (Lisp_Object a)
 {
@@ -539,66 +599,6 @@ VECTORP (Lisp_Object x)
     return VECTORLIKEP (x) && ! (ASIZE (x) & PSEUDOVECTOR_FLAG);
 }
 
-
-#define ENUM_BF(TYPE) enum TYPE
-enum symbol_interned
-{
-    SYMBOL_UNINTERNED = 0,
-    SYMBOL_INTERNED = 1,
-    SYMBOL_INTERNED_IN_INITIAL_OBARRAY = 2
-};
-
-enum symbol_redirect
-{
-    SYMBOL_PLAINVAL  = 4,
-    SYMBOL_VARALIAS  = 1,
-    SYMBOL_LOCALIZED = 2,
-    SYMBOL_FORWARDED = 3
-};
-
-enum symbol_trapped_write
-{
-    SYMBOL_UNTRAPPED_WRITE = 0,
-    SYMBOL_NOWRITE = 1,
-    SYMBOL_TRAPPED_WRITE = 2
-};
-typedef struct { void const *fwdptr; } lispfwd;
-struct Lisp_Buffer_Local_Value
-{
-    bool_bf local_if_set : 1;
-    bool_bf found : 1;
-    lispfwd fwd;
-    Lisp_Object where;
-    Lisp_Object defcell;
-    Lisp_Object valcell;
-};
-
-struct Lisp_Symbol
-{
-    union
-    {
-        struct
-        {
-            bool_bf gcmarkbit : 1;
-            ENUM_BF (symbol_redirect) redirect : 3;
-            ENUM_BF (symbol_trapped_write) trapped_write : 2;
-            unsigned interned : 2;
-            bool_bf declared_special : 1;
-            bool_bf pinned : 1;
-            Lisp_Object name;
-            union {
-                Lisp_Object value;
-                struct Lisp_Symbol *alias;
-                struct Lisp_Buffer_Local_Value *blv;
-                lispfwd fwd;
-            } val;
-            Lisp_Object function;
-            Lisp_Object plist;
-            struct Lisp_Symbol *next;
-        } s;
-    } u;
-};
-#include "globals.h"
 INLINE bool
 (SYMBOL_WITH_POS_P) (Lisp_Object x)
 {
