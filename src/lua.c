@@ -138,6 +138,26 @@ int pub ret(/*nelisp.obj[]*/) vector_to_table(lua_State *L){
     return 1;
 }
 
+void t__get_symbol(lua_State *L){
+    for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++) {
+        size_t len;
+        lua_tolstring(L,-1,&len);
+        if (memcmp(lua_tolstring(L,-1,&len),defsym_name[i],len+1)==0){
+            push_obj(L,builtin_lisp_symbol(i));
+            return;
+        }
+    }
+    lua_pushnil(L);
+}
+int pub ret(/*nelisp.obj*/) _get_symbol(lua_State *L){
+    check_nargs(L,1);
+    check_isstring(L,1);
+    tcall(L,t__get_symbol);
+    if (lua_isnil(L,-1))
+        luaL_error(L,"Symbol '%s' not found",lua_tostring(L,1));
+    return 1;
+}
+
 void t_collectgarbage(lua_State *_){
     garbage_collect_();
 }
