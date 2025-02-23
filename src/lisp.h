@@ -679,6 +679,12 @@ set_symbol_next (Lisp_Object sym, struct Lisp_Symbol *next)
 {
   XSYMBOL (sym)->u.s.next = next;
 }
+INLINE void
+SET_SYMBOL_FWD (struct Lisp_Symbol *sym, void const *v)
+{
+  eassume (sym->u.s.redirect == SYMBOL_FORWARDED && v);
+  sym->u.s.val.fwd.fwdptr = v;
+}
 INLINE Lisp_Object
 SYMBOL_NAME (Lisp_Object sym)
 {
@@ -886,5 +892,28 @@ static union Aligned_Lisp_Subr sname =                            \
 minargs, maxargs, lname, {intspec}, lisp_h_Qnil, 0}};	    \
 DEFUN_LUA_##maxargs(fnname)\
 Lisp_Object fnname
+
+
+enum Lisp_Fwd_Type
+  {
+    Lisp_Fwd_Int,
+    Lisp_Fwd_Bool,
+    Lisp_Fwd_Obj,
+    Lisp_Fwd_Buffer_Obj,
+    Lisp_Fwd_Kboard_Obj
+  };
+struct Lisp_Objfwd
+  {
+    enum Lisp_Fwd_Type type;
+    Lisp_Object *objvar;
+  };
+extern void defvar_lisp (struct Lisp_Objfwd const *, char const *);
+#define DEFVAR_LISP(lname, vname, doc)		\
+  do {						\
+    static struct Lisp_Objfwd const o_fwd	\
+      = {Lisp_Fwd_Obj, &globals.f_##vname};	\
+    defvar_lisp (&o_fwd, lname);		\
+  } while (false)
+#define DEFSYM(sym, name)
 
 #endif /* EMACS_LISP_H */

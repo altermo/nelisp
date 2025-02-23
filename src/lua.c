@@ -153,6 +153,8 @@ int pub ret() init(lua_State *L){
 
     init_obarray_once();
 
+    syms_of_lread();
+
     if (!setjmp(mainloop_return_jmp)){
         mainloop();
     }

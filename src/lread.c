@@ -13,15 +13,15 @@ static size_t oblookup_last_bucket_number;
 Lisp_Object
 check_obarray (Lisp_Object obarray) {
 #if TODO_NELISP_LATER_AND
-  if (!fatal_error_in_progress
-      && (!VECTORP (obarray) || ASIZE (obarray) == 0))
+    if (!fatal_error_in_progress
+        && (!VECTORP (obarray) || ASIZE (obarray) == 0))
     {
-      /* If Vobarray is now invalid, force it to be valid.  */
-      if (EQ (Vobarray, obarray)) Vobarray = initial_obarray;
-      wrong_type_argument (Qvectorp, obarray);
+        /* If Vobarray is now invalid, force it to be valid.  */
+        if (EQ (Vobarray, obarray)) Vobarray = initial_obarray;
+        wrong_type_argument (Qvectorp, obarray);
     }
 #endif
-  return obarray;
+    return obarray;
 }
 
 Lisp_Object
@@ -55,22 +55,22 @@ oblookup (Lisp_Object obarray, register const char *ptr, ptrdiff_t size, ptrdiff
 }
 static Lisp_Object
 intern_sym (Lisp_Object sym, Lisp_Object obarray, Lisp_Object index) {
-  Lisp_Object *ptr;
+    Lisp_Object *ptr;
 
-  XSYMBOL (sym)->u.s.interned = (EQ (obarray, initial_obarray)
-				 ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
-				 : SYMBOL_INTERNED);
-  if (SREF (SYMBOL_NAME (sym), 0) == ':' && EQ (obarray, initial_obarray))
+    XSYMBOL (sym)->u.s.interned = (EQ (obarray, initial_obarray)
+        ? SYMBOL_INTERNED_IN_INITIAL_OBARRAY
+        : SYMBOL_INTERNED);
+    if (SREF (SYMBOL_NAME (sym), 0) == ':' && EQ (obarray, initial_obarray))
     {
-      make_symbol_constant (sym);
-      XSYMBOL (sym)->u.s.redirect = SYMBOL_PLAINVAL;
-      XSYMBOL (sym)->u.s.declared_special = true;
-      SET_SYMBOL_VAL (XSYMBOL (sym), sym);
+        make_symbol_constant (sym);
+        XSYMBOL (sym)->u.s.redirect = SYMBOL_PLAINVAL;
+        XSYMBOL (sym)->u.s.declared_special = true;
+        SET_SYMBOL_VAL (XSYMBOL (sym), sym);
     }
-  ptr = aref_addr (obarray, XFIXNUM (index));
-  set_symbol_next (sym, SYMBOLP (*ptr) ? XSYMBOL (*ptr) : NULL);
-  *ptr = sym;
-  return sym;
+    ptr = aref_addr (obarray, XFIXNUM (index));
+    set_symbol_next (sym, SYMBOLP (*ptr) ? XSYMBOL (*ptr) : NULL);
+    *ptr = sym;
+    return sym;
 }
 
 static void
@@ -99,14 +99,57 @@ init_obarray_once (void) {
         define_symbol (builtin_lisp_symbol (i), defsym_name[i]);
 }
 
-/*
+Lisp_Object
+intern_driver (Lisp_Object string, Lisp_Object obarray, Lisp_Object index)
+{
+  SET_SYMBOL_VAL (XSYMBOL (Qobarray_cache), Qnil);
+  return intern_sym (Fmake_symbol (string), obarray, index);
+}
+Lisp_Object
+intern_c_string (const char *str, ptrdiff_t len) {
+    Lisp_Object obarray = check_obarray (Vobarray);
+    Lisp_Object tem = oblookup (obarray, str, len, len);
+
+    if (!SYMBOLP (tem))
+    {
+        Lisp_Object string;
+
+#if TODO_NELISP_LATER_AND
+        if (NILP (Vpurify_flag))
+            string = make_string (str, len);
+        else
+            string = make_pure_c_string (str, len);
+#else
+        string = make_unibyte_string(str, len);
+#endif
+
+        tem = intern_driver (string, obarray, tem);
+    }
+    return tem;
+}
+void
+defvar_lisp_nopro (struct Lisp_Objfwd const *o_fwd, char const *namestring)
+{
+    Lisp_Object sym = intern_c_string (namestring, strlen(namestring));
+    XSYMBOL (sym)->u.s.declared_special = true;
+    XSYMBOL (sym)->u.s.redirect = SYMBOL_FORWARDED;
+    SET_SYMBOL_FWD (XSYMBOL (sym), o_fwd);
+}
+void
+defvar_lisp (struct Lisp_Objfwd const *o_fwd, char const *namestring)
+{
+    defvar_lisp_nopro (o_fwd, namestring);
+    staticpro (o_fwd->objvar);
+}
+
 void
 syms_of_lread (void) {
     DEFVAR_LISP ("obarray", Vobarray,
-                 doc: / * Symbol table for use by `intern' and `read'.
+                 doc: /* Symbol table for use by `intern' and `read'.
 It is a vector whose length ought to be prime for best results.
 The vector's contents don't make sense if examined from Lisp programs;
-to find all the symbols in an obarray, use `mapatoms'.  * /);
+to find all the symbols in an obarray, use `mapatoms'.  */);
+
+    DEFSYM (Qobarray_cache, "obarray-cache");
 }
-*/
 #endif

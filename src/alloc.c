@@ -1367,6 +1367,19 @@ set_symbol_marked (struct Lisp_Symbol *s)
 
 /* --- garbage collector -- */
 
+int staticidx;
+
+enum { NSTATICS = 2048 };
+Lisp_Object const *staticvec[NSTATICS];
+void
+staticpro (Lisp_Object const *varaddress) {
+  for (int i = 0; i < staticidx; i++)
+    eassert (staticvec[i] != varaddress);
+  if (staticidx >= NSTATICS)
+    TODO // fatal ("NSTATICS too small; try increasing and recompiling Emacs.");
+  staticvec[staticidx++] = varaddress;
+}
+
 struct mark_entry
 {
     ptrdiff_t n;
@@ -1546,7 +1559,6 @@ process_mark_stack (ptrdiff_t base_sp) {
                         TODO
                         break;
                     case SYMBOL_FORWARDED:
-                        TODO
                         break;
                     default:
                     TODO
@@ -1616,10 +1628,8 @@ mark_lua (void) {
 void mark_roots (void){
     for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++)
         mark_object (builtin_lisp_symbol (i));
-#if TODO_NELISP_LATER_AND
     for (int i = 0; i < staticidx; i++)
         mark_object(*staticvec[i]);
-#endif
 }
 
 
