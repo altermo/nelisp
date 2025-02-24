@@ -151,11 +151,7 @@ static void
 define_symbol (Lisp_Object sym, char const *str)
 {
   ptrdiff_t len = strlen (str);
-#if TODO_NELISP_LATER_AND
     Lisp_Object string = make_pure_c_string (str, len);
-#else
-    Lisp_Object string = make_unibyte_string(str, len);
-#endif
   init_symbol (sym, string);
 
   if (! BASE_EQ (sym, Qunbound))
@@ -201,7 +197,7 @@ intern_c_string_1 (const char *str, ptrdiff_t len)
         else
             string = make_pure_c_string (str, len);
 #else
-        string = make_unibyte_string(str, len);
+        string = make_pure_c_string(str, len);
 #endif
 
         tem = intern_driver (string, obarray, tem);

@@ -57,6 +57,23 @@ static struct gcstat
 } gcstat;
 static ptrdiff_t hash_table_allocated_bytes = 0;
 
+#define SYSTEM_PURESIZE_EXTRA 0
+#define SITELOAD_PURESIZE_EXTRA 0
+#define BASE_PURESIZE (3400000 + SYSTEM_PURESIZE_EXTRA + SITELOAD_PURESIZE_EXTRA)
+#define PURESIZE  (BASE_PURESIZE * PURESIZE_RATIO * PURESIZE_CHECKING_RATIO)
+#define PURESIZE_RATIO 10 / 6
+#define PURESIZE_CHECKING_RATIO 1
+EMACS_INT pure[(PURESIZE + sizeof (EMACS_INT) - 1) / sizeof (EMACS_INT)] = {1,};
+#define PUREBEG (char *) pure
+static char *purebeg;
+static ptrdiff_t pure_size;
+static ptrdiff_t pure_bytes_used_before_overflow;
+static ptrdiff_t pure_bytes_used_lisp;
+static ptrdiff_t pure_bytes_used_non_lisp;
+#if TODO_NELISP_LATER_ELSE
+static ptrdiff_t pure_bytes_used;
+#endif
+
 enum mem_type
 {
     MEM_TYPE_NON_LISP,
@@ -93,7 +110,12 @@ void staticpro (Lisp_Object const *varaddress);
 enum { NSTATICS = 2048 };
 Lisp_Object const *staticvec[NSTATICS];
 int staticidx;
-
+static void *pure_alloc (size_t, int);
+static void *
+pointer_align (void *ptr, int alignment)
+{
+    return (void *) ROUNDUP ((uintptr_t) ptr, alignment);
+}
 static void *
 XPNTR (Lisp_Object a)
 {
@@ -112,7 +134,6 @@ tally_consing (ptrdiff_t nbytes)
     UNUSED(nbytes);
     TODO_NELISP_LATER
 }
-
 
 /* --- memory full handling -- */
 void
@@ -140,6 +161,19 @@ xmalloc (size_t size)
 
     MALLOC_BLOCK_INPUT;
     val = lmalloc (size, false);
+    MALLOC_UNBLOCK_INPUT;
+
+    if (!val)
+        memory_full (size);
+    return val;
+}
+void *
+xzalloc (size_t size)
+{
+    void *val;
+
+    MALLOC_BLOCK_INPUT;
+    val = lmalloc (size, true);
     MALLOC_UNBLOCK_INPUT;
 
     if (!val)
@@ -432,6 +466,151 @@ hash_table_free_bytes (void *p, ptrdiff_t nbytes)
     tally_consing (-nbytes);
     hash_table_allocated_bytes -= nbytes;
     xfree (p);
+}
+
+/* --- pure storage -- */
+
+#define puresize_h_PURE_P(ptr) \
+((uintptr_t) (ptr) - (uintptr_t) pure <= PURESIZE)
+# define PURE_P(ptr) puresize_h_PURE_P (ptr)
+
+static void *
+pure_alloc (size_t size, int type)
+{
+    void *result;
+    static bool pure_overflow_warned = false;
+
+again:
+    if (type >= 0)
+    {
+        result = pointer_align (purebeg + pure_bytes_used_lisp, LISP_ALIGNMENT);
+        pure_bytes_used_lisp = ((char *)result - (char *)purebeg) + size;
+    }
+    else
+{
+        ptrdiff_t unaligned_non_lisp = pure_bytes_used_non_lisp + size;
+        char *unaligned = purebeg + pure_size - unaligned_non_lisp;
+        int decr = (intptr_t) unaligned & (-1 - type);
+        pure_bytes_used_non_lisp = unaligned_non_lisp + decr;
+        result = unaligned - decr;
+    }
+    pure_bytes_used = pure_bytes_used_lisp + pure_bytes_used_non_lisp;
+
+    if (pure_bytes_used <= pure_size)
+        return result;
+
+    if (!pure_overflow_warned)
+    {
+        TODO //message ("Pure Lisp storage overflowed");
+        pure_overflow_warned = true;
+    }
+
+    int small_amount = 10000;
+    eassert (size <= small_amount - LISP_ALIGNMENT);
+    purebeg = xzalloc (small_amount);
+    pure_size = small_amount;
+    pure_bytes_used_before_overflow += pure_bytes_used - size;
+    pure_bytes_used = 0;
+    pure_bytes_used_lisp = pure_bytes_used_non_lisp = 0;
+
+#if TODO_NELISP_LATER_AND
+    garbage_collection_inhibited++;
+#endif
+    goto again;
+}
+
+static char *
+find_string_data_in_pure (const char *data, ptrdiff_t nbytes)
+{
+    int i;
+    ptrdiff_t skip, bm_skip[256], last_char_skip, infinity, start, start_max;
+    const unsigned char *p;
+    char *non_lisp_beg;
+
+    if (pure_bytes_used_non_lisp <= nbytes)
+        return NULL;
+
+    skip = nbytes + 1;
+    for (i = 0; i < 256; i++)
+        bm_skip[i] = skip;
+
+    p = (const unsigned char *) data;
+    while (--skip > 0)
+        bm_skip[*p++] = skip;
+
+    last_char_skip = bm_skip['\0'];
+
+    non_lisp_beg = purebeg + pure_size - pure_bytes_used_non_lisp;
+    start_max = pure_bytes_used_non_lisp - (nbytes + 1);
+
+    infinity = pure_bytes_used_non_lisp + 1;
+    bm_skip['\0'] = infinity;
+
+    p = (const unsigned char *) non_lisp_beg + nbytes;
+    start = 0;
+    do
+    {
+        do
+        {
+            start += bm_skip[*(p + start)];
+        }
+        while (start <= start_max);
+
+        if (start < infinity)
+            return NULL;
+
+        start -= infinity;
+
+        if (memcmp (data, non_lisp_beg + start, nbytes) == 0)
+            return non_lisp_beg + start;
+
+        start += last_char_skip;
+    }
+    while (start <= start_max);
+
+    return NULL;
+}
+Lisp_Object
+make_pure_string (const char *data,
+                  ptrdiff_t nchars, ptrdiff_t nbytes, bool multibyte)
+{
+    Lisp_Object string;
+    struct Lisp_String *s = pure_alloc (sizeof *s, Lisp_String);
+    s->u.s.data = (unsigned char *) find_string_data_in_pure (data, nbytes);
+    if (s->u.s.data == NULL)
+    {
+        s->u.s.data = pure_alloc (nbytes + 1, -1);
+        memcpy (s->u.s.data, data, nbytes);
+        s->u.s.data[nbytes] = '\0';
+    }
+    s->u.s.size = nchars;
+    s->u.s.size_byte = multibyte ? nbytes : -1;
+    s->u.s.intervals = NULL;
+    XSETSTRING (string, s);
+    return string;
+}
+Lisp_Object
+make_pure_c_string (const char *data, ptrdiff_t nchars)
+{
+    Lisp_Object string;
+    struct Lisp_String *s = pure_alloc (sizeof *s, Lisp_String);
+    s->u.s.size = nchars;
+    s->u.s.size_byte = -2;
+    s->u.s.data = (unsigned char *) data;
+    s->u.s.intervals = NULL;
+    XSETSTRING (string, s);
+    return string;
+}
+
+static Lisp_Object
+make_pure_vector (ptrdiff_t len)
+{
+    Lisp_Object new;
+    size_t size = header_size + len * word_size;
+    struct Lisp_Vector *p = pure_alloc (size, Lisp_Vectorlike);
+    XSETVECTOR (new, p);
+    XVECTOR (new)->header.size = len;
+    return new;
 }
 
 /* --- string allocation -- */
@@ -770,18 +949,10 @@ make_unibyte_string (const char *contents, ptrdiff_t length)
 static void
 init_strings (void)
 {
-#if TODO_NELISP_LATER_AND
     empty_unibyte_string = make_pure_string ("", 0, 0, 0);
     staticpro (&empty_unibyte_string);
     empty_multibyte_string = make_pure_string ("", 0, 0, 1);
     staticpro (&empty_multibyte_string);
-#else
-    empty_unibyte_string = make_unibyte_string ("",0);
-    staticpro (&empty_unibyte_string);
-    empty_multibyte_string = make_unibyte_string ("",0);
-    XSTRING(empty_multibyte_string)->u.s.size_byte = 0;
-    staticpro (&empty_unibyte_string);
-#endif
 }
 /* --- float allocation -- */
 
@@ -1029,11 +1200,7 @@ allocate_vector_block (void)
 static void
 init_vectors (void)
 {
-#if TODO_NELISP_LATER_AND
     zero_vector = make_pure_vector (0);
-#else
-    zero_vector = Fmake_vector (0,Qnil);
-#endif
     staticpro (&zero_vector);
 }
 static ptrdiff_t
@@ -1568,11 +1735,6 @@ mem_find (void *start)
 static struct mem_node *
 mem_insert (void *start, void *end, enum mem_type type)
 {
-# if TODO_NELISP_LATER_ELSE
-    if (mem_root == NULL) {
-        mem_init();
-    }
-#endif
     struct mem_node *c, *parent, *x;
 
     if (min_heap_address == NULL || start < min_heap_address)
@@ -1993,12 +2155,8 @@ process_mark_stack (ptrdiff_t base_sp)
         Lisp_Object obj = mark_stack_pop ();
     mark_obj: ;
         void *po = XPNTR (obj);
-#if TODO_NELISP_LATER_AND
         if (PURE_P (po))
             continue;
-#else
-        UNUSED(po);
-#endif
 #define CHECK_ALLOCATED_AND_LIVE(LIVEP, MEM_TYPE)	((void) 0)
 #define CHECK_ALLOCATED_AND_LIVE_SYMBOL()		((void) 0)
         switch (XTYPE (obj))
@@ -2104,9 +2262,9 @@ process_mark_stack (ptrdiff_t base_sp)
                             break;
                         default: emacs_abort ();
                     }
-#if TODO_NELISP_LATER_AND
                     if (!PURE_P (XSTRING (ptr->u.s.name)))
                         set_string_marked (XSTRING (ptr->u.s.name));
+#if TODO_NELISP_LATER_AND
                     mark_interval_tree (string_intervals (ptr->u.s.name));
 #endif
                     po = ptr = ptr->u.s.next;
@@ -2375,8 +2533,8 @@ sweep_symbols (void)
              symbol_free_list->u.s.function = dead_object ();
              ASAN_POISON_SYMBOL (sym);
              ++this_free;
-            }
-            else
+             }
+             else
         {
                 ++num_used;
                 sym->u.s.gcmarkbit = 0;
@@ -2426,10 +2584,19 @@ garbage_collect (void)
     gc_sweep ();
 }
 
+static void
+init_alloc_once_for_pdumper (void)
+{
+    TODO_NELISP_LATER
+    purebeg = PUREBEG;
+    pure_size = PURESIZE;
+    mem_init ();
+}
 void
 init_alloc_once (void)
 {
     TODO_NELISP_LATER
+    init_alloc_once_for_pdumper();
     init_strings ();
     init_vectors ();
 }
