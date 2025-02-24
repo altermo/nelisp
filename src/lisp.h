@@ -961,26 +961,26 @@ void mainloop(void){
     }
 }
 
-#define DEFUN_LUA_1(fname)\
+#define DEF_TCALL_ARGS_0(fname)
+#define DEF_TCALL_ARGS_1(fname) userdata_to_obj(L,1)
+#define DEF_TCALL_ARGS_2(fname) DEF_TCALL_ARGS_1(fname),userdata_to_obj(L,2)
+#define DEF_TCALL_ARGS_3(fname) DEF_TCALL_ARGS_2(fname),userdata_to_obj(L,3)
+#define DEF_TCALL_ARGS_4(fname) DEF_TCALL_ARGS_3(fname),userdata_to_obj(L,4)
+#define DEF_TCALL_ARGS_5(fname) DEF_TCALL_ARGS_4(fname),userdata_to_obj(L,5)
+#define DEF_TCALL_ARGS_6(fname) DEF_TCALL_ARGS_5(fname),userdata_to_obj(L,6)
+#define DEF_TCALL_ARGS_7(fname) DEF_TCALL_ARGS_6(fname),userdata_to_obj(L,7)
+#define DEF_TCALL_ARGS_8(fname) DEF_TCALL_ARGS_7(fname),userdata_to_obj(L,8)
+
+#define DEFUN_LUA_N(fname,maxargs)\
 void t_l##fname(lua_State *L) {\
-    Lisp_Object obj=fname(userdata_to_obj(L,1));\
+    Lisp_Object obj=fname(DEF_TCALL_ARGS_##maxargs(maxargs));\
     push_obj(L,obj);\
 }\
 int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
-    check_nargs(L,1);\
-    check_isobject(L,1);\
-    tcall(L,t_l##fname);\
-    return 1;\
-}
-#define DEFUN_LUA_2(fname)\
-void t_l##fname(lua_State *L) {\
-    Lisp_Object obj=fname(userdata_to_obj(L,1),userdata_to_obj(L,2));\
-    push_obj(L,obj);\
-}\
-int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
-    check_nargs(L,2);\
-    check_isobject(L,1);\
-    check_isobject(L,2);\
+    check_nargs(L,maxargs);\
+    for (int i=1;i<=maxargs;i++){\
+        check_isobject(L,i);\
+    }\
     tcall(L,t_l##fname);\
     return 1;\
 }
@@ -990,7 +990,7 @@ static union Aligned_Lisp_Subr sname =                            \
 {{{ PVEC_SUBR << PSEUDOVECTOR_AREA_BITS },			    \
 { .a ## maxargs = fnname },				    \
 minargs, maxargs, lname, {intspec}, lisp_h_Qnil, 0}};	    \
-DEFUN_LUA_##maxargs(fnname)\
+DEFUN_LUA_N(fnname,maxargs)\
 Lisp_Object fnname
 
 
