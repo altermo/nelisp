@@ -7,6 +7,7 @@
 
 #define USE_ALIGNED_ALLOC 1
 #define MALLOC_0_IS_NONNULL 1
+Lisp_Object empty_unibyte_string, empty_multibyte_string;
 
 union emacs_align_type
 {
@@ -88,6 +89,7 @@ static void mem_delete_fixup (struct mem_node *);
 static struct mem_node *mem_find (void *);
 void mark_object (Lisp_Object obj);
 static bool vector_marked_p (struct Lisp_Vector const *);
+void staticpro (Lisp_Object const *varaddress);
 enum { NSTATICS = 2048 };
 Lisp_Object const *staticvec[NSTATICS];
 int staticidx;
@@ -728,10 +730,8 @@ make_clear_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes, bool clearit)
 
     if (nchars < 0)
         emacs_abort ();
-#if TODO_NELISP_LATER_AND
     if (!nbytes)
         return empty_multibyte_string;
-#endif
 
     s = allocate_string ();
     s->u.s.intervals = NULL;
@@ -747,10 +747,8 @@ make_clear_string (EMACS_INT length, bool clearit)
 {
     Lisp_Object val;
 
-#if TODO_NELISP_LATER_AND
     if (!length)
         return empty_unibyte_string;
-#endif
     val = make_clear_multibyte_string (length, length, clearit);
     STRING_SET_UNIBYTE (val);
     return val;
@@ -767,6 +765,23 @@ make_unibyte_string (const char *contents, ptrdiff_t length)
     val = make_uninit_string (length);
     memcpy (SDATA (val), contents, length);
     return val;
+}
+
+static void
+init_strings (void)
+{
+#if TODO_NELISP_LATER_AND
+    empty_unibyte_string = make_pure_string ("", 0, 0, 0);
+    staticpro (&empty_unibyte_string);
+    empty_multibyte_string = make_pure_string ("", 0, 0, 1);
+    staticpro (&empty_multibyte_string);
+#else
+    empty_unibyte_string = make_unibyte_string ("",0);
+    staticpro (&empty_unibyte_string);
+    empty_multibyte_string = make_unibyte_string ("",0);
+    XSTRING(empty_multibyte_string)->u.s.size_byte = 0;
+    staticpro (&empty_unibyte_string);
+#endif
 }
 /* --- float allocation -- */
 
@@ -980,7 +995,7 @@ static struct vector_block *vector_blocks;
 static struct Lisp_Vector *vector_free_lists[VECTOR_FREE_LIST_ARRAY_SIZE];
 static ptrdiff_t last_inserted_vector_free_idx = VECTOR_FREE_LIST_ARRAY_SIZE;
 static struct large_vector *large_vectors;
-
+Lisp_Object zero_vector;
 #define ASAN_POISON_VECTOR_CONTENTS(v, bytes) ((void) 0)
 #define ASAN_UNPOISON_VECTOR_CONTENTS(v, bytes) ((void) 0)
 #define ASAN_UNPOISON_VECTOR_BLOCK(b) ((void) 0)
@@ -1011,6 +1026,16 @@ allocate_vector_block (void)
     return block;
 }
 
+static void
+init_vectors (void)
+{
+#if TODO_NELISP_LATER_AND
+    zero_vector = make_pure_vector (0);
+#else
+    zero_vector = Fmake_vector (0,Qnil);
+#endif
+    staticpro (&zero_vector);
+}
 static ptrdiff_t
 pseudovector_nbytes (const union vectorlike_header *hdr)
 {
@@ -1305,10 +1330,8 @@ allocate_vectorlike (ptrdiff_t len, bool clearit)
 static struct Lisp_Vector *
 allocate_clear_vector (ptrdiff_t len, bool clearit)
 {
-#if TODO_NELISP_LATER_AND
     if (len == 0)
         return XVECTOR (zero_vector);
-#endif
     if (VECTOR_ELTS_MAX < len)
         memory_full (SIZE_MAX);
     struct Lisp_Vector *v = allocate_vectorlike (len, clearit);
@@ -2352,7 +2375,7 @@ sweep_symbols (void)
              symbol_free_list->u.s.function = dead_object ();
              ASAN_POISON_SYMBOL (sym);
              ++this_free;
-             }
+            }
             else
         {
                 ++num_used;
@@ -2401,6 +2424,14 @@ garbage_collect (void)
     mark_lua();
     eassert (mark_stack_empty_p ());
     gc_sweep ();
+}
+
+void
+init_alloc_once (void)
+{
+    TODO_NELISP_LATER
+    init_strings ();
+    init_vectors ();
 }
 
 #endif
