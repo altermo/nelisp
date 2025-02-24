@@ -828,6 +828,11 @@ set_symbol_next (Lisp_Object sym, struct Lisp_Symbol *next)
 {
   XSYMBOL (sym)->u.s.next = next;
 }
+INLINE void
+make_symbol_constant (Lisp_Object sym)
+{
+  XSYMBOL (sym)->u.s.trapped_write = SYMBOL_NOWRITE;
+}
 
 
 #ifdef ENABLE_CHECKING

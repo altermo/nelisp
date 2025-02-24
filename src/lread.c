@@ -171,7 +171,24 @@ init_obarray_once (void)
 
     for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++)
         define_symbol (builtin_lisp_symbol (i), defsym_name[i]);
-    TODO_NELISP_LATER
+
+    DEFSYM (Qunbound, "unbound");
+
+    DEFSYM (Qnil, "nil");
+    SET_SYMBOL_VAL (XBARE_SYMBOL (Qnil), Qnil);
+    make_symbol_constant (Qnil);
+    XBARE_SYMBOL (Qnil)->u.s.declared_special = true;
+
+    DEFSYM (Qt, "t");
+    SET_SYMBOL_VAL (XBARE_SYMBOL (Qt), Qt);
+    make_symbol_constant (Qt);
+    XBARE_SYMBOL (Qt)->u.s.declared_special = true;
+
+#if TODO_NELISP_LATER_AND
+    Vpurify_flag = Qt;
+#endif
+
+    DEFSYM (Qvariable_documentation, "variable-documentation");
 }
 
 Lisp_Object
