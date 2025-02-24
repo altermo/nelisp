@@ -167,9 +167,13 @@ int pub ret() collectgarbage(lua_State *L){
     return 0;
 }
 
+bool inited=false;
 int pub ret() init(lua_State *L){
     global_lua_state = L;
     check_nargs(L,0);
+    if (inited)
+        luaL_error(L,"Nelisp is already inited");
+    inited=true;
 
     init_obarray_once();
 
