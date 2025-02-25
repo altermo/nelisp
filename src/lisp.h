@@ -532,6 +532,34 @@ XSETCDR (Lisp_Object c, Lisp_Object n)
 {
     *xcdr_addr (c) = n;
 }
+INLINE Lisp_Object
+CAR (Lisp_Object c)
+{
+  if (CONSP (c))
+    return XCAR (c);
+  if (!NILP (c))
+    TODO; //wrong_type_argument (Qlistp, c);
+  return Qnil;
+}
+INLINE Lisp_Object
+CDR (Lisp_Object c)
+{
+  if (CONSP (c))
+    return XCDR (c);
+  if (!NILP (c))
+    TODO; //wrong_type_argument (Qlistp, c);
+  return Qnil;
+}
+INLINE Lisp_Object
+CAR_SAFE (Lisp_Object c)
+{
+  return CONSP (c) ? XCAR (c) : Qnil;
+}
+INLINE Lisp_Object
+CDR_SAFE (Lisp_Object c)
+{
+  return CONSP (c) ? XCDR (c) : Qnil;
+}
 
 struct Lisp_String
 {
