@@ -16,11 +16,10 @@
 
 static lua_State *global_lua_state;
 static bool unrecoverable_error;
-#define unrecoverable_lua_error(L,...) unrecoverable_error=true,luaL_error(L,__VA_ARGS__)
 #define TODO_NELISP_LATER (void)0;
 #define TODO_NELISP_LATER_ELSE true
 #define TODO_NELISP_LATER_AND false
-#define TODO if (1){eassert(global_lua_state);unrecoverable_lua_error(global_lua_state,"TODO at %s:%d",__FILE__,__LINE__);__builtin_unreachable();}
+#define TODO if (1){eassert(global_lua_state);luaL_error(global_lua_state,"TODO at %s:%d",__FILE__,__LINE__);__builtin_unreachable();}
 #define UNUSED(x) (void)x
 
 // LSP being anyoing about them existing and not existing, so just define them here
@@ -49,7 +48,7 @@ typedef bool bool_bf;
 
 #define symbols_with_pos_enabled 1
 _Noreturn INLINE void emacs_abort(void) {
-    unrecoverable_lua_error(global_lua_state,"emacs_abort");
+    luaL_error(global_lua_state,"emacs_abort");
     __builtin_unreachable();
 }
 
@@ -933,7 +932,7 @@ struct for_each_tail_internal
 
 INLINE Lisp_Object userdata_to_obj(lua_State *L,int idx){
     if (!lua_checkstack(L,lua_gettop(L)+5))
-        unrecoverable_lua_error(L,"Lua stack overflow");
+        luaL_error(L,"Lua stack overflow");
     check_obj(L,idx);
 
     if (lua_islightuserdata(L,idx)){
@@ -949,7 +948,7 @@ INLINE Lisp_Object userdata_to_obj(lua_State *L,int idx){
 
 INLINE void push_obj(lua_State *L, Lisp_Object obj){
     if (!lua_checkstack(L,lua_gettop(L)+10))
-        unrecoverable_lua_error(L,"Lua stack overflow");
+        luaL_error(L,"Lua stack overflow");
     if (FIXNUMP(obj)) {
         lua_pushlightuserdata(L,obj);
         set_obj_check(L,-1);
@@ -1037,8 +1036,17 @@ INLINE void enter_mainloop(void (*f)(void)){
     };
 }
 static void (*tcall_func_var)(lua_State *L);
+static int tcall_func_n(lua_State *L){
+    tcall_func_var(L);
+    return 1;
+}
 INLINE void tcall_func(void){
-    tcall_func_var(global_lua_state);
+    lua_pushcfunction(global_lua_state,tcall_func_n);
+    lua_insert(global_lua_state,1);
+    if (lua_pcall(global_lua_state,lua_gettop(global_lua_state)-1,1,0)){
+        unrecoverable_error=true;
+        lua_error(global_lua_state);
+    }
 }
 // If this is not a macro, then it will crash
 #define tcall(L,f)\
