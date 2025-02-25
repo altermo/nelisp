@@ -161,17 +161,6 @@ int pub ret(/*nelisp.obj*/) _get_symbol(lua_State *L){
 }
 
 void t_eval(lua_State *L){
-    Lisp_Object obj = userdata_to_obj(L,1);
-    push_obj(L,eval_sub(obj));
-}
-int pub ret(/*nelisp.obj*/) eval(lua_State *L){
-    check_nargs(L,1);
-    check_isobject(L,1);
-    tcall(L,t_eval);
-    return 1;
-}
-
-void t_evals(lua_State *L){
     size_t len;
     const char* str = lua_tolstring(L,-1,&len);
     Lisp_Object readcharfun = make_unibyte_string(str,len);
@@ -203,10 +192,10 @@ void t_evals(lua_State *L){
         lua_pushnil(L);
 }
 int collectgarbage(lua_State *L);
-int pub ret(/*nelisp.obj|nil*/) evals(lua_State *L){
+int pub ret(/*nelisp.obj|nil*/) eval(lua_State *L){
     check_nargs(L,1);
     check_isstring(L,1);
-    tcall(L,t_evals);
+    tcall(L,t_eval);
     return 1;
 }
 
