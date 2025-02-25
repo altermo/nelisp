@@ -191,7 +191,6 @@ void t_eval(lua_State *L){
     else
         lua_pushnil(L);
 }
-int collectgarbage(lua_State *L);
 int pub ret(/*nelisp.obj|nil*/) eval(lua_State *L){
     check_nargs(L,1);
     check_isstring(L,1);
