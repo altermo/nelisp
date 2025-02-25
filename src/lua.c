@@ -214,7 +214,7 @@ int pub ret() init(lua_State *L){
     global_lua_state = L;
     check_nargs(L,0);
     if (inited)
-        luaL_error(L,"Nelisp is already inited");
+        return 0;
     inited=true;
 
     init_alloc_once();
