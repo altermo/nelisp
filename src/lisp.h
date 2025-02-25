@@ -45,8 +45,9 @@ static bool unrecoverable_error;
 typedef bool bool_bf;
 
 #define symbols_with_pos_enabled 1
-INLINE void emacs_abort(void) {
+_Noreturn INLINE void emacs_abort(void) {
     unrecoverable_lua_error(global_lua_state,"emacs_abort");
+    __builtin_unreachable();
 }
 
 INLINE bool
@@ -995,7 +996,8 @@ push_obj(L,obj);\
 }\
 int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
     check_nargs(L,maxargs);\
-    for (int i=1;i<=maxargs;i++){\
+    static int i;\
+    for (i=1;i<=maxargs;i++){\
         check_isobject(L,i);\
     }\
     tcall(L,t_l##fname);\

@@ -2076,11 +2076,12 @@ if (pdumper_object_p (p))
 void
 staticpro (Lisp_Object const *varaddress)
 {
-    for (int i = 0; i < staticidx; i++)
-        eassert (staticvec[i] != varaddress);
-    if (staticidx >= NSTATICS)
-        TODO // fatal ("NSTATICS too small; try increasing and recompiling Emacs.");
-        staticvec[staticidx++] = varaddress;
+for (int i = 0; i < staticidx; i++)
+    eassert (staticvec[i] != varaddress);
+if (staticidx >= NSTATICS){
+    TODO // fatal ("NSTATICS too small; try increasing and recompiling Emacs.");
+}
+    staticvec[staticidx++] = varaddress;
 }
 
 struct mark_entry
@@ -2221,7 +2222,6 @@ process_mark_stack (ptrdiff_t base_sp)
                             break;
 
                         case PVEC_SUBR:
-                            TODO;
                             break;
 
                         case PVEC_FREE:
@@ -2331,7 +2331,7 @@ mark_roots (void)
 }
 
 #define GC_POINTER_ALIGNMENT alignof (void *)
-extern char *__libc_stack_end;
+extern const void *__libc_stack_end;
 void
 mark_c_stack (void)
 {
@@ -2535,8 +2535,8 @@ sweep_symbols (void)
              ++this_free;
              }
              else
-        {
-                ++num_used;
+             {
+             ++num_used;
                 sym->u.s.gcmarkbit = 0;
 #if TODO_NELISP_LATER_AND
                 eassert (valid_lisp_object_p (sym->u.s.function));

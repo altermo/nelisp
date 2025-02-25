@@ -158,7 +158,8 @@ int pub ret(/*nelisp.obj*/) _get_symbol(lua_State *L){
     return 1;
 }
 
-void t_collectgarbage(lua_State *_){
+void t_collectgarbage(lua_State *L){
+    UNUSED(L);
     garbage_collect();
 }
 int pub ret() collectgarbage(lua_State *L){
