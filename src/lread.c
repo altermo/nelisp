@@ -287,6 +287,17 @@ defvar_lisp (struct Lisp_Objfwd const *o_fwd, char const *namestring)
 }
 
 void
+defsubr (union Aligned_Lisp_Subr *aname)
+{
+  struct Lisp_Subr *sname = &aname->s;
+  Lisp_Object sym, tem;
+  sym = intern_c_string (sname->symbol_name);
+  XSETPVECTYPE (sname, PVEC_SUBR);
+  XSETSUBR (tem, sname);
+  set_symbol_function (sym, tem);
+}
+
+void
 syms_of_lread (void) {
     DEFVAR_LISP ("obarray", Vobarray,
                  doc: /* Symbol table for use by `intern' and `read'.
@@ -295,6 +306,8 @@ The vector's contents don't make sense if examined from Lisp programs;
 to find all the symbols in an obarray, use `mapatoms'.  */);
 
     DEFSYM (Qobarray_cache, "obarray-cache");
+
+    defsubr (&Sintern);
 }
 
 #endif

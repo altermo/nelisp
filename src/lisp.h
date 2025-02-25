@@ -470,6 +470,18 @@ dead_object (void)
     | ((restsize) << PSEUDOVECTOR_SIZE_BITS) | (lispsize))
 #define XSETPVECTYPESIZE(v, code, lispsize, restsize)		\
 ((v)->header.size = PVECHEADERSIZE (code, lispsize, restsize))
+#define XSETPSEUDOVECTOR(a, b, code) \
+XSETTYPED_PSEUDOVECTOR (a, b,					\
+                        (XUNTAG (a, Lisp_Vectorlike,		\
+                                 union vectorlike_header)	\
+                         ->size),				\
+                         code)
+#define XSETTYPED_PSEUDOVECTOR(a, b, size, code)			\
+(XSETVECTOR (a, b),							\
+    eassert ((size & (PSEUDOVECTOR_FLAG | PVEC_TYPE_MASK))		\
+             == (PSEUDOVECTOR_FLAG | (code << PSEUDOVECTOR_AREA_BITS))))
+
+#define XSETSUBR(a, b) XSETPSEUDOVECTOR (a, b, PVEC_SUBR)
 
 typedef struct interval *INTERVAL;
 struct Lisp_Cons
@@ -575,7 +587,7 @@ SDATA (Lisp_Object string)
 INLINE char *
 SSDATA (Lisp_Object string)
 {
-  return (char *) SDATA (string);
+    return (char *) SDATA (string);
 }
 INLINE unsigned char
 SREF (Lisp_Object string, ptrdiff_t index)
@@ -679,7 +691,7 @@ memclear (void *p, ptrdiff_t nbytes)
     memset (p, 0, nbytes);
 }
 #define VECSIZE(type)						\
-  ((sizeof (type) - header_size + word_size - 1) / word_size)
+((sizeof (type) - header_size + word_size - 1) / word_size)
 
 struct Lisp_Subr
 {
@@ -715,51 +727,51 @@ GCALIGNED_UNION_MEMBER
 INLINE Lisp_Object
 SYMBOL_VAL (struct Lisp_Symbol *sym)
 {
-  eassert (sym->u.s.redirect == SYMBOL_PLAINVAL);
-  return sym->u.s.val.value;
+    eassert (sym->u.s.redirect == SYMBOL_PLAINVAL);
+    return sym->u.s.val.value;
 }
 
 INLINE void
 SET_SYMBOL_VAL (struct Lisp_Symbol *sym, Lisp_Object v)
 {
-  eassert (sym->u.s.redirect == SYMBOL_PLAINVAL);
-  sym->u.s.val.value = v;
+    eassert (sym->u.s.redirect == SYMBOL_PLAINVAL);
+    sym->u.s.val.value = v;
 }
 INLINE void
 SET_SYMBOL_FWD (struct Lisp_Symbol *sym, void const *v)
 {
-  eassume (sym->u.s.redirect == SYMBOL_FORWARDED && v);
-  sym->u.s.val.fwd.fwdptr = v;
+    eassume (sym->u.s.redirect == SYMBOL_FORWARDED && v);
+    sym->u.s.val.fwd.fwdptr = v;
 }
 
 struct Lisp_Obarray
 {
-  union vectorlike_header header;
-  Lisp_Object *buckets;
-  unsigned size_bits;
-  unsigned count;
+    union vectorlike_header header;
+    Lisp_Object *buckets;
+    unsigned size_bits;
+    unsigned count;
 };
 INLINE bool
 OBARRAYP (Lisp_Object a)
 {
-  return PSEUDOVECTORP (a, PVEC_OBARRAY);
+    return PSEUDOVECTORP (a, PVEC_OBARRAY);
 }
 INLINE struct Lisp_Obarray *
 XOBARRAY (Lisp_Object a)
 {
-  eassert (OBARRAYP (a));
-  return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Obarray);
+    eassert (OBARRAYP (a));
+    return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Obarray);
 }
 INLINE Lisp_Object
 make_lisp_obarray (struct Lisp_Obarray *o)
 {
-  eassert (PSEUDOVECTOR_TYPEP (&o->header, PVEC_OBARRAY));
-  return make_lisp_ptr (o, Lisp_Vectorlike);
+    eassert (PSEUDOVECTOR_TYPEP (&o->header, PVEC_OBARRAY));
+    return make_lisp_ptr (o, Lisp_Vectorlike);
 }
 INLINE ptrdiff_t
 obarray_size (const struct Lisp_Obarray *o)
 {
-  return (ptrdiff_t)1 << o->size_bits;
+    return (ptrdiff_t)1 << o->size_bits;
 }
 
 typedef unsigned int hash_hash_t;
@@ -767,19 +779,19 @@ typedef unsigned int hash_hash_t;
 INLINE hash_hash_t
 reduce_emacs_uint_to_hash_hash (EMACS_UINT x)
 {
-  return (sizeof x == sizeof (hash_hash_t)
-	  ? x
-	  : x ^ (x >> (8 * (sizeof x - sizeof (hash_hash_t)))));
+    return (sizeof x == sizeof (hash_hash_t)
+    ? x
+    : x ^ (x >> (8 * (sizeof x - sizeof (hash_hash_t)))));
 }
 
 INLINE ptrdiff_t
 knuth_hash (hash_hash_t hash, unsigned bits)
 {
-  unsigned int h = hash;
-  unsigned int alpha = 2654435769;
-  unsigned int product = (h * alpha) & 0xffffffffu;
-  unsigned long long int wide_product = product;
-  return wide_product >> (32 - bits);
+    unsigned int h = hash;
+    unsigned int alpha = 2654435769;
+    unsigned int product = (h * alpha) & 0xffffffffu;
+    unsigned long long int wide_product = product;
+    return wide_product >> (32 - bits);
 }
 
 struct Lisp_Float
@@ -816,22 +828,22 @@ XFIXNAT (Lisp_Object a)
 INLINE void
 set_symbol_function (Lisp_Object sym, Lisp_Object function)
 {
-  XSYMBOL (sym)->u.s.function = function;
+    XSYMBOL (sym)->u.s.function = function;
 }
 INLINE void
 set_symbol_plist (Lisp_Object sym, Lisp_Object plist)
 {
-  XSYMBOL (sym)->u.s.plist = plist;
+    XSYMBOL (sym)->u.s.plist = plist;
 }
 INLINE void
 set_symbol_next (Lisp_Object sym, struct Lisp_Symbol *next)
 {
-  XSYMBOL (sym)->u.s.next = next;
+    XSYMBOL (sym)->u.s.next = next;
 }
 INLINE void
 make_symbol_constant (Lisp_Object sym)
 {
-  XSYMBOL (sym)->u.s.trapped_write = SYMBOL_NOWRITE;
+    XSYMBOL (sym)->u.s.trapped_write = SYMBOL_NOWRITE;
 }
 
 
@@ -978,8 +990,8 @@ void mainloop(void){
 
 #define DEFUN_LUA_N(fname,maxargs)\
 void t_l##fname(lua_State *L) {\
-    Lisp_Object obj=fname(DEF_TCALL_ARGS_##maxargs(maxargs));\
-    push_obj(L,obj);\
+Lisp_Object obj=fname(DEF_TCALL_ARGS_##maxargs(maxargs));\
+push_obj(L,obj);\
 }\
 int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
     check_nargs(L,maxargs);\
@@ -1012,4 +1024,5 @@ do {						\
     defvar_lisp (&o_fwd, lname);		\
 } while (false)
 #define DEFSYM(sym, name)
+extern void defsubr (union Aligned_Lisp_Subr *);
 #endif

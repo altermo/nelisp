@@ -2601,4 +2601,13 @@ init_alloc_once (void)
     init_vectors ();
 }
 
+
+void
+syms_of_alloc (void)
+{
+    defsubr (&Scons);
+    defsubr (&Smake_vector);
+    defsubr (&Smake_symbol);
+}
+
 #endif
