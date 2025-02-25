@@ -4,6 +4,7 @@
 #include "alloc.c"
 #include "lread.c"
 #include "data.c"
+#include "eval.c"
 
 void t_number_to_fixnum(lua_State *L){
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
@@ -159,6 +160,17 @@ int pub ret(/*nelisp.obj*/) _get_symbol(lua_State *L){
     return 1;
 }
 
+void t_eval(lua_State *L){
+    Lisp_Object obj = userdata_to_obj(L,1);
+    push_obj(L,eval_sub(obj));
+}
+int pub ret(/*nelisp.obj*/) eval(lua_State *L){
+    check_nargs(L,1);
+    check_isobject(L,1);
+    tcall(L,t_eval);
+    return 1;
+}
+
 void t_collectgarbage(lua_State *L){
     UNUSED(L);
     garbage_collect();
@@ -182,6 +194,7 @@ int pub ret() init(lua_State *L){
 
     syms_of_lread();
     syms_of_data();
+    syms_of_alloc();
 
     if (!setjmp(mainloop_return_jmp)){
         mainloop();

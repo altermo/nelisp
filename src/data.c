@@ -1,5 +1,5 @@
-#ifndef EMACS_EVAL_C
-#define EMACS_EVAL_C
+#ifndef EMACS_DATA_C
+#define EMACS_DATA_C
 
 #include "lisp.h"
 

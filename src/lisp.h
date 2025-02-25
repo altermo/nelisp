@@ -31,6 +31,9 @@ static bool unrecoverable_error;
 #ifndef SIZE_WIDTH
 #define SIZE_WIDTH   __WORDSIZE
 #endif
+#ifndef USHRT_WIDTH
+#define USHRT_WIDTH 16
+#endif
 
 # define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
 // Taken from conf_post.h
@@ -752,6 +755,17 @@ union Aligned_Lisp_Subr
 struct Lisp_Subr s;
 GCALIGNED_UNION_MEMBER
   };
+INLINE bool
+SUBRP (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_SUBR);
+}
+INLINE struct Lisp_Subr *
+XSUBR (Lisp_Object a)
+{
+  eassert (SUBRP (a));
+  return &XUNTAG (a, Lisp_Vectorlike, union Aligned_Lisp_Subr)->s;
+}
 
 INLINE Lisp_Object
 SYMBOL_VAL (struct Lisp_Symbol *sym)
@@ -874,6 +888,40 @@ make_symbol_constant (Lisp_Object sym)
 {
     XSYMBOL (sym)->u.s.trapped_write = SYMBOL_NOWRITE;
 }
+
+INLINE bool
+NATIVE_COMP_FUNCTION_DYNP (Lisp_Object a)
+{
+    UNUSED(a);
+    return false;
+}
+
+#if TODO_NELISP_LATER_ELSE
+void circular_list (Lisp_Object list){
+    UNUSED(list);
+    TODO
+}
+void maybe_quit (void){
+}
+#endif
+struct for_each_tail_internal
+{
+  Lisp_Object tortoise;
+  intptr_t max, n;
+  unsigned short int q;
+};
+#define FOR_EACH_TAIL_INTERNAL(tail, cycle, check_quit)			\
+  for (struct for_each_tail_internal li = { tail, 2, 0, 2 };		\
+       CONSP (tail);							\
+       ((tail) = XCDR (tail),						\
+	((--li.q != 0							\
+	  || ((check_quit) ? maybe_quit () : (void) 0, 0 < --li.n)	\
+	  || (li.q = li.n = li.max <<= 1, li.n >>= USHRT_WIDTH,		\
+	      li.tortoise = (tail), false))				\
+	 && BASE_EQ (tail, li.tortoise))				\
+	? (cycle) : (void) 0))
+#define FOR_EACH_TAIL(tail) \
+  FOR_EACH_TAIL_INTERNAL (tail, circular_list (tail), true)
 
 
 #ifdef ENABLE_CHECKING
@@ -1055,4 +1103,9 @@ do {						\
 } while (false)
 #define DEFSYM(sym, name)
 extern void defsubr (union Aligned_Lisp_Subr *);
+enum maxargs
+  {
+    MANY = -2,
+    UNEVALLED = -1
+  };
 #endif

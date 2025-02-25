@@ -3,6 +3,17 @@
 
 #include "lisp.h"
 
+ptrdiff_t
+list_length (Lisp_Object list)
+{
+    intptr_t i = 0;
+    FOR_EACH_TAIL (list) i++;
+#if TODO_NELISP_LATER_AND
+    CHECK_LIST_END (list, list);
+#endif
+    return i;
+}
+
 INLINE EMACS_UINT
 sxhash_combine (EMACS_UINT x, EMACS_UINT y)
 {
