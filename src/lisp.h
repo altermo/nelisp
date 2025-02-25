@@ -98,7 +98,7 @@ typedef size_t bits_word;
 # define BITS_WORD_MAX SIZE_MAX
 enum { BITS_PER_BITS_WORD = SIZE_WIDTH };
 #define pD "t"
-#define AVOID _Noreturn ATTRIBUTE_COLD void
+#define AVOID _Noreturn void
 #define eassert(cond) ((void) (false && (cond))) /* Check COND compiles.  */
 #define eassume(cond) assume (cond)
 enum Lisp_Bits

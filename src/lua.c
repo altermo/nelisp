@@ -171,6 +171,45 @@ int pub ret(/*nelisp.obj*/) eval(lua_State *L){
     return 1;
 }
 
+void t_evals(lua_State *L){
+    size_t len;
+    const char* str = lua_tolstring(L,-1,&len);
+    Lisp_Object readcharfun = make_unibyte_string(str,len);
+    read_from_string_index = 0;
+    read_from_string_index_byte = string_char_to_byte (readcharfun, 0);
+    read_from_string_limit = len;
+    Lisp_Object ret=NULL;
+    while (1){
+        int c = READCHAR;
+        if (c == ';')
+        {
+            while ((c = READCHAR) != '\n' && c != -1);
+            continue;
+        }
+        if (c < 0)
+        {
+            break;
+        }
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r'
+            || c == NO_BREAK_SPACE)
+            continue;
+        UNREAD (c);
+        Lisp_Object val = read0 (readcharfun, false);
+        ret = eval_sub (val);
+    }
+    if (ret)
+        push_obj(L,ret);
+    else
+        lua_pushnil(L);
+}
+int collectgarbage(lua_State *L);
+int pub ret(/*nelisp.obj|nil*/) evals(lua_State *L){
+    check_nargs(L,1);
+    check_isstring(L,1);
+    tcall(L,t_evals);
+    return 1;
+}
+
 void t_collectgarbage(lua_State *L){
     UNUSED(L);
     garbage_collect();

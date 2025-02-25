@@ -3,6 +3,7 @@
 #include "lisp.h"
 #include "alloc.c"
 #include "fns.c"
+#include "character.c"
 
 static Lisp_Object initial_obarray;
 static size_t oblookup_last_bucket_number;
@@ -289,13 +290,300 @@ defvar_lisp (struct Lisp_Objfwd const *o_fwd, char const *namestring)
 void
 defsubr (union Aligned_Lisp_Subr *aname)
 {
-  struct Lisp_Subr *sname = &aname->s;
-  Lisp_Object sym, tem;
-  sym = intern_c_string (sname->symbol_name);
-  XSETPVECTYPE (sname, PVEC_SUBR);
-  XSETSUBR (tem, sname);
-  set_symbol_function (sym, tem);
+    struct Lisp_Subr *sname = &aname->s;
+    Lisp_Object sym, tem;
+    sym = intern_c_string (sname->symbol_name);
+    XSETPVECTYPE (sname, PVEC_SUBR);
+    XSETSUBR (tem, sname);
+    set_symbol_function (sym, tem);
 }
+
+static ptrdiff_t read_from_string_index;
+static ptrdiff_t read_from_string_index_byte;
+static ptrdiff_t read_from_string_limit;
+#define READCHAR readchar (readcharfun, NULL)
+#define UNREAD(c) unreadchar (readcharfun, c)
+#define READCHAR_REPORT_MULTIBYTE(multibyte) readchar (readcharfun, multibyte)
+static int
+readchar (Lisp_Object readcharfun, bool *multibyte)
+{
+    register int c;
+
+    if (multibyte)
+        *multibyte = 0;
+
+    if (STRINGP (readcharfun))
+    {
+        if (read_from_string_index >= read_from_string_limit)
+            c = -1;
+        else if (STRING_MULTIBYTE (readcharfun)) {
+            TODO
+        } else {
+            c = SREF (readcharfun, read_from_string_index_byte);
+            read_from_string_index++;
+            read_from_string_index_byte++;
+        }
+        return c;
+    }
+    TODO
+}
+static void
+unreadchar (Lisp_Object readcharfun, int c)
+{
+    if (c == -1)
+        ;
+    else if (STRINGP (readcharfun))
+    {
+    read_from_string_index--;
+    read_from_string_index_byte
+        = string_char_to_byte (readcharfun, read_from_string_index);
+}
+    else
+    TODO
+}
+enum read_entry_type
+{
+    RE_list_start,
+    RE_list,
+    RE_list_dot,
+    RE_vector,
+    RE_record,
+    RE_char_table,
+    RE_sub_char_table,
+    RE_byte_code,
+    RE_string_props,
+    RE_special,
+    RE_numbered,
+};
+struct read_stack_entry
+{
+    enum read_entry_type type;
+    union {
+        struct {
+            Lisp_Object head;
+            Lisp_Object tail;
+        } list;
+        struct {
+            Lisp_Object elems;
+            bool old_locate_syms;
+        } vector;
+        struct {
+            Lisp_Object symbol;
+        } special;
+        struct {
+            Lisp_Object number;
+            Lisp_Object placeholder;
+        } numbered;
+    } u;
+};
+struct read_stack
+{
+    struct read_stack_entry *stack;
+    ptrdiff_t size;
+    ptrdiff_t sp;
+};
+static struct read_stack rdstack = {NULL, 0, 0};
+NO_INLINE static void
+grow_read_stack (void)
+{
+    struct read_stack *rs = &rdstack;
+    eassert (rs->sp == rs->size);
+    rs->stack = xpalloc (rs->stack, &rs->size, 1, -1, sizeof *rs->stack);
+    eassert (rs->sp < rs->size);
+}
+static inline void
+read_stack_push (struct read_stack_entry e)
+{
+    if (rdstack.sp >= rdstack.size)
+        grow_read_stack ();
+    rdstack.stack[rdstack.sp++] = e;
+}
+static void
+read_stack_reset (intmax_t sp)
+{
+    eassert (sp <= rdstack.sp);
+    rdstack.sp = sp;
+}
+static AVOID
+end_of_file_error (void)
+{
+    TODO
+}
+static Lisp_Object
+read0 (Lisp_Object readcharfun, bool locate_syms)
+{
+    TODO_NELISP_LATER;
+    char stackbuf[64];
+    char *read_buffer = stackbuf;
+    ptrdiff_t read_buffer_size = sizeof stackbuf;
+    bool uninterned_symbol;
+    bool skip_shorthand;
+    ptrdiff_t base_sp = rdstack.sp;
+read_obj: ;
+    Lisp_Object obj;
+    bool multibyte;
+    int c = READCHAR_REPORT_MULTIBYTE (&multibyte);
+    switch (c)
+    {
+        case '(': TODO;
+        case ')': TODO;
+        case '[': TODO;
+        case ']': TODO;
+        case '#': TODO;
+        case '?': TODO;
+        case '"': TODO;
+        case '\'': TODO;
+        case '`': TODO;
+        case ',': TODO;
+        case ';':
+            {
+                int c;
+                do
+                c = READCHAR;
+                while (c >= 0 && c != '\n');
+                goto read_obj;
+            }
+        case '.': TODO;
+        default:
+            if (c <= 32 || c == NO_BREAK_SPACE)
+                goto read_obj;
+
+            uninterned_symbol = false;
+            skip_shorthand = false;
+
+            char *p = read_buffer;
+            char *end = read_buffer + read_buffer_size;
+            bool quoted = false;
+            do
+            {
+                if (end - p < MAX_MULTIBYTE_LENGTH + 1)
+                {
+                    TODO
+                }
+
+                if (c == '\\')
+                {
+                    c = READCHAR;
+                    if (c < 0)
+                        end_of_file_error ();
+                    quoted = true;
+                }
+
+                if (multibyte)
+                    p += CHAR_STRING (c, (unsigned char *) p);
+                else
+                    *p++ = c;
+                c = READCHAR;
+            }
+            while (c > 32
+            && c != NO_BREAK_SPACE
+            && (c >= 128
+            || !(   c == '"' || c == '\'' || c == ';' || c == '#'
+            || c == '(' || c == ')'  || c == '[' || c == ']'
+            || c == '`' || c == ',')));
+
+            *p = 0;
+            ptrdiff_t nbytes = p - read_buffer;
+            UNREAD (c);
+
+            char c0 = read_buffer[0];
+            if (((c0 >= '0' && c0 <= '9') || c0 == '.' || c0 == '-' || c0 == '+')
+                && !quoted && !uninterned_symbol && !skip_shorthand)
+            {
+                TODO;}
+
+#if TODO_NELISP_LATER_AND
+        ptrdiff_t nchars
+            = (multibyte
+            ? multibyte_chars_in_text ((unsigned char *)read_buffer, nbytes)
+            : nbytes);
+#else
+        ptrdiff_t nchars = nbytes;
+#endif
+        Lisp_Object result;
+        if (uninterned_symbol)
+        {
+            TODO
+        } else {
+            Lisp_Object obarray = check_obarray (Vobarray);
+
+            char *longhand = NULL;
+            Lisp_Object found;
+#if TODO_NELISP_LATER_AND
+            ptrdiff_t longhand_chars = 0;
+            ptrdiff_t longhand_bytes = 0;
+
+            if (skip_shorthand || symbol_char_span (read_buffer) >= nbytes)
+                found = oblookup (obarray, read_buffer, nchars, nbytes);
+            else
+                found = oblookup_considering_shorthand (obarray, read_buffer,
+                                                        nchars, nbytes, &longhand,
+                                                        &longhand_chars,
+                                                        &longhand_bytes);
+#else
+            found = oblookup (obarray, read_buffer, nchars, nbytes);
+#endif
+
+            if (BARE_SYMBOL_P (found))
+                result = found;
+            else if (longhand) {
+                TODO
+            } else {
+                Lisp_Object name = make_specified_string (read_buffer, nchars,
+                                                          nbytes, multibyte);
+                result = intern_driver (name, obarray, found);
+            }
+        }
+        if (locate_syms && !NILP (result))
+            TODO
+
+                obj = result;
+        break;
+    }
+
+    while (rdstack.sp > base_sp)
+    {
+        TODO
+    }
+#if TODO_NELISP_LATER_ELSE
+    read_stack_reset(base_sp);
+#endif
+    return obj;
+}
+void
+mark_lread (void)
+{
+    for (ptrdiff_t i = 0; i < rdstack.sp; i++)
+    {
+        struct read_stack_entry *e = &rdstack.stack[i];
+        switch (e->type)
+        {
+            case RE_list_start:
+                break;
+            case RE_list:
+            case RE_list_dot:
+                mark_object (e->u.list.head);
+                mark_object (e->u.list.tail);
+                break;
+            case RE_vector:
+            case RE_record:
+            case RE_char_table:
+            case RE_sub_char_table:
+            case RE_byte_code:
+            case RE_string_props:
+                mark_object (e->u.vector.elems);
+                break;
+            case RE_special:
+                mark_object (e->u.special.symbol);
+                break;
+            case RE_numbered:
+                mark_object (e->u.numbered.number);
+                mark_object (e->u.numbered.placeholder);
+                break;
+        }
+    }
+}
+
 
 void
 syms_of_lread (void) {

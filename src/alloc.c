@@ -921,6 +921,30 @@ make_clear_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes, bool clearit)
 #endif
     return string;
 }
+Lisp_Object
+make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
+{
+    return make_clear_multibyte_string (nchars, nbytes, false);
+}
+Lisp_Object
+make_specified_string (const char *contents,
+                       ptrdiff_t nchars, ptrdiff_t nbytes, bool multibyte)
+{
+    Lisp_Object val;
+
+    if (nchars < 0)
+    {
+        if (multibyte) {
+            TODO;
+        } else
+        nchars = nbytes;
+    }
+    val = make_uninit_multibyte_string (nchars, nbytes);
+    memcpy (SDATA (val), contents, nbytes);
+    if (!multibyte)
+        STRING_SET_UNIBYTE (val);
+    return val;
+}
 static Lisp_Object
 make_clear_string (EMACS_INT length, bool clearit)
 {
@@ -2537,11 +2561,11 @@ sweep_symbols (void)
              else
              {
              ++num_used;
-                sym->u.s.gcmarkbit = 0;
+             sym->u.s.gcmarkbit = 0;
 #if TODO_NELISP_LATER_AND
-                eassert (valid_lisp_object_p (sym->u.s.function));
+             eassert (valid_lisp_object_p (sym->u.s.function));
 #endif
-            }
+             }
         }
 
         lim = SYMBOL_BLOCK_SIZE;
@@ -2572,6 +2596,7 @@ gc_sweep (void)
     sweep_vectors ();
 }
 
+extern void mark_lread(void);
 void
 garbage_collect (void)
 {
@@ -2580,6 +2605,7 @@ garbage_collect (void)
     mark_roots ();
     mark_c_stack();
     mark_lua();
+    mark_lread();
     eassert (mark_stack_empty_p ());
     gc_sweep ();
 }
