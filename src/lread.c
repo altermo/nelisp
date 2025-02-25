@@ -383,6 +383,23 @@ struct read_stack
     ptrdiff_t sp;
 };
 static struct read_stack rdstack = {NULL, 0, 0};
+static inline struct read_stack_entry *
+read_stack_top (void)
+{
+    eassume (rdstack.sp > 0);
+    return &rdstack.stack[rdstack.sp - 1];
+}
+static inline struct read_stack_entry *
+read_stack_pop (void)
+{
+    eassume (rdstack.sp > 0);
+    return &rdstack.stack[--rdstack.sp];
+}
+static inline bool
+read_stack_empty_p (ptrdiff_t base_sp)
+{
+    return rdstack.sp <= base_sp;
+}
 NO_INLINE static void
 grow_read_stack (void)
 {
@@ -409,6 +426,13 @@ end_of_file_error (void)
 {
     TODO
 }
+static AVOID
+invalid_syntax (const char *s, Lisp_Object readcharfun)
+{
+    UNUSED(s);
+    UNUSED(readcharfun);
+    TODO
+}
 static Lisp_Object
 read0 (Lisp_Object readcharfun, bool locate_syms)
 {
@@ -425,8 +449,29 @@ read_obj: ;
     int c = READCHAR_REPORT_MULTIBYTE (&multibyte);
     switch (c)
     {
-        case '(': TODO;
-        case ')': TODO;
+        case '(':
+            read_stack_push ((struct read_stack_entry) {.type = RE_list_start});
+            goto read_obj;
+        case ')':
+            if (read_stack_empty_p (base_sp))
+                invalid_syntax (")", readcharfun);
+            switch (read_stack_top ()->type)
+            {
+                case RE_list_start:
+                    read_stack_pop ();
+                    obj = Qnil;
+                    break;
+                case RE_list:
+                    obj = read_stack_pop ()->u.list.head;
+                    break;
+                case RE_record:
+                    TODO;
+                case RE_string_props:
+                    TODO;
+                default:
+                    invalid_syntax (")", readcharfun);
+            }
+            break;
         case '[': TODO;
         case ']': TODO;
         case '#': TODO;
@@ -543,7 +588,32 @@ read_obj: ;
 
     while (rdstack.sp > base_sp)
     {
-        TODO
+
+        struct read_stack_entry *e = read_stack_top ();
+        switch (e->type)
+        {
+            case RE_list_start:
+                e->type = RE_list;
+                e->u.list.head = e->u.list.tail = Fcons (obj, Qnil);
+                goto read_obj;
+            case RE_list:
+                {
+                    Lisp_Object tl = Fcons (obj, Qnil);
+                    XSETCDR (e->u.list.tail, tl);
+                    e->u.list.tail = tl;
+                    goto read_obj;
+                }
+            case RE_list_dot: TODO;
+            case RE_vector:
+            case RE_record:
+            case RE_char_table:
+            case RE_sub_char_table:
+            case RE_byte_code:
+            case RE_string_props:
+                TODO;
+            case RE_special: TODO;
+            case RE_numbered: TODO;
+        }
     }
 #if TODO_NELISP_LATER_ELSE
     read_stack_reset(base_sp);
