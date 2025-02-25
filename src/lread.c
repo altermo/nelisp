@@ -131,34 +131,34 @@ intern_sym (Lisp_Object sym, Lisp_Object obarray, Lisp_Object index)
 static struct Lisp_Obarray *
 allocate_obarray (void)
 {
-  return ALLOCATE_PLAIN_PSEUDOVECTOR (struct Lisp_Obarray, PVEC_OBARRAY);
+    return ALLOCATE_PLAIN_PSEUDOVECTOR (struct Lisp_Obarray, PVEC_OBARRAY);
 }
 
 static Lisp_Object
 make_obarray (unsigned bits)
 {
-  struct Lisp_Obarray *o = allocate_obarray ();
-  o->count = 0;
-  o->size_bits = bits;
-  ptrdiff_t size = (ptrdiff_t)1 << bits;
-  o->buckets = hash_table_alloc_bytes (size * sizeof *o->buckets);
-  for (ptrdiff_t i = 0; i < size; i++)
-    o->buckets[i] = make_fixnum (0);
-  return make_lisp_obarray (o);
+    struct Lisp_Obarray *o = allocate_obarray ();
+    o->count = 0;
+    o->size_bits = bits;
+    ptrdiff_t size = (ptrdiff_t)1 << bits;
+    o->buckets = hash_table_alloc_bytes (size * sizeof *o->buckets);
+    for (ptrdiff_t i = 0; i < size; i++)
+        o->buckets[i] = make_fixnum (0);
+    return make_lisp_obarray (o);
 }
 
 static void
 define_symbol (Lisp_Object sym, char const *str)
 {
-  ptrdiff_t len = strlen (str);
+    ptrdiff_t len = strlen (str);
     Lisp_Object string = make_pure_c_string (str, len);
-  init_symbol (sym, string);
+    init_symbol (sym, string);
 
-  if (! BASE_EQ (sym, Qunbound))
+    if (! BASE_EQ (sym, Qunbound))
     {
-      Lisp_Object bucket = oblookup (initial_obarray, str, len, len);
-      eassert (FIXNUMP (bucket));
-      intern_sym (sym, initial_obarray, bucket);
+        Lisp_Object bucket = oblookup (initial_obarray, str, len, len);
+        eassert (FIXNUMP (bucket));
+        intern_sym (sym, initial_obarray, bucket);
     }
 }
 
@@ -225,6 +225,50 @@ INLINE Lisp_Object
 intern_c_string (const char *str)
 {
     return intern_c_string_1 (str, strlen (str));
+}
+
+DEFUN ("intern", Fintern, Sintern, 1, 2, 0,
+       doc: /* Return the canonical symbol whose name is STRING.
+If there is none, one is created by this function and returned.
+A second optional argument specifies the obarray to use;
+it defaults to the value of `obarray'.  */)
+    (Lisp_Object string, Lisp_Object obarray)
+{
+    Lisp_Object tem;
+
+    obarray = check_obarray (NILP (obarray) ? Vobarray : obarray);
+#if TODO_NELISP_LATER_AND
+    CHECK_STRING (string);
+#endif
+
+#if TODO_NELISP_LATER_AND
+    char* longhand = NULL;
+    ptrdiff_t longhand_chars = 0;
+    ptrdiff_t longhand_bytes = 0;
+    tem = oblookup_considering_shorthand (obarray, SSDATA (string),
+                                          SCHARS (string), SBYTES (string),
+                                          &longhand, &longhand_chars,
+                                          &longhand_bytes);
+
+    if (!BARE_SYMBOL_P (tem))
+    {
+        if (longhand)
+        {
+            tem = intern_driver (make_specified_string (longhand, longhand_chars,
+                                                        longhand_bytes, true),
+                                 obarray, tem);
+            xfree (longhand);
+        }
+        else
+        tem = intern_driver (NILP (Vpurify_flag) ? string : Fpurecopy (string),
+                             obarray, tem);
+    }
+#else
+    tem = oblookup(obarray, SSDATA (string), SCHARS (string), SBYTES (string));
+    if (!BARE_SYMBOL_P (tem))
+        tem = intern_driver (string,obarray,tem);
+#endif
+    return tem;
 }
 
 void
