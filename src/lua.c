@@ -3,6 +3,7 @@
 
 #include "alloc.c"
 #include "lread.c"
+#include "data.c"
 
 void t_number_to_fixnum(lua_State *L){
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
@@ -180,6 +181,7 @@ int pub ret() init(lua_State *L){
     init_obarray_once();
 
     syms_of_lread();
+    syms_of_data();
 
     if (!setjmp(mainloop_return_jmp)){
         mainloop();

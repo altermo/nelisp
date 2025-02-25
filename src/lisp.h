@@ -20,7 +20,7 @@ static bool unrecoverable_error;
 #define TODO_NELISP_LATER (void)0;
 #define TODO_NELISP_LATER_ELSE true
 #define TODO_NELISP_LATER_AND false
-#define TODO if (1){eassert(global_lua_state);unrecoverable_lua_error(global_lua_state,"TODO at %s:%d",__FILE__,__LINE__);}
+#define TODO if (1){eassert(global_lua_state);unrecoverable_lua_error(global_lua_state,"TODO at %s:%d",__FILE__,__LINE__);__builtin_unreachable();}
 #define UNUSED(x) (void)x
 
 // LSP being anyoing about them existing and not existing, so just define them here
