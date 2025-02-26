@@ -222,6 +222,7 @@ int pub ret() init(lua_State *L){
     syms_of_lread();
     syms_of_data();
     syms_of_alloc();
+    syms_of_eval();
 
     if (!setjmp(mainloop_return_jmp)){
         mainloop();

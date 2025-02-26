@@ -48,8 +48,8 @@ eval_sub (Lisp_Object form)
             val = (XSUBR (fun)->function.aUNEVALLED) (args_left);
         else if (XSUBR (fun)->max_args == MANY
                 || XSUBR (fun)->max_args > 8) {
-            TODO;
-        } else {
+        TODO;
+    } else {
             int i, maxargs = XSUBR (fun)->max_args;
 
             for (i = 0; i < maxargs; i++)
@@ -58,9 +58,9 @@ eval_sub (Lisp_Object form)
                 args_left = Fcdr (args_left);
             }
 
-            #if TODO_NELISP_LATER_AND
+#if TODO_NELISP_LATER_AND
             set_backtrace_args (specpdl_ref_to_ptr (count), argvals, numargs);
-            #endif
+#endif
 
             switch (i)
             {
@@ -109,6 +109,51 @@ eval_sub (Lisp_Object form)
         TODO
     }
     return val;
+}
+
+DEFUN ("setq", Fsetq, Ssetq, 0, UNEVALLED, 0,
+       doc: /* Set each SYM to the value of its VAL.
+The symbols SYM are variables; they are literal (not evaluated).
+The values VAL are expressions; they are evaluated.
+Thus, (setq x (1+ y)) sets `x' to the value of `(1+ y)'.
+The second VAL is not computed until after the first SYM is set, and so on;
+each VAL can use the new value of variables set earlier in the `setq'.
+The return value of the `setq' form is the value of the last VAL.
+usage: (setq [SYM VAL]...)  */)
+    (Lisp_Object args)
+{
+    Lisp_Object val = args, tail = args;
+
+    for (EMACS_INT nargs = 0; CONSP (tail); nargs += 2)
+    {
+        UNUSED(nargs);
+        Lisp_Object sym = XCAR (tail);
+        tail = XCDR (tail);
+        if (!CONSP (tail))
+            TODO; //xsignal2 (Qwrong_number_of_arguments, Qsetq, make_fixnum (nargs + 1));
+        Lisp_Object arg = XCAR (tail);
+        tail = XCDR (tail);
+        val = eval_sub (arg);
+#if TODO_NELISP_LATER_AND
+         Lisp_Object lex_binding
+         = (SYMBOLP (sym)
+         ? Fassq (sym, Vinternal_interpreter_environment)
+         : Qnil);
+         if (!NILP (lex_binding))
+         XSETCDR (lex_binding, val); /* SYM is lexically bound.  */
+         else
+#endif
+        Fset (sym, val);	/* SYM is dynamically bound.  */
+    }
+
+    return val;
+}
+
+
+void
+syms_of_eval (void)
+{
+    defsubr (&Ssetq);
 }
 
 #endif

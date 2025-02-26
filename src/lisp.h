@@ -1079,6 +1079,7 @@ void mainloop(void){
 #define DEF_TCALL_ARGS_6(fname) DEF_TCALL_ARGS_5(fname),userdata_to_obj(L,6)
 #define DEF_TCALL_ARGS_7(fname) DEF_TCALL_ARGS_6(fname),userdata_to_obj(L,7)
 #define DEF_TCALL_ARGS_8(fname) DEF_TCALL_ARGS_7(fname),userdata_to_obj(L,8)
+#define DEF_TCALL_ARGS_UNEVALLED(fname) userdata_to_obj(L,1)
 
 #define DEFUN_LUA_N(fname,maxargs)\
 void t_l##fname(lua_State *L) {\
