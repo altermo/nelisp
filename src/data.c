@@ -79,6 +79,46 @@ global value outside of any lexical scope.  */)
 }
 
 void
+set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
+              enum Set_Internal_Bind bindflag)
+{
+    UNUSED(where);
+    UNUSED(bindflag);
+#if TODO_NELISP_LATER_AND
+  bool voide = BASE_EQ (newval, Qunbound);
+  CHECK_SYMBOL (symbol);
+#endif
+  struct Lisp_Symbol *sym = XSYMBOL (symbol);
+  switch (sym->u.s.trapped_write)
+    {
+    case SYMBOL_NOWRITE:
+        TODO;
+    case SYMBOL_TRAPPED_WRITE:
+        TODO;
+    case SYMBOL_UNTRAPPED_WRITE:
+      break;
+    default: emacs_abort ();
+    }
+
+  switch (sym->u.s.redirect)
+    {
+    case SYMBOL_VARALIAS: TODO;
+    case SYMBOL_PLAINVAL: SET_SYMBOL_VAL (sym , newval); return;
+    case SYMBOL_LOCALIZED: TODO;
+    case SYMBOL_FORWARDED: TODO;
+    default: emacs_abort ();
+    }
+  return;
+}
+DEFUN ("set", Fset, Sset, 2, 2, 0,
+       doc: /* Set SYMBOL's value to NEWVAL, and return NEWVAL.  */)
+  (register Lisp_Object symbol, Lisp_Object newval)
+{
+  set_internal (symbol, newval, Qnil, SET_INTERNAL_SET);
+  return newval;
+}
+
+void
 syms_of_data (void)
 {
     defsubr (&Ssymbol_value);
@@ -86,6 +126,7 @@ syms_of_data (void)
     defsubr (&Scdr);
     defsubr (&Scar_safe);
     defsubr (&Scdr_safe);
+    defsubr (&Sset);
 }
 
 #endif

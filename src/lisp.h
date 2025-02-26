@@ -921,6 +921,13 @@ struct for_each_tail_internal
 	? (cycle) : (void) 0))
 #define FOR_EACH_TAIL(tail) \
   FOR_EACH_TAIL_INTERNAL (tail, circular_list (tail), true)
+enum Set_Internal_Bind
+  {
+    SET_INTERNAL_SET,
+    SET_INTERNAL_BIND,
+    SET_INTERNAL_UNBIND,
+    SET_INTERNAL_THREAD_SWITCH,
+  };
 
 
 #ifdef ENABLE_CHECKING
