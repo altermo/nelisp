@@ -145,9 +145,9 @@ local function scan_c(path,out)
         get_comma()
         local maxargs=get_comma()
         if maxargs=='MANY' then
-            maxargs=-1
-        elseif maxargs=='UNEVALLED' then
             maxargs=-2
+        elseif maxargs=='UNEVALLED' then
+            maxargs=-1
         else
             maxargs=tonumber(maxargs)
             if not maxargs then error('') end
