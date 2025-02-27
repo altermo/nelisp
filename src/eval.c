@@ -144,7 +144,7 @@ mark_specpdl (void)
 Lisp_Object
 eval_sub (Lisp_Object form)
 {
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
 
     if (SYMBOLP (form))
     {
@@ -242,7 +242,7 @@ eval_sub (Lisp_Object form)
             }
         }
     } else {
-        TODO
+        TODO;
     }
     specpdl_ptr--;
     return val;
@@ -298,7 +298,7 @@ init_eval_once_for_pdumper (void)
 void
 init_eval_once (void)
 {
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
     init_eval_once_for_pdumper();
 }
 

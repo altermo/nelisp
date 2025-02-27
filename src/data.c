@@ -74,7 +74,7 @@ global value outside of any lexical scope.  */)
 #if TODO_NELISP_LATER_AND
   xsignal1 (Qvoid_variable, symbol);
 #else
-    TODO
+    TODO;
 #endif
 }
 

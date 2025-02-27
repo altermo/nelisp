@@ -51,7 +51,7 @@ CHAR_STRING (int c, unsigned char *p)
         p[2] = 0x80 | (c & 0x3F);
         return 3;
     }
-    TODO
+    TODO;
     // int len = char_string (c, p);
     // eassume (0 < len && len <= MAX_MULTIBYTE_LENGTH);
     // return len;

@@ -72,7 +72,7 @@ grow_obarray (struct Lisp_Obarray *o)
 
     int new_bits = o->size_bits + 1;
     if (new_bits > obarray_max_bits)
-        TODO //error ("Obarray too big");
+        TODO; //error ("Obarray too big");
     ptrdiff_t new_size = (ptrdiff_t)1 << new_bits;
     o->buckets = hash_table_alloc_bytes (new_size * sizeof *o->buckets);
     for (ptrdiff_t i = 0; i < new_size; i++)
@@ -318,7 +318,7 @@ readchar (Lisp_Object readcharfun, bool *multibyte)
         if (read_from_string_index >= read_from_string_limit)
             c = -1;
         else if (STRING_MULTIBYTE (readcharfun)) {
-            TODO
+            TODO;
         } else {
             c = SREF (readcharfun, read_from_string_index_byte);
             read_from_string_index++;
@@ -326,7 +326,7 @@ readchar (Lisp_Object readcharfun, bool *multibyte)
         }
         return c;
     }
-    TODO
+    TODO;
 }
 static void
 unreadchar (Lisp_Object readcharfun, int c)
@@ -340,7 +340,7 @@ unreadchar (Lisp_Object readcharfun, int c)
         = string_char_to_byte (readcharfun, read_from_string_index);
 }
     else
-    TODO
+    TODO;
 }
 enum read_entry_type
 {
@@ -425,14 +425,14 @@ read_stack_reset (intmax_t sp)
 static AVOID
 end_of_file_error (void)
 {
-    TODO
+    TODO;
 }
 static AVOID
 invalid_syntax (const char *s, Lisp_Object readcharfun)
 {
     UNUSED(s);
     UNUSED(readcharfun);
-    TODO
+    TODO;
 }
 static Lisp_Object
 read0 (Lisp_Object readcharfun, bool locate_syms)
@@ -506,7 +506,7 @@ read_obj: ;
             {
                 if (end - p < MAX_MULTIBYTE_LENGTH + 1)
                 {
-                    TODO
+                    TODO;
                 }
 
                 if (c == '\\')
@@ -551,7 +551,7 @@ read_obj: ;
         Lisp_Object result;
         if (uninterned_symbol)
         {
-            TODO
+            TODO;
         } else {
             Lisp_Object obarray = check_obarray (Vobarray);
 
@@ -575,7 +575,7 @@ read_obj: ;
             if (BARE_SYMBOL_P (found))
                 result = found;
             else if (longhand) {
-                TODO
+                TODO;
             } else {
                 Lisp_Object name = make_specified_string (read_buffer, nchars,
                                                           nbytes, multibyte);
@@ -583,7 +583,7 @@ read_obj: ;
             }
         }
         if (locate_syms && !NILP (result))
-            TODO
+            TODO;
 
                 obj = result;
         break;

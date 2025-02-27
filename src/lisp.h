@@ -16,10 +16,14 @@
 
 static lua_State *global_lua_state;
 static bool unrecoverable_error;
-#define TODO_NELISP_LATER (void)0;
+#define TODO_NELISP_LATER (void)0
 #define TODO_NELISP_LATER_ELSE true
 #define TODO_NELISP_LATER_AND false
-#define TODO if (1){eassert(global_lua_state);luaL_error(global_lua_state,"TODO at %s:%d",__FILE__,__LINE__);__builtin_unreachable();}
+static inline _Noreturn void TODO_(const char *file, int line){
+    luaL_error(global_lua_state,"TODO at %s:%d",file,line);
+    __builtin_unreachable();
+}
+#define TODO TODO_(__FILE__,__LINE__)
 #define UNUSED(x) (void)x
 
 // LSP being anyoing about them existing and not existing, so just define them here
@@ -56,27 +60,27 @@ INLINE bool
 pdumper_object_p (const void *obj)
 {
     UNUSED(obj);
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
     return false;
 }
 INLINE bool
 pdumper_marked_p (const void *obj)
 {
     UNUSED(obj);
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
     return false;
 }
 INLINE void
 pdumper_set_marked (const void *obj)
 {
     UNUSED(obj);
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
 }
 INLINE bool
 pdumper_cold_object_p (const void *obj)
 {
     UNUSED(obj);
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
     return false;
 }
 
@@ -1001,7 +1005,7 @@ SPECPDL_INDEX (void)
 #if TODO_NELISP_LATER_ELSE
 void circular_list (Lisp_Object list){
     UNUSED(list);
-    TODO
+    TODO;
 }
 void maybe_quit (void){
 }
@@ -1161,11 +1165,11 @@ INLINE void tcall_func(void){
 // If this is not a macro, then it will crash
 #define tcall(L,f)\
 if (global_lua_state!=L)\
-    TODO /*use lua_xmove to move between the states*/ \
+    TODO; /*use lua_xmove to move between the states*/ \
 tcall_func_var=f;\
 enter_mainloop(tcall_func);
 void mainloop(void){
-    TODO_NELISP_LATER // move function to somewhere else
+    TODO_NELISP_LATER; // move function to somewhere else
     while (1){
         if (!setjmp(mainloop_jmp))
             longjmp(mainloop_return_jmp,1);

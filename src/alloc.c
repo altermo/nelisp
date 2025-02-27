@@ -132,14 +132,14 @@ static void
 tally_consing (ptrdiff_t nbytes)
 {
     UNUSED(nbytes);
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
 }
 
 /* --- memory full handling -- */
 void
 memory_full (size_t nbytes) {
     UNUSED(nbytes);
-    TODO
+    TODO;
 }
 
 
@@ -501,7 +501,7 @@ again:
 
     if (!pure_overflow_warned)
     {
-        TODO //message ("Pure Lisp storage overflowed");
+        TODO; //message ("Pure Lisp storage overflowed");
         pure_overflow_warned = true;
     }
 
@@ -731,7 +731,7 @@ allocate_string_data (struct Lisp_String *s,
 #if TODO_NELISP_LATER_AND
     string_overflow ();
 #else
-    TODO
+    TODO;
 #endif
 
     ptrdiff_t needed = sdata_size (nbytes);
@@ -2034,7 +2034,7 @@ struct mem_node *m;
 
 if (pdumper_object_p (p))
 {
-    TODO
+    TODO;
 }
 
     m = mem_find (p);
@@ -2054,35 +2054,35 @@ if (pdumper_object_p (p))
                 {
                     if (symbol_only)
                         return;
-                    TODO
+                    TODO;
                 }
                 break;
             case MEM_TYPE_STRING:
                 {
                     if (symbol_only)
                         return;
-                    TODO
+                    TODO;
                 }
                 break;
             case MEM_TYPE_SYMBOL:
                 {
-                    TODO
+                    TODO;
                 }
                 break;
             case MEM_TYPE_FLOAT:
                 {
-                    TODO
+                    TODO;
                 }
                 break;
             case MEM_TYPE_VECTORLIKE:
                 {
-                    TODO
+                    TODO;
                 }
                 break;
 
             case MEM_TYPE_VECTOR_BLOCK:
                 {
-                    TODO
+                    TODO;
                 }
                 break;
             default:
@@ -2103,7 +2103,7 @@ staticpro (Lisp_Object const *varaddress)
 for (int i = 0; i < staticidx; i++)
     eassert (staticvec[i] != varaddress);
 if (staticidx >= NSTATICS){
-    TODO // fatal ("NSTATICS too small; try increasing and recompiling Emacs.");
+    TODO; // fatal ("NSTATICS too small; try increasing and recompiling Emacs.");
 }
     staticvec[staticidx++] = varaddress;
 }
@@ -2550,7 +2550,7 @@ sweep_symbols (void)
             {
                 if (sym->u.s.redirect == SYMBOL_LOCALIZED)
              {
-             TODO
+             TODO;
              }
              sym->u.s.next = symbol_free_list;
              symbol_free_list = sym;
@@ -2601,7 +2601,7 @@ extern void mark_specpdl(void);
 void
 garbage_collect (void)
 {
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
     eassert(mark_stack_empty_p ());
     mark_roots ();
     mark_c_stack();
@@ -2615,7 +2615,7 @@ garbage_collect (void)
 static void
 init_alloc_once_for_pdumper (void)
 {
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
     purebeg = PUREBEG;
     pure_size = PURESIZE;
     mem_init ();
@@ -2623,7 +2623,7 @@ init_alloc_once_for_pdumper (void)
 void
 init_alloc_once (void)
 {
-    TODO_NELISP_LATER
+    TODO_NELISP_LATER;
     init_alloc_once_for_pdumper();
     init_strings ();
     init_vectors ();
