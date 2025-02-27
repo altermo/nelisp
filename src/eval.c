@@ -1,8 +1,145 @@
 #ifndef EMACS_EVAL_C
 #define EMACS_EVAL_C
 
+#include "alloc.c"
 #include "fns.c"
 #include "lisp.h"
+
+void
+grow_specpdl_allocation (void)
+{
+    eassert (specpdl_ptr == specpdl_end);
+
+    specpdl_ref count = SPECPDL_INDEX ();
+    ptrdiff_t max_size = PTRDIFF_MAX - 1000;
+    union specbinding *pdlvec = specpdl - 1;
+    ptrdiff_t size = specpdl_end - specpdl;
+    ptrdiff_t pdlvecsize = size + 1;
+    eassert (max_size > size);
+    pdlvec = xpalloc (pdlvec, &pdlvecsize, 1, max_size + 1, sizeof *specpdl);
+    specpdl = pdlvec + 1;
+    specpdl_end = specpdl + pdlvecsize - 1;
+    specpdl_ptr = specpdl_ref_to_ptr (count);
+}
+INLINE void
+grow_specpdl (void)
+{
+    specpdl_ptr++;
+    if (specpdl_ptr == specpdl_end)
+        grow_specpdl_allocation ();
+}
+void
+record_unwind_protect_intmax (void (*function) (intmax_t), intmax_t arg)
+{
+    specpdl_ptr->unwind_intmax.kind = SPECPDL_UNWIND_INTMAX;
+    specpdl_ptr->unwind_intmax.func = function;
+    specpdl_ptr->unwind_intmax.arg = arg;
+    grow_specpdl ();
+}
+
+INLINE specpdl_ref
+record_in_backtrace (Lisp_Object function, Lisp_Object *args, ptrdiff_t nargs)
+{
+    specpdl_ref count = SPECPDL_INDEX ();
+
+    eassert (nargs >= UNEVALLED);
+    specpdl_ptr->bt.kind = SPECPDL_BACKTRACE;
+    specpdl_ptr->bt.debug_on_exit = false;
+    specpdl_ptr->bt.function = function;
+    specpdl_ptr->bt.args = args;
+    specpdl_ptr->bt.nargs = nargs;
+    grow_specpdl ();
+
+    return count;
+}
+
+static void
+set_backtrace_args (union specbinding *pdl, Lisp_Object *args, ptrdiff_t nargs)
+{
+    eassert (pdl->kind == SPECPDL_BACKTRACE);
+    pdl->bt.args = args;
+    pdl->bt.nargs = nargs;
+}
+
+static void
+do_one_unbind (union specbinding *this_binding, bool unwinding,
+               enum Set_Internal_Bind bindflag)
+{
+    UNUSED(bindflag);
+    eassert (unwinding || this_binding->kind >= SPECPDL_LET);
+    switch (this_binding->kind)
+    {
+        case SPECPDL_UNWIND: TODO;
+        case SPECPDL_UNWIND_ARRAY: TODO;
+        case SPECPDL_UNWIND_PTR: TODO;
+        case SPECPDL_UNWIND_INT: TODO;
+        case SPECPDL_UNWIND_INTMAX:
+            this_binding->unwind_intmax.func (this_binding->unwind_intmax.arg);
+            break;
+        case SPECPDL_UNWIND_VOID: TODO;
+        case SPECPDL_UNWIND_EXCURSION: TODO;
+        case SPECPDL_BACKTRACE:
+        case SPECPDL_NOP:
+            break;
+        case SPECPDL_LET: TODO;
+        case SPECPDL_LET_DEFAULT: TODO;
+        case SPECPDL_LET_LOCAL: TODO;
+    }
+}
+Lisp_Object
+unbind_to (specpdl_ref count, Lisp_Object value)
+{
+#if TODO_NELISP_LATER_AND
+    Lisp_Object quitf = Vquit_flag;
+
+    Vquit_flag = Qnil;
+#endif
+
+    while (specpdl_ptr != specpdl_ref_to_ptr (count))
+    {
+        union specbinding this_binding;
+        this_binding = *--specpdl_ptr;
+
+        do_one_unbind (&this_binding, true, SET_INTERNAL_UNBIND);
+    }
+
+#if TODO_NELISP_LATER_AND
+    if (NILP (Vquit_flag) && !NILP (quitf))
+        Vquit_flag = quitf;
+#endif
+
+    return value;
+}
+
+void
+mark_specpdl (void)
+{
+    union specbinding *first = specpdl;
+    union specbinding *ptr=specpdl_ptr;
+    union specbinding *pdl;
+    for (pdl = first; pdl != ptr; pdl++)
+    {
+        switch (pdl->kind)
+        {
+            case SPECPDL_UNWIND: TODO;
+            case SPECPDL_UNWIND_ARRAY: TODO;
+            case SPECPDL_UNWIND_EXCURSION: TODO;
+            case SPECPDL_BACKTRACE: TODO;
+            case SPECPDL_LET_DEFAULT:
+            case SPECPDL_LET_LOCAL:
+                TODO;
+            case SPECPDL_LET: TODO;
+            case SPECPDL_UNWIND_PTR: TODO;
+            case SPECPDL_UNWIND_INT:
+            case SPECPDL_UNWIND_INTMAX:
+            case SPECPDL_UNWIND_VOID:
+            case SPECPDL_NOP:
+                break;
+            default:
+                emacs_abort ();
+        }
+    }
+}
 
 Lisp_Object
 eval_sub (Lisp_Object form)
@@ -25,6 +162,7 @@ eval_sub (Lisp_Object form)
 
     Lisp_Object original_fun = XCAR (form);
     Lisp_Object original_args = XCDR (form);
+    specpdl_ref count = record_in_backtrace (original_fun, &original_args, UNEVALLED);
 
     Lisp_Object fun, val;
     Lisp_Object argvals[8];
@@ -58,9 +196,7 @@ eval_sub (Lisp_Object form)
                 args_left = Fcdr (args_left);
             }
 
-#if TODO_NELISP_LATER_AND
             set_backtrace_args (specpdl_ref_to_ptr (count), argvals, numargs);
-#endif
 
             switch (i)
             {
@@ -108,6 +244,7 @@ eval_sub (Lisp_Object form)
     } else {
         TODO
     }
+    specpdl_ptr--;
     return val;
 }
 
@@ -143,10 +280,26 @@ usage: (setq [SYM VAL]...)  */)
          XSETCDR (lex_binding, val); /* SYM is lexically bound.  */
          else
 #endif
-        Fset (sym, val);	/* SYM is dynamically bound.  */
-    }
+         Fset (sym, val);	/* SYM is dynamically bound.  */
+         }
 
     return val;
+}
+
+
+static void
+init_eval_once_for_pdumper (void)
+{
+    enum { size = 50 };
+    union specbinding *pdlvec = malloc ((size + 1) * sizeof *specpdl);
+    specpdl = specpdl_ptr = pdlvec + 1;
+    specpdl_end = specpdl + size;
+}
+void
+init_eval_once (void)
+{
+    TODO_NELISP_LATER
+    init_eval_once_for_pdumper();
 }
 
 

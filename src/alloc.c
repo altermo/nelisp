@@ -2597,6 +2597,7 @@ gc_sweep (void)
 }
 
 extern void mark_lread(void);
+extern void mark_specpdl(void);
 void
 garbage_collect (void)
 {
@@ -2606,6 +2607,7 @@ garbage_collect (void)
     mark_c_stack();
     mark_lua();
     mark_lread();
+    mark_specpdl();
     eassert (mark_stack_empty_p ());
     gc_sweep ();
 }

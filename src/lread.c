@@ -4,6 +4,7 @@
 #include "alloc.c"
 #include "fns.c"
 #include "character.c"
+#include "eval.c"
 
 static Lisp_Object initial_obarray;
 static size_t oblookup_last_bucket_number;
@@ -440,9 +441,11 @@ read0 (Lisp_Object readcharfun, bool locate_syms)
     char stackbuf[64];
     char *read_buffer = stackbuf;
     ptrdiff_t read_buffer_size = sizeof stackbuf;
+    specpdl_ref base_pdl = SPECPDL_INDEX ();
+    ptrdiff_t base_sp = rdstack.sp;
+    record_unwind_protect_intmax (read_stack_reset, base_sp);
     bool uninterned_symbol;
     bool skip_shorthand;
-    ptrdiff_t base_sp = rdstack.sp;
 read_obj: ;
     Lisp_Object obj;
     bool multibyte;
@@ -615,10 +618,7 @@ read_obj: ;
             case RE_numbered: TODO;
         }
     }
-#if TODO_NELISP_LATER_ELSE
-    read_stack_reset(base_sp);
-#endif
-    return obj;
+  return unbind_to (base_pdl, obj);
 }
 void
 mark_lread (void)

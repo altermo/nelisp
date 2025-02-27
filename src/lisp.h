@@ -895,6 +895,109 @@ NATIVE_COMP_FUNCTION_DYNP (Lisp_Object a)
     return false;
 }
 
+enum maxargs
+  {
+    MANY = -2,
+    UNEVALLED = -1
+  };
+
+enum specbind_tag {
+  SPECPDL_UNWIND,
+  SPECPDL_UNWIND_ARRAY,
+  SPECPDL_UNWIND_PTR,
+  SPECPDL_UNWIND_INT,
+  SPECPDL_UNWIND_INTMAX,
+  SPECPDL_UNWIND_EXCURSION,
+  SPECPDL_UNWIND_VOID,
+  SPECPDL_BACKTRACE,
+  SPECPDL_NOP,
+  SPECPDL_LET,
+  SPECPDL_LET_LOCAL,
+  SPECPDL_LET_DEFAULT
+};
+typedef struct kboard KBOARD;
+union specbinding
+  {
+    ENUM_BF (specbind_tag) kind : CHAR_BIT;
+    struct {
+      ENUM_BF (specbind_tag) kind : CHAR_BIT;
+      void (*func) (Lisp_Object);
+      Lisp_Object arg;
+      EMACS_INT eval_depth;
+    } unwind;
+    struct {
+      ENUM_BF (specbind_tag) kind : CHAR_BIT;
+      ptrdiff_t nelts;
+      Lisp_Object *array;
+    } unwind_array;
+    struct {
+      ENUM_BF (specbind_tag) kind : CHAR_BIT;
+      void (*func) (void *);
+      void *arg;
+      void (*mark) (void *);
+    } unwind_ptr;
+    struct {
+      ENUM_BF (specbind_tag) kind : CHAR_BIT;
+      void (*func) (int);
+      int arg;
+    } unwind_int;
+    struct {
+      ENUM_BF (specbind_tag) kind : CHAR_BIT;
+      void (*func) (intmax_t);
+      intmax_t arg;
+    } unwind_intmax;
+    struct {
+      ENUM_BF (specbind_tag) kind : CHAR_BIT;
+      Lisp_Object marker, window;
+    } unwind_excursion;
+    struct {
+      ENUM_BF (specbind_tag) kind : CHAR_BIT;
+      void (*func) (void);
+    } unwind_void;
+    struct {
+      ENUM_BF (specbind_tag) kind : CHAR_BIT;
+      Lisp_Object symbol, old_value;
+      union {
+	KBOARD *kbd;
+	Lisp_Object buf;
+      } where;
+    } let;
+    struct {
+      ENUM_BF (specbind_tag) kind : CHAR_BIT;
+      bool_bf debug_on_exit : 1;
+      Lisp_Object function;
+      Lisp_Object *args;
+      ptrdiff_t nargs;
+    } bt;
+  };
+
+union specbinding *specpdl_ptr;
+union specbinding *specpdl_end;
+union specbinding *specpdl;
+
+typedef struct { ptrdiff_t bytes; } specpdl_ref;
+INLINE specpdl_ref
+wrap_specpdl_ref (ptrdiff_t bytes)
+{
+  return (specpdl_ref){.bytes = bytes};
+}
+INLINE ptrdiff_t
+unwrap_specpdl_ref (specpdl_ref ref)
+{
+  return ref.bytes;
+}
+INLINE union specbinding *
+specpdl_ref_to_ptr (specpdl_ref ref)
+{
+  return (union specbinding *)((char *)specpdl + unwrap_specpdl_ref (ref));
+}
+INLINE specpdl_ref
+SPECPDL_INDEX (void)
+{
+  return wrap_specpdl_ref ((char *)specpdl_ptr - (char *)specpdl);
+}
+
+
 #if TODO_NELISP_LATER_ELSE
 void circular_list (Lisp_Object list){
     UNUSED(list);
@@ -1119,9 +1222,4 @@ do {						\
 } while (false)
 #define DEFSYM(sym, name)
 extern void defsubr (union Aligned_Lisp_Subr *);
-enum maxargs
-  {
-    MANY = -2,
-    UNEVALLED = -1
-  };
 #endif

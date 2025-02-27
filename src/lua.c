@@ -217,6 +217,7 @@ int pub ret() init(lua_State *L){
     inited=true;
 
     init_alloc_once();
+    init_eval_once();
     init_obarray_once();
 
     syms_of_lread();
