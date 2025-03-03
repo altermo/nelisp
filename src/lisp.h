@@ -1213,11 +1213,19 @@ Lisp_Object obj=fname(DEF_TCALL_ARGS_##maxargs(maxargs));\
 push_obj(L,obj);\
 }\
 int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
-    check_nargs(L,maxargs);\
+    if (maxargs>=0)\
+        check_nargs(L,maxargs);\
+    else\
+        check_nargs(L,1);\
     static int i;\
-    for (i=1;i<=maxargs;i++){\
-        check_isobject(L,i);\
-    }\
+    if (maxargs==UNEVALLED)\
+        check_isobject(L,1);\
+    else if (maxargs==MANY)\
+        TODO;\
+    else\
+        for (i=1;i<=maxargs;i++){\
+            check_isobject(L,i);\
+        }\
     tcall(L,t_l##fname);\
     return 1;\
 }
