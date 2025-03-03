@@ -29,6 +29,17 @@ enum { MAX_3_BYTE_CHAR = 0xFFFF };
 enum { MAX_4_BYTE_CHAR = 0x1FFFFF };
 enum { MAX_5_BYTE_CHAR = 0x3FFF7F };
 
+INLINE bool
+CHAR_BYTE8_P (int c)
+{
+  return MAX_5_BYTE_CHAR < c;
+}
+INLINE int
+BYTE8_TO_CHAR (int byte)
+{
+  return byte + 0x3FFF00;
+}
+
 INLINE int
 CHAR_STRING (int c, unsigned char *p)
 {
@@ -69,5 +80,94 @@ BYTES_BY_CHAR_HEAD (int byte)
 	  : !(byte & 0x10) ? 3
 	  : !(byte & 0x08) ? 4
 	  : 5);
+}
+INLINE bool
+CHAR_BYTE8_HEAD_P (int byte)
+{
+  return byte == 0xC0 || byte == 0xC1;
+}
+INLINE int
+CHAR_TO_BYTE8 (int c)
+{
+  return CHAR_BYTE8_P (c) ? c - 0x3FFF00 : c & 0xFF;
+}
+INLINE int
+string_char_and_length (unsigned char const *p, int *length)
+{
+  int c = p[0];
+  if (! (c & 0x80))
+    {
+      *length = 1;
+      return c;
+    }
+  eassume (0xC0 <= c);
+
+  int d = (c << 6) + p[1] - ((0xC0 << 6) + 0x80);
+  if (! (c & 0x20))
+    {
+      *length = 2;
+      return d + (c < 0xC2 ? 0x3FFF80 : 0);
+    }
+
+  d = (d << 6) + p[2] - ((0x20 << 12) + 0x80);
+  if (! (c & 0x10))
+    {
+      *length = 3;
+      eassume (MAX_2_BYTE_CHAR < d && d <= MAX_3_BYTE_CHAR);
+      return d;
+    }
+
+  d = (d << 6) + p[3] - ((0x10 << 18) + 0x80);
+  if (! (c & 0x08))
+    {
+      *length = 4;
+      eassume (MAX_3_BYTE_CHAR < d && d <= MAX_4_BYTE_CHAR);
+      return d;
+    }
+
+  d = (d << 6) + p[4] - ((0x08 << 24) + 0x80);
+  *length = 5;
+  eassume (MAX_4_BYTE_CHAR < d && d <= MAX_5_BYTE_CHAR);
+  return d;
+}
+INLINE int
+string_char_advance (unsigned char const **pp)
+{
+  unsigned char const *p = *pp;
+  int len, c = string_char_and_length (p, &len);
+  *pp = p + len;
+  return c;
+}
+ptrdiff_t
+str_as_unibyte (unsigned char *str, ptrdiff_t bytes)
+{
+  const unsigned char *p = str, *endp = str + bytes;
+  unsigned char *to;
+  int c, len;
+
+  while (p < endp)
+    {
+      c = *p;
+      len = BYTES_BY_CHAR_HEAD (c);
+      if (CHAR_BYTE8_HEAD_P (c))
+	break;
+      p += len;
+    }
+  to = str + (p - str);
+  while (p < endp)
+    {
+      c = *p;
+      len = BYTES_BY_CHAR_HEAD (c);
+      if (CHAR_BYTE8_HEAD_P (c))
+	{
+	  c = string_char_advance (&p);
+	  *to++ = CHAR_TO_BYTE8 (c);
+	}
+      else
+	{
+	  while (len--) *to++ = *p++;
+	}
+    }
+  return (to - str);
 }
 #endif

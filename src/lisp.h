@@ -728,6 +728,12 @@ memclear (void *p, ptrdiff_t nbytes)
 #define VECSIZE(type)						\
 ((sizeof (type) - header_size + word_size - 1) / word_size)
 
+INLINE bool
+ASCII_CHAR_P (intmax_t c)
+{
+  return 0 <= c && c < 0x80;
+}
+
 struct Lisp_Subr
 {
     union vectorlike_header header;
@@ -860,6 +866,19 @@ XFLOAT_DATA (Lisp_Object f)
 {
     return XFLOAT (f)->u.data;
 }
+
+enum char_bits
+  {
+    CHAR_ALT = 0x0400000,
+    CHAR_SUPER = 0x0800000,
+    CHAR_HYPER = 0x1000000,
+    CHAR_SHIFT = 0x2000000,
+    CHAR_CTL = 0x4000000,
+    CHAR_META = 0x8000000,
+    CHAR_MODIFIER_MASK =
+      CHAR_ALT | CHAR_SUPER | CHAR_HYPER | CHAR_SHIFT | CHAR_CTL | CHAR_META,
+    CHARACTERBITS = 22
+  };
 
 INLINE EMACS_INT
 XFIXNAT (Lisp_Object a)

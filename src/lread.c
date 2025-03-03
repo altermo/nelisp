@@ -435,6 +435,109 @@ invalid_syntax (const char *s, Lisp_Object readcharfun)
     TODO;
 }
 static Lisp_Object
+read_string_literal (Lisp_Object readcharfun)
+{
+    char stackbuf[1024];
+    char *read_buffer = stackbuf;
+    ptrdiff_t read_buffer_size = sizeof stackbuf;
+    specpdl_ref count = SPECPDL_INDEX ();
+    // char *heapbuf = NULL;
+    char *p = read_buffer;
+    char *end = read_buffer + read_buffer_size;
+    bool force_multibyte = false;
+    bool force_singlebyte = false;
+    ptrdiff_t nchars = 0;
+    int ch;
+    while ((ch = READCHAR) >= 0 && ch != '\"')
+    {
+        if (end - p < MAX_MULTIBYTE_LENGTH)
+        {
+            ptrdiff_t offset = p - read_buffer;
+            TODO;
+            p = read_buffer + offset;
+            end = read_buffer + read_buffer_size;
+        }
+
+        if (ch == '\\')
+        {
+            ch = READCHAR;
+            switch (ch)
+            {
+                case 's':
+                    ch = ' ';
+                    break;
+                case ' ':
+                case '\n':
+                    continue;
+                default:
+                    TODO;
+                    break;
+            }
+
+            int modifiers = ch & CHAR_MODIFIER_MASK;
+            ch &= ~CHAR_MODIFIER_MASK;
+
+            if (CHAR_BYTE8_P (ch))
+                force_singlebyte = true;
+            else if (! ASCII_CHAR_P (ch))
+                force_multibyte = true;
+            else
+            {
+                if (modifiers == CHAR_CTL && ch == ' ')
+                {
+                    ch = 0;
+                    modifiers = 0;
+                }
+                if (modifiers & CHAR_SHIFT)
+                {
+                    if (ch >= 'A' && ch <= 'Z')
+                        modifiers &= ~CHAR_SHIFT;
+                    else if (ch >= 'a' && ch <= 'z')
+                    {
+                    ch -= ('a' - 'A');
+                    modifiers &= ~CHAR_SHIFT;
+                }
+                }
+
+                if (modifiers & CHAR_META)
+                {
+                    modifiers &= ~CHAR_META;
+                    ch = BYTE8_TO_CHAR (ch | 0x80);
+                    force_singlebyte = true;
+                }
+            }
+
+            if (modifiers)
+                invalid_syntax ("Invalid modifier in string", readcharfun);
+            p += CHAR_STRING (ch, (unsigned char *) p);
+        }
+        else
+    {
+            p += CHAR_STRING (ch, (unsigned char *) p);
+            if (CHAR_BYTE8_P (ch))
+                force_singlebyte = true;
+            else if (! ASCII_CHAR_P (ch))
+                force_multibyte = true;
+        }
+        nchars++;
+    }
+
+    if (ch < 0)
+        end_of_file_error ();
+
+    if (!force_multibyte && force_singlebyte)
+    {
+        nchars = str_as_unibyte ((unsigned char *) read_buffer,
+                                 p - read_buffer);
+        p = read_buffer + nchars;
+    }
+
+    Lisp_Object obj = make_specified_string (read_buffer, nchars, p - read_buffer,
+                                             (force_multibyte
+                                             || (p - read_buffer != nchars)));
+    return unbind_to (count, obj);
+}
+static Lisp_Object
 read0 (Lisp_Object readcharfun, bool locate_syms)
 {
     TODO_NELISP_LATER;
@@ -479,7 +582,9 @@ read_obj: ;
         case ']': TODO;
         case '#': TODO;
         case '?': TODO;
-        case '"': TODO;
+        case '"':
+            obj = read_string_literal (readcharfun);
+            break;
         case '\'': TODO;
         case '`': TODO;
         case ',': TODO;
