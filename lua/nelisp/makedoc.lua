@@ -247,6 +247,13 @@ local function cfn_to_meta(cfn,out)
     for name,maxargs in vim.spairs(cfn) do
         table.insert(out,'')
         local arg_vars={}
+        if maxargs==-1 then
+            table.insert(out,('---@param form nelisp.obj'))
+            table.insert(arg_vars,'form')
+        elseif maxargs==-2 then
+            table.insert(out,('---@param args nelisp.obj[]'))
+            table.insert(arg_vars,'args')
+        end
         for i=1,maxargs do
             assert(varnames:sub(i,i)~='')
             table.insert(arg_vars,varnames:sub(i,i))
