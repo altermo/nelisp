@@ -1154,9 +1154,16 @@ INLINE void check_isobject(lua_State *L,int n){
     check_obj(L,n);
 }
 
-INLINE void check_istable(lua_State *L,int n){
+INLINE void check_istable_with_obj(lua_State *L,int n){
     if (!lua_istable(L,n))
         luaL_error(L,"Wrong argument #%d: expected table, got %s",n,lua_typename(L,lua_type(L,n)));
+    if (!lua_checkstack(L,lua_gettop(L)+5))
+        luaL_error(L,"Lua stack overflow");
+    for (lua_pushnil(L); lua_next(L,n); lua_pop(L,1)){
+        if (!lua_isuserdata(L,-1))
+            luaL_error(L,"Expected table of userdata(lisp objects)");
+        check_obj(L,-1);
+    }
 }
 
 static jmp_buf mainloop_jmp;
@@ -1196,6 +1203,26 @@ void mainloop(void){
     }
 }
 
+#define DEF_TCALL_ARGS_PRE_0
+#define DEF_TCALL_ARGS_PRE_1
+#define DEF_TCALL_ARGS_PRE_2
+#define DEF_TCALL_ARGS_PRE_3
+#define DEF_TCALL_ARGS_PRE_4
+#define DEF_TCALL_ARGS_PRE_5
+#define DEF_TCALL_ARGS_PRE_6
+#define DEF_TCALL_ARGS_PRE_7
+#define DEF_TCALL_ARGS_PRE_8
+#define DEF_TCALL_ARGS_PRE_UNEVALLED
+#define DEF_TCALL_ARGS_PRE_MANY\
+    if (!lua_checkstack(L,lua_gettop(L)+5))\
+        luaL_error(L,"Lua stack overflow");\
+    ptrdiff_t len = lua_objlen(L,1);\
+    Lisp_Object args[len];\
+    for (ptrdiff_t i=0; i<len; i++){\
+        lua_rawgeti(L,1,i+1);\
+        args[i] = userdata_to_obj(L,-1);\
+        lua_pop(L,1);\
+    }
 #define DEF_TCALL_ARGS_0(fname)
 #define DEF_TCALL_ARGS_1(fname) userdata_to_obj(L,1)
 #define DEF_TCALL_ARGS_2(fname) DEF_TCALL_ARGS_1(fname),userdata_to_obj(L,2)
@@ -1206,9 +1233,11 @@ void mainloop(void){
 #define DEF_TCALL_ARGS_7(fname) DEF_TCALL_ARGS_6(fname),userdata_to_obj(L,7)
 #define DEF_TCALL_ARGS_8(fname) DEF_TCALL_ARGS_7(fname),userdata_to_obj(L,8)
 #define DEF_TCALL_ARGS_UNEVALLED(fname) userdata_to_obj(L,1)
+#define DEF_TCALL_ARGS_MANY(fname) len,args
 
 #define DEFUN_LUA_N(fname,maxargs)\
 void t_l##fname(lua_State *L) {\
+DEF_TCALL_ARGS_PRE_##maxargs;\
 Lisp_Object obj=fname(DEF_TCALL_ARGS_##maxargs(maxargs));\
 push_obj(L,obj);\
 }\
@@ -1220,9 +1249,9 @@ int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
     static int i;\
     if (maxargs==UNEVALLED)\
         check_isobject(L,1);\
-    else if (maxargs==MANY)\
-        TODO;\
-    else\
+    else if (maxargs==MANY){\
+        check_istable_with_obj(L,1);\
+    } else\
         for (i=1;i<=maxargs;i++){\
             check_isobject(L,i);\
         }\
