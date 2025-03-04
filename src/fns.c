@@ -130,4 +130,41 @@ string_char_to_byte (Lisp_Object string, ptrdiff_t char_index)
 
   return i_byte;
 }
+
+Lisp_Object
+plist_get (Lisp_Object plist, Lisp_Object prop)
+{
+    Lisp_Object tail = plist;
+    FOR_EACH_TAIL_SAFE (tail)
+    {
+        if (! CONSP (XCDR (tail)))
+            break;
+        if (EQ (XCAR (tail), prop))
+            return XCAR (XCDR (tail));
+        tail = XCDR (tail);
+    }
+    return Qnil;
+}
+DEFUN ("get", Fget, Sget, 2, 2, 0,
+       doc: /* Return the value of SYMBOL's PROPNAME property.
+This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.  */)
+  (Lisp_Object symbol, Lisp_Object propname)
+{
+#if TODO_NELISP_LATER_AND
+    CHECK_SYMBOL (symbol);
+    Lisp_Object propval = plist_get (CDR (Fassq (symbol,
+                                                 Voverriding_plist_environment)),
+                                     propname);
+    if (!NILP (propval))
+        return propval;
+#endif
+    return plist_get (XSYMBOL (symbol)->u.s.plist, propname);
+}
+
+void
+syms_of_fns (void)
+{
+    defsubr(&Sget);
+}
+
 #endif

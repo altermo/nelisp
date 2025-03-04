@@ -1047,6 +1047,8 @@ struct for_each_tail_internal
 	? (cycle) : (void) 0))
 #define FOR_EACH_TAIL(tail) \
   FOR_EACH_TAIL_INTERNAL (tail, circular_list (tail), true)
+#define FOR_EACH_TAIL_SAFE(tail) \
+  FOR_EACH_TAIL_INTERNAL (tail, (void) ((tail) = Qnil), false)
 enum Set_Internal_Bind
   {
     SET_INTERNAL_SET,
