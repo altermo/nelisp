@@ -153,6 +153,7 @@ local function diff(a,b)
         'DEFINE_GDB_SYMBOL_BEGIN%s*%b()',
         'DEFINE_GDB_SYMBOL_END%s*%b()',
         'ATTRIBUTE_NO_SANITIZE_UNDEFINED',
+        '%s*##%s*',
     }
     for _,r in ipairs(remove) do
         a=a:gsub(r,'')
