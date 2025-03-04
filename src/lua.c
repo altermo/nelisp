@@ -230,9 +230,11 @@ int pub ret() init(lua_State *L){
 
     init_keyboard();
 
+    unrecoverable_error=true;
     if (!setjmp(mainloop_return_jmp)){
         Frecursive_edit();
     }
+    unrecoverable_error=false;
 
     return 0;
 }
