@@ -1172,16 +1172,6 @@ static jmp_buf mainloop_jmp;
 static jmp_buf mainloop_return_jmp;
 static void (*mainloop_func)(void);
 static bool mainloop_error=false;
-INLINE void enter_mainloop(void (*f)(void)){
-    mainloop_func=f;
-    if (!setjmp(mainloop_return_jmp)){
-        longjmp(mainloop_jmp,1);
-    };
-    if (mainloop_error){
-        mainloop_error=false;
-        lua_error(global_lua_state);
-    }
-}
 static void (*tcall_func_var)(lua_State *L);
 static int tcall_func_n(lua_State *L){
     tcall_func_var(L);
@@ -1195,12 +1185,19 @@ INLINE void tcall_func(void){
         mainloop_error=true;
     }
 }
-// If this is not a macro, then it will crash
-#define tcall(L,f)\
-if (global_lua_state!=L)\
-    TODO; /*use lua_xmove to move between the states*/ \
-tcall_func_var=f;\
-enter_mainloop(tcall_func);
+void tcall(lua_State *L,void (*f)(lua_State *L)){
+    if (global_lua_state!=L)
+        TODO; /*use lua_xmove to move between the states*/ \
+    tcall_func_var=f;
+    mainloop_func=tcall_func;
+    if (!setjmp(mainloop_return_jmp)){
+        longjmp(mainloop_jmp,1);
+    }
+    if (mainloop_error){
+        mainloop_error=false;
+        lua_error(global_lua_state);
+    }
+}
 
 #define DEF_TCALL_ARGS_PRE_0
 #define DEF_TCALL_ARGS_PRE_1
