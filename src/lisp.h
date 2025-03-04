@@ -1171,11 +1171,16 @@ INLINE void check_istable_with_obj(lua_State *L,int n){
 static jmp_buf mainloop_jmp;
 static jmp_buf mainloop_return_jmp;
 static void (*mainloop_func)(void);
+static bool mainloop_error=false;
 INLINE void enter_mainloop(void (*f)(void)){
     mainloop_func=f;
     if (!setjmp(mainloop_return_jmp)){
         longjmp(mainloop_jmp,1);
     };
+    if (mainloop_error){
+        mainloop_error=false;
+        lua_error(global_lua_state);
+    }
 }
 static void (*tcall_func_var)(lua_State *L);
 static int tcall_func_n(lua_State *L){
@@ -1187,7 +1192,7 @@ INLINE void tcall_func(void){
     lua_insert(global_lua_state,1);
     if (lua_pcall(global_lua_state,lua_gettop(global_lua_state)-1,1,0)){
         unrecoverable_error=true;
-        lua_error(global_lua_state);
+        mainloop_error=true;
     }
 }
 // If this is not a macro, then it will crash
@@ -1196,14 +1201,6 @@ if (global_lua_state!=L)\
     TODO; /*use lua_xmove to move between the states*/ \
 tcall_func_var=f;\
 enter_mainloop(tcall_func);
-void mainloop(void){
-    TODO_NELISP_LATER; // move function to somewhere else
-    while (1){
-        if (!setjmp(mainloop_jmp))
-            longjmp(mainloop_return_jmp,1);
-        mainloop_func();
-    }
-}
 
 #define DEF_TCALL_ARGS_PRE_0
 #define DEF_TCALL_ARGS_PRE_1

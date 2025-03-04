@@ -5,6 +5,7 @@
 #include "lread.c"
 #include "data.c"
 #include "eval.c"
+#include "keyboard.c"
 
 void t_number_to_fixnum(lua_State *L){
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
@@ -225,9 +226,12 @@ int pub ret() init(lua_State *L){
     syms_of_alloc();
     syms_of_eval();
     syms_of_fns();
+    syms_of_keyboard();
+
+    init_keyboard();
 
     if (!setjmp(mainloop_return_jmp)){
-        mainloop();
+        Frecursive_edit();
     }
 
     return 0;
