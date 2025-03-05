@@ -1206,6 +1206,31 @@ extern void syms_of_editfns (void);
 extern void syms_of_emacs (void);
 
 
+#define DEFUN(lname, fnname, sname, minargs, maxargs, intspec, doc) \
+static union Aligned_Lisp_Subr sname =                            \
+{{{ PVEC_SUBR << PSEUDOVECTOR_AREA_BITS },			    \
+{ .a ## maxargs = fnname },				    \
+minargs, maxargs, lname, {intspec}, lisp_h_Qnil, 0}};	    \
+DEFUN_LUA_N(fnname,maxargs)\
+Lisp_Object fnname
+
+
+struct Lisp_Objfwd
+{
+    enum Lisp_Fwd_Type type;
+    Lisp_Object *objvar;
+};
+extern void defvar_lisp (struct Lisp_Objfwd const *, char const *);
+#define DEFVAR_LISP(lname, vname, doc)		\
+do {						\
+    static struct Lisp_Objfwd const o_fwd	\
+        = {Lisp_Fwd_Obj, &globals.f_##vname};	\
+    defvar_lisp (&o_fwd, lname);		\
+} while (false)
+#define DEFSYM(sym, name)
+extern void defsubr (union Aligned_Lisp_Subr *);
+
+/* --- lua -- */
 #ifdef ENABLE_CHECKING
 #error "TODO"
 #else
@@ -1402,28 +1427,4 @@ int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
     tcall(L,t_l##fname);\
     return 1;\
 }
-
-#define DEFUN(lname, fnname, sname, minargs, maxargs, intspec, doc) \
-static union Aligned_Lisp_Subr sname =                            \
-{{{ PVEC_SUBR << PSEUDOVECTOR_AREA_BITS },			    \
-{ .a ## maxargs = fnname },				    \
-minargs, maxargs, lname, {intspec}, lisp_h_Qnil, 0}};	    \
-DEFUN_LUA_N(fnname,maxargs)\
-Lisp_Object fnname
-
-
-struct Lisp_Objfwd
-{
-    enum Lisp_Fwd_Type type;
-    Lisp_Object *objvar;
-};
-extern void defvar_lisp (struct Lisp_Objfwd const *, char const *);
-#define DEFVAR_LISP(lname, vname, doc)		\
-do {						\
-    static struct Lisp_Objfwd const o_fwd	\
-        = {Lisp_Fwd_Obj, &globals.f_##vname};	\
-    defvar_lisp (&o_fwd, lname);		\
-} while (false)
-#define DEFSYM(sym, name)
-extern void defsubr (union Aligned_Lisp_Subr *);
 #endif
