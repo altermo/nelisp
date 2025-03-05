@@ -1110,6 +1110,11 @@ safe_free (specpdl_ref sa_count)
 	}
     }
 }
+extern Lisp_Object list1 (Lisp_Object);
+extern Lisp_Object list2 (Lisp_Object, Lisp_Object);
+extern Lisp_Object list3 (Lisp_Object, Lisp_Object, Lisp_Object);
+extern Lisp_Object list4 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
+extern Lisp_Object list5 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
 
 
 #if TODO_NELISP_LATER_ELSE

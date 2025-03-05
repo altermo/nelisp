@@ -1131,6 +1131,39 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
     return val;
 }
 
+Lisp_Object
+list1 (Lisp_Object arg1)
+{
+  return Fcons (arg1, Qnil);
+}
+
+Lisp_Object
+list2 (Lisp_Object arg1, Lisp_Object arg2)
+{
+  return Fcons (arg1, Fcons (arg2, Qnil));
+}
+
+
+Lisp_Object
+list3 (Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3)
+{
+  return Fcons (arg1, Fcons (arg2, Fcons (arg3, Qnil)));
+}
+
+Lisp_Object
+list4 (Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3, Lisp_Object arg4)
+{
+  return Fcons (arg1, Fcons (arg2, Fcons (arg3, Fcons (arg4, Qnil))));
+}
+
+Lisp_Object
+list5 (Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3, Lisp_Object arg4,
+       Lisp_Object arg5)
+{
+  return Fcons (arg1, Fcons (arg2, Fcons (arg3, Fcons (arg4,
+						       Fcons (arg5, Qnil)))));
+}
+
 /* --- vector allocation -- */
 
 static struct Lisp_Vector *

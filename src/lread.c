@@ -582,7 +582,12 @@ read_obj: ;
         case '"':
             obj = read_string_literal (readcharfun);
             break;
-        case '\'': TODO;
+        case '\'':
+            read_stack_push ((struct read_stack_entry) {
+                .type = RE_special,
+                .u.special.symbol = Qquote,
+            });
+            goto read_obj;
         case '`': TODO;
         case ',': TODO;
         case ';':
@@ -716,7 +721,10 @@ read_obj: ;
             case RE_byte_code:
             case RE_string_props:
                 TODO;
-            case RE_special: TODO;
+            case RE_special:
+                read_stack_pop ();
+                obj = list2 (e->u.special.symbol, obj);
+                break;
             case RE_numbered: TODO;
         }
     }
