@@ -24,8 +24,7 @@ usage: (message FORMAT-STRING &rest ARGS)  */)
 {
     UNUSED (nargs);
     TODO_NELISP_LATER;
-    if (!lua_checkstack(global_lua_state,lua_gettop(global_lua_state)+5))
-        luaL_error(global_lua_state,"Lua stack overflow");
+    lcheckstack(global_lua_state,5);
     int top = lua_gettop(global_lua_state);
     lua_getglobal(global_lua_state,"print");
     lua_pushlstring(global_lua_state,(char*)SDATA(args[0]),SBYTES(args[0]));

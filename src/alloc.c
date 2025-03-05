@@ -2384,8 +2384,7 @@ mark_c_stack (void)
 static void
 mark_lua (void) {
     lua_State *L = global_lua_state;
-    if (!lua_checkstack(L,lua_gettop(L)+10))
-        luaL_error(L,"Lua stack overflow");
+    lcheckstack(L,10);
     lua_getfield(L,LUA_ENVIRONINDEX,"memtbl");
     eassert(lua_istable(L,-1));
     // (-1)memtbl

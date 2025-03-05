@@ -1238,9 +1238,13 @@ extern void defsubr (union Aligned_Lisp_Subr *);
 #define check_obj(L,idx)
 #endif
 
-INLINE Lisp_Object userdata_to_obj(lua_State *L,int idx){
-    if (!lua_checkstack(L,lua_gettop(L)+5))
+INLINE void lcheckstack(lua_State* L,int n){
+    if (!lua_checkstack(L,lua_gettop(L)+n))
         luaL_error(L,"Lua stack overflow");
+}
+
+INLINE Lisp_Object userdata_to_obj(lua_State *L,int idx){
+    lcheckstack(L,5);
     check_obj(L,idx);
 
     if (lua_islightuserdata(L,idx)){
@@ -1255,8 +1259,7 @@ INLINE Lisp_Object userdata_to_obj(lua_State *L,int idx){
 }
 
 INLINE void push_obj(lua_State *L, Lisp_Object obj){
-    if (!lua_checkstack(L,lua_gettop(L)+10))
-        luaL_error(L,"Lua stack overflow");
+    lcheckstack(L,10);
     if (FIXNUMP(obj)) {
         lua_pushlightuserdata(L,obj);
         set_obj_check(L,-1);
@@ -1332,8 +1335,7 @@ INLINE void check_isobject(lua_State *L,int n){
 INLINE void check_istable_with_obj(lua_State *L,int n){
     if (!lua_istable(L,n))
         luaL_error(L,"Wrong argument #%d: expected table, got %s",n,lua_typename(L,lua_type(L,n)));
-    if (!lua_checkstack(L,lua_gettop(L)+5))
-        luaL_error(L,"Lua stack overflow");
+    lcheckstack(L,5);
     for (lua_pushnil(L); lua_next(L,n); lua_pop(L,1)){
         if (!lua_isuserdata(L,-1))
             luaL_error(L,"Expected table of userdata(lisp objects)");
@@ -1383,8 +1385,7 @@ INLINE void tcall(lua_State *L,void (*f)(lua_State *L)){
 #define DEF_TCALL_ARGS_PRE_8
 #define DEF_TCALL_ARGS_PRE_UNEVALLED
 #define DEF_TCALL_ARGS_PRE_MANY\
-    if (!lua_checkstack(L,lua_gettop(L)+5))\
-        luaL_error(L,"Lua stack overflow");\
+    lcheckstack(L,5);\
     ptrdiff_t len = lua_objlen(L,1);\
     Lisp_Object args[len];\
     for (ptrdiff_t i=0; i<len; i++){\
