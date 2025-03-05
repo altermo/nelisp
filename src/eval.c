@@ -5,6 +5,9 @@
 #include "fns.c"
 #include "lisp.h"
 
+#define CACHEABLE
+#define clobbered_eassert(E) eassert (sizeof (E) != 0)
+
 void
 grow_specpdl_allocation (void)
 {
@@ -138,6 +141,58 @@ mark_specpdl (void)
             default:
                 emacs_abort ();
         }
+    }
+}
+
+struct handler *
+push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
+{
+    struct handler *CACHEABLE c = handlerlist->nextfree;
+    if (!c)
+    {
+        c = malloc (sizeof *c);
+        if (!c)
+            return c;
+        c->nextfree = NULL;
+        handlerlist->nextfree = c;
+    }
+    c->type = handlertype;
+    c->tag_or_ch = tag_ch_val;
+    c->val = Qnil;
+    c->next = handlerlist;
+    c->f_lisp_eval_depth = lisp_eval_depth;
+    c->pdlcount = SPECPDL_INDEX ();
+    TODO_NELISP_LATER;
+    // c->act_rec = get_act_rec (current_thread);
+    // c->poll_suppress_count = poll_suppress_count;
+    // c->interrupt_input_blocked = interrupt_input_blocked;
+    handlerlist = c;
+    return c;
+}
+struct handler *
+push_handler (Lisp_Object tag_ch_val, enum handlertype handlertype)
+{
+    struct handler *c = push_handler_nosignal (tag_ch_val, handlertype);
+    if (!c)
+        memory_full (sizeof *c);
+    return c;
+}
+Lisp_Object
+internal_catch (Lisp_Object tag,
+                Lisp_Object (*func) (Lisp_Object), Lisp_Object arg)
+{
+    struct handler *c = push_handler (tag, CATCHER);
+    if (! sys_setjmp (c->jmp))
+    {
+        Lisp_Object val = func (arg);
+        eassert (handlerlist == c);
+        handlerlist = c->next;
+        return val;
+    } else {
+        Lisp_Object val = handlerlist->val;
+        clobbered_eassert (handlerlist == c);
+        handlerlist = handlerlist->next;
+        return val;
     }
 }
 
@@ -317,6 +372,15 @@ void
 init_eval (void)
 {
     TODO_NELISP_LATER;
+    specpdl_ptr = specpdl;
+    {
+        handlerlist_sentinel = xzalloc (sizeof (struct handler));
+        handlerlist = handlerlist_sentinel->nextfree = handlerlist_sentinel;
+        struct handler *c = push_handler (Qunbound, CATCHER);
+        eassert (c == handlerlist_sentinel);
+        handlerlist_sentinel->nextfree = NULL;
+        handlerlist_sentinel->next = NULL;
+    }
     lisp_eval_depth = 0;
 }
 

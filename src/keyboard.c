@@ -44,8 +44,7 @@ command_loop (void)
     while (1)
     {
         // internal_catch (Qtop_level, top_level_1, Qnil);
-        command_loop_2(Qerror);
-        // internal_catch (Qtop_level, command_loop_2, Qerror);
+        internal_catch (Qtop_level, command_loop_2, Qerror);
         // executing_kbd_macro = Qnil;
         //
         // if (noninteractive)

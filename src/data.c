@@ -121,6 +121,8 @@ DEFUN ("set", Fset, Sset, 2, 2, 0,
 void
 syms_of_data (void)
 {
+    DEFSYM (Qtop_level, "top-level");
+
     defsubr (&Ssymbol_value);
     defsubr (&Scar);
     defsubr (&Scdr);

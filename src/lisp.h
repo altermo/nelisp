@@ -776,6 +776,9 @@ XSUBR (Lisp_Object a)
   return &XUNTAG (a, Lisp_Vectorlike, union Aligned_Lisp_Subr)->s;
 }
 
+typedef jmp_buf sys_jmp_buf;
+#define sys_setjmp(j) _setjmp (j)
+#define sys_longjmp(j, v) _longjmp (j, v)
 #include "thread.h"
 
 INLINE Lisp_Object
@@ -1017,6 +1020,37 @@ SPECPDL_INDEX (void)
 {
   return wrap_specpdl_ref ((char *)specpdl_ptr - (char *)specpdl);
 }
+
+
+enum handlertype {
+  CATCHER,
+  CONDITION_CASE,
+  CATCHER_ALL,
+  HANDLER_BIND,
+  SKIP_CONDITIONS
+};
+enum nonlocal_exit
+{
+  NONLOCAL_EXIT_SIGNAL,
+  NONLOCAL_EXIT_THROW,
+};
+struct handler
+{
+  enum handlertype type;
+  Lisp_Object tag_or_ch;
+  enum nonlocal_exit nonlocal_exit;
+  Lisp_Object val;
+  struct handler *next;
+  struct handler *nextfree;
+  Lisp_Object *bytecode_top;
+  int bytecode_dest;
+  sys_jmp_buf jmp;
+  EMACS_INT f_lisp_eval_depth;
+  specpdl_ref pdlcount;
+  struct bc_frame *act_rec;
+  int poll_suppress_count;
+  int interrupt_input_blocked;
+};
 
 
 #if TODO_NELISP_LATER_ELSE

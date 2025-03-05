@@ -229,6 +229,7 @@ int pub ret() init(lua_State *L){
     syms_of_keyboard();
 
     init_keyboard();
+    init_eval();
 
     unrecoverable_error=true;
     if (!setjmp(mainloop_return_jmp)){
