@@ -1,7 +1,7 @@
 #include "lisp.h"
 #include "character.h"
 
-struct Lisp_Symbol lispsym[8];
+struct Lisp_Symbol lispsym[];
 
 static Lisp_Object initial_obarray;
 static size_t oblookup_last_bucket_number;
