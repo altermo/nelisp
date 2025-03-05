@@ -6,6 +6,7 @@
 #include "data.c"
 #include "eval.c"
 #include "keyboard.c"
+#include "editfns.c"
 
 void t_number_to_fixnum(lua_State *L){
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
@@ -227,6 +228,7 @@ int pub ret() init(lua_State *L){
     syms_of_eval();
     syms_of_fns();
     syms_of_keyboard();
+    syms_of_editfns();
 
     init_keyboard();
     init_eval();

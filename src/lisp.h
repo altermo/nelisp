@@ -10,6 +10,7 @@
 #include <stdalign.h>
 #include <setjmp.h>
 #include <stdckdint.h>
+#include <alloca.h>
 
 #include <luajit-2.1/lua.h>
 #include <luajit-2.1/lauxlib.h>
@@ -1051,6 +1052,50 @@ struct handler
   int poll_suppress_count;
   int interrupt_input_blocked;
 };
+
+
+extern void record_unwind_protect_array (Lisp_Object *, ptrdiff_t);
+#define SAFE_ALLOCA_LISP(buf, nelt) SAFE_ALLOCA_LISP_EXTRA (buf, nelt, 0)
+enum MAX_ALLOCA { MAX_ALLOCA = 16 * 1024 };
+#define AVAIL_ALLOCA(size) (sa_avail -= (size), alloca (size))
+#define USE_SAFE_ALLOCA			\
+  unsigned long sa_avail = MAX_ALLOCA;	\
+  specpdl_ref sa_count = SPECPDL_INDEX ()
+#define SAFE_ALLOCA_LISP_EXTRA(buf, nelt, extra)	       \
+do {							       \
+    unsigned long alloca_nbytes;				       \
+    if (ckd_mul (&alloca_nbytes, nelt, word_size)	       \
+        || ckd_add (&alloca_nbytes, alloca_nbytes, extra)      \
+        || SIZE_MAX < alloca_nbytes)			       \
+        memory_full (SIZE_MAX);				       \
+    else if (alloca_nbytes <= sa_avail)			       \
+        (buf) = AVAIL_ALLOCA (alloca_nbytes);		       \
+    else						       \
+    {							       \
+        (buf) = xzalloc (alloca_nbytes);		       \
+        record_unwind_protect_array (buf, nelt);	       \
+    }							       \
+} while (false)
+#define SAFE_FREE() safe_free (sa_count)
+extern void xfree (void *);
+INLINE void
+safe_free (specpdl_ref sa_count)
+{
+  while (specpdl_ptr != specpdl_ref_to_ptr (sa_count))
+    {
+      specpdl_ptr--;
+      if (specpdl_ptr->kind == SPECPDL_UNWIND_PTR)
+	{
+	  eassert (specpdl_ptr->unwind_ptr.func == xfree);
+	  xfree (specpdl_ptr->unwind_ptr.arg);
+	}
+      else
+	{
+	  eassert (specpdl_ptr->kind == SPECPDL_UNWIND_ARRAY);
+	  xfree (specpdl_ptr->unwind_array.array);
+	}
+    }
+}
 
 
 #if TODO_NELISP_LATER_ELSE

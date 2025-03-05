@@ -39,6 +39,14 @@ record_unwind_protect_intmax (void (*function) (intmax_t), intmax_t arg)
     specpdl_ptr->unwind_intmax.arg = arg;
     grow_specpdl ();
 }
+void
+record_unwind_protect_array (Lisp_Object *array, ptrdiff_t nelts)
+{
+  specpdl_ptr->unwind_array.kind = SPECPDL_UNWIND_ARRAY;
+  specpdl_ptr->unwind_array.array = array;
+  specpdl_ptr->unwind_array.nelts = nelts;
+  grow_specpdl ();
+}
 
 INLINE specpdl_ref
 record_in_backtrace (Lisp_Object function, Lisp_Object *args, ptrdiff_t nargs)
@@ -251,7 +259,32 @@ eval_sub (Lisp_Object form)
             val = (XSUBR (fun)->function.aUNEVALLED) (args_left);
         else if (XSUBR (fun)->max_args == MANY
                 || XSUBR (fun)->max_args > 8) {
-        TODO;
+
+        Lisp_Object *vals;
+        ptrdiff_t argnum = 0;
+        USE_SAFE_ALLOCA;
+
+        SAFE_ALLOCA_LISP (vals, numargs);
+
+        while (CONSP (args_left) && argnum < numargs)
+        {
+            Lisp_Object arg = XCAR (args_left);
+            args_left = XCDR (args_left);
+            vals[argnum++] = eval_sub (arg);
+        }
+
+        set_backtrace_args (specpdl_ref_to_ptr (count), vals, argnum);
+
+        val = XSUBR (fun)->function.aMANY (argnum, vals);
+
+        lisp_eval_depth--;
+        #if TODO_NELISP_LATER_AND
+        if (backtrace_debug_on_exit (specpdl_ref_to_ptr (count)))
+            val = call_debugger (list2 (Qexit, val));
+        #endif
+        SAFE_FREE ();
+        specpdl_ptr--;
+        return val;
     } else {
             int i, maxargs = XSUBR (fun)->max_args;
 
