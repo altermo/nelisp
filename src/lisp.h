@@ -788,6 +788,12 @@ SYMBOL_VAL (struct Lisp_Symbol *sym)
     eassert (sym->u.s.redirect == SYMBOL_PLAINVAL);
     return sym->u.s.val.value;
 }
+INLINE lispfwd
+SYMBOL_FWD (struct Lisp_Symbol *sym)
+{
+  eassume (sym->u.s.redirect == SYMBOL_FORWARDED && sym->u.s.val.fwd.fwdptr);
+  return sym->u.s.val.fwd;
+}
 
 INLINE void
 SET_SYMBOL_VAL (struct Lisp_Symbol *sym, Lisp_Object v)
@@ -850,6 +856,13 @@ knuth_hash (hash_hash_t hash, unsigned bits)
     unsigned int product = (h * alpha) & 0xffffffffu;
     unsigned long long int wide_product = product;
     return wide_product >> (32 - bits);
+}
+
+INLINE enum Lisp_Fwd_Type
+XFWDTYPE (lispfwd a)
+{
+  enum Lisp_Fwd_Type const *p = a.fwdptr;
+  return *p;
 }
 
 struct Lisp_Float

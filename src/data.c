@@ -3,6 +3,18 @@
 
 #include "lisp.h"
 
+static bool
+OBJFWDP (lispfwd a)
+{
+  return XFWDTYPE (a) == Lisp_Fwd_Obj;
+}
+static struct Lisp_Objfwd const *
+XOBJFWD (lispfwd a)
+{
+  eassert (OBJFWDP (a));
+  return a.fwdptr;
+}
+
 DEFUN ("car", Fcar, Scar, 1, 1, 0,
        doc: /* Return the car of LIST.  If LIST is nil, return nil.
 Error if LIST is not nil and not a cons cell.  See also `car-safe'.
@@ -37,6 +49,28 @@ DEFUN ("cdr-safe", Fcdr_safe, Scdr_safe, 1, 1, 0,
 }
 
 Lisp_Object
+do_symval_forwarding (lispfwd valcontents)
+{
+    switch (XFWDTYPE (valcontents))
+    {
+        case Lisp_Fwd_Int:
+            TODO;
+
+        case Lisp_Fwd_Bool:
+            TODO;
+
+        case Lisp_Fwd_Obj:
+            return *XOBJFWD (valcontents)->objvar;
+
+        case Lisp_Fwd_Buffer_Obj:
+            TODO;
+
+        case Lisp_Fwd_Kboard_Obj:
+            TODO;
+        default: emacs_abort ();
+    }
+}
+Lisp_Object
 find_symbol_value (Lisp_Object symbol)
 {
   struct Lisp_Symbol *sym;
@@ -55,7 +89,7 @@ find_symbol_value (Lisp_Object symbol)
                 TODO;
       }
     case SYMBOL_FORWARDED:
-        TODO;
+        return do_symval_forwarding (SYMBOL_FWD (sym));
     default: emacs_abort ();
     }
 }
