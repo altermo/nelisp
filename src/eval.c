@@ -160,6 +160,16 @@ eval_sub (Lisp_Object form)
     if (!CONSP (form))
         return form;
 
+    #if TODO_NELISP_LATER_ELSE
+    int max_lisp_eval_depth = 1600;
+    #endif
+    if (++lisp_eval_depth > max_lisp_eval_depth){
+        if (max_lisp_eval_depth < 100)
+            max_lisp_eval_depth = 100;
+        if (lisp_eval_depth > max_lisp_eval_depth)
+            TODO;
+    }
+
     Lisp_Object original_fun = XCAR (form);
     Lisp_Object original_args = XCDR (form);
     specpdl_ref count = record_in_backtrace (original_fun, &original_args, UNEVALLED);
@@ -244,6 +254,7 @@ eval_sub (Lisp_Object form)
     } else {
         TODO;
     }
+    lisp_eval_depth--;
     specpdl_ptr--;
     return val;
 }
@@ -302,6 +313,12 @@ init_eval_once (void)
     init_eval_once_for_pdumper();
 }
 
+void
+init_eval (void)
+{
+    TODO_NELISP_LATER;
+    lisp_eval_depth = 0;
+}
 
 void
 syms_of_eval (void)
