@@ -776,6 +776,8 @@ XSUBR (Lisp_Object a)
   return &XUNTAG (a, Lisp_Vectorlike, union Aligned_Lisp_Subr)->s;
 }
 
+#include "thread.h"
+
 INLINE Lisp_Object
 SYMBOL_VAL (struct Lisp_Symbol *sym)
 {
@@ -993,10 +995,6 @@ union specbinding
       ptrdiff_t nargs;
     } bt;
   };
-
-union specbinding *specpdl_ptr;
-union specbinding *specpdl_end;
-union specbinding *specpdl;
 
 typedef struct { ptrdiff_t bytes; } specpdl_ref;
 INLINE specpdl_ref
