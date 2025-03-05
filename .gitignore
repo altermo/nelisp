@@ -1,3 +1,5 @@
 *.so
 /src/globals.h
 /src/link.c
+/.cache
+/compile_commands.json
