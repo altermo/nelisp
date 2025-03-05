@@ -1,6 +1,3 @@
-#ifndef EDITFNS_C
-#define EDITFNS_C
-
 #include "lisp.h"
 
 DEFUN ("message", Fmessage, Smessage, 1, MANY, 0,
@@ -43,5 +40,3 @@ syms_of_editfns (void)
 {
     defsubr (&Smessage);
 }
-
-#endif

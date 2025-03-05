@@ -1,6 +1,3 @@
-#ifndef EMACS_ALLOC_C
-#define EMACS_ALLOC_C
-
 #include <stdlib.h>
 
 #include "lisp.h"
@@ -8,6 +5,8 @@
 #define USE_ALIGNED_ALLOC 1
 #define MALLOC_0_IS_NONNULL 1
 Lisp_Object empty_unibyte_string, empty_multibyte_string;
+
+struct emacs_globals globals;
 
 union emacs_align_type
 {
@@ -1546,8 +1545,6 @@ allocate_pseudovector (int memlen, int lisplen,
     XSETPVECTYPESIZE (v, tag, lisplen, memlen - lisplen);
     return v;
 }
-#define ALLOCATE_PLAIN_PSEUDOVECTOR(type, tag) \
-((type *) allocate_pseudovector (VECSIZE (type), 0, 0, tag))
 
 Lisp_Object
 make_vector (ptrdiff_t length, Lisp_Object init)
@@ -2637,5 +2634,3 @@ syms_of_alloc (void)
     defsubr (&Smake_vector);
     defsubr (&Smake_symbol);
 }
-
-#endif

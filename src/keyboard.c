@@ -1,8 +1,4 @@
-#ifndef EMACS_KEYBOARD_C
-#define EMACS_KEYBOARD_C
-
 #include "lisp.h"
-#include "eval.c"
 
 EMACS_INT command_loop_level;
 
@@ -145,4 +141,3 @@ syms_of_keyboard (void)
 {
     defsubr (&Srecursive_edit);
 }
-#endif

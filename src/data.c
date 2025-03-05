@@ -1,6 +1,3 @@
-#ifndef EMACS_DATA_C
-#define EMACS_DATA_C
-
 #include "lisp.h"
 
 static bool
@@ -164,5 +161,3 @@ syms_of_data (void)
     defsubr (&Scdr_safe);
     defsubr (&Sset);
 }
-
-#endif

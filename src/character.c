@@ -1,6 +1,3 @@
-#ifndef EMACS_CHARACTER_C
-#define EMACS_CHARACTER_C
-
 #include "character.h"
 
 ptrdiff_t
@@ -35,4 +32,3 @@ str_as_unibyte (unsigned char *str, ptrdiff_t bytes)
     }
   return (to - str);
 }
-#endif

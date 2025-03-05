@@ -1,13 +1,5 @@
-#ifndef EMACS_LUA_C
-#define EMACS_LUA_C
-
-#include "alloc.c"
-#include "lread.c"
-#include "data.c"
-#include "eval.c"
-#include "keyboard.c"
-#include "editfns.c"
-#include "emacs.c"
+#include "lisp.h"
+#include "character.h"
 
 void t_number_to_fixnum(lua_State *L){
     Lisp_Object obj = make_fixnum(lua_tointeger(L,-1));
@@ -243,4 +235,3 @@ int pub ret() init(lua_State *L){
 
     return 0;
 }
-#endif

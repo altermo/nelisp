@@ -1,8 +1,5 @@
-#ifndef EMACS_EVAL_C
-#define EMACS_EVAL_C
+#include <stdlib.h>
 
-#include "alloc.c"
-#include "fns.c"
 #include "lisp.h"
 
 #define CACHEABLE
@@ -422,5 +419,3 @@ syms_of_eval (void)
 {
     defsubr (&Ssetq);
 }
-
-#endif

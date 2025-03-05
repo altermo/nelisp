@@ -1,8 +1,5 @@
-#ifndef EMACS_FNS_C
-#define EMACS_FNS_C
-
 #include "lisp.h"
-#include "character.c"
+#include "character.h"
 
 ptrdiff_t
 list_length (Lisp_Object list)
@@ -166,5 +163,3 @@ syms_of_fns (void)
 {
     defsubr(&Sget);
 }
-
-#endif

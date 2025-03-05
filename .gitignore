@@ -1,2 +1,3 @@
 *.so
 /src/globals.h
+/src/link.c

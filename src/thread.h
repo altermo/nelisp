@@ -3,13 +3,13 @@
 
 #include <stdint.h>
 
-union specbinding *specpdl_ptr;
-union specbinding *specpdl_end;
-union specbinding *specpdl;
+extern union specbinding *specpdl_ptr;
+extern union specbinding *specpdl_end;
+extern union specbinding *specpdl;
 
-intmax_t lisp_eval_depth;
+extern intmax_t lisp_eval_depth;
 
-struct handler *handlerlist;
-struct handler *handlerlist_sentinel;
+extern struct handler *handlerlist;
+extern struct handler *handlerlist_sentinel;
 
 #endif

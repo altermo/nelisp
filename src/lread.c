@@ -1,10 +1,7 @@
-#ifndef EMACS_LREAD_C
-#define EMACS_LREAD_C
 #include "lisp.h"
-#include "alloc.c"
-#include "fns.c"
-#include "character.c"
-#include "eval.c"
+#include "character.h"
+
+struct Lisp_Symbol lispsym[8];
 
 static Lisp_Object initial_obarray;
 static size_t oblookup_last_bucket_number;
@@ -299,13 +296,13 @@ defsubr (union Aligned_Lisp_Subr *aname)
     set_symbol_function (sym, tem);
 }
 
-static ptrdiff_t read_from_string_index;
-static ptrdiff_t read_from_string_index_byte;
-static ptrdiff_t read_from_string_limit;
+ptrdiff_t read_from_string_index;
+ptrdiff_t read_from_string_index_byte;
+ptrdiff_t read_from_string_limit;
 #define READCHAR readchar (readcharfun, NULL)
 #define UNREAD(c) unreadchar (readcharfun, c)
 #define READCHAR_REPORT_MULTIBYTE(multibyte) readchar (readcharfun, multibyte)
-static int
+int
 readchar (Lisp_Object readcharfun, bool *multibyte)
 {
     register int c;
@@ -328,7 +325,7 @@ readchar (Lisp_Object readcharfun, bool *multibyte)
     }
     TODO;
 }
-static void
+void
 unreadchar (Lisp_Object readcharfun, int c)
 {
     if (c == -1)
@@ -537,7 +534,7 @@ read_string_literal (Lisp_Object readcharfun)
                                              || (p - read_buffer != nchars)));
     return unbind_to (count, obj);
 }
-static Lisp_Object
+Lisp_Object
 read0 (Lisp_Object readcharfun, bool locate_syms)
 {
     TODO_NELISP_LATER;
@@ -772,5 +769,3 @@ to find all the symbols in an obarray, use `mapatoms'.  */);
 
     defsubr (&Sintern);
 }
-
-#endif

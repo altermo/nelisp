@@ -1068,6 +1068,7 @@ struct handler
 
 
 extern void record_unwind_protect_array (Lisp_Object *, ptrdiff_t);
+extern void record_unwind_protect_intmax (void (*) (intmax_t), intmax_t);
 #define SAFE_ALLOCA_LISP(buf, nelt) SAFE_ALLOCA_LISP_EXTRA (buf, nelt, 0)
 enum MAX_ALLOCA { MAX_ALLOCA = 16 * 1024 };
 #define AVAIL_ALLOCA(size) (sa_avail -= (size), alloca (size))
@@ -1112,11 +1113,11 @@ safe_free (specpdl_ref sa_count)
 
 
 #if TODO_NELISP_LATER_ELSE
-void circular_list (Lisp_Object list){
+INLINE void circular_list (Lisp_Object list){
     UNUSED(list);
     TODO;
 }
-void maybe_quit (void){
+INLINE void maybe_quit (void){
 }
 #endif
 struct for_each_tail_internal
@@ -1146,6 +1147,63 @@ enum Set_Internal_Bind
     SET_INTERNAL_UNBIND,
     SET_INTERNAL_THREAD_SWITCH,
   };
+
+extern Lisp_Object make_float (double);
+extern void syms_of_alloc (void);
+extern Lisp_Object make_unibyte_string (const char *, ptrdiff_t);
+extern void garbage_collect (void);
+extern void init_alloc_once (void);
+extern void *xmalloc (size_t);
+extern void *xzalloc (size_t);
+extern void *xrealloc (void *, size_t);
+extern void xfree (void *);
+extern void *xnmalloc (ptrdiff_t, ptrdiff_t);
+extern void *xnrealloc (void *, ptrdiff_t, ptrdiff_t);
+extern void *xpalloc (void *, ptrdiff_t *, ptrdiff_t, ptrdiff_t, ptrdiff_t);
+extern AVOID memory_full (size_t);
+void *hash_table_alloc_bytes (ptrdiff_t nbytes);
+void hash_table_free_bytes (void *p, ptrdiff_t nbytes);
+extern struct Lisp_Vector *allocate_pseudovector (int, int, int, enum pvec_type);
+#define ALLOCATE_PLAIN_PSEUDOVECTOR(type, tag) \
+((type *) allocate_pseudovector (VECSIZE (type), 0, 0, tag))
+extern Lisp_Object make_pure_c_string (const char *, ptrdiff_t);
+extern void init_symbol (Lisp_Object, Lisp_Object);
+void staticpro (Lisp_Object const *);
+extern Lisp_Object make_specified_string (const char *, ptrdiff_t, ptrdiff_t, bool);
+extern void mark_object (Lisp_Object);
+extern void mark_objects (Lisp_Object *, ptrdiff_t);
+
+extern ptrdiff_t read_from_string_index;
+extern ptrdiff_t read_from_string_index_byte;
+extern ptrdiff_t read_from_string_limit;
+#define READCHAR readchar (readcharfun, NULL)
+#define UNREAD(c) unreadchar (readcharfun, c)
+extern int readchar (Lisp_Object readcharfun, bool *multibyte);
+void unreadchar (Lisp_Object readcharfun, int c);
+Lisp_Object read0 (Lisp_Object readcharfun, bool locate_syms);
+extern void init_obarray_once (void);
+extern void syms_of_lread (void);
+
+extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
+extern void syms_of_fns (void);
+extern ptrdiff_t list_length (Lisp_Object);
+EMACS_UINT hash_string (char const *, ptrdiff_t);
+
+extern Lisp_Object eval_sub (Lisp_Object form);
+extern void init_eval_once (void);
+extern void init_eval (void);
+extern void syms_of_eval (void);
+extern Lisp_Object internal_catch (Lisp_Object, Lisp_Object (*) (Lisp_Object), Lisp_Object);
+extern Lisp_Object unbind_to (specpdl_ref, Lisp_Object);
+
+extern void syms_of_data (void);
+
+extern void syms_of_keyboard (void);
+extern void init_keyboard (void);
+
+extern void syms_of_editfns (void);
+
+extern void syms_of_emacs (void);
 
 
 #ifdef ENABLE_CHECKING
@@ -1275,7 +1333,7 @@ INLINE void tcall_func(void){
         mainloop_error=true;
     }
 }
-void tcall(lua_State *L,void (*f)(lua_State *L)){
+INLINE void tcall(lua_State *L,void (*f)(lua_State *L)){
     if (global_lua_state!=L)
         TODO; /*use lua_xmove to move between the states*/ \
     tcall_func_var=f;

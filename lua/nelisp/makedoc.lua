@@ -197,7 +197,8 @@ local function c_to_globals(c)
         end
         table.insert(out,('#define %s globals.f_%s'):format(k,k))
     end
-    table.insert(out,'} globals;')
+    table.insert(out,'};')
+    table.insert(out,'extern struct emacs_globals globals;')
     table.insert(out,'')
     c.s['Qnil']=nil
     c.s['Qt']=nil
@@ -216,7 +217,7 @@ local function c_to_globals(c)
     table.insert(syms,3,'Qunbound')
     table.insert(syms,4,'Qerror')
     table.insert(syms,5,'Qlambda')
-    table.insert(out,('struct Lisp_Symbol lispsym[%d];'):format(#syms))
+    table.insert(out,('extern struct Lisp_Symbol lispsym[%d];'):format(#syms))
     table.insert(out,'')
     for k,v in ipairs(syms) do
         table.insert(out,('#define i%s %d'):format(v,k-1))
@@ -266,7 +267,7 @@ end
 if #arg<4 then
     error(('require 4 arguments, got %d'):format(#arg))
 end
-local lua_c_file,lua_out,c_dir,c_out=unpack(arg --[[@as string[] ]])
+local lua_c_file,lua_out,c_dir,c_out,c_link_out=unpack(arg --[[@as string[] ]])
 local gen_file=arg[0]
 local c
 if outfile_needs_update(c_out,c_dir) or outfile_needs_update(c_out,gen_file) then
@@ -310,4 +311,14 @@ if outfile_needs_update(lua_out,lua_c_file) or outfile_needs_update(lua_out,c_di
     table.insert(out,'')
     table.insert(out,'return M')
     vim.fn.writefile(out,lua_out)
+end
+if outfile_needs_update(c_link_out,c_dir) then
+    local out={}
+    local files={}
+    for file in vim.fs.dir(c_dir) do
+        if vim.endswith(file,'.c') and file~=vim.fs.basename(c_link_out) then
+            table.insert(files,('#include "%s"'):format(file))
+        end
+    end
+    vim.fn.writefile(files,c_link_out)
 end
