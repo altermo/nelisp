@@ -11,6 +11,7 @@
 #include <setjmp.h>
 #include <stdckdint.h>
 #include <alloca.h>
+#include <ieee754.h>
 
 #include <luajit-2.1/lua.h>
 #include <luajit-2.1/lauxlib.h>
@@ -884,6 +885,13 @@ INLINE double
 XFLOAT_DATA (Lisp_Object f)
 {
     return XFLOAT (f)->u.data;
+}
+
+INLINE Lisp_Object
+make_uint (uintmax_t n)
+{
+    TODO_NELISP_LATER;
+    return make_fixnum (n);
 }
 
 enum char_bits

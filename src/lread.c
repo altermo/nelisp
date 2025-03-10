@@ -1,5 +1,7 @@
 #include "lisp.h"
 #include "character.h"
+#include <stdlib.h>
+#include <math.h>
 
 struct Lisp_Symbol lispsym[];
 
@@ -534,6 +536,134 @@ read_string_literal (Lisp_Object readcharfun)
                                              || (p - read_buffer != nchars)));
     return unbind_to (count, obj);
 }
+static int
+digit_to_number (int character, int base)
+{
+  int digit;
+
+  if ('0' <= character && character <= '9')
+    digit = character - '0';
+  else if ('a' <= character && character <= 'z')
+    digit = character - 'a' + 10;
+  else if ('A' <= character && character <= 'Z')
+    digit = character - 'A' + 10;
+  else
+    return -2;
+
+  return digit < base ? digit : -1;
+}
+Lisp_Object
+string_to_number (char const *string, int base, ptrdiff_t *plen)
+{
+    char const *cp = string;
+    bool float_syntax = false;
+    double value = 0;
+
+    bool negative = *cp == '-';
+    bool positive = *cp == '+';
+
+    bool signedp = negative | positive;
+    cp += signedp;
+
+    enum { INTOVERFLOW = 1, LEAD_INT = 2, TRAIL_INT = 4, E_EXP = 16 };
+    int state = 0;
+    int leading_digit = digit_to_number (*cp, base);
+    uintmax_t n = leading_digit;
+    if (leading_digit >= 0)
+    {
+        state |= LEAD_INT;
+        for (int digit; 0 <= (digit = digit_to_number (*++cp, base)); )
+        {
+#if TODO_NELISP_LATER_AND
+            if (INT_MULTIPLY_OVERFLOW (n, base))
+                state |= INTOVERFLOW;
+#endif
+            n *= base;
+#if TODO_NELISP_LATER_AND
+            if (INT_ADD_OVERFLOW (n, digit))
+                state |= INTOVERFLOW;
+#endif
+            n += digit;
+        }
+    }
+    // char const *after_digits = cp;
+    if (*cp == '.')
+    {
+        cp++;
+    }
+
+    if (base == 10)
+    {
+        if ('0' <= *cp && *cp <= '9')
+        {
+            state |= TRAIL_INT;
+            do
+            cp++;
+            while ('0' <= *cp && *cp <= '9');
+        }
+        if (*cp == 'e' || *cp == 'E')
+        {
+            char const *ecp = cp;
+            cp++;
+            if (*cp == '+' || *cp == '-')
+                cp++;
+            if ('0' <= *cp && *cp <= '9')
+            {
+                state |= E_EXP;
+                do
+                cp++;
+                while ('0' <= *cp && *cp <= '9');
+            }
+            else if (cp[-1] == '+'
+                && cp[0] == 'I' && cp[1] == 'N' && cp[2] == 'F')
+            {
+                state |= E_EXP;
+                cp += 3;
+                value = INFINITY;
+            }
+            else if (cp[-1] == '+'
+                && cp[0] == 'N' && cp[1] == 'a' && cp[2] == 'N')
+            {
+                state |= E_EXP;
+                cp += 3;
+                union ieee754_double u
+                    = { .ieee_nan = { .exponent = 0x7ff, .quiet_nan = 1,
+                        .mantissa0 = n >> 31 >> 1, .mantissa1 = n }};
+                value = u.d;
+            }
+            else
+            cp = ecp;
+        }
+
+        float_syntax = ((state & TRAIL_INT)
+            || ((state & LEAD_INT) && (state & E_EXP)));
+    }
+
+    if (plen)
+        *plen = cp - string;
+
+    if (float_syntax)
+    {
+        if (! value)
+            value = atof (string + signedp);
+        return make_float (negative ? -value : value);
+    }
+
+    if (! (state & LEAD_INT))
+        return Qnil;
+
+    if (! (state & INTOVERFLOW))
+    {
+        if (!negative)
+            return make_uint (n);
+        if (-MOST_NEGATIVE_FIXNUM < n)
+            TODO;
+        EMACS_INT signed_n = n;
+        return make_fixnum (-signed_n);
+    }
+
+    TODO;
+}
 Lisp_Object
 read0 (Lisp_Object readcharfun, bool locate_syms)
 {
@@ -645,7 +775,14 @@ read_obj: ;
             if (((c0 >= '0' && c0 <= '9') || c0 == '.' || c0 == '-' || c0 == '+')
                 && !quoted && !uninterned_symbol && !skip_shorthand)
             {
-                TODO;}
+                ptrdiff_t len;
+                Lisp_Object result = string_to_number (read_buffer, 10, &len);
+                if (!NILP (result) && len == nbytes)
+                {
+                    obj = result;
+                    break;
+                }
+            }
 
 #if TODO_NELISP_LATER_AND
         ptrdiff_t nchars
