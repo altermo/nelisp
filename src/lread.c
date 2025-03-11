@@ -433,6 +433,108 @@ invalid_syntax (const char *s, Lisp_Object readcharfun)
     UNUSED(readcharfun);
     TODO;
 }
+static int
+read_char_escape (Lisp_Object readcharfun, int next_char)
+{
+    int modifiers = 0;
+    ptrdiff_t ncontrol = 0;
+    int chr;
+
+again: ;
+    int c = next_char;
+
+    switch (c)
+    {
+        case -1:
+            end_of_file_error ();
+
+        case 'a': chr = '\a'; break;
+        case 'b': chr = '\b'; break;
+        case 'd': chr =  127; break;
+        case 'e': chr =   27; break;
+        case 'f': chr = '\f'; break;
+        case 'n': chr = '\n'; break;
+        case 'r': chr = '\r'; break;
+        case 't': chr = '\t'; break;
+        case 'v': chr = '\v'; break;
+
+        case '\n':
+            TODO;
+
+        case 'M': TODO;
+        case 'S': TODO;
+        case 'H': TODO;
+        case 'A': TODO;
+        case 's': TODO;
+
+        case 'C':
+            {
+                int c1 = READCHAR;
+                if (c1 != '-')
+                    TODO;
+            }
+            FALLTHROUGH;
+        case '^':
+            {
+                ncontrol++;
+                int c1 = READCHAR;
+                if (c1 == '\\')
+                {
+                    next_char = READCHAR;
+                    goto again;
+                }
+                chr = c1;
+                break;
+            }
+
+        case '0': case '1': case '2': case '3':
+        case '4': case '5': case '6': case '7':
+            {
+                int i = c - '0';
+                int count = 0;
+                while (count < 2)
+                {
+                    int c = READCHAR;
+                    if (c < '0' || c > '7')
+                    {
+                        UNREAD (c);
+                        break;
+                    }
+                    i = (i << 3) + (c - '0');
+                    count++;
+                }
+
+                if (i >= 0x80 && i < 0x100)
+                    i = BYTE8_TO_CHAR (i);
+                chr = i;
+                break;
+            }
+
+        case 'x':
+            TODO;
+
+        case 'U':
+            TODO;
+
+        case 'u':
+            TODO;
+
+        case 'N':
+            TODO;
+
+        default:
+            chr = c;
+            break;
+    }
+    eassert (chr >= 0 && chr < (1 << CHARACTERBITS));
+
+    while (ncontrol > 0)
+    {
+        TODO;
+    }
+
+    return chr | modifiers;
+}
 static Lisp_Object
 read_string_literal (Lisp_Object readcharfun)
 {
@@ -469,7 +571,7 @@ read_string_literal (Lisp_Object readcharfun)
                 case '\n':
                     continue;
                 default:
-                    TODO;
+                    ch = read_char_escape (readcharfun, ch);
                     break;
             }
 

@@ -51,6 +51,7 @@ static inline _Noreturn void TODO_(const char *file, int line){
 ((offsetof (type, member) + FLEXALIGNOF (type) - 1 + (n)) \
     & ~ (FLEXALIGNOF (type) - 1))
 typedef bool bool_bf;
+#define FALLTHROUGH __attribute__((fallthrough))
 
 #define symbols_with_pos_enabled 1
 _Noreturn INLINE void emacs_abort(void) {
