@@ -1209,6 +1209,7 @@ extern void init_eval (void);
 extern void syms_of_eval (void);
 extern Lisp_Object internal_catch (Lisp_Object, Lisp_Object (*) (Lisp_Object), Lisp_Object);
 extern Lisp_Object unbind_to (specpdl_ref, Lisp_Object);
+extern Lisp_Object internal_condition_case (Lisp_Object (*) (void), Lisp_Object, Lisp_Object (*) (Lisp_Object));
 
 extern void syms_of_data (void);
 

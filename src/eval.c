@@ -202,6 +202,25 @@ internal_catch (Lisp_Object tag,
 }
 
 Lisp_Object
+internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
+                         Lisp_Object (*hfun) (Lisp_Object))
+{
+    struct handler *c = push_handler (handlers, CONDITION_CASE);
+    if (sys_setjmp (c->jmp))
+    {
+        Lisp_Object val = handlerlist->val;
+        clobbered_eassert (handlerlist == c);
+        handlerlist = handlerlist->next;
+        return hfun (val);
+    } else {
+        Lisp_Object val = bfun ();
+        eassert (handlerlist == c);
+        handlerlist = c->next;
+        return val;
+    }
+}
+
+Lisp_Object
 eval_sub (Lisp_Object form)
 {
     TODO_NELISP_LATER;

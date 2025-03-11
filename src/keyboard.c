@@ -3,6 +3,13 @@
 EMACS_INT command_loop_level;
 
 static Lisp_Object
+cmd_error (Lisp_Object data)
+{
+    UNUSED(data);
+    return make_fixnum(0);
+}
+
+static Lisp_Object
 command_loop_1 (void)
 {
     while (1){
@@ -18,8 +25,7 @@ command_loop_2 (Lisp_Object handlers)
 
     UNUSED(handlers);
     do
-        val = command_loop_1();
-        // val = internal_condition_case (command_loop_1, handlers, cmd_error);
+        val = internal_condition_case (command_loop_1, handlers, cmd_error);
     while (!NILP (val));
 
     return Qnil;
