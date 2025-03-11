@@ -221,6 +221,14 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
 }
 
 Lisp_Object
+indirect_function (Lisp_Object object)
+{
+  while (SYMBOLP (object) && !NILP (object))
+    object = XSYMBOL (object)->u.s.function;
+  return object;
+}
+
+Lisp_Object
 eval_sub (Lisp_Object form)
 {
     TODO_NELISP_LATER;
@@ -259,7 +267,7 @@ eval_sub (Lisp_Object form)
     if (!SYMBOLP (fun)) {
         TODO;
     } else if (!NILP (fun) && (fun = XSYMBOL (fun)->u.s.function, SYMBOLP (fun))) {
-        TODO;
+        fun = indirect_function (fun);
     }
 
     if (SUBRP (fun) && !NATIVE_COMP_FUNCTION_DYNP (fun))
