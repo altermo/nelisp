@@ -158,8 +158,24 @@ This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.  */)
     return plist_get (XSYMBOL (symbol)->u.s.plist, propname);
 }
 
+DEFUN ("memq", Fmemq, Smemq, 2, 2, 0,
+       doc: /* Return non-nil if ELT is an element of LIST.  Comparison done with `eq'.
+The value is actually the tail of LIST whose car is ELT.  */)
+  (Lisp_Object elt, Lisp_Object list)
+{
+  Lisp_Object tail = list;
+  FOR_EACH_TAIL (tail)
+    if (EQ (XCAR (tail), elt))
+      return tail;
+#if TODO_NELISP_LATER_AND
+  CHECK_LIST_END (tail, list);
+#endif
+  return Qnil;
+}
+
 void
 syms_of_fns (void)
 {
     defsubr(&Sget);
+    defsubr(&Smemq);
 }
