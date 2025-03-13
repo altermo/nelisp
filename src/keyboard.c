@@ -7,8 +7,7 @@ cmd_error (Lisp_Object data)
 {
     TODO_NELISP_LATER;
     tcall_error=true;
-    if (!lua_checkstack(global_lua_state,5))
-        luaL_error(global_lua_state,"Lua stack overflow");
+    lcheckstack(global_lua_state,5);
     Lisp_Object err_symbol = Fcar(data);
     Lisp_Object message = Fget(err_symbol, Qerror_message);
     Lisp_Object tail = Fcdr_safe(data);
