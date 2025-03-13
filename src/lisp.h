@@ -1265,7 +1265,6 @@ INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
 {
     Fsignal (error_symbol, data);
-    __builtin_unreachable();
 }
 extern AVOID xsignal0 (Lisp_Object);
 extern AVOID xsignal1 (Lisp_Object, Lisp_Object);

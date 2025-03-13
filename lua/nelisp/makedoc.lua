@@ -1,8 +1,8 @@
 #!/usr/bin/env -S nvim -l
 ---@alias nelisp.makedoc.lfn table<string,[string,[string,string][]]>
 ---                                name    ret    args
----@alias nelisp.makedoc.cfn table<string,number>
----                                name   maxargs
+---@alias nelisp.makedoc.cfn table<string,[number,string[]]>
+---                                name   maxargs attrs
 ---@alias nelisp.makedoc.sym table<string,string>
 ---                                name   sname
 ---@alias nelisp.makedoc.var table<string,string>
@@ -152,9 +152,20 @@ local function scan_c(path,out)
             maxargs=tonumber(maxargs)
             if not maxargs then error('') end
         end
-        if name~='...' then
-            out.f[name]=maxargs
+        get_comma()
+        pos=assert(s:match('^.-%*/%s*()',pos))
+        local attrs={}
+        if s:match('^attributes:',pos) then
+            pos=pos+#'attributes:'
+            local attr
+            attr,pos=assert(s:match('(.-)%)()',pos))
+            if attr:find('noreturn') then
+                table.insert(attrs,'_Noreturn')
+            elseif attr:find('const') then
+                error('TODO')
+            end
         end
+        out.f[name]={maxargs,attrs}
         ::continue::
     end
 end
@@ -223,13 +234,14 @@ local function c_to_globals(c)
         table.insert(out,('#define i%s %d'):format(v,k-1))
     end
     for k,v in vim.spairs(c.f) do
-        local s=tostring(v)
-        if v==-2 then
+        local s=tostring(v[1])
+        if v[1]==-2 then
             s='MANY'
-        elseif v==-1 then
+        elseif v[1]==-1 then
             s='UNEVALLED'
         end
-        table.insert(out,('EXFUN(%s, %s);'):format(k,s))
+
+        table.insert(out,(('%s EXFUN(%s, %s);'):format(table.concat(v[2],' '),k,s):gsub('^ ','')))
     end
     table.insert(out,'static char const *const defsym_name[] = {')
     for _,v in ipairs(syms) do
@@ -245,7 +257,8 @@ end
 ---@param out string[]
 local function cfn_to_meta(cfn,out)
     local varnames='abcdefghijklmnopqrstuvwxyz'
-    for name,maxargs in vim.spairs(cfn) do
+    for name,fn in vim.spairs(cfn) do
+        local maxargs=fn[1]
         table.insert(out,'')
         local arg_vars={}
         if maxargs==-1 then
