@@ -505,7 +505,7 @@ again:
     }
 
     int small_amount = 10000;
-    eassert (size <= small_amount - LISP_ALIGNMENT);
+    eassert ((long)size <= (long)small_amount - LISP_ALIGNMENT);
     purebeg = xzalloc (small_amount);
     pure_size = small_amount;
     pure_bytes_used_before_overflow += pure_bytes_used - size;
@@ -1294,7 +1294,7 @@ allocate_vector_from_block (ptrdiff_t nbytes)
         {
             vector = vector_free_lists[index];
             size_t vector_nbytes = pseudovector_nbytes (&vector->header);
-            eassert (vector_nbytes > nbytes);
+            eassert ((long)vector_nbytes > nbytes);
             ASAN_UNPOISON_VECTOR_CONTENTS (vector, nbytes - header_size);
             vector_free_lists[index] = next_vector (vector);
 

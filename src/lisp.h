@@ -105,8 +105,8 @@ typedef size_t bits_word;
 enum { BITS_PER_BITS_WORD = SIZE_WIDTH };
 #define pD "t"
 #define AVOID _Noreturn void
-#define eassert(cond) ((void) (false && (cond))) /* Check COND compiles.  */
-#define eassume(cond) assume (cond)
+#define eassert(cond) (cond ? (void) 0 : TODO)
+#define eassume(cond) (cond ? (void) 0 : TODO)
 enum Lisp_Bits
 {
     VALBITS = EMACS_INT_WIDTH - GCTYPEBITS,
