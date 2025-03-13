@@ -583,6 +583,23 @@ usage: (setq [SYM VAL]...)  */)
     return val;
 }
 
+DEFUN ("if", Fif, Sif, 2, UNEVALLED, 0,
+       doc: /* If COND yields non-nil, do THEN, else do ELSE...
+Returns the value of THEN or the value of the last of the ELSE's.
+THEN must be one expression, but ELSE... can be zero or more expressions.
+If COND yields nil, and there are no ELSE's, the value is nil.
+usage: (if COND THEN ELSE...)  */)
+  (Lisp_Object args)
+{
+  Lisp_Object cond;
+
+  cond = eval_sub (XCAR (args));
+
+  if (!NILP (cond))
+    return eval_sub (Fcar (XCDR (args)));
+  return Fprogn (Fcdr (XCDR (args)));
+}
+
 
 static void
 init_eval_once_for_pdumper (void)
@@ -621,4 +638,5 @@ syms_of_eval (void)
     defsubr (&Ssignal);
     defsubr (&Ssetq);
     defsubr (&Sprogn);
+    defsubr (&Sif);
 }
