@@ -1,6 +1,8 @@
 #include "lisp.h"
 #include "character.h"
 
+enum equal_kind { EQUAL_NO_QUIT, EQUAL_PLAIN, EQUAL_INCLUDING_PROPERTIES };
+
 ptrdiff_t
 list_length (Lisp_Object list)
 {
@@ -193,6 +195,26 @@ It can be retrieved with `(get SYMBOL PROPNAME)'.  */)
   return value;
 }
 
+static bool
+eq_comparable_value (Lisp_Object x)
+{
+  return SYMBOLP (x) || FIXNUMP (x);
+}
+DEFUN ("member", Fmember, Smember, 2, 2, 0,
+       doc: /* Return non-nil if ELT is an element of LIST.  Comparison done with `equal'.
+The value is actually the tail of LIST whose car is ELT.  */)
+  (Lisp_Object elt, Lisp_Object list)
+{
+  if (eq_comparable_value (elt))
+    return Fmemq (elt, list);
+  Lisp_Object tail = list;
+  FOR_EACH_TAIL (tail)
+    if (! NILP (Fequal (elt, XCAR (tail))))
+      return tail;
+  CHECK_LIST_END (tail, list);
+  return Qnil;
+}
+
 DEFUN ("memq", Fmemq, Smemq, 2, 2, 0,
        doc: /* Return non-nil if ELT is an element of LIST.  Comparison done with `eq'.
 The value is actually the tail of LIST whose car is ELT.  */)
@@ -206,6 +228,118 @@ The value is actually the tail of LIST whose car is ELT.  */)
   return Qnil;
 }
 
+enum { WORDS_PER_DOUBLE = (sizeof (double) / sizeof (EMACS_UINT)
+                          + (sizeof (double) % sizeof (EMACS_UINT) != 0)) };
+union double_and_words
+{
+  double val;
+  EMACS_UINT word[WORDS_PER_DOUBLE];
+};
+static bool
+same_float (Lisp_Object x, Lisp_Object y)
+{
+  union double_and_words
+    xu = { .val = XFLOAT_DATA (x) },
+    yu = { .val = XFLOAT_DATA (y) };
+  EMACS_UINT neql = 0;
+  for (int i = 0; i < WORDS_PER_DOUBLE; i++)
+    neql |= xu.word[i] ^ yu.word[i];
+  return !neql;
+}
+bool
+equal_no_quit (Lisp_Object o1, Lisp_Object o2);
+static bool
+internal_equal (Lisp_Object o1, Lisp_Object o2, enum equal_kind equal_kind,
+		int depth, Lisp_Object ht)
+{
+tail_recurse:
+    if (depth > 10)
+    {
+        TODO;
+    }
+
+    o1 = maybe_remove_pos_from_symbol (o1);
+    o2 = maybe_remove_pos_from_symbol (o2);
+
+    if (BASE_EQ (o1, o2))
+        return true;
+    if (XTYPE (o1) != XTYPE (o2))
+        return false;
+
+    switch (XTYPE (o1))
+    {
+        case Lisp_Float:
+            return same_float (o1, o2);
+
+        case Lisp_Cons:
+            if (equal_kind == EQUAL_NO_QUIT)
+                for (; CONSP (o1); o1 = XCDR (o1))
+                {
+                    if (! CONSP (o2))
+                        return false;
+                    if (! equal_no_quit (XCAR (o1), XCAR (o2)))
+                        return false;
+                    o2 = XCDR (o2);
+                    if (EQ (XCDR (o1), o2))
+                        return true;
+                }
+            else
+                FOR_EACH_TAIL (o1)
+            {
+                if (! CONSP (o2))
+                    return false;
+                if (! internal_equal (XCAR (o1), XCAR (o2),
+                                      equal_kind, depth + 1, ht))
+                    return false;
+                o2 = XCDR (o2);
+                if (EQ (XCDR (o1), o2))
+                    return true;
+            }
+            depth++;
+            goto tail_recurse;
+
+        case Lisp_Vectorlike:
+            {
+                ptrdiff_t size = ASIZE (o1);
+                if (ASIZE (o2) != size)
+                    return false;
+
+                TODO;
+                return true;
+            }
+            break;
+
+        case Lisp_String:
+            return (SCHARS (o1) == SCHARS (o2)
+            && SBYTES (o1) == SBYTES (o2)
+            && !memcmp (SDATA (o1), SDATA (o2), SBYTES (o1))
+            && (equal_kind != EQUAL_INCLUDING_PROPERTIES
+            || (TODO,false)));
+
+        default:
+            break;
+    }
+
+    return false;
+}
+bool
+equal_no_quit (Lisp_Object o1, Lisp_Object o2)
+{
+  return internal_equal (o1, o2, EQUAL_NO_QUIT, 0, Qnil);
+}
+DEFUN ("equal", Fequal, Sequal, 2, 2, 0,
+       doc: /* Return t if two Lisp objects have similar structure and contents.
+They must have the same data type.
+Conses are compared by comparing the cars and the cdrs.
+Vectors and strings are compared element by element.
+Numbers are compared via `eql', so integers do not equal floats.
+\(Use `=' if you want integers and floats to be able to be equal.)
+Symbols must match exactly.  */)
+  (Lisp_Object o1, Lisp_Object o2)
+{
+  return internal_equal (o1, o2, EQUAL_PLAIN, 0, Qnil) ? Qt : Qnil;
+}
+
 void
 syms_of_fns (void)
 {
@@ -214,4 +348,6 @@ syms_of_fns (void)
     defsubr(&Sget);
     defsubr(&Smemq);
     defsubr(&Sput);
+    defsubr(&Smember);
+    defsubr(&Sequal);
 }

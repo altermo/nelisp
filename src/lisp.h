@@ -397,6 +397,12 @@ XSYMBOL_WITH_POS_SYM (Lisp_Object a)
     eassume (BARE_SYMBOL_P (sym));
     return sym;
 }
+INLINE Lisp_Object
+maybe_remove_pos_from_symbol (Lisp_Object x)
+{
+    return (symbols_with_pos_enabled && SYMBOL_WITH_POS_P (x)
+    ? XSYMBOL_WITH_POS_SYM (x) : x);
+}
 INLINE struct Lisp_Symbol *
 XBARE_SYMBOL (Lisp_Object a)
 {
