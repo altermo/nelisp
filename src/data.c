@@ -149,6 +149,30 @@ DEFUN ("set", Fset, Sset, 2, 2, 0,
   return newval;
 }
 
+DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
+       doc: /* Set the car of CELL to be NEWCAR.  Returns NEWCAR.  */)
+  (register Lisp_Object cell, Lisp_Object newcar)
+{
+#if TODO_NELISP_LATER_AND
+  CHECK_CONS (cell);
+  CHECK_IMPURE (cell, XCONS (cell));
+#endif
+  XSETCAR (cell, newcar);
+  return newcar;
+}
+
+DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
+       doc: /* Set the cdr of CELL to be NEWCDR.  Returns NEWCDR.  */)
+  (register Lisp_Object cell, Lisp_Object newcdr)
+{
+#if TODO_NELISP_LATER_AND
+  CHECK_CONS (cell);
+  CHECK_IMPURE (cell, XCONS (cell));
+#endif
+  XSETCDR (cell, newcdr);
+  return newcdr;
+}
+
 void
 syms_of_data (void)
 {
@@ -161,4 +185,6 @@ syms_of_data (void)
     defsubr (&Scar_safe);
     defsubr (&Scdr_safe);
     defsubr (&Sset);
+    defsubr (&Ssetcar);
+    defsubr (&Ssetcdr);
 }
