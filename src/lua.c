@@ -208,7 +208,7 @@ int t_init(void* args){
     (void)args;
     stack_top=&args;
     Frecursive_edit();
-    TODO;
+    eassume(false);
 }
 int pub ret() init(lua_State *L){
     global_lua_state = L;
