@@ -107,11 +107,7 @@ global value outside of any lexical scope.  */)
   if (!BASE_EQ (val, Qunbound))
     return val;
 
-#if TODO_NELISP_LATER_AND
   xsignal1 (Qvoid_variable, symbol);
-#else
-    TODO;
-#endif
 }
 
 void
@@ -188,6 +184,7 @@ syms_of_data (void)
     DEFSYM (Qvoid_function, "void-function");
     DEFSYM (Qwrong_type_argument, "wrong-type-argument");
     DEFSYM (Qwrong_number_of_arguments, "wrong-number-of-arguments");
+    DEFSYM (Qvoid_variable, "void-variable");
 
     Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -205,6 +202,7 @@ syms_of_data (void)
     PUT_ERROR (Qwrong_type_argument, error_tail, "Wrong type argument");
     PUT_ERROR (Qwrong_number_of_arguments, error_tail,
                "Wrong number of arguments");
+    PUT_ERROR (Qvoid_variable, error_tail, "Symbol's value as variable is void");
 
     defsubr (&Ssymbol_value);
     defsubr (&Scar);
