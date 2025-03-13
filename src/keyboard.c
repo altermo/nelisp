@@ -25,6 +25,8 @@ command_loop_1 (void)
         main_func();
         main_func=NULL;
     }
+
+    __builtin_unreachable();
 }
 Lisp_Object
 command_loop_2 (Lisp_Object handlers)

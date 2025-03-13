@@ -18,15 +18,13 @@
 #include <luajit-2.1/lua.h>
 #include <luajit-2.1/lauxlib.h>
 
+static inline _Noreturn void TODO_(const char *file, int line);
+
 static lua_State *global_lua_state;
 static bool unrecoverable_error;
 #define TODO_NELISP_LATER (void)0
 #define TODO_NELISP_LATER_ELSE true
 #define TODO_NELISP_LATER_AND false
-static inline _Noreturn void TODO_(const char *file, int line){
-    luaL_error(global_lua_state,"TODO at %s:%d",file,line);
-    __builtin_unreachable();
-}
 #define TODO TODO_(__FILE__,__LINE__)
 #define UNUSED(x) (void)x
 
@@ -1371,23 +1369,14 @@ cnd_t thread_cond;
 static bool tcall_error=false;
 static void (*main_func)(void)=NULL;
 
-static void (*tcall_func_var)(lua_State *L);
-static int tcall_func_n(lua_State *L){
-    tcall_func_var(L);
-    return 1;
-}
+static void (*tcall_func_cb)(lua_State *L);
 INLINE void tcall_func(void){
-    lua_pushcfunction(global_lua_state,tcall_func_n);
-    lua_insert(global_lua_state,1);
-    if (lua_pcall(global_lua_state,lua_gettop(global_lua_state)-1,1,0)){
-        unrecoverable_error=true;
-        tcall_error=true;
-    }
+    tcall_func_cb(global_lua_state);
 }
 INLINE void tcall(lua_State *L,void (*f)(lua_State *L)){
     if (global_lua_state!=L)
         TODO; /*use lua_xmove to move between the states*/ \
-    tcall_func_var=f;
+    tcall_func_cb=f;
     main_func=tcall_func;
 
     mtx_lock(&thread_mutex);
@@ -1454,5 +1443,16 @@ int __attribute__((visibility("default"))) l##fname(lua_State *L) {\
         }\
     tcall(L,t_l##fname);\
     return 1;\
+}
+
+static inline _Noreturn void TODO_(const char *file, int line){
+    lua_pushfstring(global_lua_state,"TODO at %s:%d",file,line);
+    unrecoverable_error=true;
+    tcall_error=true;
+    mtx_lock(&main_mutex);
+    cnd_signal(&main_cond);
+    mtx_unlock(&main_mutex);
+    cnd_wait(&thread_cond,&thread_mutex);
+    __builtin_unreachable();
 }
 #endif
