@@ -350,6 +350,27 @@ See also the function `condition-case'.  */
   eassume (false);
 }
 
+void
+xsignal0 (Lisp_Object error_symbol)
+{
+  xsignal (error_symbol, Qnil);
+}
+void
+xsignal1 (Lisp_Object error_symbol, Lisp_Object arg)
+{
+  xsignal (error_symbol, list1 (arg));
+}
+void
+xsignal2 (Lisp_Object error_symbol, Lisp_Object arg1, Lisp_Object arg2)
+{
+  xsignal (error_symbol, list2 (arg1, arg2));
+}
+void
+xsignal3 (Lisp_Object error_symbol, Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3)
+{
+  xsignal (error_symbol, list3 (arg1, arg2, arg3));
+}
+
 Lisp_Object
 indirect_function (Lisp_Object object)
 {
@@ -432,10 +453,10 @@ eval_sub (Lisp_Object form)
         val = XSUBR (fun)->function.aMANY (argnum, vals);
 
         lisp_eval_depth--;
-        #if TODO_NELISP_LATER_AND
+#if TODO_NELISP_LATER_AND
         if (backtrace_debug_on_exit (specpdl_ref_to_ptr (count)))
             val = call_debugger (list2 (Qexit, val));
-        #endif
+#endif
         SAFE_FREE ();
         specpdl_ptr--;
         return val;
@@ -493,7 +514,13 @@ eval_sub (Lisp_Object form)
                     emacs_abort ();
             }
         }
-    } else {
+    } else if (CLOSUREP (fun)
+        || NATIVE_COMP_FUNCTION_DYNP (fun)
+        || MODULE_FUNCTIONP (fun))
+        TODO;
+    else {
+        if (NILP (fun))
+            xsignal1 (Qvoid_function, original_fun);
         TODO;
     }
     lisp_eval_depth--;

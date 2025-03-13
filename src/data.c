@@ -179,6 +179,23 @@ syms_of_data (void)
     DEFSYM (Qquote, "quote");
     DEFSYM (Qtop_level, "top-level");
     DEFSYM (Qerror_conditions, "error-conditions");
+    DEFSYM (Qerror_message, "error-message");
+
+    DEFSYM (Qvoid_function, "void-function");
+
+    Lisp_Object error_tail = Fcons (Qerror, Qnil);
+
+    Fput (Qerror, Qerror_conditions,
+        error_tail);
+    Fput (Qerror, Qerror_message,
+        build_pure_c_string ("error"));
+
+#define PUT_ERROR(sym, tail, msg)			\
+    Fput (sym, Qerror_conditions, Fcons (sym, tail)); \
+    Fput (sym, Qerror_message, build_pure_c_string (msg))
+
+    PUT_ERROR (Qvoid_function, error_tail,
+               "Symbol's function definition is void");
 
     defsubr (&Ssymbol_value);
     defsubr (&Scar);

@@ -908,6 +908,17 @@ enum char_bits
     CHARACTERBITS = 22
   };
 
+INLINE bool
+CLOSUREP (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_CLOSURE);
+}
+INLINE bool
+MODULE_FUNCTIONP (Lisp_Object o)
+{
+  return PSEUDOVECTORP (o, PVEC_MODULE_FUNCTION);
+}
+
 INLINE EMACS_INT
 XFIXNAT (Lisp_Object a)
 {
@@ -1181,6 +1192,11 @@ extern struct Lisp_Vector *allocate_pseudovector (int, int, int, enum pvec_type)
 #define ALLOCATE_PLAIN_PSEUDOVECTOR(type, tag) \
 ((type *) allocate_pseudovector (VECSIZE (type), 0, 0, tag))
 extern Lisp_Object make_pure_c_string (const char *, ptrdiff_t);
+INLINE Lisp_Object
+build_pure_c_string (const char *str)
+{
+  return make_pure_c_string (str, strlen (str));
+}
 extern void init_symbol (Lisp_Object, Lisp_Object);
 void staticpro (Lisp_Object const *);
 extern Lisp_Object make_specified_string (const char *, ptrdiff_t, ptrdiff_t, bool);
@@ -1204,6 +1220,12 @@ extern void syms_of_fns (void);
 extern ptrdiff_t list_length (Lisp_Object);
 EMACS_UINT hash_string (char const *, ptrdiff_t);
 
+INLINE AVOID
+xsignal (Lisp_Object error_symbol, Lisp_Object data)
+{
+    Fsignal (error_symbol, data);
+    __builtin_unreachable();
+}
 extern Lisp_Object eval_sub (Lisp_Object form);
 extern void init_eval_once (void);
 extern void init_eval (void);
