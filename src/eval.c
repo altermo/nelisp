@@ -528,6 +528,23 @@ eval_sub (Lisp_Object form)
     return val;
 }
 
+DEFUN ("progn", Fprogn, Sprogn, 0, UNEVALLED, 0,
+       doc: /* Eval BODY forms sequentially and return value of last one.
+usage: (progn BODY...)  */)
+  (Lisp_Object body)
+{
+  Lisp_Object CACHEABLE val = Qnil;
+
+  while (CONSP (body))
+    {
+      Lisp_Object form = XCAR (body);
+      body = XCDR (body);
+      val = eval_sub (form);
+    }
+
+  return val;
+}
+
 DEFUN ("setq", Fsetq, Ssetq, 0, UNEVALLED, 0,
        doc: /* Set each SYM to the value of its VAL.
 The symbols SYM are variables; they are literal (not evaluated).
@@ -603,4 +620,5 @@ syms_of_eval (void)
 {
     defsubr (&Ssignal);
     defsubr (&Ssetq);
+    defsubr (&Sprogn);
 }
