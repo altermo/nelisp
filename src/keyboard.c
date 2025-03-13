@@ -11,10 +11,16 @@ cmd_error (Lisp_Object data)
         luaL_error(global_lua_state,"Lua stack overflow");
     Lisp_Object err_symbol = Fcar(data);
     Lisp_Object message = Fget(err_symbol, Qerror_message);
+    Lisp_Object tail = Fcdr_safe(data);
+    char *errmsg="nil";
     if (STRINGP(message))
-        lua_pushfstring(global_lua_state,"(nelisp): %s",SDATA(message));
-    else
-        lua_pushliteral(global_lua_state,"(nelisp): nil");
+        errmsg = (char*)SDATA(message);
+    char *extra="";
+    if (SYMBOLP(tail))
+        extra = (char*)SDATA(SYMBOL_NAME(tail));
+    if (SYMBOLP(Fcar_safe(tail)))
+        extra = (char*)SDATA(SYMBOL_NAME(Fcar_safe(tail)));
+    lua_pushfstring(global_lua_state,"(nelisp): %s (%s)",errmsg,extra);
     return make_fixnum(0);
 }
 

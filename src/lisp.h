@@ -809,6 +809,11 @@ SET_SYMBOL_FWD (struct Lisp_Symbol *sym, void const *v)
     eassume (sym->u.s.redirect == SYMBOL_FORWARDED && v);
     sym->u.s.val.fwd.fwdptr = v;
 }
+INLINE Lisp_Object
+SYMBOL_NAME (Lisp_Object sym)
+{
+  return XSYMBOL (sym)->u.s.name;
+}
 
 struct Lisp_Obarray
 {
