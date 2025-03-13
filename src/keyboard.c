@@ -13,9 +13,14 @@ static Lisp_Object
 command_loop_1 (void)
 {
     while (1){
-        if (!setjmp(mainloop_jmp))
-            longjmp(mainloop_return_jmp,1);
-        mainloop_func();
+        mtx_lock(&main_mutex);
+        cnd_signal(&main_cond);
+        mtx_unlock(&main_mutex);
+        cnd_wait(&thread_cond,&thread_mutex);
+
+        eassert(main_func);
+        main_func();
+        main_func=NULL;
     }
 }
 Lisp_Object

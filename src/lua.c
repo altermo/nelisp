@@ -204,6 +204,11 @@ int pub ret() collectgarbage(lua_State *L){
 }
 
 bool inited=false;
+int t_init(void* args){
+    (void)args;
+    Frecursive_edit();
+    TODO;
+}
 int pub ret() init(lua_State *L){
     global_lua_state = L;
     check_nargs(L,0);
@@ -227,11 +232,24 @@ int pub ret() init(lua_State *L){
     init_keyboard();
     init_eval();
 
-    unrecoverable_error=true;
-    if (!setjmp(mainloop_return_jmp)){
-        Frecursive_edit();
+    bool err=false;
+    if (mtx_init(&main_mutex,mtx_plain)!=thrd_success)
+        err=true;
+    if (mtx_init(&thread_mutex,mtx_plain)!=thrd_success)
+        err=true;
+    if (cnd_init(&main_cond)!=thrd_success)
+        err=true;
+    if (cnd_init(&thread_cond)!=thrd_success)
+        err=true;
+    if (err)
+    {
+        unrecoverable_error=true;
+        luaL_error(global_lua_state,"Failed to init thread");
     }
-    unrecoverable_error=false;
+
+    mtx_lock(&main_mutex);
+    thrd_create(&main_thread,t_init,NULL);
+    cnd_wait(&main_cond,&main_mutex);
 
     return 0;
 }

@@ -13,6 +13,8 @@
 #include <alloca.h>
 #include <ieee754.h>
 
+#include <threads.h>
+
 #include <luajit-2.1/lua.h>
 #include <luajit-2.1/lauxlib.h>
 
@@ -1358,10 +1360,17 @@ INLINE void check_istable_with_obj(lua_State *L,int n){
     }
 }
 
-static jmp_buf mainloop_jmp;
-static jmp_buf mainloop_return_jmp;
-static void (*mainloop_func)(void);
-static bool mainloop_error=false;
+thrd_t main_thread;
+
+mtx_t main_mutex;
+mtx_t thread_mutex;
+
+cnd_t main_cond;
+cnd_t thread_cond;
+
+static bool tcall_error=false;
+static void (*main_func)(void)=NULL;
+
 static void (*tcall_func_var)(lua_State *L);
 static int tcall_func_n(lua_State *L){
     tcall_func_var(L);
@@ -1372,19 +1381,22 @@ INLINE void tcall_func(void){
     lua_insert(global_lua_state,1);
     if (lua_pcall(global_lua_state,lua_gettop(global_lua_state)-1,1,0)){
         unrecoverable_error=true;
-        mainloop_error=true;
+        tcall_error=true;
     }
 }
 INLINE void tcall(lua_State *L,void (*f)(lua_State *L)){
     if (global_lua_state!=L)
         TODO; /*use lua_xmove to move between the states*/ \
     tcall_func_var=f;
-    mainloop_func=tcall_func;
-    if (!setjmp(mainloop_return_jmp)){
-        longjmp(mainloop_jmp,1);
-    }
-    if (mainloop_error){
-        mainloop_error=false;
+    main_func=tcall_func;
+
+    mtx_lock(&thread_mutex);
+    cnd_signal(&thread_cond);
+    mtx_unlock(&thread_mutex);
+    cnd_wait(&main_cond,&main_mutex);
+
+    if (tcall_error){
+        tcall_error=false;
         lua_error(global_lua_state);
     }
 }
