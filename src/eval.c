@@ -603,6 +603,26 @@ usage: (or CONDITIONS...)  */)
 
   return val;
 }
+DEFUN ("and", Fand, Sand, 0, UNEVALLED, 0,
+       doc: /* Eval args until one of them yields nil, then return nil.
+The remaining args are not evalled at all.
+If no arg yields nil, return the last arg's value.
+usage: (and CONDITIONS...)  */)
+  (Lisp_Object args)
+{
+  Lisp_Object val = Qt;
+
+  while (CONSP (args))
+    {
+      Lisp_Object arg = XCAR (args);
+      args = XCDR (args);
+      val = eval_sub (arg);
+      if (NILP (val))
+	break;
+    }
+
+  return val;
+}
 
 DEFUN ("if", Fif, Sif, 2, UNEVALLED, 0,
        doc: /* If COND yields non-nil, do THEN, else do ELSE...
@@ -619,6 +639,24 @@ usage: (if COND THEN ELSE...)  */)
   if (!NILP (cond))
     return eval_sub (Fcar (XCDR (args)));
   return Fprogn (Fcdr (XCDR (args)));
+}
+
+DEFUN ("quote", Fquote, Squote, 1, UNEVALLED, 0,
+       doc: /* Return the argument, without evaluating it.  `(quote x)' yields `x'.
+Warning: `quote' does not construct its return value, but just returns
+the value that was pre-constructed by the Lisp reader (see info node
+`(elisp)Printed Representation').
+This means that \\='(a . b) is not identical to (cons \\='a \\='b): the former
+does not cons.  Quoting should be reserved for constants that will
+never be modified by side-effects, unless you like self-modifying code.
+See the common pitfall in info node `(elisp)Rearrangement' for an example
+of unexpected results when a quoted object is modified.
+usage: (quote ARG)  */)
+  (Lisp_Object args)
+{
+  if (!NILP (XCDR (args)))
+    xsignal2 (Qwrong_number_of_arguments, Qquote, (TODO,NULL));
+  return XCAR (args);
 }
 
 
@@ -661,4 +699,6 @@ syms_of_eval (void)
     defsubr (&Sprogn);
     defsubr (&Sif);
     defsubr (&Sor);
+    defsubr (&Sand);
+    defsubr (&Squote);
 }

@@ -187,6 +187,7 @@ syms_of_data (void)
 
     DEFSYM (Qvoid_function, "void-function");
     DEFSYM (Qwrong_type_argument, "wrong-type-argument");
+    DEFSYM (Qwrong_number_of_arguments, "wrong-number-of-arguments");
 
     Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -202,6 +203,8 @@ syms_of_data (void)
     PUT_ERROR (Qvoid_function, error_tail,
                "Symbol's function definition is void");
     PUT_ERROR (Qwrong_type_argument, error_tail, "Wrong type argument");
+    PUT_ERROR (Qwrong_number_of_arguments, error_tail,
+               "Wrong number of arguments");
 
     defsubr (&Ssymbol_value);
     defsubr (&Scar);
