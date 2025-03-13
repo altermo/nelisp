@@ -5,7 +5,10 @@ EMACS_INT command_loop_level;
 static Lisp_Object
 cmd_error (Lisp_Object data)
 {
+    TODO_NELISP_LATER;
     UNUSED(data);
+    tcall_error=true;
+    lua_pushliteral(global_lua_state,"nelisp error");
     return make_fixnum(0);
 }
 
