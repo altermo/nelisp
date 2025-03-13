@@ -162,7 +162,7 @@ local function scan_c(path,out)
             if attr:find('noreturn') then
                 table.insert(attrs,'_Noreturn')
             elseif attr:find('const') then
-                error('TODO')
+                table.insert(attrs,'__attribute__((__const__))')
             end
         end
         out.f[name]={maxargs,attrs}
