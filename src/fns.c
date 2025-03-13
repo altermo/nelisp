@@ -158,6 +158,47 @@ This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.  */)
     return plist_get (XSYMBOL (symbol)->u.s.plist, propname);
 }
 
+Lisp_Object
+plist_put (Lisp_Object plist, Lisp_Object prop, Lisp_Object val)
+{
+    Lisp_Object prev = Qnil, tail = plist;
+    FOR_EACH_TAIL (tail)
+    {
+        if (! CONSP (XCDR (tail)))
+            break;
+
+        if (EQ (XCAR (tail), prop))
+        {
+            Fsetcar (XCDR (tail), val);
+            return plist;
+        }
+
+        prev = tail;
+        tail = XCDR (tail);
+    }
+    #if TODO_NELISP_LATER_AND
+    CHECK_TYPE (NILP (tail), Qplistp, plist);
+    #endif
+    Lisp_Object newcell
+        = Fcons (prop, Fcons (val, NILP (prev) ? plist : XCDR (XCDR (prev))));
+    if (NILP (prev))
+        return newcell;
+    Fsetcdr (XCDR (prev), newcell);
+    return plist;
+}
+DEFUN ("put", Fput, Sput, 3, 3, 0,
+       doc: /* Store SYMBOL's PROPNAME property with value VALUE.
+It can be retrieved with `(get SYMBOL PROPNAME)'.  */)
+  (Lisp_Object symbol, Lisp_Object propname, Lisp_Object value)
+{
+#if TODO_NELISP_LATER_AND
+  CHECK_SYMBOL (symbol);
+#endif
+  set_symbol_plist
+    (symbol, plist_put (XSYMBOL (symbol)->u.s.plist, propname, value));
+  return value;
+}
+
 DEFUN ("memq", Fmemq, Smemq, 2, 2, 0,
        doc: /* Return non-nil if ELT is an element of LIST.  Comparison done with `eq'.
 The value is actually the tail of LIST whose car is ELT.  */)
@@ -178,4 +219,5 @@ syms_of_fns (void)
 {
     defsubr(&Sget);
     defsubr(&Smemq);
+    defsubr(&Sput);
 }
