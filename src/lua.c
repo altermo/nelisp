@@ -206,6 +206,7 @@ int pub ret() collectgarbage(lua_State *L){
 bool inited=false;
 int t_init(void* args){
     (void)args;
+    stack_top=&args;
     Frecursive_edit();
     TODO;
 }

@@ -2385,11 +2385,12 @@ mark_roots (void)
 }
 
 #define GC_POINTER_ALIGNMENT alignof (void *)
-extern const void *__libc_stack_end;
 void
 mark_c_stack (void)
 {
-    const void *start = __libc_stack_end;
+    if (!stack_top)
+        TODO;
+    const void *start = stack_top;
     const void *end = &start;
 
     char const *pp;

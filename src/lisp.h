@@ -1197,6 +1197,7 @@ void unreadchar (Lisp_Object readcharfun, int c);
 Lisp_Object read0 (Lisp_Object readcharfun, bool locate_syms);
 extern void init_obarray_once (void);
 extern void syms_of_lread (void);
+void* stack_top=NULL;
 
 extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
 extern void syms_of_fns (void);
