@@ -840,6 +840,12 @@ SYMBOL_NAME (Lisp_Object sym)
   return XSYMBOL (sym)->u.s.name;
 }
 
+INLINE bool
+SYMBOL_INTERNED_IN_INITIAL_OBARRAY_P (Lisp_Object sym)
+{
+  return XSYMBOL (sym)->u.s.interned == SYMBOL_INTERNED_IN_INITIAL_OBARRAY;
+}
+
 struct Lisp_Obarray
 {
     union vectorlike_header header;
@@ -942,6 +948,11 @@ INLINE bool
 CLOSUREP (Lisp_Object a)
 {
   return PSEUDOVECTORP (a, PVEC_CLOSURE);
+}
+INLINE bool
+RECORDP (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_RECORD);
 }
 INLINE bool
 MODULE_FUNCTIONP (Lisp_Object o)

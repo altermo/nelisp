@@ -167,6 +167,119 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
   return newcdr;
 }
 
+DEFUN ("consp", Fconsp, Sconsp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a cons cell.  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  if (CONSP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("atom", Fatom, Satom, 1, 1, 0,
+       doc: /* Return t if OBJECT is not a cons cell.  This includes nil.  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  if (CONSP (object))
+    return Qnil;
+  return Qt;
+}
+
+DEFUN ("listp", Flistp, Slistp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a list, that is, a cons cell or nil.
+Otherwise, return nil.  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  if (CONSP (object) || NILP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("nlistp", Fnlistp, Snlistp, 1, 1, 0,
+       doc: /* Return t if OBJECT is not a list.  Lists include nil.  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  if (CONSP (object) || NILP (object))
+    return Qnil;
+  return Qt;
+}
+
+DEFUN ("bare-symbol-p", Fbare_symbol_p, Sbare_symbol_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is a symbol, but not a symbol together with position.  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  if (BARE_SYMBOL_P (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("symbol-with-pos-p", Fsymbol_with_pos_p, Ssymbol_with_pos_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is a symbol together with position.
+Ignore `symbols-with-pos-enabled'.  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  if (SYMBOL_WITH_POS_P (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("symbolp", Fsymbolp, Ssymbolp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a symbol.  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  if (SYMBOLP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("keywordp", Fkeywordp, Skeywordp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a keyword.
+This means that it is a symbol with a print name beginning with `:'
+interned in the initial obarray.  */)
+  (Lisp_Object object)
+{
+  if (SYMBOLP (object)
+      && SREF (SYMBOL_NAME (object), 0) == ':'
+      && SYMBOL_INTERNED_IN_INITIAL_OBARRAY_P (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("vectorp", Fvectorp, Svectorp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a vector.  */)
+  (Lisp_Object object)
+{
+  if (VECTORP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("recordp", Frecordp, Srecordp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a record.  */)
+  (Lisp_Object object)
+{
+  if (RECORDP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("stringp", Fstringp, Sstringp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a string.  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  if (STRINGP (object))
+    return Qt;
+  return Qnil;
+}
+
 void
 syms_of_data (void)
 {
@@ -212,4 +325,15 @@ syms_of_data (void)
     defsubr (&Sset);
     defsubr (&Ssetcar);
     defsubr (&Ssetcdr);
+    defsubr (&Sconsp);
+    defsubr (&Satom);
+    defsubr (&Slistp);
+    defsubr (&Snlistp);
+    defsubr (&Sbare_symbol_p);
+    defsubr (&Ssymbol_with_pos_p);
+    defsubr (&Ssymbolp);
+    defsubr (&Skeywordp);
+    defsubr (&Svectorp);
+    defsubr (&Srecordp);
+    defsubr (&Sstringp);
 }
