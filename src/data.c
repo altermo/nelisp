@@ -293,6 +293,7 @@ syms_of_data (void)
     DEFSYM (Qlistp, "listp");
     DEFSYM (Qwholenump, "wholenump");
     DEFSYM (Qstringp, "stringp");
+    DEFSYM (Qintegerp, "integerp");
 
     DEFSYM (Qvoid_function, "void-function");
     DEFSYM (Qwrong_type_argument, "wrong-type-argument");

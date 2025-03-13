@@ -340,6 +340,43 @@ Symbols must match exactly.  */)
   return internal_equal (o1, o2, EQUAL_PLAIN, 0, Qnil) ? Qt : Qnil;
 }
 
+DEFUN ("nthcdr", Fnthcdr, Snthcdr, 2, 2, 0,
+       doc: /* Take cdr N times on LIST, return the result.  */)
+  (Lisp_Object n, Lisp_Object list)
+{
+    Lisp_Object tail = list;
+
+    CHECK_INTEGER (n);
+
+    EMACS_INT num;
+    if (FIXNUMP (n))
+    {
+        num = XFIXNUM (n);
+
+        if (num <= SMALL_LIST_LEN_MAX)
+        {
+            for (; 0 < num; num--, tail = XCDR (tail))
+                if (! CONSP (tail))
+                {
+                    CHECK_LIST_END (tail, list);
+                    return Qnil;
+                }
+            return tail;
+        }
+    } else {
+        TODO;
+    }
+
+    TODO;
+}
+DEFUN ("nth", Fnth, Snth, 2, 2, 0,
+       doc: /* Return the Nth element of LIST.
+N counts from zero.  If LIST is not that long, nil is returned.  */)
+  (Lisp_Object n, Lisp_Object list)
+{
+  return Fcar (Fnthcdr (n, list));
+}
+
 void
 syms_of_fns (void)
 {
@@ -350,4 +387,6 @@ syms_of_fns (void)
     defsubr(&Sput);
     defsubr(&Smember);
     defsubr(&Sequal);
+    defsubr(&Snthcdr);
+    defsubr(&Snth);
 }

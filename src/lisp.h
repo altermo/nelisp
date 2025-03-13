@@ -950,6 +950,16 @@ CLOSUREP (Lisp_Object a)
   return PSEUDOVECTORP (a, PVEC_CLOSURE);
 }
 INLINE bool
+BIGNUMP (Lisp_Object x)
+{
+  return PSEUDOVECTORP (x, PVEC_BIGNUM);
+}
+INLINE bool
+INTEGERP (Lisp_Object x)
+{
+  return FIXNUMP (x) || BIGNUMP (x);
+}
+INLINE bool
 RECORDP (Lisp_Object a)
 {
   return PSEUDOVECTORP (a, PVEC_RECORD);
@@ -979,6 +989,12 @@ XFIXNAT (Lisp_Object a)
     EMACS_INT result = USE_LSB_TAG ? XFIXNUM (a) : XLI (a) - (int0 << VALBITS);
     eassume (0 <= result);
     return result;
+}
+
+INLINE void
+CHECK_INTEGER (Lisp_Object x)
+{
+  CHECK_TYPE (INTEGERP (x), Qintegerp, x);
 }
 
 INLINE void
@@ -1197,6 +1213,7 @@ INLINE void circular_list (Lisp_Object list){
 INLINE void maybe_quit (void){
 }
 #endif
+enum { SMALL_LIST_LEN_MAX = 127 };
 struct for_each_tail_internal
 {
   Lisp_Object tortoise;
