@@ -583,6 +583,27 @@ usage: (setq [SYM VAL]...)  */)
     return val;
 }
 
+DEFUN ("or", For, Sor, 0, UNEVALLED, 0,
+       doc: /* Eval args until one of them yields non-nil, then return that value.
+The remaining args are not evalled at all.
+If all args return nil, return nil.
+usage: (or CONDITIONS...)  */)
+  (Lisp_Object args)
+{
+  Lisp_Object val = Qnil;
+
+  while (CONSP (args))
+    {
+      Lisp_Object arg = XCAR (args);
+      args = XCDR (args);
+      val = eval_sub (arg);
+      if (!NILP (val))
+	break;
+    }
+
+  return val;
+}
+
 DEFUN ("if", Fif, Sif, 2, UNEVALLED, 0,
        doc: /* If COND yields non-nil, do THEN, else do ELSE...
 Returns the value of THEN or the value of the last of the ELSE's.
@@ -639,4 +660,5 @@ syms_of_eval (void)
     defsubr (&Ssetq);
     defsubr (&Sprogn);
     defsubr (&Sif);
+    defsubr (&Sor);
 }
