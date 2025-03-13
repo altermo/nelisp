@@ -6,11 +6,15 @@ static Lisp_Object
 cmd_error (Lisp_Object data)
 {
     TODO_NELISP_LATER;
-    UNUSED(data);
     tcall_error=true;
     if (!lua_checkstack(global_lua_state,5))
         luaL_error(global_lua_state,"Lua stack overflow");
-    lua_pushliteral(global_lua_state,"nelisp error");
+    Lisp_Object err_symbol = Fcar(data);
+    Lisp_Object message = Fget(err_symbol, Qerror_message);
+    if (STRINGP(message))
+        lua_pushfstring(global_lua_state,"(nelisp): %s",SDATA(message));
+    else
+        lua_pushliteral(global_lua_state,"(nelisp): nil");
     return make_fixnum(0);
 }
 
