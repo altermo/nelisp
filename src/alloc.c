@@ -1594,10 +1594,8 @@ DEFUN ("make-vector", Fmake_vector, Smake_vector, 2, 2, 0,
 See also the function `vector'.  */)
     (Lisp_Object length, Lisp_Object init)
 {
-#if TODO_NELISP_LATER_AND
     CHECK_TYPE (FIXNATP (length) && XFIXNAT (length) <= PTRDIFF_MAX,
                 Qwholenump, length);
-#endif
     return make_vector (XFIXNAT (length), init);
 }
 
@@ -1645,9 +1643,7 @@ Its value is void, and its function definition and property list are nil.  */)
 {
     Lisp_Object val;
 
-#if TODO_NELISP_LATER_AND
     CHECK_STRING (name);
-#endif
 
     MALLOC_BLOCK_INPUT;
 

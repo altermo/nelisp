@@ -207,6 +207,15 @@ enum Lisp_Fwd_Type
 typedef Lisp_Word Lisp_Object;
 #define LISP_INITIALLY(w) (w)
 
+INLINE void
+CHECK_IMPURE (Lisp_Object obj, void *ptr)
+{
+    UNUSED (obj);
+    UNUSED (ptr);
+    TODO_NELISP_LATER_AND;
+}
+extern AVOID wrong_type_argument (Lisp_Object, Lisp_Object);
+
 #define XUNTAG(a, type, ctype) \
 ((ctype *) ((uintptr_t) XLP (a) - (uintptr_t) LISP_WORD_TAG (type)))
 
@@ -515,6 +524,11 @@ INLINE bool
 {
     return lisp_h_NILP (x);
 }
+INLINE void
+CHECK_CONS (Lisp_Object x)
+{
+  CHECK_TYPE (CONSP (x), Qconsp, x);
+}
 INLINE struct Lisp_Cons *
 XCONS (Lisp_Object a)
 {
@@ -547,7 +561,7 @@ CAR (Lisp_Object c)
   if (CONSP (c))
     return XCAR (c);
   if (!NILP (c))
-    TODO; //wrong_type_argument (Qlistp, c);
+    wrong_type_argument (Qlistp, c);
   return Qnil;
 }
 INLINE Lisp_Object
@@ -556,7 +570,7 @@ CDR (Lisp_Object c)
   if (CONSP (c))
     return XCDR (c);
   if (!NILP (c))
-    TODO; //wrong_type_argument (Qlistp, c);
+    wrong_type_argument (Qlistp, c);
   return Qnil;
 }
 INLINE Lisp_Object
@@ -589,6 +603,11 @@ INLINE bool
 STRINGP (Lisp_Object x)
 {
     return TAGGEDP (x, Lisp_String);
+}
+INLINE void
+CHECK_STRING (Lisp_Object x)
+{
+  CHECK_TYPE (STRINGP (x), Qstringp, x);
 }
 INLINE struct Lisp_String *
 XSTRING (Lisp_Object a)
@@ -924,6 +943,17 @@ MODULE_FUNCTIONP (Lisp_Object o)
   return PSEUDOVECTORP (o, PVEC_MODULE_FUNCTION);
 }
 
+INLINE void
+CHECK_LIST_END (Lisp_Object x, Lisp_Object y)
+{
+  CHECK_TYPE (NILP (x), Qlistp, y);
+}
+
+INLINE bool
+FIXNATP (Lisp_Object x)
+{
+  return FIXNUMP (x) && 0 <= XFIXNUM (x);
+}
 INLINE EMACS_INT
 XFIXNAT (Lisp_Object a)
 {
@@ -1231,6 +1261,10 @@ xsignal (Lisp_Object error_symbol, Lisp_Object data)
     Fsignal (error_symbol, data);
     __builtin_unreachable();
 }
+extern AVOID xsignal0 (Lisp_Object);
+extern AVOID xsignal1 (Lisp_Object, Lisp_Object);
+extern AVOID xsignal2 (Lisp_Object, Lisp_Object, Lisp_Object);
+extern AVOID xsignal3 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
 extern Lisp_Object eval_sub (Lisp_Object form);
 extern void init_eval_once (void);
 extern void init_eval (void);

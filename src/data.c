@@ -1,5 +1,12 @@
 #include "lisp.h"
 
+AVOID
+wrong_type_argument (Lisp_Object predicate, Lisp_Object value)
+{
+  eassert (!TAGGEDP (value, Lisp_Type_Unused0));
+  xsignal2 (Qwrong_type_argument, predicate, value);
+}
+
 static bool
 OBJFWDP (lispfwd a)
 {
@@ -72,9 +79,7 @@ find_symbol_value (Lisp_Object symbol)
 {
   struct Lisp_Symbol *sym;
 
-#if TODO_NELISP_LATER_AND
   CHECK_SYMBOL (symbol);
-#endif
   sym = XSYMBOL (symbol);
 
   switch (sym->u.s.redirect)
@@ -115,10 +120,7 @@ set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
 {
     UNUSED(where);
     UNUSED(bindflag);
-#if TODO_NELISP_LATER_AND
-  bool voide = BASE_EQ (newval, Qunbound);
   CHECK_SYMBOL (symbol);
-#endif
   struct Lisp_Symbol *sym = XSYMBOL (symbol);
   switch (sym->u.s.trapped_write)
     {
@@ -153,10 +155,8 @@ DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
        doc: /* Set the car of CELL to be NEWCAR.  Returns NEWCAR.  */)
   (register Lisp_Object cell, Lisp_Object newcar)
 {
-#if TODO_NELISP_LATER_AND
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
-#endif
   XSETCAR (cell, newcar);
   return newcar;
 }
@@ -165,10 +165,8 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
        doc: /* Set the cdr of CELL to be NEWCDR.  Returns NEWCDR.  */)
   (register Lisp_Object cell, Lisp_Object newcdr)
 {
-#if TODO_NELISP_LATER_AND
   CHECK_CONS (cell);
   CHECK_IMPURE (cell, XCONS (cell));
-#endif
   XSETCDR (cell, newcdr);
   return newcdr;
 }
@@ -181,7 +179,14 @@ syms_of_data (void)
     DEFSYM (Qerror_conditions, "error-conditions");
     DEFSYM (Qerror_message, "error-message");
 
+    DEFSYM (Qsymbolp, "symbolp");
+    DEFSYM (Qconsp, "consp");
+    DEFSYM (Qlistp, "listp");
+    DEFSYM (Qwholenump, "wholenump");
+    DEFSYM (Qstringp, "stringp");
+
     DEFSYM (Qvoid_function, "void-function");
+    DEFSYM (Qwrong_type_argument, "wrong-type-argument");
 
     Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -196,6 +201,7 @@ syms_of_data (void)
 
     PUT_ERROR (Qvoid_function, error_tail,
                "Symbol's function definition is void");
+    PUT_ERROR (Qwrong_type_argument, error_tail, "Wrong type argument");
 
     defsubr (&Ssymbol_value);
     defsubr (&Scar);

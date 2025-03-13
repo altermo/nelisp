@@ -6,9 +6,7 @@ list_length (Lisp_Object list)
 {
     intptr_t i = 0;
     FOR_EACH_TAIL (list) i++;
-#if TODO_NELISP_LATER_AND
     CHECK_LIST_END (list, list);
-#endif
     return i;
 }
 
@@ -147,8 +145,8 @@ DEFUN ("get", Fget, Sget, 2, 2, 0,
 This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.  */)
   (Lisp_Object symbol, Lisp_Object propname)
 {
-#if TODO_NELISP_LATER_AND
     CHECK_SYMBOL (symbol);
+#if TODO_NELISP_LATER_AND
     Lisp_Object propval = plist_get (CDR (Fassq (symbol,
                                                  Voverriding_plist_environment)),
                                      propname);
@@ -176,9 +174,7 @@ plist_put (Lisp_Object plist, Lisp_Object prop, Lisp_Object val)
         prev = tail;
         tail = XCDR (tail);
     }
-    #if TODO_NELISP_LATER_AND
     CHECK_TYPE (NILP (tail), Qplistp, plist);
-    #endif
     Lisp_Object newcell
         = Fcons (prop, Fcons (val, NILP (prev) ? plist : XCDR (XCDR (prev))));
     if (NILP (prev))
@@ -191,9 +187,7 @@ DEFUN ("put", Fput, Sput, 3, 3, 0,
 It can be retrieved with `(get SYMBOL PROPNAME)'.  */)
   (Lisp_Object symbol, Lisp_Object propname, Lisp_Object value)
 {
-#if TODO_NELISP_LATER_AND
   CHECK_SYMBOL (symbol);
-#endif
   set_symbol_plist
     (symbol, plist_put (XSYMBOL (symbol)->u.s.plist, propname, value));
   return value;
@@ -208,15 +202,15 @@ The value is actually the tail of LIST whose car is ELT.  */)
   FOR_EACH_TAIL (tail)
     if (EQ (XCAR (tail), elt))
       return tail;
-#if TODO_NELISP_LATER_AND
   CHECK_LIST_END (tail, list);
-#endif
   return Qnil;
 }
 
 void
 syms_of_fns (void)
 {
+    DEFSYM (Qplistp, "plistp");
+
     defsubr(&Sget);
     defsubr(&Smemq);
     defsubr(&Sput);

@@ -238,9 +238,7 @@ it defaults to the value of `obarray'.  */)
     Lisp_Object tem;
 
     obarray = check_obarray (NILP (obarray) ? Vobarray : obarray);
-#if TODO_NELISP_LATER_AND
     CHECK_STRING (string);
-#endif
 
 #if TODO_NELISP_LATER_AND
     char* longhand = NULL;
