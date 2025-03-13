@@ -8,6 +8,8 @@ cmd_error (Lisp_Object data)
     TODO_NELISP_LATER;
     UNUSED(data);
     tcall_error=true;
+    if (!lua_checkstack(global_lua_state,5))
+        luaL_error(global_lua_state,"Lua stack overflow");
     lua_pushliteral(global_lua_state,"nelisp error");
     return make_fixnum(0);
 }

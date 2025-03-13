@@ -178,6 +178,7 @@ syms_of_data (void)
 {
     DEFSYM (Qquote, "quote");
     DEFSYM (Qtop_level, "top-level");
+    DEFSYM (Qerror_conditions, "error-conditions");
 
     defsubr (&Ssymbol_value);
     defsubr (&Scar);

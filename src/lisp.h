@@ -780,8 +780,8 @@ XSUBR (Lisp_Object a)
 }
 
 typedef jmp_buf sys_jmp_buf;
-#define sys_setjmp(j) _setjmp (j)
-#define sys_longjmp(j, v) _longjmp (j, v)
+#define sys_setjmp(j) setjmp (j)
+#define sys_longjmp(j, v) longjmp (j, v)
 #include "thread.h"
 
 INLINE Lisp_Object

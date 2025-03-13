@@ -220,6 +220,136 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
     }
 }
 
+static AVOID
+unwind_to_catch (struct handler *catch, enum nonlocal_exit type,
+                 Lisp_Object value)
+{
+    bool last_time;
+
+    eassert (catch->next);
+
+    catch->nonlocal_exit = type;
+    catch->val = value;
+
+    // set_poll_suppress_count (catch->poll_suppress_count);
+    // unblock_input_to (catch->interrupt_input_blocked);
+
+    do
+    {
+        unbind_to (handlerlist->pdlcount, Qnil);
+        last_time = handlerlist == catch;
+        if (! last_time)
+            handlerlist = handlerlist->next;
+    }
+    while (! last_time);
+
+    eassert (handlerlist == catch);
+
+    lisp_eval_depth = catch->f_lisp_eval_depth;
+    // set_act_rec (current_thread, catch->act_rec);
+
+    sys_longjmp (catch->jmp, 1);
+}
+
+static Lisp_Object
+find_handler_clause (Lisp_Object handlers, Lisp_Object conditions)
+{
+    register Lisp_Object h;
+
+    if (!CONSP (handlers))
+        return handlers;
+
+    for (h = handlers; CONSP (h); h = XCDR (h))
+    {
+        Lisp_Object handler = XCAR (h);
+        if (!NILP (Fmemq (handler, conditions))
+            || EQ (handler, Qt))
+            return handlers;
+    }
+
+    return Qnil;
+}
+static Lisp_Object
+signal_or_quit (Lisp_Object error_symbol, Lisp_Object data, bool continuable)
+{
+    UNUSED(continuable);
+    bool oom = NILP (error_symbol);
+    Lisp_Object error
+        = oom ? data
+        : (!SYMBOLP (error_symbol) && NILP (data)) ? error_symbol
+        : Fcons (error_symbol, data);
+    Lisp_Object conditions;
+    Lisp_Object real_error_symbol
+        = CONSP (error) ? XCAR (error) : error_symbol;
+    Lisp_Object clause = Qnil;
+    struct handler *h;
+    int skip;
+    UNUSED(skip);
+
+    conditions = Fget (real_error_symbol, Qerror_conditions);
+
+    for (skip = 0, h = handlerlist; h; skip++, h = h->next)
+    {
+        switch (h->type)
+        {
+            case CATCHER_ALL:
+                clause = Qt;
+                break;
+            case CATCHER:
+                continue;
+            case CONDITION_CASE:
+                clause = find_handler_clause (h->tag_or_ch, conditions);
+                break;
+            case HANDLER_BIND:
+                {
+                    TODO;
+                }
+            case SKIP_CONDITIONS:
+                {
+                    int toskip = XFIXNUM (h->tag_or_ch);
+                    while (toskip-- >= 0)
+                        h = h->next;
+                    continue;
+                }
+            default:
+                abort ();
+        }
+        if (!NILP (clause))
+            break;
+    }
+
+    if (!NILP (clause))
+        unwind_to_catch (h, NONLOCAL_EXIT_SIGNAL, error);
+    TODO;
+}
+DEFUN ("signal", Fsignal, Ssignal, 2, 2, 0,
+       doc: /* Signal an error.  Args are ERROR-SYMBOL and associated DATA.
+This function does not return.
+
+When `noninteractive' is non-nil (in particular, in batch mode), an
+unhandled error calls `kill-emacs', which terminates the Emacs
+session with a non-zero exit code.
+
+An error symbol is a symbol with an `error-conditions' property
+that is a list of condition names.  The symbol should be non-nil.
+A handler for any of those names will get to handle this signal.
+The symbol `error' should normally be one of them.
+
+DATA should be a list.  Its elements are printed as part of the error message.
+See Info anchor `(elisp)Definition of signal' for some details on how this
+error message is constructed.
+If the signal is handled, DATA is made available to the handler.
+See also the function `condition-case'.  */
+       attributes: noreturn)
+  (Lisp_Object error_symbol, Lisp_Object data)
+{
+  /* If they call us with nonsensical arguments, produce "peculiar error".  */
+  if (NILP (error_symbol) && NILP (data))
+    error_symbol = Qerror;
+  signal_or_quit (error_symbol, data, false);
+  eassume (false);
+}
+
 Lisp_Object
 indirect_function (Lisp_Object object)
 {
@@ -444,5 +574,6 @@ init_eval (void)
 void
 syms_of_eval (void)
 {
+    defsubr (&Ssignal);
     defsubr (&Ssetq);
 }
