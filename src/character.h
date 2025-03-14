@@ -138,6 +138,10 @@ string_char_advance (unsigned char const **pp)
   *pp = p + len;
   return c;
 }
+
 ptrdiff_t str_as_unibyte (unsigned char *str, ptrdiff_t bytes);
+void
+parse_str_as_multibyte (const unsigned char *str, ptrdiff_t len,
+			ptrdiff_t *nchars, ptrdiff_t *nbytes);
 
 #endif

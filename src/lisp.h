@@ -1271,6 +1271,12 @@ void staticpro (Lisp_Object const *);
 extern Lisp_Object make_specified_string (const char *, ptrdiff_t, ptrdiff_t, bool);
 extern void mark_object (Lisp_Object);
 extern void mark_objects (Lisp_Object *, ptrdiff_t);
+extern Lisp_Object make_string (const char *, ptrdiff_t);
+INLINE Lisp_Object
+build_string (const char *str)
+{
+  return make_string (str, strlen (str));
+}
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;

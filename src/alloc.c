@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "lisp.h"
+#include "character.h"
 
 #define USE_ALIGNED_ALLOC 1
 #define MALLOC_0_IS_NONNULL 1
@@ -966,6 +967,20 @@ make_unibyte_string (const char *contents, ptrdiff_t length)
     register Lisp_Object val;
     val = make_uninit_string (length);
     memcpy (SDATA (val), contents, length);
+    return val;
+}
+Lisp_Object
+make_string (const char *contents, ptrdiff_t nbytes)
+{
+    register Lisp_Object val;
+    ptrdiff_t nchars, multibyte_nbytes;
+
+    parse_str_as_multibyte ((const unsigned char *) contents, nbytes,
+                            &nchars, &multibyte_nbytes);
+    if (nbytes == nchars || nbytes != multibyte_nbytes)
+        val = make_unibyte_string (contents, nbytes);
+    else
+        TODO;
     return val;
 }
 
