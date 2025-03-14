@@ -3,6 +3,7 @@ CC=gcc
 CFLAGS=
 
 all:
+	which jq >/dev/null && test $$(jq length compile_commands.json) = 0 && rm compile_commands.json || true
 	[ Makefile -nt compile_commands.json ] && intercept-build make nelisp || make nelisp
 
 nelisp:
