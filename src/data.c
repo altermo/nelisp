@@ -327,6 +327,8 @@ syms_of_data (void)
     PUT_ERROR (Qwrong_number_of_arguments, error_tail,
                "Wrong number of arguments");
     PUT_ERROR (Qvoid_variable, error_tail, "Symbol's value as variable is void");
+    DEFSYM (Qcircular_list, "circular-list");
+    PUT_ERROR (Qcircular_list, error_tail, "List contains a loop");
 
     defsubr (&Ssymbol_value);
     defsubr (&Scar);

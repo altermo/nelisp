@@ -628,7 +628,6 @@ STRING_MULTIBYTE (Lisp_Object str)
 }
 #define STRING_BYTES_BOUND  \
 ((ptrdiff_t) min (MOST_POSITIVE_FIXNUM, min (SIZE_MAX, PTRDIFF_MAX) - 1))
-#if TODO_NELISP_LATER_AND
 #define STRING_SET_UNIBYTE(STR)				\
 do {							\
     if (XSTRING (STR)->u.s.size == 0)			\
@@ -636,12 +635,6 @@ do {							\
     else						\
         XSTRING (STR)->u.s.size_byte = -1;		\
 } while (false)
-#else
-#define STRING_SET_UNIBYTE(STR)				\
-do {							\
-    XSTRING (STR)->u.s.size_byte = -1;		\
-} while (false)
-#endif
 INLINE unsigned char *
 SDATA (Lisp_Object string)
 {
@@ -1206,10 +1199,6 @@ extern Lisp_Object list5 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Li
 
 
 #if TODO_NELISP_LATER_ELSE
-INLINE void circular_list (Lisp_Object list){
-    UNUSED(list);
-    TODO;
-}
 INLINE void maybe_quit (void){
 }
 #endif
@@ -1320,6 +1309,10 @@ extern void init_keyboard (void);
 extern void syms_of_editfns (void);
 
 extern void syms_of_emacs (void);
+
+INLINE void circular_list (Lisp_Object list){
+    xsignal1 (Qcircular_list, list);
+}
 
 
 #define DEFUN(lname, fnname, sname, minargs, maxargs, intspec, doc) \
