@@ -284,6 +284,14 @@ defvar_lisp (struct Lisp_Objfwd const *o_fwd, char const *namestring)
     defvar_lisp_nopro (o_fwd, namestring);
     staticpro (o_fwd->objvar);
 }
+void
+defvar_int (struct Lisp_Intfwd const *i_fwd, char const *namestring)
+{
+  Lisp_Object sym = intern_c_string (namestring);
+  XBARE_SYMBOL (sym)->u.s.declared_special = true;
+  XBARE_SYMBOL (sym)->u.s.redirect = SYMBOL_FORWARDED;
+  SET_SYMBOL_FWD (XBARE_SYMBOL (sym), i_fwd);
+}
 
 void
 defsubr (union Aligned_Lisp_Subr *aname)

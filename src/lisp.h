@@ -1343,6 +1343,18 @@ do {						\
         = {Lisp_Fwd_Obj, &globals.f_##vname};	\
     defvar_lisp (&o_fwd, lname);		\
 } while (false)
+struct Lisp_Intfwd
+  {
+    enum Lisp_Fwd_Type type;
+    intmax_t *intvar;
+  };
+extern void defvar_int (struct Lisp_Intfwd const *, char const *);
+#define DEFVAR_INT(lname, vname, doc)		\
+  do {						\
+    static struct Lisp_Intfwd const i_fwd	\
+      = {Lisp_Fwd_Int, &globals.f_##vname};	\
+    defvar_int (&i_fwd, lname);			\
+  } while (false)
 #define DEFSYM(sym, name)
 extern void defsubr (union Aligned_Lisp_Subr *);
 
