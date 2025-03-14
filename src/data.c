@@ -280,6 +280,16 @@ DEFUN ("stringp", Fstringp, Sstringp, 1, 1, 0,
   return Qnil;
 }
 
+DEFUN ("null", Fnull, Snull, 1, 1, 0,
+       doc: /* Return t if OBJECT is nil, and return nil otherwise.  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  if (NILP (object))
+    return Qt;
+  return Qnil;
+}
+
 void
 syms_of_data (void)
 {
@@ -337,4 +347,5 @@ syms_of_data (void)
     defsubr (&Svectorp);
     defsubr (&Srecordp);
     defsubr (&Sstringp);
+    defsubr (&Snull);
 }
