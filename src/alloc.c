@@ -712,9 +712,7 @@ allocate_string (void)
 
     MALLOC_UNBLOCK_INPUT;
 
-#if TODO_NELISP_LATER_AND
     ++strings_consed;
-#endif
     tally_consing (sizeof *s);
 
     return s;
@@ -916,9 +914,7 @@ make_clear_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes, bool clearit)
     s->u.s.intervals = NULL;
     allocate_string_data (s, nchars, nbytes, clearit, false);
     XSETSTRING (string, s);
-#if TODO_NELISP_LATER_AND
     string_chars_consed += nbytes;
-#endif
     return string;
 }
 Lisp_Object
@@ -1067,9 +1063,7 @@ make_float (double float_value)
     XFLOAT_INIT (val, float_value);
     eassert (!XFLOAT_MARKED_P (XFLOAT (val)));
     tally_consing (sizeof (struct Lisp_Float));
-#if TODO_NELISP_LATER_AND
     floats_consed++;
-#endif
     return val;
 }
 
@@ -1141,8 +1135,8 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
     eassert (!XCONS_MARKED_P (XCONS (val)));
 #if TODO_NELISP_LATER_AND
     consing_until_gc -= sizeof (struct Lisp_Cons);
-    cons_cells_consed++;
 #endif
+    cons_cells_consed++;
     return val;
 }
 
@@ -1557,9 +1551,7 @@ allocate_vectorlike (ptrdiff_t len, bool clearit)
     }
 
     tally_consing (nbytes);
-#if TODO_NELISP_LATER_AND
     vector_cells_consed += len;
-#endif
 
     MALLOC_UNBLOCK_INPUT;
 
@@ -1689,9 +1681,7 @@ Its value is void, and its function definition and property list are nil.  */)
 
     init_symbol (val, name);
     tally_consing (sizeof (struct Lisp_Symbol));
-#if TODO_NELISP_LATER_AND
     symbols_consed++;
-#endif
     return val;
 }
 
@@ -2674,6 +2664,20 @@ init_alloc_once (void)
 void
 syms_of_alloc (void)
 {
+    DEFVAR_INT ("cons-cells-consed", cons_cells_consed,
+                doc: /* Number of cons cells that have been consed so far.  */);
+    DEFVAR_INT ("floats-consed", floats_consed,
+                doc: /* Number of floats that have been consed so far.  */);
+    DEFVAR_INT ("vector-cells-consed", vector_cells_consed,
+                doc: /* Number of vector cells that have been consed so far.  */);
+    DEFVAR_INT ("symbols-consed", symbols_consed,
+                doc: /* Number of symbols that have been consed so far.  */);
+    symbols_consed += ARRAYELTS (lispsym);
+    DEFVAR_INT ("string-chars-consed", string_chars_consed,
+                doc: /* Number of string characters that have been consed so far.  */);
+    DEFVAR_INT ("strings-consed", strings_consed,
+                doc: /* Number of strings that have been consed so far.  */);
+
     defsubr (&Scons);
     defsubr (&Smake_vector);
     defsubr (&Smake_symbol);
