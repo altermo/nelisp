@@ -159,6 +159,7 @@ int pub ret(/*nelisp.obj*/) _get_symbol(lua_State *L){
 void t_eval(lua_State *L){
     specpdl_ref count = SPECPDL_INDEX ();
     size_t len;
+    Lisp_Object lex_bound;
     const char* str = lua_tolstring(L,-1,&len);
 
     specbind (Qlexical_binding, Qnil);
@@ -188,6 +189,10 @@ void t_eval(lua_State *L){
             || c == NO_BREAK_SPACE)
             continue;
         UNREAD (c);
+        lex_bound = find_symbol_value (Qlexical_binding);
+        specbind (Qinternal_interpreter_environment,
+                  (NILP (lex_bound) || BASE_EQ (lex_bound, Qunbound)
+                  ? Qnil : list1 (Qt)));
         Lisp_Object val = read0 (readcharfun, false);
         ret = eval_sub (val);
     }

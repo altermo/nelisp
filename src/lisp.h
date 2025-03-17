@@ -895,6 +895,16 @@ XFWDTYPE (lispfwd a)
   enum Lisp_Fwd_Type const *p = a.fwdptr;
   return *p;
 }
+INLINE bool
+BUFFER_OBJFWDP (lispfwd a)
+{
+  return XFWDTYPE (a) == Lisp_Fwd_Buffer_Obj;
+}
+INLINE bool
+KBOARD_OBJFWDP (lispfwd a)
+{
+  return XFWDTYPE (a) == Lisp_Fwd_Kboard_Obj;
+}
 
 struct Lisp_Float
 {
@@ -1016,6 +1026,19 @@ NATIVE_COMP_FUNCTION_DYNP (Lisp_Object a)
 {
     UNUSED(a);
     return false;
+}
+
+INLINE bool
+integer_to_intmax (Lisp_Object num, intmax_t *n)
+{
+    if (FIXNUMP (num))
+    {
+        *n = XFIXNUM (num);
+        return true;
+    }
+    else {
+        TODO;
+    }
 }
 
 enum maxargs
@@ -1311,6 +1334,7 @@ extern void specbind (Lisp_Object symbol, Lisp_Object value);
 extern void syms_of_data (void);
 extern void set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
                           enum Set_Internal_Bind bindflag);
+extern Lisp_Object find_symbol_value (Lisp_Object symbol);
 
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);
@@ -1357,6 +1381,11 @@ extern void defvar_int (struct Lisp_Intfwd const *, char const *);
       = {Lisp_Fwd_Int, &globals.f_##vname};	\
     defvar_int (&i_fwd, lname);			\
   } while (false)
+struct Lisp_Boolfwd
+  {
+    enum Lisp_Fwd_Type type;	/* = Lisp_Fwd_Bool */
+    bool *boolvar;
+  };
 #define DEFSYM(sym, name)
 extern void defsubr (union Aligned_Lisp_Subr *);
 

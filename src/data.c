@@ -8,9 +8,31 @@ wrong_type_argument (Lisp_Object predicate, Lisp_Object value)
 }
 
 static bool
+BOOLFWDP (lispfwd a)
+{
+  return XFWDTYPE (a) == Lisp_Fwd_Bool;
+}
+static bool
+INTFWDP (lispfwd a)
+{
+  return XFWDTYPE (a) == Lisp_Fwd_Int;
+}
+static bool
 OBJFWDP (lispfwd a)
 {
   return XFWDTYPE (a) == Lisp_Fwd_Obj;
+}
+static struct Lisp_Boolfwd const *
+XBOOLFWD (lispfwd a)
+{
+  eassert (BOOLFWDP (a));
+  return a.fwdptr;
+}
+static struct Lisp_Intfwd const *
+XFIXNUMFWD (lispfwd a)
+{
+  eassert (INTFWDP (a));
+  return a.fwdptr;
 }
 static struct Lisp_Objfwd const *
 XOBJFWD (lispfwd a)
@@ -110,12 +132,49 @@ global value outside of any lexical scope.  */)
   xsignal1 (Qvoid_variable, symbol);
 }
 
+static void
+store_symval_forwarding (lispfwd valcontents, Lisp_Object newval)
+{
+    switch (XFWDTYPE (valcontents))
+    {
+        case Lisp_Fwd_Int:
+            {
+                intmax_t i;
+                CHECK_INTEGER (newval);
+                if (! integer_to_intmax (newval, &i))
+                    TODO;
+                *XFIXNUMFWD (valcontents)->intvar = i;
+            }
+            break;
+
+        case Lisp_Fwd_Bool:
+            *XBOOLFWD (valcontents)->boolvar = !NILP (newval);
+            break;
+
+        case Lisp_Fwd_Obj:
+            *XOBJFWD (valcontents)->objvar = newval;
+
+#if TODO_NELISP_LATER_AND
+            if (XOBJFWD (valcontents)->objvar > (Lisp_Object *) &buffer_defaults
+                && XOBJFWD (valcontents)->objvar < (Lisp_Object *) (&buffer_defaults + 1))
+            {
+                TODO;
+            }
+#endif
+            break;
+        case Lisp_Fwd_Buffer_Obj: TODO;
+        case Lisp_Fwd_Kboard_Obj: TODO;
+        default:
+            emacs_abort (); /* goto def; */
+    }
+}
 void
 set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
               enum Set_Internal_Bind bindflag)
 {
     UNUSED(where);
     UNUSED(bindflag);
+  bool voide = BASE_EQ (newval, Qunbound);
   CHECK_SYMBOL (symbol);
   struct Lisp_Symbol *sym = XSYMBOL (symbol);
   switch (sym->u.s.trapped_write)
@@ -130,13 +189,29 @@ set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
     }
 
   switch (sym->u.s.redirect)
-    {
+  {
     case SYMBOL_VARALIAS: TODO;
     case SYMBOL_PLAINVAL: SET_SYMBOL_VAL (sym , newval); return;
     case SYMBOL_LOCALIZED: TODO;
-    case SYMBOL_FORWARDED: TODO;
+    case SYMBOL_FORWARDED:
+      {
+        lispfwd innercontents = SYMBOL_FWD (sym);
+        if (BUFFER_OBJFWDP (innercontents))
+        {
+          TODO;
+        }
+
+        if (voide)
+        {
+          sym->u.s.redirect = SYMBOL_PLAINVAL;
+          SET_SYMBOL_VAL (sym, newval);
+        } else {
+          store_symval_forwarding (innercontents, newval);
+        }
+        break;
+      }
     default: emacs_abort ();
-    }
+  }
   return;
 }
 DEFUN ("set", Fset, Sset, 2, 2, 0,

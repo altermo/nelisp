@@ -11,6 +11,13 @@ specpdl_symbol (union specbinding *pdl)
   eassert (pdl->kind >= SPECPDL_LET);
   return pdl->let.symbol;
 }
+static enum specbind_tag
+specpdl_kind (union specbinding *pdl)
+{
+  eassert (pdl->kind >= SPECPDL_LET);
+  return pdl->let.kind;
+}
+
 static Lisp_Object
 specpdl_old_value (union specbinding *pdl)
 {
@@ -112,6 +119,18 @@ do_one_unbind (union specbinding *this_binding, bool unwinding,
                     else
                         set_internal (sym, specpdl_old_value (this_binding),
                                       Qnil, bindflag);
+                    break;
+                }
+                if (SYMBOLP (sym) && XSYMBOL (sym)->u.s.redirect == SYMBOL_FORWARDED &&
+                    XSYMBOL (sym)->u.s.trapped_write == SYMBOL_UNTRAPPED_WRITE)
+                {
+                    if (BUFFER_OBJFWDP (SYMBOL_FWD (XSYMBOL(sym))) ||
+                        KBOARD_OBJFWDP (SYMBOL_FWD (XSYMBOL(sym))))
+                    {
+                        TODO;
+                    }
+                    set_internal (sym, specpdl_old_value (this_binding),
+                                  Qnil, bindflag);
                     break;
                 }
                 TODO;
@@ -291,8 +310,17 @@ do_specbind (struct Lisp_Symbol *sym, union specbinding *bind,
             else
                 TODO;
             break;
-        case SYMBOL_FORWARDED: TODO;
-        case SYMBOL_LOCALIZED: TODO;
+        case SYMBOL_FORWARDED:
+            if (BUFFER_OBJFWDP (SYMBOL_FWD (sym))
+                && specpdl_kind (bind) == SPECPDL_LET_DEFAULT)
+            {
+                TODO;
+                return;
+            }
+            FALLTHROUGH;
+        case SYMBOL_LOCALIZED:
+            set_internal (specpdl_symbol (bind), value, Qnil, bindflag);
+            break;
         default:
             emacs_abort ();
     }
@@ -312,7 +340,32 @@ specbind (Lisp_Object symbol, Lisp_Object value)
             break;
         case SYMBOL_LOCALIZED:
         case SYMBOL_FORWARDED:
-            TODO;
+            {
+                Lisp_Object ovalue = find_symbol_value (symbol);
+                specpdl_ptr->let.kind = SPECPDL_LET_LOCAL;
+                specpdl_ptr->let.symbol = symbol;
+                specpdl_ptr->let.old_value = ovalue;
+
+                eassert (sym->u.s.redirect != SYMBOL_LOCALIZED
+                         || (TODO,false));
+
+                if (sym->u.s.redirect == SYMBOL_LOCALIZED)
+                {
+                    TODO;
+                }
+                else if (BUFFER_OBJFWDP (SYMBOL_FWD (sym)))
+                {
+                    TODO;
+                }
+                else if (KBOARD_OBJFWDP (SYMBOL_FWD (sym)))
+                {
+                    TODO;
+                }
+                else
+                    specpdl_ptr->let.kind = SPECPDL_LET;
+
+                break;
+            }
         default: emacs_abort ();
     }
     grow_specpdl ();
@@ -454,13 +507,9 @@ eval_sub (Lisp_Object form)
 
     if (SYMBOLP (form))
     {
-#if TODO_NELISP_LATER_AND
         Lisp_Object lex_binding
             = Fassq (form, Vinternal_interpreter_environment);
         return !NILP (lex_binding) ? XCDR (lex_binding) : Fsymbol_value (form);
-#else
-        return Fsymbol_value(form);
-#endif
     }
 
     if (!CONSP (form))
@@ -636,17 +685,15 @@ usage: (setq [SYM VAL]...)  */)
         Lisp_Object arg = XCAR (tail);
         tail = XCDR (tail);
         val = eval_sub (arg);
-#if TODO_NELISP_LATER_AND
-         Lisp_Object lex_binding
-         = (SYMBOLP (sym)
-         ? Fassq (sym, Vinternal_interpreter_environment)
-         : Qnil);
-         if (!NILP (lex_binding))
-         XSETCDR (lex_binding, val); /* SYM is lexically bound.  */
-         else
-#endif
-         Fset (sym, val);	/* SYM is dynamically bound.  */
-         }
+        Lisp_Object lex_binding
+            = (SYMBOLP (sym)
+            ? Fassq (sym, Vinternal_interpreter_environment)
+            : Qnil);
+        if (!NILP (lex_binding))
+            XSETCDR (lex_binding, val);
+        else
+            Fset (sym, val);
+    }
 
     return val;
 }
@@ -762,6 +809,19 @@ init_eval (void)
 void
 syms_of_eval (void)
 {
+    DEFSYM (Qinternal_interpreter_environment,
+            "internal-interpreter-environment");
+    DEFVAR_LISP ("internal-interpreter-environment",
+                 Vinternal_interpreter_environment,
+                 doc: /* If non-nil, the current lexical environment of the lisp interpreter.
+When lexical binding is not being used, this variable is nil.
+A value of `(t)' indicates an empty environment, otherwise it is an
+alist of active lexical bindings.  */);
+    Vinternal_interpreter_environment = Qnil;
+    /* Don't export this variable to Elisp, so no one can mess with it
+     (Just imagine if someone makes it buffer-local).  */
+    Funintern (Qinternal_interpreter_environment, Qnil);
+
     defsubr (&Ssignal);
     defsubr (&Ssetq);
     defsubr (&Sprogn);
