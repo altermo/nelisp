@@ -389,6 +389,25 @@ N counts from zero.  If LIST is not that long, nil is returned.  */)
 {
   return Fcar (Fnthcdr (n, list));
 }
+DEFUN ("proper-list-p", Fproper_list_p, Sproper_list_p, 1, 1, 0,
+       doc: /* Return OBJECT's length if it is a proper list, nil otherwise.
+A proper list is neither circular nor dotted (i.e., its last cdr is nil).  */
+       attributes: const)
+  (Lisp_Object object)
+{
+  intptr_t len = 0;
+  Lisp_Object last_tail = object;
+  Lisp_Object tail = object;
+  FOR_EACH_TAIL_SAFE (tail)
+    {
+      len++;
+      rarely_quit (len);
+      last_tail = XCDR (tail);
+    }
+  if (!NILP (last_tail))
+    return Qnil;
+  return make_fixnum (len);
+}
 
 void
 syms_of_fns (void)
@@ -403,4 +422,5 @@ syms_of_fns (void)
     defsubr(&Sequal);
     defsubr(&Snthcdr);
     defsubr(&Snth);
+    defsubr(&Sproper_list_p);
 }

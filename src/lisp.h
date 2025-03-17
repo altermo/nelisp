@@ -1224,6 +1224,9 @@ extern Lisp_Object list5 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object, Li
 #if TODO_NELISP_LATER_ELSE
 INLINE void maybe_quit (void){
 }
+INLINE void rarely_quit (unsigned short int count){
+    UNUSED(count);
+}
 #endif
 enum { SMALL_LIST_LEN_MAX = 127 };
 struct for_each_tail_internal
