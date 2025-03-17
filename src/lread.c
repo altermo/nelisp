@@ -1217,4 +1217,5 @@ programs that process this list should tolerate directories both with
 and without trailing slashes.  */);
 
     defsubr (&Sintern);
+    defsubr (&Sunintern);
 }
