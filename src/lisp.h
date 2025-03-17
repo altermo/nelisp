@@ -12,6 +12,7 @@
 #include <stdckdint.h>
 #include <alloca.h>
 #include <ieee754.h>
+#include <sys/stat.h>
 
 #include <threads.h>
 
@@ -1517,6 +1518,50 @@ INLINE void check_istable_with_obj(lua_State *L,int n){
             luaL_error(L,"Expected table of userdata(lisp objects)");
         check_obj(L,-1);
     }
+}
+#define Xkeyvalue()\
+    X(1,nil,lua_isnil,"nil")\
+    X(2,string,lua_isstring,"string")\
+    X(4,boolean,lua_isboolean,"boolean")
+#define X(mask,name,check,str) kv_mask_##name=mask,
+enum kv_mask{
+    Xkeyvalue()
+};
+#undef X
+#define X(mask,name,check,str) str " or "
+size_t kv_message_maxlen=sizeof(Xkeyvalue());
+#undef X
+struct kv_t {
+    const char* key;
+    enum kv_mask type;
+};
+INLINE void check_istable_with_keyvalue(lua_State *L,int n,struct kv_t keyvalue[]){
+    if (!lua_istable(L,n))
+        luaL_error(L,"Wrong argument #%d: expected table, got %s",n,lua_typename(L,lua_type(L,n)));
+    lcheckstack(L,5);
+    lua_pushnil(L);
+    for (struct kv_t* kv=keyvalue; kv->key; kv++){
+        lua_pop(L,1);
+        lua_getfield(L,-1,kv->key);
+        if (lua_isnil(L,-1) && !(kv->type&kv_mask_nil))
+            luaL_error(L,"Key `%s` not set",kv->key);
+#define X(mask,name,check,str) else if (kv->type&mask && check(L,-1)) continue;
+        if (false);
+        Xkeyvalue();
+#undef X
+        char type[kv_message_maxlen];
+        char *p=type;
+#define X(mask,name,check,str) if (kv->type&(mask)){\
+    memcpy(p,str,strlen(str));\
+    memcpy(p+strlen(str)," or ",4);\
+    p+=strlen(str)+4;\
+}
+        Xkeyvalue();
+#undef X
+        memcpy(p-4,"\0",1);
+        luaL_error(L,"Expected key `%s` be %s",kv->key,type);
+    }
+    lua_pop(L,1);
 }
 
 thrd_t main_thread;

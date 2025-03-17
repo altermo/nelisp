@@ -1206,5 +1206,15 @@ to find all the symbols in an obarray, use `mapatoms'.  */);
 
     DEFSYM (Qlexical_binding, "lexical-binding");
 
+    DEFVAR_LISP ("load-path", Vload_path,
+                 doc: /* List of directories to search for files to load.
+Each element is a string (directory file name) or nil (meaning
+`default-directory').
+This list is consulted by the `require' function.
+Initialized during startup as described in Info node `(elisp)Library Search'.
+Use `directory-file-name' when adding items to this path.  However, Lisp
+programs that process this list should tolerate directories both with
+and without trailing slashes.  */);
+
     defsubr (&Sintern);
 }

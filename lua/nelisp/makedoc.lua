@@ -11,6 +11,7 @@ local map={
     string={'string','str'},
     number={'number','n'},
     object={'nelisp.obj','obj'},
+    table={'table','tbl'},
 }
 ---@param path string
 ---@return nelisp.makedoc.lfn
@@ -52,7 +53,7 @@ local function scan_lua_c(path)
         local typ_map={}
         local args={}
         for _=1,tonumber(nargs) do
-            local typ=readline():match('^%s*check_is(%w*)%b()')
+            local typ=readline():match('^%s*check_is(%w*)')
             if not typ then
                 err('pub function bad format')
             end

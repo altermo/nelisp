@@ -1,3 +1,5 @@
+#include <sys/stat.h>
+
 #include "lisp.h"
 #include "character.h"
 
@@ -219,6 +221,11 @@ int pub ret() collectgarbage(lua_State *L){
     return 0;
 }
 
+static bool is_directory(const char* dir){
+    struct stat st;
+    if (stat(dir, &st)!=0) return false;
+    return S_ISDIR(st.st_mode);
+}
 bool inited=false;
 int t_init(void* args){
     (void)args;
@@ -228,14 +235,32 @@ int t_init(void* args){
 }
 int pub ret() init(lua_State *L){
     global_lua_state = L;
-    check_nargs(L,0);
+    check_nargs(L,1);
+    check_istable_with_keyvalue(L,1,(struct kv_t[]){
+        {"runtime_path",kv_mask_string},
+        {NULL,0}});
     if (inited)
         return 0;
     inited=true;
 
+    lua_getfield(L,-1,"runtime_path");
+    size_t len;
+    const char* dir=lua_tolstring(L,-1,&len);
+    if (memchr(dir,'\0',len)!=NULL)
+        luaL_error(L,"runtime_path contains a null byte");
+    if (!is_directory(dir))
+        luaL_error(L,"runtime_path is not a directory");
+    lua_pushliteral(L,"/lisp");
+    lua_concat(L,2);
+    const char* lisp_dir=lua_tostring(L,-1);
+    if (!is_directory(lisp_dir))
+        luaL_error(L,"runtime_path directory doesn't have subdirectory `lisp/`");
+
     init_alloc_once();
     init_eval_once();
     init_obarray_once();
+
+    Vload_path=make_unibyte_string(dir,len);
 
     syms_of_lread();
     syms_of_data();
