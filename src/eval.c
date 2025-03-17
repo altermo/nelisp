@@ -491,6 +491,14 @@ xsignal3 (Lisp_Object error_symbol, Lisp_Object arg1, Lisp_Object arg2, Lisp_Obj
 {
   xsignal (error_symbol, list3 (arg1, arg2, arg3));
 }
+void
+signal_error (const char *s, Lisp_Object arg)
+{
+  if (NILP (Fproper_list_p (arg)))
+    arg = list1 (arg);
+
+  xsignal (Qerror, Fcons (build_string (s), arg));
+}
 
 Lisp_Object
 indirect_function (Lisp_Object object)
@@ -698,6 +706,67 @@ usage: (setq [SYM VAL]...)  */)
     return val;
 }
 
+DEFUN ("let", Flet, Slet, 1, UNEVALLED, 0,
+       doc: /* Bind variables according to VARLIST then eval BODY.
+The value of the last form in BODY is returned.
+Each element of VARLIST is a symbol (which is bound to nil)
+or a list (SYMBOL VALUEFORM) (which binds SYMBOL to the value of VALUEFORM).
+All the VALUEFORMs are evalled before any symbols are bound.
+usage: (let VARLIST BODY...)  */)
+  (Lisp_Object args)
+{
+    Lisp_Object *temps, tem, lexenv;
+    Lisp_Object elt;
+    specpdl_ref count = SPECPDL_INDEX ();
+    ptrdiff_t argnum;
+    USE_SAFE_ALLOCA;
+
+    Lisp_Object varlist = XCAR (args);
+
+    EMACS_INT varlist_len = list_length (varlist);
+    SAFE_ALLOCA_LISP (temps, varlist_len);
+    ptrdiff_t nvars = varlist_len;
+
+    for (argnum = 0; argnum < nvars && CONSP (varlist); argnum++)
+    {
+        maybe_quit ();
+        elt = XCAR (varlist);
+        varlist = XCDR (varlist);
+        if (SYMBOLP (elt))
+            temps[argnum] = Qnil;
+        else if (! NILP (Fcdr (Fcdr (elt))))
+            signal_error ("`let' bindings can have only one value-form", elt);
+        else
+            temps[argnum] = eval_sub (Fcar (Fcdr (elt)));
+    }
+    nvars = argnum;
+
+    lexenv = Vinternal_interpreter_environment;
+
+    varlist = XCAR (args);
+    for (argnum = 0; argnum < nvars && CONSP (varlist); argnum++)
+    {
+        elt = XCAR (varlist);
+        varlist = XCDR (varlist);
+        Lisp_Object var = maybe_remove_pos_from_symbol (SYMBOLP (elt) ? elt
+                                                        : Fcar (elt));
+        CHECK_TYPE (BARE_SYMBOL_P (var), Qsymbolp, var);
+        tem = temps[argnum];
+
+        if (!NILP (lexenv) && !XBARE_SYMBOL (var)->u.s.declared_special
+            && NILP (Fmemq (var, Vinternal_interpreter_environment)))
+            lexenv = Fcons (Fcons (var, tem), lexenv);
+        else
+            specbind (var, tem);
+    }
+
+    if (!EQ (lexenv, Vinternal_interpreter_environment))
+        specbind (Qinternal_interpreter_environment, lexenv);
+
+    elt = Fprogn (XCDR (args));
+    return SAFE_FREE_UNBIND_TO (count, elt);
+}
+
 DEFUN ("or", For, Sor, 0, UNEVALLED, 0,
        doc: /* Eval args until one of them yields non-nil, then return that value.
 The remaining args are not evalled at all.
@@ -824,6 +893,7 @@ alist of active lexical bindings.  */);
 
     defsubr (&Ssignal);
     defsubr (&Ssetq);
+    defsubr (&Slet);
     defsubr (&Sprogn);
     defsubr (&Sif);
     defsubr (&Sor);

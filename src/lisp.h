@@ -1118,6 +1118,7 @@ union specbinding
   };
 
 typedef struct { ptrdiff_t bytes; } specpdl_ref;
+
 INLINE specpdl_ref
 wrap_specpdl_ref (ptrdiff_t bytes)
 {
@@ -1127,6 +1128,11 @@ INLINE ptrdiff_t
 unwrap_specpdl_ref (specpdl_ref ref)
 {
   return ref.bytes;
+}
+INLINE bool
+specpdl_ref_lt (specpdl_ref a, specpdl_ref b)
+{
+  return unwrap_specpdl_ref (a) < unwrap_specpdl_ref (b);
 }
 INLINE union specbinding *
 specpdl_ref_to_ptr (specpdl_ref ref)
@@ -1170,6 +1176,7 @@ struct handler
   int interrupt_input_blocked;
 };
 
+extern Lisp_Object unbind_to (specpdl_ref, Lisp_Object);
 
 extern void record_unwind_protect_array (Lisp_Object *, ptrdiff_t);
 extern void record_unwind_protect_intmax (void (*) (intmax_t), intmax_t);
@@ -1213,6 +1220,14 @@ safe_free (specpdl_ref sa_count)
 	  xfree (specpdl_ptr->unwind_array.array);
 	}
     }
+}
+#define SAFE_FREE_UNBIND_TO(count, val) \
+  safe_free_unbind_to (count, sa_count, val)
+INLINE Lisp_Object
+safe_free_unbind_to (specpdl_ref count, specpdl_ref sa_count, Lisp_Object val)
+{
+  eassert (!specpdl_ref_lt (sa_count, count));
+  return unbind_to (count, val);
 }
 extern Lisp_Object list1 (Lisp_Object);
 extern Lisp_Object list2 (Lisp_Object, Lisp_Object);
@@ -1330,7 +1345,6 @@ extern void init_eval_once (void);
 extern void init_eval (void);
 extern void syms_of_eval (void);
 extern Lisp_Object internal_catch (Lisp_Object, Lisp_Object (*) (Lisp_Object), Lisp_Object);
-extern Lisp_Object unbind_to (specpdl_ref, Lisp_Object);
 extern Lisp_Object internal_condition_case (Lisp_Object (*) (void), Lisp_Object, Lisp_Object (*) (Lisp_Object));
 extern void specbind (Lisp_Object symbol, Lisp_Object value);
 
