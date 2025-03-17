@@ -227,6 +227,19 @@ The value is actually the tail of LIST whose car is ELT.  */)
   CHECK_LIST_END (tail, list);
   return Qnil;
 }
+DEFUN ("assq", Fassq, Sassq, 2, 2, 0,
+       doc: /* Return non-nil if KEY is `eq' to the car of an element of ALIST.
+The value is actually the first element of ALIST whose car is KEY.
+Elements of ALIST that are not conses are ignored.  */)
+  (Lisp_Object key, Lisp_Object alist)
+{
+    Lisp_Object tail = alist;
+    FOR_EACH_TAIL (tail)
+    if (CONSP (XCAR (tail)) && EQ (XCAR (XCAR (tail)), key))
+        return XCAR (tail);
+    CHECK_LIST_END (tail, alist);
+    return Qnil;
+}
 
 enum { WORDS_PER_DOUBLE = (sizeof (double) / sizeof (EMACS_UINT)
                           + (sizeof (double) % sizeof (EMACS_UINT) != 0)) };
@@ -384,6 +397,7 @@ syms_of_fns (void)
 
     defsubr(&Sget);
     defsubr(&Smemq);
+    defsubr(&Sassq);
     defsubr(&Sput);
     defsubr(&Smember);
     defsubr(&Sequal);

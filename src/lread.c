@@ -269,6 +269,76 @@ it defaults to the value of `obarray'.  */)
 #endif
     return tem;
 }
+DEFUN ("unintern", Funintern, Sunintern, 1, 2, 0,
+       doc: /* Delete the symbol named NAME, if any, from OBARRAY.
+The value is t if a symbol was found and deleted, nil otherwise.
+NAME may be a string or a symbol.  If it is a symbol, that symbol
+is deleted, if it belongs to OBARRAY--no other symbol is deleted.
+OBARRAY, if nil, defaults to the value of the variable `obarray'.
+usage: (unintern NAME OBARRAY)  */)
+  (Lisp_Object name, Lisp_Object obarray)
+{
+    register Lisp_Object tem;
+    Lisp_Object string;
+
+    if (NILP (obarray)) obarray = Vobarray;
+    obarray = check_obarray (obarray);
+
+    if (SYMBOLP (name))
+    {
+        if (!BARE_SYMBOL_P (name))
+            name = XSYMBOL_WITH_POS (name)->sym;
+        string = SYMBOL_NAME (name);
+    } else {
+        CHECK_STRING (name);
+        string = name;
+    }
+
+#if TODO_NELISP_LATER_AND
+    char *longhand = NULL;
+    ptrdiff_t longhand_chars = 0;
+    ptrdiff_t longhand_bytes = 0;
+    tem = oblookup_considering_shorthand (obarray, SSDATA (string),
+                                          SCHARS (string), SBYTES (string),
+                                          &longhand, &longhand_chars,
+                                          &longhand_bytes);
+    if (longhand)
+        xfree(longhand);
+#endif
+    tem = oblookup(obarray, SSDATA (string), SCHARS (string), SBYTES (string));
+
+    if (FIXNUMP (tem))
+        return Qnil;
+    if (BARE_SYMBOL_P (name) && !BASE_EQ (name, tem))
+        return Qnil;
+
+    struct Lisp_Symbol *sym = XBARE_SYMBOL (tem);
+    sym->u.s.interned = SYMBOL_UNINTERNED;
+
+    ptrdiff_t idx = oblookup_last_bucket_number;
+    Lisp_Object *loc = &XOBARRAY (obarray)->buckets[idx];
+
+    eassert (BARE_SYMBOL_P (*loc));
+    struct Lisp_Symbol *prev = XBARE_SYMBOL (*loc);
+    if (sym == prev)
+        *loc = sym->u.s.next ? make_lisp_symbol (sym->u.s.next) : make_fixnum (0);
+    else {
+        while (1)
+        {
+            struct Lisp_Symbol *next = prev->u.s.next;
+            if (next == sym)
+            {
+                prev->u.s.next = next->u.s.next;
+                break;
+            }
+            prev = next;
+        }
+    }
+
+    XOBARRAY (obarray)->count--;
+
+    return Qt;
+}
 
 void
 defvar_lisp_nopro (struct Lisp_Objfwd const *o_fwd, char const *namestring)
