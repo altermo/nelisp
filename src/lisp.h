@@ -1300,8 +1300,11 @@ extern void syms_of_eval (void);
 extern Lisp_Object internal_catch (Lisp_Object, Lisp_Object (*) (Lisp_Object), Lisp_Object);
 extern Lisp_Object unbind_to (specpdl_ref, Lisp_Object);
 extern Lisp_Object internal_condition_case (Lisp_Object (*) (void), Lisp_Object, Lisp_Object (*) (Lisp_Object));
+extern void specbind (Lisp_Object symbol, Lisp_Object value);
 
 extern void syms_of_data (void);
+extern void set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
+                          enum Set_Internal_Bind bindflag);
 
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);

@@ -5,6 +5,19 @@
 #define CACHEABLE
 #define clobbered_eassert(E) eassert (sizeof (E) != 0)
 
+static Lisp_Object
+specpdl_symbol (union specbinding *pdl)
+{
+  eassert (pdl->kind >= SPECPDL_LET);
+  return pdl->let.symbol;
+}
+static Lisp_Object
+specpdl_old_value (union specbinding *pdl)
+{
+  eassert (pdl->kind >= SPECPDL_LET);
+  return pdl->let.old_value;
+}
+
 void
 grow_specpdl_allocation (void)
 {
@@ -89,7 +102,20 @@ do_one_unbind (union specbinding *this_binding, bool unwinding,
         case SPECPDL_BACKTRACE:
         case SPECPDL_NOP:
             break;
-        case SPECPDL_LET: TODO;
+        case SPECPDL_LET:
+            {
+                Lisp_Object sym = specpdl_symbol (this_binding);
+                if (SYMBOLP (sym) && XSYMBOL (sym)->u.s.redirect == SYMBOL_PLAINVAL)
+                {
+                    if (XSYMBOL (sym)->u.s.trapped_write == SYMBOL_UNTRAPPED_WRITE)
+                        SET_SYMBOL_VAL (XSYMBOL (sym), specpdl_old_value (this_binding));
+                    else
+                        set_internal (sym, specpdl_old_value (this_binding),
+                                      Qnil, bindflag);
+                    break;
+                }
+                TODO;
+            }
         case SPECPDL_LET_DEFAULT: TODO;
         case SPECPDL_LET_LOCAL: TODO;
     }
@@ -249,6 +275,48 @@ unwind_to_catch (struct handler *catch, enum nonlocal_exit type,
     // set_act_rec (current_thread, catch->act_rec);
 
     sys_longjmp (catch->jmp, 1);
+}
+
+static void
+do_specbind (struct Lisp_Symbol *sym, union specbinding *bind,
+             Lisp_Object value, enum Set_Internal_Bind bindflag)
+{
+    UNUSED(bind);
+    UNUSED(bindflag);
+    switch (sym->u.s.redirect)
+    {
+        case SYMBOL_PLAINVAL:
+            if (!sym->u.s.trapped_write)
+                SET_SYMBOL_VAL (sym, value);
+            else
+                TODO;
+            break;
+        case SYMBOL_FORWARDED: TODO;
+        case SYMBOL_LOCALIZED: TODO;
+        default:
+            emacs_abort ();
+    }
+}
+void
+specbind (Lisp_Object symbol, Lisp_Object value)
+{
+    struct Lisp_Symbol *sym = XBARE_SYMBOL (symbol);
+    switch (sym->u.s.redirect)
+    {
+        case SYMBOL_VARALIAS: TODO;
+        case SYMBOL_PLAINVAL:
+            specpdl_ptr->let.kind = SPECPDL_LET;
+            specpdl_ptr->let.symbol = symbol;
+            specpdl_ptr->let.old_value = SYMBOL_VAL (sym);
+            specpdl_ptr->let.where.kbd = NULL;
+            break;
+        case SYMBOL_LOCALIZED:
+        case SYMBOL_FORWARDED:
+            TODO;
+        default: emacs_abort ();
+    }
+    grow_specpdl ();
+    do_specbind (sym, specpdl_ptr - 1, value, SET_INTERNAL_BIND);
 }
 
 static Lisp_Object
