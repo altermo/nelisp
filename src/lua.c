@@ -155,13 +155,23 @@ int pub ret(/*nelisp.obj*/) _get_symbol(lua_State *L){
     return 1;
 }
 
+
 void t_eval(lua_State *L){
+    specpdl_ref count = SPECPDL_INDEX ();
     size_t len;
     const char* str = lua_tolstring(L,-1,&len);
+
+    specbind (Qlexical_binding, Qnil);
+
     Lisp_Object readcharfun = make_unibyte_string(str,len);
+
     read_from_string_index = 0;
     read_from_string_index_byte = string_char_to_byte (readcharfun, 0);
     read_from_string_limit = len;
+
+    if (lisp_file_lexical_cookie (readcharfun) == Cookie_Lex)
+        Fset (Qlexical_binding, Qt);
+
     Lisp_Object ret=NULL;
     while (1){
         int c = READCHAR;
@@ -185,6 +195,7 @@ void t_eval(lua_State *L){
         push_obj(L,ret);
     else
         lua_pushnil(L);
+    unbind_to (count, Qnil);
 }
 int pub ret(/*nelisp.obj|nil*/) eval(lua_State *L){
     check_nargs(L,1);

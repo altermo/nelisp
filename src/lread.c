@@ -1009,6 +1009,120 @@ mark_lread (void)
     }
 }
 
+lexical_cookie_t
+lisp_file_lexical_cookie (Lisp_Object readcharfun)
+{
+    int ch = READCHAR;
+
+    if (ch == '#')
+    {
+        ch = READCHAR;
+        if (ch != '!')
+        {
+            UNREAD (ch);
+            UNREAD ('#');
+            return Cookie_None;
+        }
+        while (ch != '\n' && ch != EOF)
+            ch = READCHAR;
+        if (ch == '\n') ch = READCHAR;
+    }
+
+    if (ch != ';')
+    {
+        UNREAD (ch);
+        return Cookie_None;
+    } else {
+        lexical_cookie_t rv = Cookie_None;
+        enum {
+            NOMINAL, AFTER_FIRST_DASH, AFTER_ASTERIX
+        } beg_end_state = NOMINAL;
+        bool in_file_vars = 0;
+
+#define UPDATE_BEG_END_STATE(ch)				\
+        if (beg_end_state == NOMINAL)					\
+            beg_end_state = (ch == '-' ? AFTER_FIRST_DASH : NOMINAL);	\
+        else if (beg_end_state == AFTER_FIRST_DASH)			\
+            beg_end_state = (ch == '*' ? AFTER_ASTERIX : NOMINAL);	\
+        else if (beg_end_state == AFTER_ASTERIX)			\
+        {								\
+        if (ch == '-')						\
+            in_file_vars = !in_file_vars;				\
+        beg_end_state = NOMINAL;					\
+    }
+
+        do
+        {
+            ch = READCHAR;
+            UPDATE_BEG_END_STATE (ch);
+        }
+        while (!in_file_vars && ch != '\n' && ch != EOF);
+
+        while (in_file_vars)
+        {
+            char var[100], val[100];
+            unsigned i;
+
+            ch = READCHAR;
+
+            while (ch == ' ' || ch == '\t')
+                ch = READCHAR;
+
+            i = 0;
+            beg_end_state = NOMINAL;
+            while (ch != ':' && ch != '\n' && ch != EOF && in_file_vars)
+            {
+                if (i < sizeof var - 1)
+                    var[i++] = ch;
+                UPDATE_BEG_END_STATE (ch);
+                ch = READCHAR;
+            }
+
+            if (!in_file_vars || ch == '\n' || ch == EOF)
+                break;
+
+            while (i > 0 && (var[i - 1] == ' ' || var[i - 1] == '\t'))
+                i--;
+            var[i] = '\0';
+
+            if (ch == ':')
+            {
+                /* Read a variable value.  */
+                ch = READCHAR;
+
+                while (ch == ' ' || ch == '\t')
+                    ch = READCHAR;
+
+                i = 0;
+                beg_end_state = NOMINAL;
+                while (ch != ';' && ch != '\n' && ch != EOF && in_file_vars)
+                {
+                    if (i < sizeof val - 1)
+                        val[i++] = ch;
+                    UPDATE_BEG_END_STATE (ch);
+                    ch = READCHAR;
+                }
+                if (! in_file_vars)
+                    i -= 3;
+                while (i > 0 && (val[i - 1] == ' ' || val[i - 1] == '\t'))
+                    i--;
+                val[i] = '\0';
+
+                if (strcmp (var, "lexical-binding") == 0)
+                {
+                    rv = strcmp (val, "nil") != 0 ? Cookie_Lex : Cookie_Dyn;
+                    break;
+                }
+            }
+        }
+
+        while (ch != '\n' && ch != EOF)
+            ch = READCHAR;
+
+        return rv;
+    }
+}
+
 
 void
 syms_of_lread (void) {
@@ -1019,6 +1133,8 @@ The vector's contents don't make sense if examined from Lisp programs;
 to find all the symbols in an obarray, use `mapatoms'.  */);
 
     DEFSYM (Qobarray_cache, "obarray-cache");
+
+    DEFSYM (Qlexical_binding, "lexical-binding");
 
     defsubr (&Sintern);
 }

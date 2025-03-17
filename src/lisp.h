@@ -1278,6 +1278,12 @@ Lisp_Object read0 (Lisp_Object readcharfun, bool locate_syms);
 extern void init_obarray_once (void);
 extern void syms_of_lread (void);
 void* stack_top=NULL;
+typedef enum {
+  Cookie_None,
+  Cookie_Dyn,
+  Cookie_Lex
+} lexical_cookie_t;
+extern lexical_cookie_t lisp_file_lexical_cookie (Lisp_Object readcharfun);
 
 extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
 extern void syms_of_fns (void);
