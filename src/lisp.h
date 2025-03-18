@@ -60,6 +60,7 @@ emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
 #define IS_ANY_SEP(_c_) (IS_DIRECTORY_SEP (_c_))
 #define IS_DEVICE_SEP(_c_) 0
 // Taken from conf_post.h
+#define UNINIT
 #define INLINE EXTERN_INLINE
 #define EXTERN_INLINE static inline __attribute__((unused))
 #define NO_INLINE __attribute__ ((__noinline__))
@@ -750,6 +751,12 @@ enum
     word_size = sizeof (Lisp_Object)
 };
 
+INLINE bool
+BOOL_VECTOR_P (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_BOOL_VECTOR);
+}
+
 INLINE Lisp_Object
 AREF (Lisp_Object array, ptrdiff_t idx)
 {
@@ -761,6 +768,13 @@ aref_addr (Lisp_Object array, ptrdiff_t idx)
 {
     eassert (0 <= idx && idx <= gc_asize (array));
     return & XVECTOR (array)->contents[idx];
+}
+
+INLINE void
+ASET (Lisp_Object array, ptrdiff_t idx, Lisp_Object val)
+{
+  eassert (0 <= idx && idx < ASIZE (array));
+  XVECTOR (array)->contents[idx] = val;
 }
 
 enum { NIL_IS_ZERO = iQnil == 0 && Lisp_Symbol == 0 };

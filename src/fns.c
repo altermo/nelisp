@@ -409,6 +409,79 @@ A proper list is neither circular nor dotted (i.e., its last cdr is nil).  */
   return make_fixnum (len);
 }
 
+DEFUN ("nconc", Fnconc, Snconc, 0, MANY, 0,
+       doc: /* Concatenate any number of lists by altering them.
+Only the last argument is not altered, and need not be a list.
+usage: (nconc &rest LISTS)  */)
+  (ptrdiff_t nargs, Lisp_Object *args)
+{
+    Lisp_Object val = Qnil;
+
+    for (ptrdiff_t argnum = 0; argnum < nargs; argnum++)
+    {
+        Lisp_Object tem = args[argnum];
+        if (NILP (tem)) continue;
+
+        if (NILP (val))
+            val = tem;
+
+        if (argnum + 1 == nargs) break;
+
+        CHECK_CONS (tem);
+
+         Lisp_Object tail UNINIT;
+        FOR_EACH_TAIL (tem)
+        tail = tem;
+
+        tem = args[argnum + 1];
+        Fsetcdr (tail, tem);
+        if (NILP (tem))
+            args[argnum + 1] = tail;
+    }
+
+    return val;
+}
+DEFUN ("nreverse", Fnreverse, Snreverse, 1, 1, 0,
+       doc: /* Reverse order of items in a list, vector or string SEQ.
+If SEQ is a list, it should be nil-terminated.
+This function may destructively modify SEQ to produce the value.  */)
+  (Lisp_Object seq)
+{
+    if (NILP (seq))
+        return seq;
+    else if (CONSP (seq)) {
+        Lisp_Object prev, tail, next;
+
+        for (prev = Qnil, tail = seq; CONSP (tail); tail = next)
+        {
+            next = XCDR (tail);
+            if (BASE_EQ (next, seq))
+                circular_list (seq);
+            Fsetcdr (tail, prev);
+            prev = tail;
+        }
+        CHECK_LIST_END (tail, seq);
+        seq = prev;
+    } else if (VECTORP (seq)) {
+        ptrdiff_t i, size = ASIZE (seq);
+
+        for (i = 0; i < size / 2; i++)
+        {
+            Lisp_Object tem = AREF (seq, i);
+            ASET (seq, i, AREF (seq, size - i - 1));
+            ASET (seq, size - i - 1, tem);
+        }
+    } else if (BOOL_VECTOR_P (seq)) {
+        TODO;
+    }
+    else if (STRINGP (seq))
+        TODO;
+    else
+        wrong_type_argument (Qarrayp, seq);
+    return seq;
+}
+
+
 void
 syms_of_fns (void)
 {
@@ -423,4 +496,6 @@ syms_of_fns (void)
     defsubr(&Snthcdr);
     defsubr(&Snth);
     defsubr(&Sproper_list_p);
+    defsubr(&Snconc);
+    defsubr(&Snreverse);
 }
