@@ -260,7 +260,7 @@ int pub ret() init(lua_State *L){
     init_eval_once();
     init_obarray_once();
 
-    Vload_path=make_unibyte_string(dir,len);
+    Vload_path=list1(make_unibyte_string(dir,len));
 
     syms_of_lread();
     syms_of_data();
