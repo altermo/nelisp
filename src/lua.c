@@ -526,6 +526,13 @@ ret () init (lua_State *L)
   if (!is_directory (lisp_dir))
     luaL_error (L, "runtime_path directory doesn't have subdirectory `lisp/`");
 
+  if (!lua_pushthread (L))
+    luaL_error (L, "nelisp init needs to be called from main thread");
+  // TODO: Maybe we should create a separate lua-thread?
+  // Is there any reason global_lua_state needs to be main thread?
+  // Well there's errors.
+  lua_pop (L, 1);
+
   init_alloc_once ();
   init_eval_once ();
   init_obarray_once ();
