@@ -20,22 +20,22 @@ any existing message; this lets the minibuffer contents show.  See
 also `current-message'.
 
 usage: (message FORMAT-STRING &rest ARGS)  */)
-  (ptrdiff_t nargs, Lisp_Object *args)
+(ptrdiff_t nargs, Lisp_Object *args)
 {
-    UNUSED (nargs);
-    TODO_NELISP_LATER;
-    lcheckstack(global_lua_state,5);
-    int top = lua_gettop(global_lua_state);
-    lua_getglobal(global_lua_state,"print");
-    lua_pushlstring(global_lua_state,(char*)SDATA(args[0]),SBYTES(args[0]));
-    lua_pcall(global_lua_state,1,0,0);
-    eassert(top == lua_gettop(global_lua_state));
-    return args[0];
+  UNUSED (nargs);
+  TODO_NELISP_LATER;
+  lcheckstack (global_lua_state, 5);
+  int top = lua_gettop (global_lua_state);
+  lua_getglobal (global_lua_state, "print");
+  lua_pushlstring (global_lua_state, (char *) SDATA (args[0]),
+                   SBYTES (args[0]));
+  lua_pcall (global_lua_state, 1, 0, 0);
+  eassert (top == lua_gettop (global_lua_state));
+  return args[0];
 }
-
 
 void
 syms_of_editfns (void)
 {
-    defsubr (&Smessage);
+  defsubr (&Smessage);
 }
