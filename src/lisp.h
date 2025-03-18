@@ -13,6 +13,7 @@
 #include <alloca.h>
 #include <ieee754.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #include <threads.h>
 
@@ -42,10 +43,22 @@ static bool unrecoverable_error;
 #endif
 
 # define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
+static void maybe_quit(void);
+// Taken from sysdep.c
+int
+emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
+{
+    int r;
+    while ((r = fstatat (dirfd, filename, st, flags)) != 0
+        && errno == EINTR)
+        maybe_quit ();
+    return r;
+}
 // Taken from config.h
 #define DIRECTORY_SEP '/'
 #define IS_DIRECTORY_SEP(_c_) ((_c_) == DIRECTORY_SEP)
 #define IS_ANY_SEP(_c_) (IS_DIRECTORY_SEP (_c_))
+#define IS_DEVICE_SEP(_c_) 0
 // Taken from conf_post.h
 #define INLINE EXTERN_INLINE
 #define EXTERN_INLINE static inline __attribute__((unused))
@@ -1212,7 +1225,7 @@ do {							       \
         record_unwind_protect_array (buf, nelt);	       \
     }							       \
 } while (false)
-#define SAFE_ALLOCA(size) ((size) <= (long)sa_avail				\
+#define SAFE_ALLOCA(size) ((long)(size) <= (long)sa_avail				\
     ? AVAIL_ALLOCA (size)			\
     : (TODO,NULL))
 #define SAFE_ALLOCA_STRING(ptr, string)			\

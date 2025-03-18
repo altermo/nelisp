@@ -1,4 +1,8 @@
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "lisp.h"
+#include "coding.h"
 
 enum { file_name_as_directory_slop = 2 };
 
@@ -75,7 +79,7 @@ the root directory.  */)
     Lisp_Object root;
     root = build_string ("/");
     if (NILP (default_directory))
-        TODO;
+        TODO_NELISP_LATER;
     if (! STRINGP (default_directory))
         default_directory = root;
     {
@@ -94,7 +98,34 @@ the root directory.  */)
     nmlim = nm + SBYTES (name);
 
     if (IS_DIRECTORY_SEP (nm[0]))
-        TODO;
+    {
+        bool lose = 0;
+        char *p = nm;
+
+        while (*p)
+        {
+
+            if (IS_DIRECTORY_SEP (p[0])
+                && p[1] == '.'
+                && (IS_DIRECTORY_SEP (p[2])
+                || p[2] == 0
+                || (p[2] == '.' && (IS_DIRECTORY_SEP (p[3])
+                || p[3] == 0))))
+                lose = 1;
+            else if (IS_DIRECTORY_SEP (p[0])
+                    && IS_DIRECTORY_SEP (p[1])
+                    && (p != nm || IS_DIRECTORY_SEP (p[2])))
+                lose = 1;
+            p++;
+        }
+        if (!lose)
+        {
+            if (strcmp (nm, SSDATA (name)) != 0)
+                name = make_specified_string (nm, -1, nmlim - nm, multibyte);
+            SAFE_FREE ();
+            return name;
+        }
+    }
     newdir = newdirlim = 0;
     if (nm[0] == '~')
         TODO;
@@ -170,6 +201,91 @@ the root directory.  */)
     return result;
 }
 
+Lisp_Object
+expand_and_dir_to_file (Lisp_Object filename)
+{
+    Lisp_Object absname = Fexpand_file_name (filename, Qnil);
+
+    if (SCHARS (absname) > 1
+        && IS_DIRECTORY_SEP (SREF (absname, SBYTES (absname) - 1))
+        && !IS_DEVICE_SEP (SREF (absname, SBYTES (absname) - 2)))
+        TODO;
+    return absname;
+}
+
+bool
+file_access_p (char const *file, int amode)
+{
+    if (faccessat (AT_FDCWD, file, amode, AT_EACCESS) == 0)
+        return true;
+    return false;
+}
+bool
+file_accessible_directory_p (Lisp_Object file)
+{
+    const char *data = SSDATA (file);
+    ptrdiff_t len = SBYTES (file);
+    char const *dir;
+    bool ok;
+    USE_SAFE_ALLOCA;
+
+    if (! len)
+        dir = data;
+    else
+    {
+
+        static char const appended[] = "/./";
+        char *buf = SAFE_ALLOCA (len + sizeof appended);
+        memcpy (buf, data, len);
+        strcpy (buf + len, &appended[data[len - 1] == '/']);
+        dir = buf;
+    }
+
+    ok = file_access_p (dir, F_OK);
+    SAFE_FREE ();
+    return ok;
+}
+bool
+file_directory_p (Lisp_Object file)
+{
+    if (file_accessible_directory_p (file))
+        return true;
+    if (errno != EACCES)
+        return false;
+    struct stat st;
+    if (emacs_fstatat (AT_FDCWD, SSDATA (file), &st, 0) != 0)
+        return errno == EOVERFLOW;
+    if (S_ISDIR (st.st_mode))
+        return true;
+    errno = ENOTDIR;
+    return false;
+}
+
+DEFUN ("file-directory-p", Ffile_directory_p, Sfile_directory_p, 1, 1, 0,
+       doc: /* Return t if FILENAME names an existing directory.
+Return nil if FILENAME does not name a directory, or if there
+was trouble determining whether FILENAME is a directory.
+
+As a special case, this function will also return t if FILENAME is the
+empty string (\"\").  This quirk is due to Emacs interpreting the
+empty string (in some cases) as the current directory.
+
+Symbolic links to directories count as directories.
+See `file-symlink-p' to distinguish symlinks.  */)
+    (Lisp_Object filename)
+{
+    Lisp_Object absname = expand_and_dir_to_file (filename);
+
+#if TODO_NELISP_LATER_AND
+    Lisp_Object handler = Ffind_file_name_handler (absname, Qfile_directory_p);
+    if (!NILP (handler))
+        return call2 (handler, Qfile_directory_p, absname);
+#endif
+
+    return file_directory_p (ENCODE_FILE (absname)) ? Qt : Qnil;
+}
+
 void syms_of_fileio(void){
     defsubr(&Sexpand_file_name);
+    defsubr(&Sfile_directory_p);
 }
