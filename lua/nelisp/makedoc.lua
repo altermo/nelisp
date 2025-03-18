@@ -16,57 +16,48 @@ local map={
 ---@param path string
 ---@return nelisp.makedoc.lfn
 local function scan_lua_c(path)
-    local row=0
-    local function err(msg)
-        error(('%s:%s: %s'):format(path,row,msg))
-    end
-    local f=io.lines(path)
+    local s=vim.fn.readblob(path)
     ---@return string
-    local function readline()
-        row=row+1
-        return f()
-    end
     local out={}
-    for line in readline do
-        if not line:match('^int pub') then
-            goto continue
-        end
-        local ret,name=line:match('^int pub ret(%b()) ([a-zA-Z_1-9]*)%(lua_State %*L%) *{ *$')
+    for pos in s:gmatch('[\n\r]int pub()') do
+        local ret,name
+        ret,name,pos=s:match('^%s+ret%s*(%b())%s+([a-zA-Z_1-9]+)%s*%(lua_State %*L%)%s*{%s*()',pos)
         if not ret then
-            err('pub function bad format')
+            error('pub function bad format')
         end
         ret=ret:sub(2,-2)
-        if ret:match('/%*(.*)%*/') then
-            ret=ret:match('/%*(.*)%*/')
+        if ret:find('^%s*/%*(.*)%*/%s*$') then
+            ret=ret:match('^%s*/%*(.*)%*/%s*$')
         end
         if ret=='' then
             ret=nil
         end
-        local l=readline()
-        if l:match('^%s*global_lua_state%s*=%s*L;$') then
-            l=readline()
+        if s:find('^global_lua_state%s*=%s*L;',pos) then
+            pos=s:match('^global_lua_state%s*=%s*L;%s*()',pos)
         end
-        local nargs=l:match('^%s*check_nargs%(L,%s*(%d+)%s*%);$')
+        local nargs
+        nargs,pos=s:match('^check_nargs%s*%(%s*L,%s*(%d+)%s*%);%s*()',pos)
         if not nargs then
-            err('pub function bad format')
+            error('pub function bad format')
         end
-        local typ_map={}
+        local type_map={}
         local args={}
         for _=1,tonumber(nargs) do
-            local typ=readline():match('^%s*check_is(%w*)')
-            if not typ then
-                err('pub function bad format')
+            local type_
+            type_,pos=s:match('^check_is(%w*)[^\n\r]-[\n\r]%s*()',pos)
+            if not type_ then
+                error('pub function bad format')
             end
-            if type(typ_map[typ])=='table' then
-                typ_map[typ][2]=map[typ][2]..'1'
-                typ_map[typ]=2
+            if type(type_map[type_])=='table' then
+                type_map[type_][2]=map[type_][2]..'1'
+                type_map[type_]=2
             end
-            local varname=map[typ][2]..(typ_map[typ] or '')
-            table.insert(args,{map[typ][1],varname})
-            if typ_map[typ] then
-                typ_map[typ]=typ_map[typ]+1
+            local varname=map[type_][2]..(type_map[type_] or '')
+            table.insert(args,{map[type_][1],varname})
+            if type_map[type_] then
+                type_map[type_]=type_map[type_]+1
             else
-                typ_map[typ]=args[#args]
+                type_map[type_]=args[#args]
             end
         end
         out[name]={ret,args}
