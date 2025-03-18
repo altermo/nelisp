@@ -11,6 +11,6 @@ nelisp:
 	$(CC) src/link.c -lluajit-5.1 -shared -o nelisp.so -Wall -Wextra -Werror -pedantic $(CFLAGS) -fvisibility=hidden -fPIC -std=gnu17
 
 format:
-	clang-format src/*.c -i --style=file
+	clang-format src/*.c src/*.h -i --style=file
 
 .PHONY: all nelisp all_works format
