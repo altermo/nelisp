@@ -270,6 +270,8 @@ int pub ret() init(lua_State *L){
     syms_of_keyboard();
     syms_of_editfns();
     syms_of_emacs();
+    syms_of_fileio();
+    syms_of_coding();
 
     init_keyboard();
     init_eval();

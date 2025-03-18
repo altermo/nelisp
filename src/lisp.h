@@ -42,6 +42,10 @@ static bool unrecoverable_error;
 #endif
 
 # define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
+// Taken from config.h
+#define DIRECTORY_SEP '/'
+#define IS_DIRECTORY_SEP(_c_) ((_c_) == DIRECTORY_SEP)
+#define IS_ANY_SEP(_c_) (IS_DIRECTORY_SEP (_c_))
 // Taken from conf_post.h
 #define INLINE EXTERN_INLINE
 #define EXTERN_INLINE static inline __attribute__((unused))
@@ -670,6 +674,12 @@ SBYTES (Lisp_Object string)
 {
     return STRING_BYTES (XSTRING (string));
 }
+INLINE void
+CHECK_STRING_NULL_BYTES (Lisp_Object string)
+{
+    CHECK_TYPE (memchr (SSDATA (string), '\0', SBYTES (string)) == NULL,
+                Qfilenamep, string);
+}
 
 struct Lisp_Vector
 {
@@ -1202,6 +1212,14 @@ do {							       \
         record_unwind_protect_array (buf, nelt);	       \
     }							       \
 } while (false)
+#define SAFE_ALLOCA(size) ((size) <= (long)sa_avail				\
+    ? AVAIL_ALLOCA (size)			\
+    : (TODO,NULL))
+#define SAFE_ALLOCA_STRING(ptr, string)			\
+  do {							\
+    (ptr) = SAFE_ALLOCA (SBYTES (string) + 1);		\
+    memcpy (ptr, SDATA (string), SBYTES (string) + 1);	\
+  } while (false)
 #define SAFE_FREE() safe_free (sa_count)
 extern void xfree (void *);
 INLINE void
@@ -1360,6 +1378,10 @@ extern void init_keyboard (void);
 extern void syms_of_editfns (void);
 
 extern void syms_of_emacs (void);
+
+extern void syms_of_fileio (void);
+
+extern void syms_of_coding (void);
 
 INLINE void circular_list (Lisp_Object list){
     xsignal1 (Qcircular_list, list);
