@@ -846,6 +846,75 @@ free_large_strings (void)
 
   large_sblocks = live_blocks;
 }
+static void
+compact_small_strings (void)
+{
+  struct sblock *tb = oldest_sblock;
+  if (tb)
+    {
+      sdata *tb_end = (sdata *) ((char *) tb + SBLOCK_SIZE);
+      sdata *to = tb->data;
+
+      struct sblock *b = tb;
+      do
+        {
+          sdata *end = b->next_free;
+          eassert ((char *) end <= (char *) b + SBLOCK_SIZE);
+
+          for (sdata *from = b->data; from < end;)
+            {
+              ptrdiff_t nbytes;
+              struct Lisp_String *s = from->string;
+
+              nbytes = s ? STRING_BYTES (s) : SDATA_NBYTES (from);
+              eassert (nbytes <= LARGE_STRING_BYTES);
+
+              ptrdiff_t size = sdata_size (nbytes);
+              sdata *from_end
+                = (sdata *) ((char *) from + size + GC_STRING_EXTRA);
+
+              if (s)
+                {
+                  sdata *to_end
+                    = (sdata *) ((char *) to + size + GC_STRING_EXTRA);
+                  if (to_end > tb_end)
+                    {
+                      tb->next_free = to;
+                      tb = tb->next;
+                      tb_end = (sdata *) ((char *) tb + SBLOCK_SIZE);
+                      to = tb->data;
+                      to_end = (sdata *) ((char *) to + size + GC_STRING_EXTRA);
+                    }
+
+                  if (from != to)
+                    {
+                      eassert (tb != b || to < from);
+                      ASAN_PREPARE_LIVE_SDATA (to, nbytes);
+                      memmove (to, from, size + GC_STRING_EXTRA);
+                      to->string->u.s.data = SDATA_DATA (to);
+                    }
+
+                  to = to_end;
+                }
+              from = from_end;
+            }
+          b = b->next;
+        }
+      while (b);
+
+      for (b = tb->next; b;)
+        {
+          struct sblock *next = b->next;
+          lisp_free (b);
+          b = next;
+        }
+
+      tb->next_free = to;
+      tb->next = NULL;
+    }
+
+  current_sblock = tb;
+}
 NO_INLINE static void
 sweep_strings (void)
 {
@@ -924,9 +993,7 @@ sweep_strings (void)
 
   string_blocks = live_blocks;
   free_large_strings ();
-#if TODO_NELISP_LATER_AND
   compact_small_strings ();
-#endif
 
   check_string_free_list ();
 }
