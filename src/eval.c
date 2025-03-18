@@ -670,6 +670,12 @@ usage: (progn BODY...)  */)
   return val;
 }
 
+void
+prog_ignore (Lisp_Object body)
+{
+  Fprogn (body);
+}
+
 DEFUN ("setq", Fsetq, Ssetq, 0, UNEVALLED, 0,
        doc: /* Set each SYM to the value of its VAL.
 The symbols SYM are variables; they are literal (not evaluated).
@@ -825,6 +831,29 @@ usage: (if COND THEN ELSE...)  */)
   return Fprogn (Fcdr (XCDR (args)));
 }
 
+DEFUN ("while", Fwhile, Swhile, 1, UNEVALLED, 0,
+       doc: /* If TEST yields non-nil, eval BODY... and repeat.
+The order of execution is thus TEST, BODY, TEST, BODY and so on
+until TEST returns nil.
+
+The value of a `while' form is always nil.
+
+usage: (while TEST BODY...)  */)
+  (Lisp_Object args)
+{
+  Lisp_Object test, body;
+
+  test = XCAR (args);
+  body = XCDR (args);
+  while (!NILP (eval_sub (test)))
+    {
+      maybe_quit ();
+      prog_ignore (body);
+    }
+
+  return Qnil;
+}
+
 DEFUN ("quote", Fquote, Squote, 1, UNEVALLED, 0,
        doc: /* Return the argument, without evaluating it.  `(quote x)' yields `x'.
 Warning: `quote' does not construct its return value, but just returns
@@ -896,6 +925,7 @@ alist of active lexical bindings.  */);
     defsubr (&Slet);
     defsubr (&Sprogn);
     defsubr (&Sif);
+    defsubr (&Swhile);
     defsubr (&Sor);
     defsubr (&Sand);
     defsubr (&Squote);
