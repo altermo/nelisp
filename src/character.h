@@ -5,6 +5,10 @@
 
 enum
 {
+  MAX_CHAR = 0x3FFFFF
+};
+enum
+{
   NO_BREAK_SPACE = 0x00A0,
   SOFT_HYPHEN = 0x00AD,
   ZERO_WIDTH_NON_JOINER = 0x200C,
@@ -47,6 +51,8 @@ enum
   MAX_5_BYTE_CHAR = 0x3FFF7F
 };
 
+extern int char_string (unsigned, unsigned char *);
+
 INLINE bool
 CHAR_BYTE8_P (int c)
 {
@@ -80,10 +86,16 @@ CHAR_STRING (int c, unsigned char *p)
       p[2] = 0x80 | (c & 0x3F);
       return 3;
     }
-  TODO;
-  // int len = char_string (c, p);
-  // eassume (0 < len && len <= MAX_MULTIBYTE_LENGTH);
-  // return len;
+  int len = char_string (c, p);
+  eassume (0 < len && len <= MAX_MULTIBYTE_LENGTH);
+  return len;
+}
+INLINE int
+BYTE8_STRING (int b, unsigned char *p)
+{
+  p[0] = 0xC0 | ((b >> 6) & 0x01);
+  p[1] = 0x80 | (b & 0x3F);
+  return 2;
 }
 INLINE bool
 CHAR_HEAD_P (int byte)

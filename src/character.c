@@ -1,5 +1,78 @@
 #include "character.h"
 
+EMACS_INT
+char_resolve_modifier_mask (EMACS_INT c)
+{
+  if (!ASCII_CHAR_P ((c & ~CHAR_MODIFIER_MASK)))
+    return c;
+
+  if (c & CHAR_SHIFT)
+    {
+      if ((c & 0377) >= 'A' && (c & 0377) <= 'Z')
+        c &= ~CHAR_SHIFT;
+      else if ((c & 0377) >= 'a' && (c & 0377) <= 'z')
+        c = (c & ~CHAR_SHIFT) - ('a' - 'A');
+      else if ((c & ~CHAR_MODIFIER_MASK) <= 0x20)
+        c &= ~CHAR_SHIFT;
+    }
+  if (c & CHAR_CTL)
+    {
+      if ((c & 0377) == ' ')
+        c &= ~0177 & ~CHAR_CTL;
+      else if ((c & 0377) == '?')
+        c = 0177 | (c & ~0177 & ~CHAR_CTL);
+      else if ((c & 0137) >= 0101 && (c & 0137) <= 0132)
+        c &= (037 | (~0177 & ~CHAR_CTL));
+      else if ((c & 0177) >= 0100 && (c & 0177) <= 0137)
+        c &= (037 | (~0177 & ~CHAR_CTL));
+    }
+
+  return c;
+}
+int
+char_string (unsigned int c, unsigned char *p)
+{
+  int bytes;
+
+  if (c & CHAR_MODIFIER_MASK)
+    {
+      c = char_resolve_modifier_mask (c);
+      /* If C still has any modifier bits, just ignore it.  */
+      c &= ~CHAR_MODIFIER_MASK;
+    }
+
+  if (c <= MAX_3_BYTE_CHAR)
+    {
+      bytes = CHAR_STRING (c, p);
+    }
+  else if (c <= MAX_4_BYTE_CHAR)
+    {
+      p[0] = (0xF0 | (c >> 18));
+      p[1] = (0x80 | ((c >> 12) & 0x3F));
+      p[2] = (0x80 | ((c >> 6) & 0x3F));
+      p[3] = (0x80 | (c & 0x3F));
+      bytes = 4;
+    }
+  else if (c <= MAX_5_BYTE_CHAR)
+    {
+      p[0] = 0xF8;
+      p[1] = (0x80 | ((c >> 18) & 0x0F));
+      p[2] = (0x80 | ((c >> 12) & 0x3F));
+      p[3] = (0x80 | ((c >> 6) & 0x3F));
+      p[4] = (0x80 | (c & 0x3F));
+      bytes = 5;
+    }
+  else if (c <= MAX_CHAR)
+    {
+      c = CHAR_TO_BYTE8 (c);
+      bytes = BYTE8_STRING (c, p);
+    }
+  else
+    TODO; // error ("Invalid character: %x", c);
+
+  return bytes;
+}
+
 ptrdiff_t
 str_as_unibyte (unsigned char *str, ptrdiff_t bytes)
 {
