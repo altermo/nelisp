@@ -1464,186 +1464,23 @@ extern void defsubr (union Aligned_Lisp_Subr *);
 #define check_obj(L,idx)
 #endif
 
-INLINE void lcheckstack(lua_State* L,int n){
-    if (!lua_checkstack(L,lua_gettop(L)+n))
-        luaL_error(L,"Lua stack overflow");
-}
-
-INLINE Lisp_Object userdata_to_obj(lua_State *L,int idx){
-    lcheckstack(L,5);
-    check_obj(L,idx);
-
-    if (lua_islightuserdata(L,idx)){
-        Lisp_Object obj=(Lisp_Object)lua_touserdata(L,idx);
-        eassert(FIXNUMP(obj));
-        return obj;
-    } else {
-        Lisp_Object obj=*(Lisp_Object*)lua_touserdata(L,idx);
-        eassert(!FIXNUMP(obj));
-        return obj;
-    }
-}
-
-INLINE void push_obj(lua_State *L, Lisp_Object obj){
-    lcheckstack(L,10);
-    if (FIXNUMP(obj)) {
-        lua_pushlightuserdata(L,obj);
-        set_obj_check(L,-1);
-        return;
-    }
-    union {
-        Lisp_Object l;
-        char c[sizeof(Lisp_Object)];
-    } u;
-    u.l=obj;
-
-    lua_getfield(L,LUA_ENVIRONINDEX,"memtbl");
-    eassert(lua_istable(L,-1));
-    // (-1)memtbl
-    lua_pushlstring(L,u.c,sizeof(Lisp_Object));
-    // (-2)memtbl, (-1)idx
-    lua_gettable(L,-2);
-    // (-2)memtbl, (-1)nil/obj
-    if (lua_isuserdata(L,-1)){
-        // (-2)memtbl, (-1)obj
-        Lisp_Object* ptr=(Lisp_Object*)lua_touserdata(L,-1);
-        eassert(*ptr==obj);
-        lua_remove(L,-2);
-        // (-1)obj
-        return;
-    }
-    // (-2)memtbl, (-1)nil
-    lua_pop(L,2);
-    //
-    Lisp_Object* ptr=(Lisp_Object*)lua_newuserdata(L,sizeof(Lisp_Object));
-    *ptr=obj;
-    // (-1)obj
-    lua_getfield(L,LUA_ENVIRONINDEX,"memtbl");
-    eassert(lua_istable(L,-1));
-    // (-2)obj, (-1)memtbl
-    lua_pushlstring(L,u.c,sizeof(Lisp_Object));
-    // (-3)obj, (-2)memtbl, (-1)idx
-    lua_pushvalue(L,-3);
-    // (-4)obj, (-3)memtbl, (-2)idx, (-1)obj
-    lua_settable(L,-3);
-    // (-2)obj, (-1)memtbl
-    lua_pop(L,1);
-    // (-1)obj
-    set_obj_check(L,-1);
-    return;
-}
-
 #define pub __attribute__((visibility("default")))
 #define ret(...)
 
-INLINE void check_nargs(lua_State *L,int nargs){
-    if (global_lua_state==NULL)
-        luaL_error(L,"Nelisp is not inited (please run `require('nelisp.c').init()`)");
-    if (unrecoverable_error)
-        luaL_error(L,"Previous error was unrecoverable, please restart Neovim");
-    if (nargs != lua_gettop(L))
-        luaL_error(L,"Wrong number of arguments: expected %d, got %d",nargs,lua_gettop(L));
-}
-INLINE void check_isnumber(lua_State *L,int n){
-    if (!lua_isnumber(L,n))
-        luaL_error(L,"Wrong argument #%d: expected number, got %s",n,lua_typename(L,lua_type(L,n)));
-}
-INLINE void check_isstring(lua_State *L,int n){
-    if (!lua_isstring(L,n))
-        luaL_error(L,"Wrong argument #%d: expected string, got %s",n,lua_typename(L,lua_type(L,n)));
-}
-INLINE void check_isobject(lua_State *L,int n){
-    if (!lua_isuserdata(L,n))
-        luaL_error(L,"Wrong argument #%d: expected userdata(lisp object), got %s",n,lua_typename(L,lua_type(L,n)));
-    check_obj(L,n);
-}
-
-INLINE void check_istable_with_obj(lua_State *L,int n){
-    if (!lua_istable(L,n))
-        luaL_error(L,"Wrong argument #%d: expected table, got %s",n,lua_typename(L,lua_type(L,n)));
-    lcheckstack(L,5);
-    for (lua_pushnil(L); lua_next(L,n); lua_pop(L,1)){
-        if (!lua_isuserdata(L,-1))
-            luaL_error(L,"Expected table of userdata(lisp objects)");
-        check_obj(L,-1);
-    }
-}
-#define Xkeyvalue()\
-    X(1,nil,lua_isnil,"nil")\
-    X(2,string,lua_isstring,"string")\
-    X(4,boolean,lua_isboolean,"boolean")
-#define X(mask,name,check,str) kv_mask_##name=mask,
-enum kv_mask{
-    Xkeyvalue()
-};
-#undef X
-#define X(mask,name,check,str) str " or "
-size_t kv_message_maxlen=sizeof(Xkeyvalue());
-#undef X
-struct kv_t {
-    const char* key;
-    enum kv_mask type;
-};
-INLINE void check_istable_with_keyvalue(lua_State *L,int n,struct kv_t keyvalue[]){
-    if (!lua_istable(L,n))
-        luaL_error(L,"Wrong argument #%d: expected table, got %s",n,lua_typename(L,lua_type(L,n)));
-    lcheckstack(L,5);
-    lua_pushnil(L);
-    for (struct kv_t* kv=keyvalue; kv->key; kv++){
-        lua_pop(L,1);
-        lua_getfield(L,-1,kv->key);
-        if (lua_isnil(L,-1) && !(kv->type&kv_mask_nil))
-            luaL_error(L,"Key `%s` not set",kv->key);
-#define X(mask,name,check,str) else if (kv->type&mask && check(L,-1)) continue;
-        if (false);
-        Xkeyvalue();
-#undef X
-        char type[kv_message_maxlen];
-        char *p=type;
-#define X(mask,name,check,str) if (kv->type&(mask)){\
-    memcpy(p,str,strlen(str));\
-    memcpy(p+strlen(str)," or ",4);\
-    p+=strlen(str)+4;\
-}
-        Xkeyvalue();
-#undef X
-        memcpy(p-4,"\0",1);
-        luaL_error(L,"Expected key `%s` be %s",kv->key,type);
-    }
-    lua_pop(L,1);
-}
-
-thrd_t main_thread;
-
-mtx_t main_mutex;
-mtx_t thread_mutex;
-
-cnd_t main_cond;
-cnd_t thread_cond;
-
-static bool tcall_error=false;
-static void (*main_func)(void)=NULL;
-
-static void (*tcall_func_cb)(lua_State *L);
-INLINE void tcall_func(void){
-    tcall_func_cb(global_lua_state);
-}
-INLINE void tcall(lua_State *L,void (*f)(lua_State *L)){
-    if (global_lua_state!=L)
-        TODO; /*use lua_xmove to move between the states*/ \
-    tcall_func_cb=f;
-    main_func=tcall_func;
-
-    mtx_lock(&thread_mutex);
-    cnd_signal(&thread_cond);
-    mtx_unlock(&thread_mutex);
-    cnd_wait(&main_cond,&main_mutex);
-
-    if (tcall_error){
-        tcall_error=false;
-        lua_error(global_lua_state);
-    }
-}
+extern thrd_t main_thread;
+extern mtx_t main_mutex;
+extern mtx_t thread_mutex;
+extern cnd_t main_cond;
+extern cnd_t thread_cond;
+extern bool tcall_error;
+extern void (*main_func)(void);
+extern Lisp_Object userdata_to_obj(lua_State *L,int idx);
+extern void push_obj(lua_State *L, Lisp_Object obj);
+extern void check_nargs(lua_State *L,int nargs);
+extern void check_isobject(lua_State *L,int n);
+extern void check_istable_with_obj(lua_State *L,int n);
+extern void tcall(lua_State *L,void (*f)(lua_State *L));
+extern void lcheckstack(lua_State* L,int n);
 
 #define DEF_TCALL_ARGS_PRE_0
 #define DEF_TCALL_ARGS_PRE_1
