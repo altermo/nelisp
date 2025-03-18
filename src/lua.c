@@ -252,15 +252,17 @@ int pub ret() init(lua_State *L){
         luaL_error(L,"runtime_path is not a directory");
     lua_pushliteral(L,"/lisp");
     lua_concat(L,2);
-    const char* lisp_dir=lua_tostring(L,-1);
+    size_t len_lisp_dir;
+    const char* lisp_dir=lua_tolstring(L,-1,&len_lisp_dir);
     if (!is_directory(lisp_dir))
         luaL_error(L,"runtime_path directory doesn't have subdirectory `lisp/`");
+
 
     init_alloc_once();
     init_eval_once();
     init_obarray_once();
 
-    Vload_path=list1(make_unibyte_string(dir,len));
+    Vload_path=list1(make_unibyte_string(lisp_dir,len_lisp_dir));
 
     syms_of_lread();
     syms_of_data();
