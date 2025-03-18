@@ -523,9 +523,6 @@ eval_sub (Lisp_Object form)
     if (!CONSP (form))
         return form;
 
-    #if TODO_NELISP_LATER_ELSE
-    int max_lisp_eval_depth = 1600;
-    #endif
     if (++lisp_eval_depth > max_lisp_eval_depth){
         if (max_lisp_eval_depth < 100)
             max_lisp_eval_depth = 100;
@@ -907,6 +904,16 @@ init_eval (void)
 void
 syms_of_eval (void)
 {
+    DEFVAR_INT ("max-lisp-eval-depth", max_lisp_eval_depth,
+                doc: /* Limit on depth in `eval', `apply' and `funcall' before error.
+
+This limit serves to catch infinite recursions for you before they cause
+actual stack overflow in C, which would be fatal for Emacs.
+You can safely make it considerably larger than its default value,
+if that proves inconveniently small.  However, if you increase it too far,
+Emacs could overflow the real C stack, and crash.  */);
+    max_lisp_eval_depth = 1600;
+
     DEFSYM (Qinternal_interpreter_environment,
             "internal-interpreter-environment");
     DEFVAR_LISP ("internal-interpreter-environment",
