@@ -13,4 +13,10 @@ nelisp:
 format:
 	clang-format src/*.c src/*.h -i --style=file
 
+lint:
+	clang-check src/*.c
+
+analyze:
+	clang-check --analyze --analyzer-output-path=/dev/null src/*.c
+
 .PHONY: all nelisp all_works format
