@@ -1,0 +1,13 @@
+root = true
+
+[*.{c,h,in}]
+indent_style = space
+indent_size = 2
+
+[*.lua]
+indent_style = space
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+indent_size = 8
