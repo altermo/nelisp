@@ -32,8 +32,8 @@ local function scan_lua_c(path)
         if ret=='' then
             ret=nil
         end
-        if s:find('^global_lua_state%s*=%s*L;',pos) then
-            pos=s:match('^global_lua_state%s*=%s*L;%s*()',pos)
+        if s:find('^_global_lua_state%s*=%s*L;',pos) then
+            pos=s:match('^_global_lua_state%s*=%s*L;%s*()',pos)
         end
         local nargs
         nargs,pos=s:match('^check_nargs%s*%(%s*L,%s*(%d+)%s*%);%s*()',pos)

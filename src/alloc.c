@@ -2541,7 +2541,7 @@ mark_c_stack (void)
 static void
 mark_lua (void)
 {
-  lua_State *L = global_lua_state;
+  lua_State *L = _global_lua_state;
   lcheckstack (L, 10);
   lua_getfield (L, LUA_ENVIRONINDEX, "memtbl");
   eassert (lua_istable (L, -1));

@@ -22,7 +22,7 @@
 
 static inline _Noreturn void TODO_ (const char *file, int line);
 
-static lua_State *global_lua_state;
+static lua_State *_global_lua_state;
 static bool unrecoverable_error;
 #define TODO_NELISP_LATER (void) 0
 #define TODO_NELISP_LATER_ELSE true
@@ -1629,7 +1629,7 @@ extern void lcheckstack (lua_State *L, int n);
 static inline _Noreturn void
 TODO_ (const char *file, int line)
 {
-  lua_pushfstring (global_lua_state, "TODO at %s:%d", file, line);
+  lua_pushfstring (_global_lua_state, "TODO at %s:%d", file, line);
   unrecoverable_error = true;
   tcall_error = true;
   mtx_lock (&main_mutex);

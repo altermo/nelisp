@@ -87,7 +87,7 @@ push_obj (lua_State *L, Lisp_Object obj)
 void
 check_nargs (lua_State *L, int nargs)
 {
-  if (global_lua_state == NULL)
+  if (_global_lua_state == NULL)
     luaL_error (L, "Nelisp is not inited (please run "
                    "`require('nelisp.c').init()`)");
   if (unrecoverable_error)
@@ -203,12 +203,12 @@ static void (*tcall_func_cb) (lua_State *L);
 INLINE void
 tcall_func (void)
 {
-  tcall_func_cb (global_lua_state);
+  tcall_func_cb (_global_lua_state);
 }
 void
 tcall (lua_State *L, void (*f) (lua_State *L))
 {
-  if (global_lua_state != L)
+  if (_global_lua_state != L)
     TODO; /*use lua_xmove to move between the states*/
   tcall_func_cb = f;
   main_func = tcall_func;
@@ -221,7 +221,7 @@ tcall (lua_State *L, void (*f) (lua_State *L))
   if (tcall_error)
     {
       tcall_error = false;
-      lua_error (global_lua_state);
+      lua_error (_global_lua_state);
     }
 }
 
@@ -502,7 +502,7 @@ t_init (void *args)
 int pub
 ret () init (lua_State *L)
 {
-  global_lua_state = L;
+  _global_lua_state = L;
   check_nargs (L, 1);
   check_istable_with_keyvalue (L, 1,
                                (struct kv_t[]) {
@@ -565,7 +565,7 @@ ret () init (lua_State *L)
   if (err)
     {
       unrecoverable_error = true;
-      luaL_error (global_lua_state, "Failed to init thread");
+      luaL_error (_global_lua_state, "Failed to init thread");
     }
 
   mtx_lock (&main_mutex);

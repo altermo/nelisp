@@ -1,5 +1,7 @@
 #include "lisp.h"
 
+#include "lua.h"
+
 DEFUN ("message", Fmessage, Smessage, 1, MANY, 0,
        doc: /* Display a message at the bottom of the screen.
 The message also goes into the `*Messages*' buffer, if `message-log-max'
@@ -24,13 +26,13 @@ usage: (message FORMAT-STRING &rest ARGS)  */)
 {
   UNUSED (nargs);
   TODO_NELISP_LATER;
-  lcheckstack (global_lua_state, 5);
-  int top = lua_gettop (global_lua_state);
-  lua_getglobal (global_lua_state, "print");
-  lua_pushlstring (global_lua_state, (char *) SDATA (args[0]),
+  lcheckstack (_global_lua_state, 5);
+  int top = lua_gettop (_global_lua_state);
+  lua_getglobal (_global_lua_state, "print");
+  lua_pushlstring (_global_lua_state, (char *) SDATA (args[0]),
                    SBYTES (args[0]));
-  lua_pcall (global_lua_state, 1, 0, 0);
-  eassert (top == lua_gettop (global_lua_state));
+  lua_pcall (_global_lua_state, 1, 0, 0);
+  eassert (top == lua_gettop (_global_lua_state));
   return args[0];
 }
 

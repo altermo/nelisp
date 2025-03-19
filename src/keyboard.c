@@ -7,7 +7,7 @@ cmd_error (Lisp_Object data)
 {
   TODO_NELISP_LATER;
   tcall_error = true;
-  lcheckstack (global_lua_state, 5);
+  lcheckstack (_global_lua_state, 5);
   Lisp_Object err_symbol = Fcar (data);
   Lisp_Object message = Fget (err_symbol, Qerror_message);
   Lisp_Object tail = Fcdr_safe (data);
@@ -19,7 +19,7 @@ cmd_error (Lisp_Object data)
     extra = (char *) SDATA (SYMBOL_NAME (tail));
   if (SYMBOLP (Fcar_safe (tail)))
     extra = (char *) SDATA (SYMBOL_NAME (Fcar_safe (tail)));
-  lua_pushfstring (global_lua_state, "(nelisp): %s (%s)", errmsg, extra);
+  lua_pushfstring (_global_lua_state, "(nelisp): %s (%s)", errmsg, extra);
   return make_fixnum (0);
 }
 
