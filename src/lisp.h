@@ -537,6 +537,12 @@ dead_object (void)
 
 #define XSETSUBR(a, b) XSETPSEUDOVECTOR (a, b, PVEC_SUBR)
 
+INLINE Lisp_Object
+make_int (intmax_t n)
+{
+  return FIXNUM_OVERFLOW_P (n) ? (TODO, NULL) : make_fixnum (n);
+}
+
 typedef struct interval *INTERVAL;
 struct Lisp_Cons
 {
@@ -1008,6 +1014,11 @@ CLOSUREP (Lisp_Object a)
   return PSEUDOVECTORP (a, PVEC_CLOSURE);
 }
 INLINE bool
+MARKERP (Lisp_Object x)
+{
+  return PSEUDOVECTORP (x, PVEC_MARKER);
+}
+INLINE bool
 BIGNUMP (Lisp_Object x)
 {
   return PSEUDOVECTORP (x, PVEC_BIGNUM);
@@ -1047,6 +1058,11 @@ XFIXNAT (Lisp_Object a)
   EMACS_INT result = USE_LSB_TAG ? XFIXNUM (a) : XLI (a) - (int0 << VALBITS);
   eassume (0 <= result);
   return result;
+}
+INLINE bool
+NUMBERP (Lisp_Object x)
+{
+  return INTEGERP (x) || FLOATP (x);
 }
 
 INLINE void
@@ -1443,6 +1459,15 @@ extern Lisp_Object internal_condition_case (Lisp_Object (*) (void), Lisp_Object,
                                             Lisp_Object (*) (Lisp_Object));
 extern void specbind (Lisp_Object symbol, Lisp_Object value);
 
+enum Arith_Comparison
+{
+  ARITH_EQUAL,
+  ARITH_NOTEQUAL,
+  ARITH_LESS,
+  ARITH_GRTR,
+  ARITH_LESS_OR_EQUAL,
+  ARITH_GRTR_OR_EQUAL
+};
 extern void syms_of_data (void);
 extern void set_internal (Lisp_Object symbol, Lisp_Object newval,
                           Lisp_Object where, enum Set_Internal_Bind bindflag);

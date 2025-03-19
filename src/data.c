@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "lisp.h"
 
 AVOID
@@ -68,7 +70,7 @@ do_symval_forwarding (lispfwd valcontents)
   switch (XFWDTYPE (valcontents))
     {
     case Lisp_Fwd_Int:
-      TODO;
+      return make_int (*XFIXNUMFWD (valcontents)->intvar);
 
     case Lisp_Fwd_Bool:
       TODO;
@@ -367,6 +369,156 @@ DEFUN ("null", Fnull, Snull, 1, 1, 0,
   return Qnil;
 }
 
+static Lisp_Object
+check_number_coerce_marker (Lisp_Object x)
+{
+  if (MARKERP (x))
+    TODO; // return make_fixnum (marker_position (x));
+  CHECK_TYPE (NUMBERP (x), Qnumber_or_marker_p, x);
+  return x;
+}
+
+Lisp_Object
+arithcompare (Lisp_Object num1, Lisp_Object num2,
+              enum Arith_Comparison comparison)
+{
+  EMACS_INT i1 = 0, i2 = 0;
+  bool lt, eq = true, gt;
+  bool test;
+
+  num1 = check_number_coerce_marker (num1);
+  num2 = check_number_coerce_marker (num2);
+
+  if (FLOATP (num1))
+    {
+      double f1 = XFLOAT_DATA (num1);
+      if (FLOATP (num2))
+        {
+          double f2 = XFLOAT_DATA (num2);
+          lt = f1 < f2;
+          eq = f1 == f2;
+          gt = f1 > f2;
+        }
+      else if (FIXNUMP (num2))
+        {
+          double f2 = XFIXNUM (num2);
+          lt = f1 < f2;
+          eq = f1 == f2;
+          gt = f1 > f2;
+          i1 = f2;
+          i2 = XFIXNUM (num2);
+        }
+      else if (isnan (f1))
+        lt = eq = gt = false;
+      else
+        TODO; // i2 = mpz_cmp_d (*xbignum_val (num2), f1);
+    }
+  else if (FIXNUMP (num1))
+    {
+      if (FLOATP (num2))
+        {
+          double f1 = XFIXNUM (num1), f2 = XFLOAT_DATA (num2);
+          lt = f1 < f2;
+          eq = f1 == f2;
+          gt = f1 > f2;
+          i1 = XFIXNUM (num1);
+          i2 = f1;
+        }
+      else if (FIXNUMP (num2))
+        {
+          i1 = XFIXNUM (num1);
+          i2 = XFIXNUM (num2);
+        }
+      else
+        TODO; // i2 = mpz_sgn (*xbignum_val (num2));
+    }
+  else if (FLOATP (num2))
+    {
+      double f2 = XFLOAT_DATA (num2);
+      if (isnan (f2))
+        lt = eq = gt = false;
+      else
+        TODO; // i1 = mpz_cmp_d (*xbignum_val (num1), f2);
+    }
+  else if (FIXNUMP (num2))
+    TODO; // i1 = mpz_sgn (*xbignum_val (num1));
+  else
+    TODO; // i1 = mpz_cmp (*xbignum_val (num1), *xbignum_val (num2));
+
+  if (eq)
+    {
+      lt = i1 < i2;
+      eq = i1 == i2;
+      gt = i1 > i2;
+    }
+
+  switch (comparison)
+    {
+    case ARITH_EQUAL:
+      test = eq;
+      break;
+
+    case ARITH_NOTEQUAL:
+      test = !eq;
+      break;
+
+    case ARITH_LESS:
+      test = lt;
+      break;
+
+    case ARITH_LESS_OR_EQUAL:
+      test = lt | eq;
+      break;
+
+    case ARITH_GRTR:
+      test = gt;
+      break;
+
+    case ARITH_GRTR_OR_EQUAL:
+      test = gt | eq;
+      break;
+
+    default:
+      eassume (false);
+    }
+
+  return test ? Qt : Qnil;
+}
+
+static Lisp_Object
+minmax_driver (ptrdiff_t nargs, Lisp_Object *args,
+               enum Arith_Comparison comparison)
+{
+  Lisp_Object accum = check_number_coerce_marker (args[0]);
+  for (ptrdiff_t argnum = 1; argnum < nargs; argnum++)
+    {
+      Lisp_Object val = check_number_coerce_marker (args[argnum]);
+      if (!NILP (arithcompare (val, accum, comparison)))
+        accum = val;
+      else if (FLOATP (val) && isnan (XFLOAT_DATA (val)))
+        return val;
+    }
+  return accum;
+}
+
+DEFUN ("max", Fmax, Smax, 1, MANY, 0,
+       doc: /* Return largest of all the arguments (which must be numbers or markers).
+The value is always a number; markers are converted to numbers.
+usage: (max NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  return minmax_driver (nargs, args, ARITH_GRTR);
+}
+
+DEFUN ("min", Fmin, Smin, 1, MANY, 0,
+       doc: /* Return smallest of all the arguments (which must be numbers or markers).
+The value is always a number; markers are converted to numbers.
+usage: (min NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  return minmax_driver (nargs, args, ARITH_LESS);
+}
+
 void
 syms_of_data (void)
 {
@@ -382,6 +534,7 @@ syms_of_data (void)
   DEFSYM (Qstringp, "stringp");
   DEFSYM (Qintegerp, "integerp");
   DEFSYM (Qarrayp, "arrayp");
+  DEFSYM (Qnumber_or_marker_p, "number-or-marker-p");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");
@@ -426,4 +579,6 @@ syms_of_data (void)
   defsubr (&Srecordp);
   defsubr (&Sstringp);
   defsubr (&Snull);
+  defsubr (&Smax);
+  defsubr (&Smin);
 }
