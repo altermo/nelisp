@@ -511,6 +511,18 @@ read_stack_reset (intmax_t sp)
   eassert (sp <= rdstack.sp);
   rdstack.sp = sp;
 }
+#define READ_AND_BUFFER(c)                     \
+  c = READCHAR;                                \
+  if (c < 0)                                   \
+    TODO;                                      \
+  if (multibyte)                               \
+    p += CHAR_STRING (c, (unsigned char *) p); \
+  else                                         \
+    *p++ = c;                                  \
+  if (end - p < MAX_MULTIBYTE_LENGTH + 1)      \
+    {                                          \
+      TODO;                                    \
+    }
 static AVOID
 end_of_file_error (void)
 {
@@ -938,6 +950,56 @@ read_obj:;
     case ']':
       TODO;
     case '#':
+      {
+        char *p = read_buffer;
+        char *end = read_buffer + read_buffer_size;
+
+        *p++ = '#';
+        int ch;
+        READ_AND_BUFFER (ch);
+        switch (ch)
+          {
+          case '\'':
+            read_stack_push ((struct read_stack_entry) {
+              .type = RE_special,
+              .u.special.symbol = Qfunction,
+            });
+            goto read_obj;
+          case '#':
+            TODO;
+          case 's':
+            TODO;
+          case '^':
+            TODO;
+          case '(':
+            TODO;
+          case '[':
+            TODO;
+          case '&':
+            TODO;
+          case '!':
+            TODO;
+          case 'x':
+          case 'X':
+            TODO;
+          case 'o':
+          case 'O':
+            TODO;
+          case 'b':
+          case 'B':
+            TODO;
+          case '@':
+            TODO;
+          case '$':
+            TODO;
+          case ':':
+            TODO;
+          case '_':
+            TODO;
+          default:
+            TODO;
+          }
+      }
       TODO;
     case '?':
       TODO;
@@ -1272,6 +1334,8 @@ The vector's contents don't make sense if examined from Lisp programs;
 to find all the symbols in an obarray, use `mapatoms'.  */);
 
   DEFSYM (Qobarray_cache, "obarray-cache");
+
+  DEFSYM (Qfunction, "function");
 
   DEFSYM (Qlexical_binding, "lexical-binding");
 
