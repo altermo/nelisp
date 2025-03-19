@@ -2,6 +2,7 @@
 
 #include "lisp.h"
 #include "character.h"
+#include "lua.h"
 
 #define USE_ALIGNED_ALLOC 1
 #define MALLOC_0_IS_NONNULL 1
@@ -2541,23 +2542,25 @@ mark_c_stack (void)
 static void
 mark_lua (void)
 {
-  lua_State *L = _global_lua_state;
-  lcheckstack (L, 10);
-  lua_getfield (L, LUA_ENVIRONINDEX, "memtbl");
-  eassert (lua_istable (L, -1));
-  // (-1)memtbl
-  lua_pushnil (L);
-  // (-2)memtbl, (-1)nil
-  while (lua_next (L, -2) != 0)
-    {
-      eassert (lua_isuserdata (L, -1) && !lua_islightuserdata (L, -1));
-      eassert (lua_isstring (L, -2));
-      // (-3)memtbl, (-2)key, (-1)value
-      Lisp_Object obj = *(Lisp_Object *) lua_touserdata (L, -1);
-      eassert (!FIXNUMP (obj));
-      mark_object (obj);
-      lua_pop (L, 1);
-    };
+  LUA (10)
+  {
+    lua_getfield (L, LUA_ENVIRONINDEX, "memtbl");
+    eassert (lua_istable (L, -1));
+    // (-1)memtbl
+    lua_pushnil (L);
+    // (-2)memtbl, (-1)nil
+    while (lua_next (L, -2) != 0)
+      {
+        eassert (lua_isuserdata (L, -1) && !lua_islightuserdata (L, -1));
+        eassert (lua_isstring (L, -2));
+        // (-3)memtbl, (-2)key, (-1)value
+        Lisp_Object obj = *(Lisp_Object *) lua_touserdata (L, -1);
+        eassert (!FIXNUMP (obj));
+        mark_object (obj);
+        lua_pop (L, 1);
+      };
+    lua_pop (L, 1);
+  }
 }
 
 NO_INLINE static void
