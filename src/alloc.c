@@ -2801,6 +2801,12 @@ syms_of_alloc (void)
   DEFVAR_INT ("strings-consed", strings_consed,
                 doc: /* Number of strings that have been consed so far.  */);
 
+  DEFVAR_LISP ("purify-flag", Vpurify_flag,
+               doc: /* Non-nil means loading Lisp code in order to dump an executable.
+This means that certain objects should be allocated in shared (pure) space.
+It can also be set to a hash-table, in which case this table is used to
+do hash-consing of the objects allocated to pure space.  */);
+
   defsubr (&Scons);
   defsubr (&Smake_vector);
   defsubr (&Smake_symbol);
