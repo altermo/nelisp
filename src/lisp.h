@@ -76,7 +76,7 @@ typedef bool bool_bf;
 _Noreturn INLINE void
 emacs_abort (void)
 {
-  luaL_error (global_lua_state, "emacs_abort");
+  TODO;
   __builtin_unreachable ();
 }
 
