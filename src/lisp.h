@@ -29,6 +29,8 @@ static bool unrecoverable_error;
 #define TODO_NELISP_LATER_AND false
 #define TODO TODO_ (__FILE__, __LINE__)
 #define UNUSED(x) (void) x
+#define STATIC_ASSERT(expr, msg) \
+  (sizeof (struct { int static_error___##msg##__ : ((expr) ? 1 : -1); }))
 
 // LSP being anyoing about them existing and not existing, so just define them
 // here
@@ -1563,7 +1565,7 @@ extern void check_nargs (lua_State *L, int nargs);
 extern void check_isobject (lua_State *L, int n);
 extern void check_istable_with_obj (lua_State *L, int n);
 extern void tcall (lua_State *L, void (*f) (lua_State *L));
-extern void lcheckstack (lua_State *L, int n);
+extern void _lcheckstack (lua_State *L, int n);
 
 #define DEF_TCALL_ARGS_PRE_0
 #define DEF_TCALL_ARGS_PRE_1
@@ -1576,7 +1578,7 @@ extern void lcheckstack (lua_State *L, int n);
 #define DEF_TCALL_ARGS_PRE_8
 #define DEF_TCALL_ARGS_PRE_UNEVALLED
 #define DEF_TCALL_ARGS_PRE_MANY          \
-  lcheckstack (L, 5);                    \
+  _lcheckstack (L, 5);                   \
   ptrdiff_t len = lua_objlen (L, 1);     \
   Lisp_Object args[len];                 \
   for (ptrdiff_t i = 0; i < len; i++)    \
@@ -1600,9 +1602,11 @@ extern void lcheckstack (lua_State *L, int n);
 #define DEFUN_LUA_N(fname, maxargs)                                    \
   void t_l##fname (lua_State *L)                                       \
   {                                                                    \
+    int top = lua_gettop (L);                                          \
     DEF_TCALL_ARGS_PRE_##maxargs;                                      \
     Lisp_Object obj = fname (DEF_TCALL_ARGS_##maxargs (maxargs));      \
     push_obj (L, obj);                                                 \
+    eassert (top + 1 == lua_gettop (L));                               \
   }                                                                    \
   int __attribute__ ((visibility ("default"))) l##fname (lua_State *L) \
   {                                                                    \
@@ -1629,6 +1633,7 @@ extern void lcheckstack (lua_State *L, int n);
 static inline _Noreturn void
 TODO_ (const char *file, int line)
 {
+  _lcheckstack (_global_lua_state, 5);
   lua_pushfstring (_global_lua_state, "TODO at %s:%d", file, line);
   unrecoverable_error = true;
   tcall_error = true;

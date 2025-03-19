@@ -2,9 +2,10 @@
 
 #include "lisp.h"
 #include "character.h"
+#include "lua.h"
 
 void
-lcheckstack (lua_State *L, int n)
+_lcheckstack (lua_State *L, int n)
 {
   if (!lua_checkstack (L, lua_gettop (L) + n))
     luaL_error (L, "Lua stack overflow");
@@ -13,75 +14,79 @@ lcheckstack (lua_State *L, int n)
 Lisp_Object
 userdata_to_obj (lua_State *L, int idx)
 {
-  lcheckstack (L, 5);
-  check_obj (L, idx);
+  Lisp_Object obj;
+  LUAL (L, 5)
+  {
+    check_obj (L, idx);
 
-  if (lua_islightuserdata (L, idx))
-    {
-      Lisp_Object obj = (Lisp_Object) lua_touserdata (L, idx);
-      eassert (FIXNUMP (obj));
-      return obj;
-    }
-  else
-    {
-      Lisp_Object obj = *(Lisp_Object *) lua_touserdata (L, idx);
-      eassert (!FIXNUMP (obj));
-      return obj;
-    }
+    if (lua_islightuserdata (L, idx))
+      {
+        obj = (Lisp_Object) lua_touserdata (L, idx);
+        eassert (FIXNUMP (obj));
+      }
+    else
+      {
+        obj = *(Lisp_Object *) lua_touserdata (L, idx);
+        eassert (!FIXNUMP (obj));
+      }
+  }
+  return obj;
 }
 
 void
 push_obj (lua_State *L, Lisp_Object obj)
 {
-  lcheckstack (L, 10);
-  if (FIXNUMP (obj))
-    {
-      lua_pushlightuserdata (L, obj);
-      set_obj_check (L, -1);
-      return;
-    }
-  union
+  LUALC (L, 10, 1)
   {
-    Lisp_Object l;
-    char c[sizeof (Lisp_Object)];
-  } u;
-  u.l = obj;
-
-  lua_getfield (L, LUA_ENVIRONINDEX, "memtbl");
-  eassert (lua_istable (L, -1));
-  // (-1)memtbl
-  lua_pushlstring (L, u.c, sizeof (Lisp_Object));
-  // (-2)memtbl, (-1)idx
-  lua_gettable (L, -2);
-  // (-2)memtbl, (-1)nil/obj
-  if (lua_isuserdata (L, -1))
+    if (FIXNUMP (obj))
+      {
+        lua_pushlightuserdata (L, obj);
+        set_obj_check (L, -1);
+        return;
+      }
+    union
     {
-      // (-2)memtbl, (-1)obj
-      Lisp_Object *ptr = (Lisp_Object *) lua_touserdata (L, -1);
-      eassert (*ptr == obj);
-      lua_remove (L, -2);
-      // (-1)obj
-      return;
-    }
-  // (-2)memtbl, (-1)nil
-  lua_pop (L, 2);
-  //
-  Lisp_Object *ptr = (Lisp_Object *) lua_newuserdata (L, sizeof (Lisp_Object));
-  *ptr = obj;
-  // (-1)obj
-  lua_getfield (L, LUA_ENVIRONINDEX, "memtbl");
-  eassert (lua_istable (L, -1));
-  // (-2)obj, (-1)memtbl
-  lua_pushlstring (L, u.c, sizeof (Lisp_Object));
-  // (-3)obj, (-2)memtbl, (-1)idx
-  lua_pushvalue (L, -3);
-  // (-4)obj, (-3)memtbl, (-2)idx, (-1)obj
-  lua_settable (L, -3);
-  // (-2)obj, (-1)memtbl
-  lua_pop (L, 1);
-  // (-1)obj
-  set_obj_check (L, -1);
-  return;
+      Lisp_Object l;
+      char c[sizeof (Lisp_Object)];
+    } u;
+    u.l = obj;
+
+    lua_getfield (L, LUA_ENVIRONINDEX, "memtbl");
+    eassert (lua_istable (L, -1));
+    // (-1)memtbl
+    lua_pushlstring (L, u.c, sizeof (Lisp_Object));
+    // (-2)memtbl, (-1)idx
+    lua_gettable (L, -2);
+    // (-2)memtbl, (-1)nil/obj
+    if (lua_isuserdata (L, -1))
+      {
+        // (-2)memtbl, (-1)obj
+        Lisp_Object *ptr = (Lisp_Object *) lua_touserdata (L, -1);
+        eassert (*ptr == obj);
+        lua_remove (L, -2);
+        // (-1)obj
+        continue;
+      }
+    // (-2)memtbl, (-1)nil
+    lua_pop (L, 2);
+    //
+    Lisp_Object *ptr
+      = (Lisp_Object *) lua_newuserdata (L, sizeof (Lisp_Object));
+    *ptr = obj;
+    // (-1)obj
+    lua_getfield (L, LUA_ENVIRONINDEX, "memtbl");
+    eassert (lua_istable (L, -1));
+    // (-2)obj, (-1)memtbl
+    lua_pushlstring (L, u.c, sizeof (Lisp_Object));
+    // (-3)obj, (-2)memtbl, (-1)idx
+    lua_pushvalue (L, -3);
+    // (-4)obj, (-3)memtbl, (-2)idx, (-1)obj
+    lua_settable (L, -3);
+    // (-2)obj, (-1)memtbl
+    lua_pop (L, 1);
+    // (-1)obj
+    set_obj_check (L, -1);
+  }
 }
 
 void
@@ -122,16 +127,18 @@ check_isobject (lua_State *L, int n)
 void
 check_istable_with_obj (lua_State *L, int n)
 {
-  if (!lua_istable (L, n))
-    luaL_error (L, "Wrong argument #%d: expected table, got %s", n,
-                lua_typename (L, lua_type (L, n)));
-  lcheckstack (L, 5);
-  for (lua_pushnil (L); lua_next (L, n); lua_pop (L, 1))
-    {
-      if (!lua_isuserdata (L, -1))
-        luaL_error (L, "Expected table of userdata(lisp objects)");
-      check_obj (L, -1);
-    }
+  LUAL (L, 5)
+  {
+    if (!lua_istable (L, n))
+      luaL_error (L, "Wrong argument #%d: expected table, got %s", n,
+                  lua_typename (L, lua_type (L, n)));
+    for (lua_pushnil (L); lua_next (L, n); lua_pop (L, 1))
+      {
+        if (!lua_isuserdata (L, -1))
+          luaL_error (L, "Expected table of userdata(lisp objects)");
+        check_obj (L, -1);
+      }
+  }
 }
 #define Xkeyvalue()                     \
   X (1, nil, lua_isnil, "nil")          \
@@ -154,25 +161,26 @@ struct kv_t
 INLINE void
 check_istable_with_keyvalue (lua_State *L, int n, struct kv_t keyvalue[])
 {
-  if (!lua_istable (L, n))
-    luaL_error (L, "Wrong argument #%d: expected table, got %s", n,
-                lua_typename (L, lua_type (L, n)));
-  lcheckstack (L, 5);
-  lua_pushnil (L);
-  for (struct kv_t *kv = keyvalue; kv->key; kv++)
-    {
-      lua_pop (L, 1);
-      lua_getfield (L, -1, kv->key);
-      if (lua_isnil (L, -1) && !(kv->type & kv_mask_nil))
-        luaL_error (L, "Key `%s` not set", kv->key);
+  LUAL (L, 5)
+  {
+    if (!lua_istable (L, n))
+      luaL_error (L, "Wrong argument #%d: expected table, got %s", n,
+                  lua_typename (L, lua_type (L, n)));
+    lua_pushnil (L);
+    for (struct kv_t *kv = keyvalue; kv->key; kv++)
+      {
+        lua_pop (L, 1);
+        lua_getfield (L, -1, kv->key);
+        if (lua_isnil (L, -1) && !(kv->type & kv_mask_nil))
+          luaL_error (L, "Key `%s` not set", kv->key);
 #define X(mask, name, check, str) \
   else if (kv->type & mask && check (L, -1)) continue;
-      if (false)
-        ;
-      Xkeyvalue ();
+        if (false)
+          ;
+        Xkeyvalue ();
 #undef X
-      char type[kv_message_maxlen];
-      char *p = type;
+        char type[kv_message_maxlen];
+        char *p = type;
 #define X(mask, name, check, str)           \
   if (kv->type & (mask))                    \
     {                                       \
@@ -180,12 +188,13 @@ check_istable_with_keyvalue (lua_State *L, int n, struct kv_t keyvalue[])
       memcpy (p + strlen (str), " or ", 4); \
       p += strlen (str) + 4;                \
     }
-      Xkeyvalue ();
+        Xkeyvalue ();
 #undef X
-      memcpy (p - 4, "\0", 1);
-      luaL_error (L, "Expected key `%s` be %s", kv->key, type);
-    }
-  lua_pop (L, 1);
+        memcpy (p - 4, "\0", 1);
+        luaL_error (L, "Expected key `%s` be %s", kv->key, type);
+      }
+    lua_pop (L, 1);
+  }
 }
 
 thrd_t main_thread;
@@ -565,7 +574,7 @@ ret () init (lua_State *L)
   if (err)
     {
       unrecoverable_error = true;
-      luaL_error (_global_lua_state, "Failed to init thread");
+      luaL_error (L, "Failed to init thread");
     }
 
   mtx_lock (&main_mutex);
