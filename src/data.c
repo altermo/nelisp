@@ -369,6 +369,16 @@ DEFUN ("null", Fnull, Snull, 1, 1, 0,
   return Qnil;
 }
 
+DEFUN ("eq", Feq, Seq, 2, 2, 0,
+       doc: /* Return t if the two args are the same Lisp object.  */
+       attributes: const)
+(Lisp_Object obj1, Lisp_Object obj2)
+{
+  if (EQ (obj1, obj2))
+    return Qt;
+  return Qnil;
+}
+
 static Lisp_Object
 check_number_coerce_marker (Lisp_Object x)
 {
@@ -579,6 +589,7 @@ syms_of_data (void)
   defsubr (&Srecordp);
   defsubr (&Sstringp);
   defsubr (&Snull);
+  defsubr (&Seq);
   defsubr (&Smax);
   defsubr (&Smin);
 }
