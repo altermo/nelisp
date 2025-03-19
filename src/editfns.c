@@ -26,13 +26,12 @@ usage: (message FORMAT-STRING &rest ARGS)  */)
 {
   UNUSED (nargs);
   TODO_NELISP_LATER;
-  lcheckstack (_global_lua_state, 5);
-  int top = lua_gettop (_global_lua_state);
-  lua_getglobal (_global_lua_state, "print");
-  lua_pushlstring (_global_lua_state, (char *) SDATA (args[0]),
-                   SBYTES (args[0]));
-  lua_pcall (_global_lua_state, 1, 0, 0);
-  eassert (top == lua_gettop (_global_lua_state));
+  LUA (5)
+  {
+    lua_getglobal (L, "print");
+    lua_pushlstring (L, (char *) SDATA (args[0]), SBYTES (args[0]));
+    lua_pcall (L, 1, 0, 0);
+  }
   return args[0];
 }
 
