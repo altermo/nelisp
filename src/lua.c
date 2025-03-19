@@ -14,23 +14,20 @@ _lcheckstack (lua_State *L, int n)
 Lisp_Object
 userdata_to_obj (lua_State *L, int idx)
 {
-  Lisp_Object obj;
-  LUAL (L, 5)
-  {
-    check_obj (L, idx);
+  check_obj (L, idx);
 
-    if (lua_islightuserdata (L, idx))
-      {
-        obj = (Lisp_Object) lua_touserdata (L, idx);
-        eassert (FIXNUMP (obj));
-      }
-    else
-      {
-        obj = *(Lisp_Object *) lua_touserdata (L, idx);
-        eassert (!FIXNUMP (obj));
-      }
-  }
-  return obj;
+  if (lua_islightuserdata (L, idx))
+    {
+      Lisp_Object obj = (Lisp_Object) lua_touserdata (L, idx);
+      eassert (FIXNUMP (obj));
+      return obj;
+    }
+  else
+    {
+      Lisp_Object obj = *(Lisp_Object *) lua_touserdata (L, idx);
+      eassert (!FIXNUMP (obj));
+      return obj;
+    }
 }
 
 void
