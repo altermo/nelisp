@@ -62,7 +62,14 @@ emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
 #define IS_ANY_SEP(_c_) (IS_DIRECTORY_SEP (_c_))
 #define IS_DEVICE_SEP(_c_) 0
 // Taken from conf_post.h
-#define UNINIT
+#ifdef lint
+# define UNINIT \
+   = {          \
+     0,         \
+   }
+#else
+# define UNINIT
+#endif
 #define INLINE EXTERN_INLINE
 #define EXTERN_INLINE static inline __attribute__ ((unused))
 #define NO_INLINE __attribute__ ((__noinline__))

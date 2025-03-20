@@ -63,7 +63,7 @@ create_buffer (long bufid)
 Lisp_Object
 nvim_bufid_to_bufobj (long bufid)
 {
-  Lisp_Object obj = NULL;
+  Lisp_Object obj;
   LUA (10)
   {
     lua_getfield (L, LUA_ENVIRONINDEX, "buftbl");
@@ -98,7 +98,6 @@ nvim_bufid_to_bufobj (long bufid)
     // buftbl, vim.b
     lua_pop (L, 2);
   }
-  eassert (obj);
   return obj;
 }
 

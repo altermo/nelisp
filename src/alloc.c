@@ -883,6 +883,7 @@ compact_small_strings (void)
                     {
                       tb->next_free = to;
                       tb = tb->next;
+                      eassert (tb != NULL);
                       tb_end = (sdata *) ((char *) tb + SBLOCK_SIZE);
                       to = tb->data;
                       to_end = (sdata *) ((char *) to + size + GC_STRING_EXTRA);
@@ -2480,6 +2481,7 @@ process_mark_stack (ptrdiff_t base_sp)
             mark_interval_tree (string_intervals (ptr->u.s.name));
 #endif
             po = ptr = ptr->u.s.next;
+            UNUSED (po);
             if (ptr)
               goto nextsym;
           }

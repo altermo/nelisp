@@ -19,6 +19,6 @@ check:
 
 analyze:
 	find src/ -name '*.c' -o -name '*.h' -not -name 'globals.h'|\
-		xargs clang-check --analyze --analyzer-output-path=/dev/null
+		xargs clang-check --analyze --analyzer-output-path=/dev/null --extra-arg=-Dlint
 
 .PHONY: all nelisp format check analyze

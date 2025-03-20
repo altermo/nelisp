@@ -684,8 +684,8 @@ read_string_literal (Lisp_Object readcharfun)
     {
       if (end - p < MAX_MULTIBYTE_LENGTH)
         {
-          ptrdiff_t offset = p - read_buffer;
           TODO;
+          ptrdiff_t offset = p - read_buffer;
           p = read_buffer + offset;
           end = read_buffer + read_buffer_size;
         }
