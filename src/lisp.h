@@ -30,7 +30,7 @@ static bool unrecoverable_error;
 #define TODO TODO_ (__FILE__, __LINE__)
 #define UNUSED(x) (void) x
 #define STATIC_ASSERT(expr, msg) \
-  (sizeof (struct { int static_error___##msg##__ : ((expr) ? 1 : -1); }))
+  (void) (sizeof (struct { int static_error___##msg##__ : ((expr) ? 1 : -1); }))
 
 // LSP being anyoing about them existing and not existing, so just define them
 // here
