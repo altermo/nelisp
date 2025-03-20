@@ -2268,6 +2268,30 @@ staticpro (Lisp_Object const *varaddress)
   staticvec[staticidx++] = varaddress;
 }
 
+static void
+mark_vectorlike (union vectorlike_header *header)
+{
+  struct Lisp_Vector *ptr = (struct Lisp_Vector *) header;
+  ptrdiff_t size = ptr->header.size;
+
+  eassert (!vector_marked_p (ptr));
+
+  eassert (PSEUDOVECTOR_TYPE (ptr) != PVEC_BOOL_VECTOR);
+
+  set_vector_marked (ptr); /* Else mark it.  */
+  if (size & PSEUDOVECTOR_FLAG)
+    size &= PSEUDOVECTOR_SIZE_MASK;
+
+  mark_objects (ptr->contents, size);
+}
+
+static void
+mark_buffer (struct buffer *buffer)
+{
+  TODO_NELISP_LATER;
+  mark_vectorlike (&buffer->header);
+}
+
 struct mark_entry
 {
   ptrdiff_t n;
@@ -2373,7 +2397,7 @@ process_mark_stack (ptrdiff_t base_sp)
             switch (pvectype)
               {
               case PVEC_BUFFER:
-                TODO;
+                mark_buffer ((struct buffer *) ptr);
                 break;
 
               case PVEC_FRAME:
@@ -2506,6 +2530,13 @@ mark_object (Lisp_Object obj)
 {
   ptrdiff_t sp = mark_stk.sp;
   mark_stack_push_value (obj);
+  process_mark_stack (sp);
+}
+void
+mark_objects (Lisp_Object *objs, ptrdiff_t n)
+{
+  ptrdiff_t sp = mark_stk.sp;
+  mark_stack_push_values (objs, n);
   process_mark_stack (sp);
 }
 
