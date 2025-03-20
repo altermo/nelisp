@@ -45,6 +45,33 @@ even if it is dead.  The return value is never nil.  */)
   return buffer;
 }
 
+void
+set_buffer_internal (register struct buffer *b)
+{
+  TODO_NELISP_LATER;
+  nvim_set_buffer (b);
+}
+
+DEFUN ("set-buffer", Fset_buffer, Sset_buffer, 1, 1, 0,
+       doc: /* Make buffer BUFFER-OR-NAME current for editing operations.
+BUFFER-OR-NAME may be a buffer or the name of an existing buffer.
+See also `with-current-buffer' when you want to make a buffer current
+temporarily.  This function does not display the buffer, so its effect
+ends when the current command terminates.  Use `switch-to-buffer' or
+`pop-to-buffer' to switch buffers permanently.
+The return value is the buffer made current.  */)
+(register Lisp_Object buffer_or_name)
+{
+  register Lisp_Object buffer;
+  buffer = Fget_buffer (buffer_or_name);
+  if (NILP (buffer))
+    TODO; // nsberror (buffer_or_name);
+  if (!BUFFER_LIVE_P (XBUFFER (buffer)))
+    TODO; // error ("Selecting deleted buffer");
+  set_buffer_internal (XBUFFER (buffer));
+  return buffer;
+}
+
 DEFUN ("buffer-name", Fbuffer_name, Sbuffer_name, 0, 1, 0,
        doc: /* Return the name of BUFFER, as a string.
 BUFFER defaults to the current buffer.
@@ -63,5 +90,6 @@ syms_of_buffer (void)
 {
   defsubr (&Sget_buffer);
   defsubr (&Sget_buffer_create);
+  defsubr (&Sset_buffer);
   defsubr (&Sbuffer_name);
 }

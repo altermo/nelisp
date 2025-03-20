@@ -185,3 +185,15 @@ nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
       emacs_abort ();
     }
 }
+
+void
+nvim_set_buffer (struct buffer *b)
+{
+  eassert (BUFFER_LIVE_P (b));
+  LUA (5)
+  {
+    push_vim_api (L, "nvim_set_current_buf");
+    lua_pushnumber (L, b->bufid);
+    lua_call (L, 1, 0);
+  }
+}

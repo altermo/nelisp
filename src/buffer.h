@@ -2,6 +2,7 @@
 #define EMACS_BUFFER_H
 
 #include "lisp.h"
+#include "nvim.h"
 
 INLINE bool
 BUFFERP (Lisp_Object a)
@@ -29,6 +30,12 @@ decode_buffer (Lisp_Object b)
 }
 
 #define BVAR(buf, field) nvim_bvar (buf, NVIM_BUFFER_VAR__##field)
+
+INLINE bool
+BUFFER_LIVE_P (struct buffer *b)
+{
+  return !NILP (BVAR (b, name));
+}
 
 struct buffer
 {
