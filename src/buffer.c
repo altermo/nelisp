@@ -16,8 +16,38 @@ BUFFER-OR-NAME is a buffer, return it as given.  */)
   return nvim_name_to_bufobj (buffer_or_name);
 }
 
+DEFUN ("get-buffer-create", Fget_buffer_create, Sget_buffer_create, 1, 2, 0,
+       doc: /* Return the buffer specified by BUFFER-OR-NAME, creating a new one if needed.
+If BUFFER-OR-NAME is a string and a live buffer with that name exists,
+return that buffer.  If no such buffer exists, create a new buffer with
+that name and return it.
+
+If BUFFER-OR-NAME starts with a space, the new buffer does not keep undo
+information.  If optional argument INHIBIT-BUFFER-HOOKS is non-nil, the
+new buffer does not run the hooks `kill-buffer-hook',
+`kill-buffer-query-functions', and `buffer-list-update-hook'.  This
+avoids slowing down internal or temporary buffers that are never
+presented to users or passed on to other applications.
+
+If BUFFER-OR-NAME is a buffer instead of a string, return it as given,
+even if it is dead.  The return value is never nil.  */)
+(register Lisp_Object buffer_or_name, Lisp_Object inhibit_buffer_hooks)
+{
+  register Lisp_Object buffer;
+
+  buffer = Fget_buffer (buffer_or_name);
+  if (!NILP (buffer))
+    return buffer;
+
+  if (SCHARS (buffer_or_name) == 0)
+    TODO; // error ("Empty string for buffer name is not allowed");
+  buffer = nvim_create_buf (buffer_or_name, inhibit_buffer_hooks);
+  return buffer;
+}
+
 void
 syms_of_buffer (void)
 {
   defsubr (&Sget_buffer);
+  defsubr (&Sget_buffer_create);
 }

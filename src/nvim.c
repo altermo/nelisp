@@ -3,6 +3,20 @@
 #include "lua.h"
 
 static void
+push_vim_api (lua_State *L, const char *name)
+{
+  LUALC (L, 5, 1)
+  {
+    lua_getglobal (L, "vim");
+    lua_getfield (L, -1, "api");
+    lua_remove (L, -2);
+    lua_getfield (L, -1, name);
+    lua_remove (L, -2);
+    eassert (lua_isfunction (L, -1));
+  }
+}
+
+static void
 push_vim_fn (lua_State *L, const char *name)
 {
   LUALC (L, 5, 1)
@@ -103,5 +117,29 @@ nvim_name_to_bufobj (Lisp_Object name)
   }
   if (bufid == -1)
     return Qnil;
+  return nvim_bufid_to_bufobj (bufid);
+}
+
+Lisp_Object
+nvim_create_buf (Lisp_Object name, Lisp_Object inhibit_buffer_hooks)
+{
+  long bufid;
+  UNUSED (inhibit_buffer_hooks);
+  CHECK_STRING (name);
+  eassert (NILP (nvim_name_to_bufobj (name)));
+  LUA (10)
+  {
+    push_vim_api (L, "nvim_create_buf");
+    lua_pushboolean (L, true);
+    lua_pushboolean (L, true);
+    lua_call (L, 2, 1);
+    push_vim_api (L, "nvim_buf_set_name");
+    lua_pushvalue (L, -2);
+    lua_pushlstring (L, (char *) SDATA (name), SBYTES (name));
+    lua_call (L, 2, 0);
+    eassert (lua_isnumber (L, -1));
+    bufid = lua_tointeger (L, -1);
+    lua_pop (L, 1);
+  }
   return nvim_bufid_to_bufobj (bufid);
 }
