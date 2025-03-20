@@ -46,6 +46,13 @@ even if it is dead.  The return value is never nil.  */)
 }
 
 void
+init_buffer (void)
+{
+  AUTO_STRING (scratch, "*scratch*");
+  Fget_buffer_create (scratch, Qnil);
+}
+
+void
 syms_of_buffer (void)
 {
   defsubr (&Sget_buffer);

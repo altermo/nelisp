@@ -1344,6 +1344,21 @@ extern Lisp_Object list4 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
 extern Lisp_Object list5 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object,
                           Lisp_Object);
 
+#define USE_STACK_LISP_OBJECTS true
+enum
+{
+  USE_STACK_CONS = USE_STACK_LISP_OBJECTS,
+  USE_STACK_STRING = USE_STACK_CONS
+};
+#define AUTO_STRING_WITH_LEN(name, str, len)                                 \
+  Lisp_Object name                                                           \
+    = (USE_STACK_STRING                                                      \
+         ? (make_lisp_ptr ((&(struct Lisp_String) {                          \
+                             { { len, -1, 0, (unsigned char *) (str) } } }), \
+                           Lisp_String))                                     \
+         : make_unibyte_string (str, len))
+#define AUTO_STRING(name, str) AUTO_STRING_WITH_LEN (name, str, strlen (str))
+
 #if TODO_NELISP_LATER_ELSE
 INLINE void
 maybe_quit (void)
@@ -1498,6 +1513,7 @@ extern void syms_of_fileio (void);
 extern void syms_of_coding (void);
 
 extern void syms_of_buffer (void);
+extern void init_buffer (void);
 
 INLINE void
 circular_list (Lisp_Object list)
