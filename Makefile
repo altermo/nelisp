@@ -14,9 +14,11 @@ format:
 	clang-format src/*.c src/*.h -i --style=file
 
 check:
-	clang-check src/*.c
+	find src/ -name '*.c' -o -name '*.h' -not -name 'globals.h'|\
+		xargs clang-check
 
 analyze:
-	clang-check --analyze --analyzer-output-path=/dev/null src/*.c
+	find src/ -name '*.c' -o -name '*.h' -not -name 'globals.h'|\
+		xargs clang-check --analyze --analyzer-output-path=/dev/null
 
 .PHONY: all nelisp format check analyze
