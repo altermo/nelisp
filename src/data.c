@@ -545,6 +545,7 @@ syms_of_data (void)
   DEFSYM (Qintegerp, "integerp");
   DEFSYM (Qarrayp, "arrayp");
   DEFSYM (Qnumber_or_marker_p, "number-or-marker-p");
+  DEFSYM (Qbufferp, "bufferp");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");

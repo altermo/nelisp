@@ -9,6 +9,27 @@ BUFFERP (Lisp_Object a)
   return PSEUDOVECTORP (a, PVEC_BUFFER);
 }
 
+INLINE void
+CHECK_BUFFER (Lisp_Object x)
+{
+  CHECK_TYPE (BUFFERP (x), Qbufferp, x);
+}
+
+INLINE struct buffer *
+XBUFFER (Lisp_Object a)
+{
+  eassert (BUFFERP (a));
+  return XUNTAG (a, Lisp_Vectorlike, struct buffer);
+}
+
+INLINE struct buffer *
+decode_buffer (Lisp_Object b)
+{
+  return NILP (b) ? (TODO, NULL) : (CHECK_BUFFER (b), XBUFFER (b));
+}
+
+#define BVAR(buf, field) nvim_bvar (buf, NVIM_BUFFER_VAR__##field)
+
 struct buffer
 {
   union vectorlike_header header;

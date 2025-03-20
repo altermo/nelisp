@@ -45,6 +45,12 @@ even if it is dead.  The return value is never nil.  */)
   return buffer;
 }
 
+DEFUN ("buffer-name", Fbuffer_name, Sbuffer_name, 0, 1, 0,
+       doc: /* Return the name of BUFFER, as a string.
+BUFFER defaults to the current buffer.
+Return nil if BUFFER has been killed.  */)
+(register Lisp_Object buffer) { return BVAR (decode_buffer (buffer), name); }
+
 void
 init_buffer (void)
 {
@@ -57,4 +63,5 @@ syms_of_buffer (void)
 {
   defsubr (&Sget_buffer);
   defsubr (&Sget_buffer_create);
+  defsubr (&Sbuffer_name);
 }

@@ -3,7 +3,13 @@
 
 #include "lisp.h"
 
+enum nvim_buffer_var_field
+{
+  NVIM_BUFFER_VAR__name,
+};
+
 extern Lisp_Object nvim_name_to_bufobj (Lisp_Object);
 extern Lisp_Object nvim_create_buf (Lisp_Object, Lisp_Object);
+extern Lisp_Object nvim_bvar (struct buffer *, enum nvim_buffer_var_field);
 
 #endif

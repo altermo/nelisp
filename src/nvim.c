@@ -1,3 +1,4 @@
+#include "nvim.h"
 #include "lisp.h"
 #include "buffer.h"
 #include "lua.h"
@@ -142,4 +143,45 @@ nvim_create_buf (Lisp_Object name, Lisp_Object inhibit_buffer_hooks)
     lua_pop (L, 1);
   }
   return nvim_bufid_to_bufobj (bufid);
+}
+
+static Lisp_Object
+buffer_name (struct buffer *b)
+{
+  long bufid = b->bufid;
+  Lisp_Object obj = Qnil;
+  LUA (5)
+  {
+    push_vim_api (L, "nvim_buf_is_valid");
+    lua_pushnumber (L, bufid);
+    lua_call (L, 1, 1);
+    eassert (lua_isboolean (L, -1));
+    if (!lua_toboolean (L, -1))
+      goto done;
+    push_vim_fn (L, "bufname");
+    lua_pushnumber (L, bufid);
+    lua_call (L, 1, 1);
+    eassert (lua_isstring (L, -1));
+    TODO_NELISP_LATER; // the returned string should always be the same until
+                       // name changed
+    size_t len;
+    const char *name = lua_tolstring (L, -1, &len);
+    obj = make_string (name, len);
+    lua_pop (L, 1);
+  done:
+    lua_pop (L, 1);
+  }
+  return obj;
+}
+
+Lisp_Object
+nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
+{
+  switch (field)
+    {
+    case NVIM_BUFFER_VAR__name:
+      return buffer_name (b);
+    default:
+      emacs_abort ();
+    }
 }
