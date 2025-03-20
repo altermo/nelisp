@@ -538,6 +538,7 @@ dead_object (void)
             == (PSEUDOVECTOR_FLAG | (code << PSEUDOVECTOR_AREA_BITS))))
 
 #define XSETSUBR(a, b) XSETPSEUDOVECTOR (a, b, PVEC_SUBR)
+#define XSETBUFFER(a, b) XSETPSEUDOVECTOR (a, b, PVEC_BUFFER)
 
 INLINE Lisp_Object
 make_int (intmax_t n)
@@ -805,6 +806,11 @@ memclear (void *p, ptrdiff_t nbytes)
 }
 #define VECSIZE(type) \
   ((sizeof (type) - header_size + word_size - 1) / word_size)
+
+#define PSEUDOVECSIZE(type, lastlispfield)                  \
+  (offsetof (type, lastlispfield) + word_size < header_size \
+     ? 0                                                    \
+     : (offsetof (type, lastlispfield) + word_size - header_size) / word_size)
 
 INLINE bool
 ASCII_CHAR_P (intmax_t c)
@@ -1397,6 +1403,7 @@ void *hash_table_alloc_bytes (ptrdiff_t nbytes);
 void hash_table_free_bytes (void *p, ptrdiff_t nbytes);
 extern struct Lisp_Vector *allocate_pseudovector (int, int, int,
                                                   enum pvec_type);
+extern struct buffer *allocate_buffer (void);
 #define ALLOCATE_PLAIN_PSEUDOVECTOR(type, tag) \
   ((type *) allocate_pseudovector (VECSIZE (type), 0, 0, tag))
 extern Lisp_Object make_pure_c_string (const char *, ptrdiff_t);
@@ -1417,6 +1424,10 @@ build_string (const char *str)
 {
   return make_string (str, strlen (str));
 }
+#define ALLOCATE_PSEUDOVECTOR(type, field, tag)                 \
+  ((type *) allocate_pseudovector (VECSIZE (type),              \
+                                   PSEUDOVECSIZE (type, field), \
+                                   PSEUDOVECSIZE (type, field), tag))
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -1485,6 +1496,8 @@ extern void syms_of_emacs (void);
 extern void syms_of_fileio (void);
 
 extern void syms_of_coding (void);
+
+extern void syms_of_buffer (void);
 
 INLINE void
 circular_list (Lisp_Object list)

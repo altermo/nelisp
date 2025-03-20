@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "lisp.h"
+#include "buffer.h"
 #include "character.h"
 #include "lua.h"
 
@@ -1707,6 +1708,15 @@ allocate_pseudovector (int memlen, int lisplen, int zerolen, enum pvec_type tag)
   memclear (v->contents, zerolen * word_size);
   XSETPVECTYPESIZE (v, tag, lisplen, memlen - lisplen);
   return v;
+}
+
+struct buffer *
+allocate_buffer (void)
+{
+  struct buffer *b
+    = ALLOCATE_PSEUDOVECTOR (struct buffer, _last_obj, PVEC_BUFFER);
+  BUFFER_PVEC_INIT (b);
+  return b;
 }
 
 Lisp_Object

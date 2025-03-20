@@ -555,6 +555,7 @@ ret () init (lua_State *L)
   syms_of_emacs ();
   syms_of_fileio ();
   syms_of_coding ();
+  syms_of_buffer ();
 
   init_keyboard ();
   init_eval ();
