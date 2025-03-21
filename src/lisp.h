@@ -1463,6 +1463,13 @@ build_string (const char *str)
                                    PSEUDOVECSIZE (type, field), \
                                    PSEUDOVECSIZE (type, field), tag))
 extern Lisp_Object empty_unibyte_string, empty_multibyte_string;
+void free_cons (struct Lisp_Cons *ptr);
+extern struct Lisp_Vector *allocate_nil_vector (ptrdiff_t);
+INLINE Lisp_Object
+make_nil_vector (ptrdiff_t size)
+{
+  return make_lisp_ptr (allocate_nil_vector (size), Lisp_Vectorlike);
+}
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;

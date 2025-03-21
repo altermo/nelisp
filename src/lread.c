@@ -1291,6 +1291,21 @@ string_to_number (char const *string, int base, ptrdiff_t *plen)
 
   TODO;
 }
+static Lisp_Object
+vector_from_rev_list (Lisp_Object elems)
+{
+  ptrdiff_t size = list_length (elems);
+  Lisp_Object obj = make_nil_vector (size);
+  Lisp_Object *vec = XVECTOR (obj)->contents;
+  for (ptrdiff_t i = size - 1; i >= 0; i--)
+    {
+      vec[i] = XCAR (elems);
+      Lisp_Object next = XCDR (elems);
+      free_cons (XCONS (elems));
+      elems = next;
+    }
+  return obj;
+}
 Lisp_Object
 read0 (Lisp_Object readcharfun, bool locate_syms)
 {
@@ -1333,9 +1348,32 @@ read_obj:;
         }
       break;
     case '[':
-      TODO;
+      read_stack_push ((struct read_stack_entry) {
+        .type = RE_vector,
+        .u.vector.elems = Qnil,
+        .u.vector.old_locate_syms = locate_syms,
+      });
+      goto read_obj;
     case ']':
-      TODO;
+      if (read_stack_empty_p (base_sp))
+        invalid_syntax ("]", readcharfun);
+      switch (read_stack_top ()->type)
+        {
+        case RE_vector:
+          locate_syms = read_stack_top ()->u.vector.old_locate_syms;
+          obj = vector_from_rev_list (read_stack_pop ()->u.vector.elems);
+          break;
+        case RE_byte_code:
+          TODO;
+        case RE_char_table:
+          TODO;
+        case RE_sub_char_table:
+          TODO;
+        default:
+          invalid_syntax ("]", readcharfun);
+          break;
+        }
+      break;
     case '#':
       {
         char *p = read_buffer;
@@ -1545,7 +1583,8 @@ read_obj:;
         case RE_sub_char_table:
         case RE_byte_code:
         case RE_string_props:
-          TODO;
+          e->u.vector.elems = Fcons (obj, e->u.vector.elems);
+          goto read_obj;
         case RE_special:
           read_stack_pop ();
           obj = list2 (e->u.special.symbol, obj);

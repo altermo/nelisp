@@ -1198,7 +1198,16 @@ static struct Lisp_Cons *cons_free_list;
 #define ASAN_POISON_CONS_BLOCK(b) ((void) 0)
 #define ASAN_POISON_CONS(p) ((void) 0)
 #define ASAN_UNPOISON_CONS(p) ((void) 0)
-
+void
+free_cons (struct Lisp_Cons *ptr)
+{
+  ptr->u.s.u.chain = cons_free_list;
+  ptr->u.s.car = dead_object ();
+  cons_free_list = ptr;
+  ptrdiff_t nbytes = sizeof *ptr;
+  tally_consing (-nbytes);
+  ASAN_POISON_CONS (ptr);
+}
 DEFUN ("cons", Fcons, Scons, 2, 2, 0,
        doc: /* Create a new cons, give it CAR and CDR as components, and return it.  */)
 (Lisp_Object car, Lisp_Object cdr)
@@ -1719,7 +1728,11 @@ allocate_buffer (void)
   BUFFER_PVEC_INIT (b);
   return b;
 }
-
+struct Lisp_Vector *
+allocate_nil_vector (ptrdiff_t len)
+{
+  return allocate_clear_vector (len, true);
+}
 Lisp_Object
 make_vector (ptrdiff_t length, Lisp_Object init)
 {
