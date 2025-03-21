@@ -1010,6 +1010,15 @@ make_uint (uintmax_t n)
   return make_fixnum (n);
 }
 
+enum Lisp_Closure
+{
+  CLOSURE_ARGLIST = 0,
+  CLOSURE_CODE = 1,
+  CLOSURE_CONSTANTS = 2,
+  CLOSURE_STACK_DEPTH = 3,
+  CLOSURE_DOC_STRING = 4,
+  CLOSURE_INTERACTIVE = 5
+};
 enum char_bits
 {
   CHAR_ALT = 0x0400000,
@@ -1470,6 +1479,7 @@ make_nil_vector (ptrdiff_t size)
 {
   return make_lisp_ptr (allocate_nil_vector (size), Lisp_Vectorlike);
 }
+void pin_string (Lisp_Object string);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;

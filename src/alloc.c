@@ -1092,6 +1092,28 @@ init_strings (void)
   empty_multibyte_string = make_pure_string ("", 0, 0, 1);
   staticpro (&empty_multibyte_string);
 }
+
+void
+pin_string (Lisp_Object string)
+{
+  eassert (STRINGP (string) && !STRING_MULTIBYTE (string));
+  struct Lisp_String *s = XSTRING (string);
+  ptrdiff_t size = STRING_BYTES (s);
+  unsigned char *data = s->u.s.data;
+
+  if (!(size > LARGE_STRING_BYTES || PURE_P (data) || pdumper_object_p (data)
+        || s->u.s.size_byte == -3))
+    {
+      eassert (s->u.s.size_byte == -1);
+      sdata *old_sdata = SDATA_OF_STRING (s);
+      allocate_string_data (s, size, size, false, true);
+      memcpy (s->u.s.data, data, size);
+      old_sdata->string = NULL;
+      SDATA_NBYTES (old_sdata) = size;
+      ASAN_PREPARE_DEAD_SDATA (old_sdata, size);
+    }
+  s->u.s.size_byte = -3;
+}
 /* --- float allocation -- */
 
 #define FLOAT_BLOCK_SIZE                                  \

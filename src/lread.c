@@ -1306,6 +1306,44 @@ vector_from_rev_list (Lisp_Object elems)
     }
   return obj;
 }
+static Lisp_Object
+bytecode_from_rev_list (Lisp_Object elems, Lisp_Object readcharfun)
+{
+  Lisp_Object obj = vector_from_rev_list (elems);
+  Lisp_Object *vec = XVECTOR (obj)->contents;
+  ptrdiff_t size = ASIZE (obj);
+
+  if (infile && size >= CLOSURE_CONSTANTS)
+    {
+      if (CONSP (vec[CLOSURE_CODE]) && FIXNUMP (XCDR (vec[CLOSURE_CODE])))
+        TODO;
+
+      if (NILP (vec[CLOSURE_CONSTANTS]) && STRINGP (vec[CLOSURE_CODE]))
+        TODO;
+    }
+
+  if (!(size >= CLOSURE_STACK_DEPTH && size <= CLOSURE_INTERACTIVE + 1
+        && (FIXNUMP (vec[CLOSURE_ARGLIST]) || CONSP (vec[CLOSURE_ARGLIST])
+            || NILP (vec[CLOSURE_ARGLIST]))
+        && ((STRINGP (vec[CLOSURE_CODE]) && VECTORP (vec[CLOSURE_CONSTANTS])
+             && size > CLOSURE_STACK_DEPTH
+             && (FIXNATP (vec[CLOSURE_STACK_DEPTH])))
+            || (CONSP (vec[CLOSURE_CODE])
+                && (CONSP (vec[CLOSURE_CONSTANTS])
+                    || NILP (vec[CLOSURE_CONSTANTS]))))))
+    invalid_syntax ("Invalid byte-code object", readcharfun);
+
+  if (STRINGP (vec[CLOSURE_CODE]))
+    {
+      if (STRING_MULTIBYTE (vec[CLOSURE_CODE]))
+        TODO;
+
+      pin_string (vec[CLOSURE_CODE]);
+    }
+
+  XSETPVECTYPE (XVECTOR (obj), PVEC_CLOSURE);
+  return obj;
+}
 Lisp_Object
 read0 (Lisp_Object readcharfun, bool locate_syms)
 {
@@ -1364,7 +1402,10 @@ read_obj:;
           obj = vector_from_rev_list (read_stack_pop ()->u.vector.elems);
           break;
         case RE_byte_code:
-          TODO;
+          locate_syms = read_stack_top ()->u.vector.old_locate_syms;
+          obj = bytecode_from_rev_list (read_stack_pop ()->u.vector.elems,
+                                        readcharfun);
+          break;
         case RE_char_table:
           TODO;
         case RE_sub_char_table:
@@ -1399,7 +1440,13 @@ read_obj:;
           case '(':
             TODO;
           case '[':
-            TODO;
+            read_stack_push ((struct read_stack_entry) {
+              .type = RE_byte_code,
+              .u.vector.elems = Qnil,
+              .u.vector.old_locate_syms = locate_syms,
+            });
+            locate_syms = false;
+            goto read_obj;
           case '&':
             TODO;
           case '!':
