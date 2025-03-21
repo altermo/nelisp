@@ -237,7 +237,9 @@ signal a `cyclic-function-indirection' error.  */)
   if (NILP (symbol) && !NILP (definition))
     xsignal1 (Qsetting_constant, symbol);
 
-  // eassert (valid_lisp_object_p (definition));
+#if TODO_NELISP_LATER_AND
+  eassert (valid_lisp_object_p (definition));
+#endif
 
   for (Lisp_Object s = definition; SYMBOLP (s) && !NILP (s);
        s = XSYMBOL (s)->u.s.function)
