@@ -2453,7 +2453,13 @@ process_mark_stack (ptrdiff_t base_sp)
                 emacs_abort ();
 
               default:
-                TODO;
+                {
+                  ptrdiff_t size = ptr->header.size;
+                  if (size & PSEUDOVECTOR_FLAG)
+                    size &= PSEUDOVECTOR_SIZE_MASK;
+                  set_vector_marked (ptr);
+                  mark_stack_push_values (ptr->contents, size);
+                }
                 break;
               }
           }
