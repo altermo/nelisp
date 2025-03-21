@@ -227,6 +227,28 @@ DEFUN ("set", Fset, Sset, 2, 2, 0,
   return newval;
 }
 
+DEFUN ("fset", Ffset, Sfset, 2, 2, 0,
+       doc: /* Set SYMBOL's function definition to DEFINITION, and return DEFINITION.
+If the resulting chain of function definitions would contain a loop,
+signal a `cyclic-function-indirection' error.  */)
+(register Lisp_Object symbol, Lisp_Object definition)
+{
+  CHECK_SYMBOL (symbol);
+  if (NILP (symbol) && !NILP (definition))
+    xsignal1 (Qsetting_constant, symbol);
+
+  // eassert (valid_lisp_object_p (definition));
+
+  for (Lisp_Object s = definition; SYMBOLP (s) && !NILP (s);
+       s = XSYMBOL (s)->u.s.function)
+    if (EQ (s, symbol))
+      xsignal1 (Qcyclic_function_indirection, symbol);
+
+  set_symbol_function (symbol, definition);
+
+  return definition;
+}
+
 DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
        doc: /* Set the car of CELL to be NEWCAR.  Returns NEWCAR.  */)
 (register Lisp_Object cell, Lisp_Object newcar)
@@ -551,6 +573,8 @@ syms_of_data (void)
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");
   DEFSYM (Qwrong_number_of_arguments, "wrong-number-of-arguments");
   DEFSYM (Qvoid_variable, "void-variable");
+  DEFSYM (Qsetting_constant, "setting-constant");
+  DEFSYM (Qcyclic_function_indirection, "cyclic-function-indirection");
 
   Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -569,6 +593,9 @@ syms_of_data (void)
   PUT_ERROR (Qvoid_variable, error_tail, "Symbol's value as variable is void");
   DEFSYM (Qcircular_list, "circular-list");
   PUT_ERROR (Qcircular_list, error_tail, "List contains a loop");
+  PUT_ERROR (Qsetting_constant, error_tail, "Attempt to set a constant symbol");
+  PUT_ERROR (Qcyclic_function_indirection, error_tail,
+             "Symbol's chain of function indirections contains a loop");
 
   defsubr (&Ssymbol_value);
   defsubr (&Scar);
@@ -576,6 +603,7 @@ syms_of_data (void)
   defsubr (&Scar_safe);
   defsubr (&Scdr_safe);
   defsubr (&Sset);
+  defsubr (&Sfset);
   defsubr (&Ssetcar);
   defsubr (&Ssetcdr);
   defsubr (&Sconsp);
