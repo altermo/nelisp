@@ -81,6 +81,25 @@ record_in_backtrace (Lisp_Object function, Lisp_Object *args, ptrdiff_t nargs)
   return count;
 }
 
+void
+record_unwind_protect_int (void (*function) (int), int arg)
+{
+  specpdl_ptr->unwind_int.kind = SPECPDL_UNWIND_INT;
+  specpdl_ptr->unwind_int.func = function;
+  specpdl_ptr->unwind_int.arg = arg;
+  grow_specpdl ();
+}
+
+void
+set_unwind_protect_ptr (specpdl_ref count, void (*func) (void *), void *arg)
+{
+  union specbinding *p = specpdl_ref_to_ptr (count);
+  p->unwind_ptr.kind = SPECPDL_UNWIND_PTR;
+  p->unwind_ptr.func = func;
+  p->unwind_ptr.arg = arg;
+  p->unwind_ptr.mark = NULL;
+}
+
 static void
 set_backtrace_args (union specbinding *pdl, Lisp_Object *args, ptrdiff_t nargs)
 {
@@ -102,7 +121,8 @@ do_one_unbind (union specbinding *this_binding, bool unwinding,
     case SPECPDL_UNWIND_ARRAY:
       TODO;
     case SPECPDL_UNWIND_PTR:
-      TODO;
+      this_binding->unwind_ptr.func (this_binding->unwind_ptr.arg);
+      break;
     case SPECPDL_UNWIND_INT:
       TODO;
     case SPECPDL_UNWIND_INTMAX:

@@ -121,6 +121,11 @@ CHAR_TO_BYTE8 (int c)
 {
   return CHAR_BYTE8_P (c) ? c - 0x3FFF00 : c & 0xFF;
 }
+INLINE bool
+TRAILING_CODE_P (int byte)
+{
+  return (byte & 0xC0) == 0x80;
+}
 INLINE int
 string_char_and_length (unsigned char const *p, int *length)
 {
@@ -167,6 +172,13 @@ string_char_advance (unsigned char const **pp)
   int len, c = string_char_and_length (p, &len);
   *pp = p + len;
   return c;
+}
+
+INLINE int
+STRING_CHAR (unsigned char const *p)
+{
+  int len;
+  return string_char_and_length (p, &len);
 }
 
 ptrdiff_t str_as_unibyte (unsigned char *str, ptrdiff_t bytes);

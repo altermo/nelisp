@@ -1059,6 +1059,11 @@ CHECK_LIST_END (Lisp_Object x, Lisp_Object y)
 {
   CHECK_TYPE (NILP (x), Qlistp, y);
 }
+INLINE void
+CHECK_STRING_CAR (Lisp_Object x)
+{
+  CHECK_TYPE (STRINGP (XCAR (x)), Qstringp, XCAR (x));
+}
 
 INLINE bool
 FIXNATP (Lisp_Object x)
@@ -1281,6 +1286,9 @@ extern Lisp_Object unbind_to (specpdl_ref, Lisp_Object);
 
 extern void record_unwind_protect_array (Lisp_Object *, ptrdiff_t);
 extern void record_unwind_protect_intmax (void (*) (intmax_t), intmax_t);
+extern void record_unwind_protect_int (void (*function) (int), int arg);
+extern void set_unwind_protect_ptr (specpdl_ref count, void (*func) (void *),
+                                    void *arg);
 #define SAFE_ALLOCA_LISP(buf, nelt) SAFE_ALLOCA_LISP_EXTRA (buf, nelt, 0)
 enum MAX_ALLOCA
 {
@@ -1357,6 +1365,10 @@ enum
   USE_STACK_CONS = USE_STACK_LISP_OBJECTS,
   USE_STACK_STRING = USE_STACK_CONS
 };
+#define STACK_CONS(a, b) \
+  make_lisp_ptr (&((struct Lisp_Cons) { { { a, { b } } } }), Lisp_Cons)
+#define AUTO_LIST1(name, a) \
+  Lisp_Object name = (USE_STACK_CONS ? STACK_CONS (a, Qnil) : list1 (a))
 #define AUTO_STRING_WITH_LEN(name, str, len)                                 \
   Lisp_Object name                                                           \
     = (USE_STACK_STRING                                                      \
@@ -1450,6 +1462,7 @@ build_string (const char *str)
   ((type *) allocate_pseudovector (VECSIZE (type),              \
                                    PSEUDOVECSIZE (type, field), \
                                    PSEUDOVECSIZE (type, field), tag))
+extern Lisp_Object empty_unibyte_string, empty_multibyte_string;
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -1521,6 +1534,10 @@ extern void syms_of_coding (void);
 
 extern void syms_of_buffer (void);
 extern void init_buffer (void);
+
+extern int emacs_close (int fd);
+extern int emacs_open (char const *file, int oflags, int mode);
+extern FILE *emacs_fdopen (int fd, const char *mode);
 
 INLINE void
 circular_list (Lisp_Object list)
