@@ -249,6 +249,37 @@ signal a `cyclic-function-indirection' error.  */)
   return definition;
 }
 
+void
+defalias (Lisp_Object symbol, Lisp_Object definition)
+{
+  TODO_NELISP_LATER;
+  Ffset (symbol, definition);
+}
+
+DEFUN ("defalias", Fdefalias, Sdefalias, 2, 3, 0,
+       doc: /* Set SYMBOL's function definition to DEFINITION.
+Associates the function with the current load file, if any.
+The optional third argument DOCSTRING specifies the documentation string
+for SYMBOL; if it is omitted or nil, SYMBOL uses the documentation string
+determined by DEFINITION.
+
+Internally, this normally uses `fset', but if SYMBOL has a
+`defalias-fset-function' property, the associated value is used instead.
+
+The return value is undefined.  */)
+(register Lisp_Object symbol, Lisp_Object definition, Lisp_Object docstring)
+{
+  CHECK_SYMBOL (symbol);
+  if (!NILP (Vpurify_flag))
+    TODO;
+
+  defalias (symbol, definition);
+
+  if (!NILP (docstring))
+    TODO;
+  return symbol;
+}
+
 DEFUN ("setcar", Fsetcar, Ssetcar, 2, 2, 0,
        doc: /* Set the car of CELL to be NEWCAR.  Returns NEWCAR.  */)
 (register Lisp_Object cell, Lisp_Object newcar)
@@ -604,6 +635,7 @@ syms_of_data (void)
   defsubr (&Scdr_safe);
   defsubr (&Sset);
   defsubr (&Sfset);
+  defsubr (&Sdefalias);
   defsubr (&Ssetcar);
   defsubr (&Ssetcdr);
   defsubr (&Sconsp);
