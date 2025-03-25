@@ -212,12 +212,14 @@ tcall_func (void)
   tcall_func_cb (_global_lua_state);
 }
 void
-tcall (lua_State *L, void (*f) (lua_State *L))
+tcall (lua_State *L, void (*f) (lua_State *L), int change)
 {
   if (_global_lua_state != L)
     TODO; /*use lua_xmove to move between the states*/
   tcall_func_cb = f;
   main_func = tcall_func;
+
+  int top = lua_gettop (L);
 
   mtx_lock (&thread_mutex);
   cnd_signal (&thread_cond);
@@ -226,9 +228,13 @@ tcall (lua_State *L, void (*f) (lua_State *L))
 
   if (tcall_error)
     {
+      if (!unrecoverable_error)
+        eassert (top + 1 == lua_gettop (L));
       tcall_error = false;
       lua_error (_global_lua_state);
     }
+
+  eassert (top + change == lua_gettop (L));
 }
 
 void
@@ -241,7 +247,7 @@ int pub ret (/*nelisp.obj*/) number_to_fixnum (lua_State *L)
 {
   check_nargs (L, 1);
   check_isnumber (L, 1);
-  tcall (L, t_number_to_fixnum);
+  tcall (L, t_number_to_fixnum, 1);
   return 1;
 }
 
@@ -255,7 +261,7 @@ int pub ret (/*nelisp.obj*/) number_to_float (lua_State *L)
 {
   check_nargs (L, 1);
   check_isnumber (L, 1);
-  tcall (L, t_number_to_float);
+  tcall (L, t_number_to_float, 1);
   return 1;
 }
 
@@ -274,7 +280,7 @@ int pub ret (/*number*/) fixnum_to_number (lua_State *L)
   Lisp_Object obj = userdata_to_obj (L, 1);
   if (!FIXNUMP (obj))
     luaL_error (L, "Expected fixnum");
-  tcall (L, t_fixnum_to_number);
+  tcall (L, t_fixnum_to_number, 1);
   return 1;
 }
 
@@ -293,7 +299,7 @@ int pub ret (/*number*/) float_to_number (lua_State *L)
   Lisp_Object obj = userdata_to_obj (L, 1);
   if (!FLOATP (obj))
     luaL_error (L, "Expected float");
-  tcall (L, t_float_to_number);
+  tcall (L, t_float_to_number, 1);
   return 1;
 }
 
@@ -309,7 +315,7 @@ int pub ret (/*nelisp.obj*/) string_to_unibyte_lstring (lua_State *L)
 {
   check_nargs (L, 1);
   check_isstring (L, 1);
-  tcall (L, t_string_to_unibyte_lstring);
+  tcall (L, t_string_to_unibyte_lstring, 1);
   return 1;
 }
 
@@ -328,7 +334,7 @@ int pub ret (/*string*/) unibyte_lstring_to_string (lua_State *L)
   Lisp_Object obj = userdata_to_obj (L, 1);
   if (!STRINGP (obj) || STRING_MULTIBYTE (obj))
     luaL_error (L, "Expected unibyte string");
-  tcall (L, t_unibyte_lstring_to_string);
+  tcall (L, t_unibyte_lstring_to_string, 1);
   return 1;
 }
 
@@ -357,7 +363,7 @@ int pub ret (/*[nelisp.obj,nelisp.obj]*/) cons_to_table (lua_State *L)
   Lisp_Object obj = userdata_to_obj (L, 1);
   if (!CONSP (obj))
     luaL_error (L, "Expected cons");
-  tcall (L, t_cons_to_table);
+  tcall (L, t_cons_to_table, 1);
   return 1;
 }
 
@@ -386,7 +392,7 @@ int pub ret (/*nelisp.obj[]*/) vector_to_table (lua_State *L)
   Lisp_Object obj = userdata_to_obj (L, 1);
   if (!VECTORP (obj))
     luaL_error (L, "Expected vector");
-  tcall (L, t_vector_to_table);
+  tcall (L, t_vector_to_table, 1);
   return 1;
 }
 
@@ -409,7 +415,7 @@ int pub ret (/*nelisp.obj*/) _get_symbol (lua_State *L)
 {
   check_nargs (L, 1);
   check_isstring (L, 1);
-  tcall (L, t__get_symbol);
+  tcall (L, t__get_symbol, 1);
   if (lua_isnil (L, -1))
     luaL_error (L, "Symbol '%s' not found", lua_tostring (L, 1));
   return 1;
@@ -470,7 +476,7 @@ int pub ret (/*nelisp.obj|nil*/) eval (lua_State *L)
 {
   check_nargs (L, 1);
   check_isstring (L, 1);
-  tcall (L, t_eval);
+  tcall (L, t_eval, 1);
   return 1;
 }
 
@@ -484,7 +490,7 @@ int pub
 ret () collectgarbage (lua_State *L)
 {
   check_nargs (L, 0);
-  tcall (L, t_collectgarbage);
+  tcall (L, t_collectgarbage, 0);
   return 0;
 }
 
