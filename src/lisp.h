@@ -1629,6 +1629,7 @@ extern cnd_t main_cond;
 extern cnd_t thread_cond;
 extern bool tcall_error;
 extern void (*main_func) (void);
+bool in_thread;
 extern Lisp_Object userdata_to_obj (lua_State *L, int idx);
 extern void push_obj (lua_State *L, Lisp_Object obj);
 extern void check_nargs (lua_State *L, int nargs);
@@ -1704,6 +1705,10 @@ TODO_ (const char *file, int line)
   _lcheckstack (_global_lua_state, 5);
   lua_pushfstring (_global_lua_state, "TODO at %s:%d", file, line);
   unrecoverable_error = true;
+  if (!in_thread)
+    {
+      lua_error (_global_lua_state);
+    }
   tcall_error = true;
   mtx_lock (&main_mutex);
   cnd_signal (&main_cond);

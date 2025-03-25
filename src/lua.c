@@ -205,6 +205,8 @@ cnd_t thread_cond;
 bool tcall_error = false;
 void (*main_func) (void) = NULL;
 
+bool in_thread = false;
+
 static void (*tcall_func_cb) (lua_State *L);
 INLINE void
 tcall_func (void)
@@ -221,10 +223,12 @@ tcall (lua_State *L, void (*f) (lua_State *L), int change)
 
   int top = lua_gettop (L);
 
+  in_thread = true;
   mtx_lock (&thread_mutex);
   cnd_signal (&thread_cond);
   mtx_unlock (&thread_mutex);
   cnd_wait (&main_cond, &main_mutex);
+  in_thread = false;
 
   if (tcall_error)
     {
@@ -582,9 +586,11 @@ ret () init (lua_State *L)
       luaL_error (L, "Failed to init thread");
     }
 
+  in_thread = true;
   mtx_lock (&main_mutex);
   thrd_create (&main_thread, t_init, NULL);
   cnd_wait (&main_cond, &main_mutex);
+  in_thread = false;
 
   return 0;
 }
