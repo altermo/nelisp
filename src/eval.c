@@ -818,6 +818,139 @@ usage: (let VARLIST BODY...)  */)
   return SAFE_FREE_UNBIND_TO (count, elt);
 }
 
+static bool
+lexbound_p (Lisp_Object symbol)
+{
+  union specbinding *pdl = specpdl_ptr;
+  while (pdl > specpdl)
+    {
+      switch ((--pdl)->kind)
+        {
+        case SPECPDL_LET_DEFAULT:
+        case SPECPDL_LET:
+          if (BASE_EQ (specpdl_symbol (pdl), Qinternal_interpreter_environment))
+            {
+              Lisp_Object env = specpdl_old_value (pdl);
+              if (CONSP (env) && !NILP (Fassq (symbol, env)))
+                return true;
+            }
+          break;
+
+        default:
+          break;
+        }
+    }
+  return false;
+}
+
+DEFUN ("internal--define-uninitialized-variable",
+       Finternal__define_uninitialized_variable,
+       Sinternal__define_uninitialized_variable, 1, 2, 0,
+       doc: /* Define SYMBOL as a variable, with DOC as its docstring.
+This is like `defvar' and `defconst' but without affecting the variable's
+value.  */)
+(Lisp_Object symbol, Lisp_Object doc)
+{
+  if (!XSYMBOL (symbol)->u.s.declared_special && lexbound_p (symbol))
+    xsignal2 (Qerror,
+              build_string ("Defining as dynamic an already lexical var"),
+              symbol);
+
+  XSYMBOL (symbol)->u.s.declared_special = true;
+  if (!NILP (doc))
+    {
+      if (!NILP (Vpurify_flag))
+        TODO;
+      Fput (symbol, Qvariable_documentation, doc);
+    }
+#if TODO_NELISP_LATER_AND
+  LOADHIST_ATTACH (symbol);
+#endif
+  return Qnil;
+}
+
+static Lisp_Object
+defvar (Lisp_Object sym, Lisp_Object initvalue, Lisp_Object docstring,
+        bool eval)
+{
+  UNUSED (eval);
+  UNUSED (initvalue);
+  Lisp_Object tem;
+
+  CHECK_SYMBOL (sym);
+
+  tem = Fdefault_boundp (sym);
+
+  Finternal__define_uninitialized_variable (sym, docstring);
+
+  if (NILP (tem))
+    Fset_default (sym, eval ? eval_sub (initvalue) : initvalue);
+  else
+    {
+      TODO;
+    }
+  return sym;
+}
+DEFUN ("defvar", Fdefvar, Sdefvar, 1, UNEVALLED, 0,
+       doc: /* Define SYMBOL as a variable, and return SYMBOL.
+You are not required to define a variable in order to use it, but
+defining it lets you supply an initial value and documentation, which
+can be referred to by the Emacs help facilities and other programming
+tools.
+
+If SYMBOL's value is void and the optional argument INITVALUE is
+provided, INITVALUE is evaluated and the result used to set SYMBOL's
+value.  If SYMBOL is buffer-local, its default value is what is set;
+buffer-local values are not affected.  If INITVALUE is missing,
+SYMBOL's value is not set.
+
+If INITVALUE is provided, the `defvar' form also declares the variable
+as \"special\", so that it is always dynamically bound even if
+`lexical-binding' is t.  If INITVALUE is missing, the form marks the
+variable \"special\" locally (i.e., within the current
+lexical scope, or the current file, if the form is at top-level),
+and does nothing if `lexical-binding' is nil.
+
+If SYMBOL is let-bound, then this form does not affect the local let
+binding but the toplevel default binding instead, like
+`set-toplevel-default-binding`.
+(`defcustom' behaves similarly in this respect.)
+
+The optional argument DOCSTRING is a documentation string for the
+variable.
+
+To define a user option, use `defcustom' instead of `defvar'.
+
+To define a buffer-local variable, use `defvar-local'.
+usage: (defvar SYMBOL &optional INITVALUE DOCSTRING)  */)
+(Lisp_Object args)
+{
+  Lisp_Object sym, tail;
+
+  sym = XCAR (args);
+  tail = XCDR (args);
+
+  CHECK_SYMBOL (sym);
+
+  if (!NILP (tail))
+    {
+      if (!NILP (XCDR (tail)) && !NILP (XCDR (XCDR (tail))))
+        TODO; // error ("Too many arguments");
+      Lisp_Object exp = XCAR (tail);
+      tail = XCDR (tail);
+      return defvar (sym, exp, CAR (tail), true);
+    }
+  else if (!NILP (Vinternal_interpreter_environment)
+           && (SYMBOLP (sym) && !XSYMBOL (sym)->u.s.declared_special))
+    Vinternal_interpreter_environment
+      = Fcons (sym, Vinternal_interpreter_environment);
+  else
+    {
+    }
+
+  return sym;
+}
+
 DEFUN ("or", For, Sor, 0, UNEVALLED, 0,
        doc: /* Eval args until one of them yields non-nil, then return that value.
 The remaining args are not evalled at all.
@@ -980,6 +1113,8 @@ alist of active lexical bindings.  */);
   defsubr (&Ssignal);
   defsubr (&Ssetq);
   defsubr (&Slet);
+  defsubr (&Sinternal__define_uninitialized_variable);
+  defsubr (&Sdefvar);
   defsubr (&Sprogn);
   defsubr (&Sif);
   defsubr (&Swhile);
