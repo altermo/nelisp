@@ -174,6 +174,75 @@ context.  Also see `default-value'.  */)
   return (BASE_EQ (value, Qunbound) ? Qnil : Qt);
 }
 
+void
+set_default_internal (Lisp_Object symbol, Lisp_Object value,
+                      enum Set_Internal_Bind bindflag, KBOARD *where)
+{
+  UNUSED (where);
+  CHECK_SYMBOL (symbol);
+  struct Lisp_Symbol *sym = XSYMBOL (symbol);
+  switch (sym->u.s.trapped_write)
+    {
+    case SYMBOL_NOWRITE:
+      if (NILP (Fkeywordp (symbol)) || !EQ (value, Fsymbol_value (symbol)))
+        xsignal1 (Qsetting_constant, symbol);
+      else
+        return;
+
+    case SYMBOL_TRAPPED_WRITE:
+      if (sym->u.s.redirect != SYMBOL_PLAINVAL
+          && bindflag != SET_INTERNAL_THREAD_SWITCH)
+        TODO;
+      break;
+
+    case SYMBOL_UNTRAPPED_WRITE:
+      break;
+
+    default:
+      emacs_abort ();
+    }
+
+start:
+  switch (sym->u.s.redirect)
+    {
+    case SYMBOL_VARALIAS:
+      TODO;
+      goto start;
+    case SYMBOL_PLAINVAL:
+      set_internal (symbol, value, Qnil, bindflag);
+      return;
+    case SYMBOL_LOCALIZED:
+      {
+        TODO;
+        return;
+      }
+    case SYMBOL_FORWARDED:
+      {
+        lispfwd valcontents = SYMBOL_FWD (sym);
+
+        if (BUFFER_OBJFWDP (valcontents))
+          TODO;
+        else if (KBOARD_OBJFWDP (valcontents))
+          TODO;
+        else
+          set_internal (symbol, value, Qnil, bindflag);
+        return;
+      }
+    default:
+      emacs_abort ();
+    }
+}
+
+DEFUN ("set-default", Fset_default, Sset_default, 2, 2, 0,
+       doc: /* Set SYMBOL's default value to VALUE.  SYMBOL and VALUE are evaluated.
+The default value is seen in buffers that do not have their own values
+for this variable.  */)
+(Lisp_Object symbol, Lisp_Object value)
+{
+  set_default_internal (symbol, value, SET_INTERNAL_SET, NULL);
+  return value;
+}
+
 static void
 store_symval_forwarding (lispfwd valcontents, Lisp_Object newval)
 {
@@ -680,6 +749,7 @@ syms_of_data (void)
 
   defsubr (&Ssymbol_value);
   defsubr (&Sdefault_boundp);
+  defsubr (&Sset_default);
   defsubr (&Scar);
   defsubr (&Scdr);
   defsubr (&Scar_safe);
