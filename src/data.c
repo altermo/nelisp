@@ -126,6 +126,54 @@ global value outside of any lexical scope.  */)
   xsignal1 (Qvoid_variable, symbol);
 }
 
+Lisp_Object
+default_value (Lisp_Object symbol)
+{
+  struct Lisp_Symbol *sym;
+
+  CHECK_SYMBOL (symbol);
+  sym = XSYMBOL (symbol);
+
+start:
+  switch (sym->u.s.redirect)
+    {
+    case SYMBOL_VARALIAS:
+      TODO;
+      goto start;
+    case SYMBOL_PLAINVAL:
+      return SYMBOL_VAL (sym);
+    case SYMBOL_LOCALIZED:
+      {
+        TODO;
+      }
+    case SYMBOL_FORWARDED:
+      {
+        lispfwd valcontents = SYMBOL_FWD (sym);
+
+        if (BUFFER_OBJFWDP (valcontents))
+          {
+            TODO;
+          }
+
+        return do_symval_forwarding (valcontents);
+      }
+    default:
+      emacs_abort ();
+    }
+}
+DEFUN ("default-boundp", Fdefault_boundp, Sdefault_boundp, 1, 1, 0,
+       doc: /* Return t if SYMBOL has a non-void default value.
+A variable may have a buffer-local value.  This function says whether
+the variable has a non-void value outside of the current buffer
+context.  Also see `default-value'.  */)
+(Lisp_Object symbol)
+{
+  register Lisp_Object value;
+
+  value = default_value (symbol);
+  return (BASE_EQ (value, Qunbound) ? Qnil : Qt);
+}
+
 static void
 store_symval_forwarding (lispfwd valcontents, Lisp_Object newval)
 {
@@ -631,6 +679,7 @@ syms_of_data (void)
              "Symbol's chain of function indirections contains a loop");
 
   defsubr (&Ssymbol_value);
+  defsubr (&Sdefault_boundp);
   defsubr (&Scar);
   defsubr (&Scdr);
   defsubr (&Scar_safe);
