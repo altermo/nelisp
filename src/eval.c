@@ -538,6 +538,13 @@ signal_error (const char *s, Lisp_Object arg)
   xsignal (Qerror, Fcons (build_string (s), arg));
 }
 
+void
+error (const char *m, ...)
+{
+  UNUSED (m);
+  TODO;
+}
+
 Lisp_Object
 indirect_function (Lisp_Object object)
 {
@@ -935,7 +942,7 @@ usage: (defvar SYMBOL &optional INITVALUE DOCSTRING)  */)
   if (!NILP (tail))
     {
       if (!NILP (XCDR (tail)) && !NILP (XCDR (XCDR (tail))))
-        TODO; // error ("Too many arguments");
+        error ("Too many arguments");
       Lisp_Object exp = XCAR (tail);
       tail = XCDR (tail);
       return defvar (sym, exp, CAR (tail), true);

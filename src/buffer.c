@@ -40,7 +40,7 @@ even if it is dead.  The return value is never nil.  */)
     return buffer;
 
   if (SCHARS (buffer_or_name) == 0)
-    TODO; // error ("Empty string for buffer name is not allowed");
+    error ("Empty string for buffer name is not allowed");
   buffer = nvim_create_buf (buffer_or_name, inhibit_buffer_hooks);
   return buffer;
 }
@@ -67,7 +67,7 @@ The return value is the buffer made current.  */)
   if (NILP (buffer))
     TODO; // nsberror (buffer_or_name);
   if (!BUFFER_LIVE_P (XBUFFER (buffer)))
-    TODO; // error ("Selecting deleted buffer");
+    error ("Selecting deleted buffer");
   set_buffer_internal (XBUFFER (buffer));
   return buffer;
 }

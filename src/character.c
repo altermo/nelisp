@@ -68,7 +68,7 @@ char_string (unsigned int c, unsigned char *p)
       bytes = BYTE8_STRING (c, p);
     }
   else
-    TODO; // error ("Invalid character: %x", c);
+    error ("Invalid character: %x", c);
 
   return bytes;
 }

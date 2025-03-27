@@ -57,6 +57,8 @@ emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
   return r;
 }
 // Taken from config.h
+#define ATTRIBUTE_FORMAT_PRINTF(string_index, first_to_check) \
+  __attribute__ ((__format__ (__printf__, string_index, first_to_check)))
 #define DIRECTORY_SEP '/'
 #define IS_DIRECTORY_SEP(_c_) ((_c_) == DIRECTORY_SEP)
 #define IS_ANY_SEP(_c_) (IS_DIRECTORY_SEP (_c_))
@@ -1514,6 +1516,7 @@ extern AVOID xsignal0 (Lisp_Object);
 extern AVOID xsignal1 (Lisp_Object, Lisp_Object);
 extern AVOID xsignal2 (Lisp_Object, Lisp_Object, Lisp_Object);
 extern AVOID xsignal3 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
+extern AVOID error (const char *, ...) ATTRIBUTE_FORMAT_PRINTF (1, 2);
 extern Lisp_Object eval_sub (Lisp_Object form);
 extern void init_eval_once (void);
 extern void init_eval (void);
