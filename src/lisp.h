@@ -1565,6 +1565,8 @@ extern int emacs_close (int fd);
 extern int emacs_open (char const *file, int oflags, int mode);
 extern FILE *emacs_fdopen (int fd, const char *mode);
 
+extern void syms_of_bytecode (void);
+
 INLINE void
 circular_list (Lisp_Object list)
 {
