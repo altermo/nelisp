@@ -237,7 +237,7 @@ exec_byte_code (Lisp_Object fun, ptrdiff_t args_template, ptrdiff_t nargs,
   Lisp_Object maxdepth = AREF (fun, CLOSURE_STACK_DEPTH);
   ptrdiff_t const_length = ASIZE (vector);
   // ptrdiff_t bytestr_length = SCHARS (bytestr);
-  // Lisp_Object *vectorp = XVECTOR (vector)->contents;
+  Lisp_Object *vectorp = XVECTOR (vector)->contents;
   EMACS_INT max_stack = XFIXNAT (maxdepth);
   Lisp_Object *frame_base = bc->fp->next_stack;
   struct bc_frame *fp = (struct bc_frame *) (frame_base + max_stack);
@@ -291,9 +291,9 @@ exec_byte_code (Lisp_Object fun, ptrdiff_t args_template, ptrdiff_t nargs,
               msg[sizeof (msg) - 4] = '0' + (op / 0100);
               TODO_msg (__FILE__, __LINE__, msg); // emacs_abort ();
             }
-          TODO;
+          PUSH (vectorp[op - Bconstant]);
+          NEXT;
         }
-      TODO;
     }
   TODO;
 }
