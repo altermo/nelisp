@@ -1751,6 +1751,11 @@ allocate_buffer (void)
   return b;
 }
 struct Lisp_Vector *
+allocate_vector (ptrdiff_t len)
+{
+  return allocate_clear_vector (len, false);
+}
+struct Lisp_Vector *
 allocate_nil_vector (ptrdiff_t len)
 {
   return allocate_clear_vector (len, true);
@@ -1773,6 +1778,17 @@ See also the function `vector'.  */)
   CHECK_TYPE (FIXNATP (length) && XFIXNAT (length) <= PTRDIFF_MAX, Qwholenump,
               length);
   return make_vector (XFIXNAT (length), init);
+}
+DEFUN ("vector", Fvector, Svector, 0, MANY, 0,
+       doc: /* Return a newly created vector with specified arguments as elements.
+Allows any number of arguments, including zero.
+usage: (vector &rest OBJECTS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  Lisp_Object val = make_uninit_vector (nargs);
+  struct Lisp_Vector *p = XVECTOR (val);
+  memcpy (p->contents, args, nargs * sizeof *args);
+  return val;
 }
 
 /* --- symbol allocation -- */
@@ -2896,5 +2912,6 @@ do hash-consing of the objects allocated to pure space.  */);
 
   defsubr (&Scons);
   defsubr (&Smake_vector);
+  defsubr (&Svector);
   defsubr (&Smake_symbol);
 }

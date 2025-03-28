@@ -1482,6 +1482,12 @@ make_nil_vector (ptrdiff_t size)
   return make_lisp_ptr (allocate_nil_vector (size), Lisp_Vectorlike);
 }
 void pin_string (Lisp_Object string);
+extern struct Lisp_Vector *allocate_vector (ptrdiff_t);
+INLINE Lisp_Object
+make_uninit_vector (ptrdiff_t size)
+{
+  return make_lisp_ptr (allocate_vector (size), Lisp_Vectorlike);
+}
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
