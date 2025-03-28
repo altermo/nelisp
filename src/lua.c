@@ -571,6 +571,7 @@ ret () init (lua_State *L)
   init_keyboard ();
   init_eval ();
   init_buffer ();
+  init_bytecode ();
 
   bool err = false;
   if (mtx_init (&main_mutex, mtx_plain) != thrd_success)

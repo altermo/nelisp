@@ -720,6 +720,11 @@ CHECK_STRING_NULL_BYTES (Lisp_Object string)
   CHECK_TYPE (memchr (SSDATA (string), '\0', SBYTES (string)) == NULL,
               Qfilenamep, string);
 }
+INLINE bool
+string_immovable_p (Lisp_Object str)
+{
+  return XSTRING (str)->u.s.size_byte == -3;
+}
 
 struct Lisp_Vector
 {
@@ -1577,6 +1582,7 @@ extern int emacs_open (char const *file, int oflags, int mode);
 extern FILE *emacs_fdopen (int fd, const char *mode);
 
 extern void syms_of_bytecode (void);
+void init_bytecode (void);
 
 INLINE void
 circular_list (Lisp_Object list)
@@ -1726,6 +1732,24 @@ TODO_ (const char *file, int line)
 {
   _lcheckstack (_global_lua_state, 5);
   lua_pushfstring (_global_lua_state, "TODO at %s:%d", file, line);
+  unrecoverable_error = true;
+  if (!in_thread)
+    {
+      lua_error (_global_lua_state);
+    }
+  tcall_error = true;
+  mtx_lock (&main_mutex);
+  cnd_signal (&main_cond);
+  mtx_unlock (&main_mutex);
+  cnd_wait (&thread_cond, &thread_mutex);
+  __builtin_unreachable ();
+}
+
+static inline _Noreturn void
+TODO_msg (const char *file, int line, const char *msg)
+{
+  _lcheckstack (_global_lua_state, 5);
+  lua_pushfstring (_global_lua_state, "TODO at %s:%d: %s", file, line, msg);
   unrecoverable_error = true;
   if (!in_thread)
     {
