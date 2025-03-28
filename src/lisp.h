@@ -1149,6 +1149,17 @@ enum maxargs
   MANY = -2,
   UNEVALLED = -1
 };
+#define CALLMANY(f, array) (f) (ARRAYELTS (array), array)
+#define CALLN(f, ...) CALLMANY (f, ((Lisp_Object[]) { __VA_ARGS__ }))
+#define calln(...) CALLN (Ffuncall, __VA_ARGS__)
+#define call1 calln
+#define call2 calln
+#define call3 calln
+#define call4 calln
+#define call5 calln
+#define call6 calln
+#define call7 calln
+#define call8 calln
 
 enum specbind_tag
 {

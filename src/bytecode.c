@@ -1,5 +1,35 @@
 #include "lisp.h"
 
+Lisp_Object
+exec_byte_code (Lisp_Object fun, ptrdiff_t args_template, ptrdiff_t nargs,
+                Lisp_Object *args)
+{
+  UNUSED (args_template);
+  UNUSED (nargs);
+  UNUSED (args);
+  UNUSED (fun);
+  TODO;
+}
+
+DEFUN ("byte-code", Fbyte_code, Sbyte_code, 3, 3, 0,
+       doc: /* Function used internally in byte-compiled code.
+The first argument, BYTESTR, is a string of byte code;
+the second, VECTOR, a vector of constants;
+the third, MAXDEPTH, the maximum stack depth used in this function.
+If the third argument is incorrect, Emacs may crash.  */)
+(Lisp_Object bytestr, Lisp_Object vector, Lisp_Object maxdepth)
+{
+  if (!(STRINGP (bytestr) && VECTORP (vector) && FIXNATP (maxdepth)))
+    error ("Invalid byte-code");
+
+  if (STRING_MULTIBYTE (bytestr))
+    {
+      TODO; // bytestr = Fstring_as_unibyte (bytestr);
+    }
+  Lisp_Object fun = CALLN (Fmake_byte_code, Qnil, bytestr, vector, maxdepth);
+  return exec_byte_code (fun, 0, 0, NULL);
+}
+
 DEFUN ("make-byte-code", Fmake_byte_code, Smake_byte_code, 4, MANY, 0,
        doc: /* Create a byte-code object with specified arguments as elements.
 The arguments should be the ARGLIST, bytecode-string BYTE-CODE, constant
@@ -36,5 +66,6 @@ usage: (make-byte-code ARGLIST BYTE-CODE CONSTANTS DEPTH &optional DOCSTRING INT
 void
 syms_of_bytecode (void)
 {
+  defsubr (&Sbyte_code);
   defsubr (&Smake_byte_code);
 }
