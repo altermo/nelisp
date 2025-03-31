@@ -1314,6 +1314,8 @@ extern Lisp_Object unbind_to (specpdl_ref, Lisp_Object);
 extern void record_unwind_protect_array (Lisp_Object *, ptrdiff_t);
 extern void record_unwind_protect_intmax (void (*) (intmax_t), intmax_t);
 extern void record_unwind_protect_int (void (*function) (int), int arg);
+specpdl_ref record_in_backtrace (Lisp_Object function, Lisp_Object *args,
+                                 ptrdiff_t nargs);
 extern void set_unwind_protect_ptr (specpdl_ref count, void (*func) (void *),
                                     void *arg);
 #define SAFE_ALLOCA_LISP(buf, nelt) SAFE_ALLOCA_LISP_EXTRA (buf, nelt, 0)
@@ -1503,6 +1505,11 @@ INLINE Lisp_Object
 make_uninit_vector (ptrdiff_t size)
 {
   return make_lisp_ptr (allocate_vector (size), Lisp_Vectorlike);
+}
+INLINE void
+maybe_gc (void)
+{
+  TODO_NELISP_LATER;
 }
 
 extern ptrdiff_t read_from_string_index;

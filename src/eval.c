@@ -65,7 +65,7 @@ record_unwind_protect_array (Lisp_Object *array, ptrdiff_t nelts)
   grow_specpdl ();
 }
 
-INLINE specpdl_ref
+specpdl_ref
 record_in_backtrace (Lisp_Object function, Lisp_Object *args, ptrdiff_t nargs)
 {
   specpdl_ref count = SPECPDL_INDEX ();

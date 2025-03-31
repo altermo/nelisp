@@ -231,6 +231,7 @@ exec_byte_code (Lisp_Object fun, ptrdiff_t args_template, ptrdiff_t nargs,
   Lisp_Object *top = NULL;
   unsigned char const *pc = NULL;
   Lisp_Object bytestr = AREF (fun, CLOSURE_CODE);
+setup_frame:;
   eassert (!STRING_MULTIBYTE (bytestr));
   eassert (string_immovable_p (bytestr));
   Lisp_Object vector = AREF (fun, CLOSURE_CONSTANTS);
@@ -280,6 +281,83 @@ exec_byte_code (Lisp_Object fun, ptrdiff_t args_template, ptrdiff_t nargs,
 #define NEXT break
       switch (op)
         {
+        case (Bcall6):
+          op = FETCH;
+          goto docall;
+
+        case (Bcall7):
+          op = FETCH2;
+          goto docall;
+
+        case (Bcall):
+        case (Bcall1):
+        case (Bcall2):
+        case (Bcall3):
+        case (Bcall4):
+        case (Bcall5):
+          op -= Bcall;
+        docall:
+          {
+            DISCARD (op);
+            maybe_quit ();
+
+            if (++lisp_eval_depth > max_lisp_eval_depth)
+              {
+                if (max_lisp_eval_depth < 100)
+                  max_lisp_eval_depth = 100;
+                if (lisp_eval_depth > max_lisp_eval_depth)
+                  error ("Lisp nesting exceeds `max-lisp-eval-depth'");
+              }
+
+            ptrdiff_t call_nargs = op;
+            Lisp_Object call_fun = TOP;
+            Lisp_Object *call_args = &TOP + 1;
+
+            specpdl_ref count1
+              = record_in_backtrace (call_fun, call_args, call_nargs);
+            maybe_gc ();
+#if TODO_NELISP_LATER_AND
+            if (debug_on_next_call)
+              do_debug_on_call (Qlambda, count1);
+#endif
+
+            Lisp_Object original_fun = call_fun;
+            UNUSED (original_fun);
+            UNUSED (count1);
+            if (BARE_SYMBOL_P (call_fun))
+              call_fun = XBARE_SYMBOL (call_fun)->u.s.function;
+            if (CLOSUREP (call_fun))
+              {
+                Lisp_Object template = AREF (call_fun, CLOSURE_ARGLIST);
+                if (FIXNUMP (template))
+                  {
+                    fun = call_fun;
+                    bytestr = AREF (call_fun, CLOSURE_CODE),
+                    args_template = XFIXNUM (template);
+                    nargs = call_nargs;
+                    args = call_args;
+                    goto setup_frame;
+                  }
+              }
+
+            Lisp_Object val;
+            if (SUBRP (call_fun) && !NATIVE_COMP_FUNCTION_DYNP (call_fun))
+              TODO; // val = funcall_subr (XSUBR (call_fun), call_nargs,
+                    // call_args);
+            else
+              TODO; // val = funcall_general (original_fun, call_nargs,
+                    // call_args);
+
+            lisp_eval_depth--;
+#if TODO_NELISP_LATER_AND
+            if (backtrace_debug_on_exit (specpdl_ptr - 1))
+              val = call_debugger (list2 (Qexit, val));
+#endif
+            specpdl_ptr--;
+
+            TOP = val;
+            NEXT;
+          }
         case (Bconstant):
         default:
           if (BYTE_CODE_SAFE
