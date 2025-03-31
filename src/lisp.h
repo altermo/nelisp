@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <setjmp.h>
 #include <stdalign.h>
+#include <stdbit.h>
 #include <stdbool.h>
 #include <stdckdint.h>
 #include <stddef.h>
@@ -47,6 +48,15 @@ static bool unrecoverable_error;
 
 #define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
 static void maybe_quit (void);
+// Taken from lib/intprops.h
+#define _GL_TYPE_SIGNED(t) (!((t) 0 < (t) - 1))
+#define _GL_TYPE_WIDTH(t) (sizeof (t) * CHAR_BIT)
+#define TYPE_SIGNED(t) _GL_TYPE_SIGNED (t)
+#define TYPE_WIDTH(t) _GL_TYPE_WIDTH (t)
+#define TYPE_MINIMUM(t) ((t) ~TYPE_MAXIMUM (t))
+#define TYPE_MAXIMUM(t)            \
+  ((t) (!TYPE_SIGNED (t) ? (t) - 1 \
+                         : ((((t) 1 << (TYPE_WIDTH (t) - 2)) - 1) * 2 + 1)))
 // Taken from sysdep.c
 int
 emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
@@ -333,6 +343,8 @@ typedef uintptr_t Lisp_Word_tag;
   ((Lisp_Word_tag) (tag) << (USE_LSB_TAG ? 0 : VALBITS))
 #define TAG_PTR_INITIALLY(tag, p) \
   LISP_INITIALLY ((Lisp_Word) ((uintptr_t) (p) + LISP_WORD_TAG (tag)))
+#define LISPSYM_INITIALLY(name) \
+  TAG_PTR_INITIALLY (Lisp_Symbol, (intptr_t) ((i##name) * sizeof *lispsym))
 
 #define POWER_OF_2(n) (((n) & ((n) - 1)) == 0)
 #define ROUNDUP(x, y)                            \
@@ -496,6 +508,18 @@ XFIXNUM (Lisp_Object a)
 {
   eassert (FIXNUMP (a));
   return XFIXNUM_RAW (a);
+}
+INLINE EMACS_UINT
+XUFIXNUM_RAW (Lisp_Object a)
+{
+  EMACS_UINT i = XLI (a);
+  return USE_LSB_TAG ? i >> INTTYPEBITS : i & INTMASK;
+}
+INLINE EMACS_UINT
+XUFIXNUM (Lisp_Object a)
+{
+  eassert (FIXNUMP (a));
+  return XUFIXNUM_RAW (a);
 }
 INLINE bool
 EQ (Lisp_Object x, Lisp_Object y)
@@ -952,7 +976,69 @@ obarray_size (const struct Lisp_Obarray *o)
   return (ptrdiff_t) 1 << o->size_bits;
 }
 
+struct Lisp_Hash_Table;
 typedef unsigned int hash_hash_t;
+typedef enum
+{
+  Test_eql,
+  Test_eq,
+  Test_equal,
+} hash_table_std_test_t;
+struct hash_table_test
+{
+  hash_hash_t (*hashfn) (Lisp_Object, struct Lisp_Hash_Table *);
+
+  Lisp_Object (*cmpfn) (Lisp_Object, Lisp_Object, struct Lisp_Hash_Table *);
+
+  Lisp_Object user_hash_function;
+
+  Lisp_Object user_cmp_function;
+
+  Lisp_Object name;
+};
+typedef enum
+{
+  Weak_None,
+  Weak_Key,
+  Weak_Value,
+  Weak_Key_Or_Value,
+  Weak_Key_And_Value,
+} hash_table_weakness_t;
+typedef int32_t hash_idx_t;
+struct Lisp_Hash_Table
+{
+  union vectorlike_header header;
+
+  hash_idx_t *index;
+
+  hash_hash_t *hash;
+
+  Lisp_Object *key_and_value;
+
+  const struct hash_table_test *test;
+
+  hash_idx_t *next;
+
+  hash_idx_t count;
+
+  hash_idx_t next_free;
+
+  hash_idx_t table_size;
+
+  unsigned char index_bits;
+
+  hash_table_weakness_t weakness : 3;
+
+  hash_table_std_test_t frozen_test : 2;
+
+  bool_bf purecopy : 1;
+
+  bool_bf mutable : 1;
+
+  struct Lisp_Hash_Table *next_weak;
+} GCALIGNED_STRUCT;
+#define INVALID_LISP_VALUE make_lisp_ptr (NULL, Lisp_Float)
+#define HASH_UNUSED_ENTRY_KEY INVALID_LISP_VALUE
 
 INLINE hash_hash_t
 reduce_emacs_uint_to_hash_hash (EMACS_UINT x)
@@ -1147,6 +1233,13 @@ integer_to_intmax (Lisp_Object num, intmax_t *n)
     {
       TODO;
     }
+}
+
+INLINE int
+elogb (unsigned long long int n)
+{
+  int width = stdc_bit_width (n);
+  return width - 1;
 }
 
 enum maxargs
@@ -1545,6 +1638,7 @@ extern AVOID xsignal0 (Lisp_Object);
 extern AVOID xsignal1 (Lisp_Object, Lisp_Object);
 extern AVOID xsignal2 (Lisp_Object, Lisp_Object, Lisp_Object);
 extern AVOID xsignal3 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
+extern AVOID signal_error (const char *, Lisp_Object);
 extern AVOID error (const char *, ...) ATTRIBUTE_FORMAT_PRINTF (1, 2);
 extern Lisp_Object eval_sub (Lisp_Object form);
 extern void init_eval_once (void);

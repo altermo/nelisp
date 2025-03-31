@@ -492,9 +492,352 @@ This function may destructively modify SEQ to produce the value.  */)
   return seq;
 }
 
+#define SXHASH_MAX_DEPTH 3
+#define SXHASH_MAX_LEN 7
+enum DEFAULT_HASH_SIZE
+{
+  DEFAULT_HASH_SIZE = 0
+};
+static EMACS_UINT sxhash_obj (Lisp_Object, int);
+static EMACS_UINT
+sxhash_float (double val)
+{
+  EMACS_UINT hash = 0;
+  union double_and_words u = { .val = val };
+  for (int i = 0; i < WORDS_PER_DOUBLE; i++)
+    hash = sxhash_combine (hash, u.word[i]);
+  return hash;
+}
+static EMACS_UINT
+sxhash_list (Lisp_Object list, int depth)
+{
+  EMACS_UINT hash = 0;
+  int i;
+
+  if (depth < SXHASH_MAX_DEPTH)
+    for (i = 0; CONSP (list) && i < SXHASH_MAX_LEN; list = XCDR (list), ++i)
+      {
+        EMACS_UINT hash2 = sxhash_obj (XCAR (list), depth + 1);
+        hash = sxhash_combine (hash, hash2);
+      }
+
+  if (!NILP (list))
+    {
+      EMACS_UINT hash2 = sxhash_obj (list, depth + 1);
+      hash = sxhash_combine (hash, hash2);
+    }
+
+  return hash;
+}
+static EMACS_UINT
+sxhash_obj (Lisp_Object obj, int depth)
+{
+  if (depth > SXHASH_MAX_DEPTH)
+    return 0;
+
+  switch (XTYPE (obj))
+    {
+    case_Lisp_Int:
+      return XUFIXNUM (obj);
+
+    case Lisp_Symbol:
+      return XHASH (obj);
+
+    case Lisp_String:
+      return hash_string (SSDATA (obj), SBYTES (obj));
+
+    case Lisp_Vectorlike:
+      {
+        enum pvec_type pvec_type = PSEUDOVECTOR_TYPE (XVECTOR (obj));
+        if (!(PVEC_NORMAL_VECTOR < pvec_type && pvec_type < PVEC_CLOSURE))
+          TODO;
+        else if (pvec_type == PVEC_BIGNUM)
+          TODO; // return sxhash_bignum (obj);
+        else if (pvec_type == PVEC_MARKER)
+          TODO;
+        else if (pvec_type == PVEC_BOOL_VECTOR)
+          TODO; // return sxhash_bool_vector (obj);
+        else if (pvec_type == PVEC_OVERLAY)
+          TODO;
+        else
+          {
+            if (symbols_with_pos_enabled && pvec_type == PVEC_SYMBOL_WITH_POS)
+              obj = XSYMBOL_WITH_POS_SYM (obj);
+
+            return XHASH (obj);
+          }
+      }
+
+    case Lisp_Cons:
+      return sxhash_list (obj, depth);
+
+    case Lisp_Float:
+      return sxhash_float (XFLOAT_DATA (obj));
+
+    default:
+      emacs_abort ();
+    }
+}
+EMACS_UINT
+sxhash (Lisp_Object obj) { return sxhash_obj (obj, 0); }
+static EMACS_INT
+sxhash_eq (Lisp_Object key)
+{
+  Lisp_Object k = maybe_remove_pos_from_symbol (key);
+  return XHASH (k) ^ XTYPE (k);
+}
+static EMACS_INT
+sxhash_eql (Lisp_Object key)
+{
+  return FLOATP (key) || BIGNUMP (key) ? sxhash (key) : sxhash_eq (key);
+}
+static hash_hash_t
+hashfn_eq (Lisp_Object key, struct Lisp_Hash_Table *h)
+{
+  UNUSED (h);
+  return reduce_emacs_uint_to_hash_hash (sxhash_eq (key));
+}
+static hash_hash_t
+hashfn_equal (Lisp_Object key, struct Lisp_Hash_Table *h)
+{
+  UNUSED (h);
+  return reduce_emacs_uint_to_hash_hash (sxhash (key));
+}
+static hash_hash_t
+hashfn_eql (Lisp_Object key, struct Lisp_Hash_Table *h)
+{
+  UNUSED (h);
+  return reduce_emacs_uint_to_hash_hash (sxhash_eql (key));
+}
+static Lisp_Object
+cmpfn_eql (Lisp_Object key1, Lisp_Object key2, struct Lisp_Hash_Table *h)
+{
+  UNUSED (h);
+  UNUSED (key1);
+  UNUSED (key2);
+  TODO; // return Feql (key1, key2);
+}
+static Lisp_Object
+cmpfn_equal (Lisp_Object key1, Lisp_Object key2, struct Lisp_Hash_Table *h)
+{
+  UNUSED (h);
+  return Fequal (key1, key2);
+}
+struct hash_table_test const hashtest_eq
+  = { .name = LISPSYM_INITIALLY (Qeq), .cmpfn = 0, .hashfn = hashfn_eq },
+  hashtest_eql = { .name = LISPSYM_INITIALLY (Qeql),
+                   .cmpfn = cmpfn_eql,
+                   .hashfn = hashfn_eql },
+  hashtest_equal = { .name = LISPSYM_INITIALLY (Qequal),
+                     .cmpfn = cmpfn_equal,
+                     .hashfn = hashfn_equal };
+INLINE Lisp_Object
+make_lisp_hash_table (struct Lisp_Hash_Table *h)
+{
+  eassert (PSEUDOVECTOR_TYPEP (&h->header, PVEC_HASH_TABLE));
+  return make_lisp_ptr (h, Lisp_Vectorlike);
+}
+INLINE ptrdiff_t
+hash_table_index_size (const struct Lisp_Hash_Table *h)
+{
+  return (ptrdiff_t) 1 << h->index_bits;
+}
+static int
+compute_hash_index_bits (hash_idx_t size)
+{
+  unsigned long upper_bound
+    = (hash_idx_t) min (MOST_POSITIVE_FIXNUM,
+                        min (TYPE_MAXIMUM (hash_idx_t),
+                             PTRDIFF_MAX / (sizeof (hash_idx_t))));
+  int bits = elogb (size) + 1;
+  if (bits >= (int) TYPE_WIDTH (uintmax_t)
+      || ((uintmax_t) 1 << bits) > upper_bound)
+    error ("Hash table too large");
+  return bits;
+}
+static struct Lisp_Hash_Table *
+allocate_hash_table (void)
+{
+  return ALLOCATE_PLAIN_PSEUDOVECTOR (struct Lisp_Hash_Table, PVEC_HASH_TABLE);
+}
+static const hash_idx_t empty_hash_index_vector[] = { -1 };
+Lisp_Object
+make_hash_table (const struct hash_table_test *test, EMACS_INT size,
+                 hash_table_weakness_t weak, bool purecopy)
+{
+  eassert (SYMBOLP (test->name));
+  eassert (0 <= size && size <= min (MOST_POSITIVE_FIXNUM, PTRDIFF_MAX));
+
+  struct Lisp_Hash_Table *h = allocate_hash_table ();
+
+  h->test = test;
+  h->weakness = weak;
+  h->count = 0;
+  h->table_size = size;
+
+  if (size == 0)
+    {
+      h->key_and_value = NULL;
+      h->hash = NULL;
+      h->next = NULL;
+      h->index_bits = 0;
+      h->index = (hash_idx_t *) empty_hash_index_vector;
+      h->next_free = -1;
+    }
+  else
+    {
+      h->key_and_value
+        = hash_table_alloc_bytes (2 * size * sizeof *h->key_and_value);
+      for (ptrdiff_t i = 0; i < 2 * size; i++)
+        h->key_and_value[i] = HASH_UNUSED_ENTRY_KEY;
+
+      h->hash = hash_table_alloc_bytes (size * sizeof *h->hash);
+
+      h->next = hash_table_alloc_bytes (size * sizeof *h->next);
+      for (ptrdiff_t i = 0; i < size - 1; i++)
+        h->next[i] = i + 1;
+      h->next[size - 1] = -1;
+
+      int index_bits = compute_hash_index_bits (size);
+      h->index_bits = index_bits;
+      ptrdiff_t index_size = hash_table_index_size (h);
+      h->index = hash_table_alloc_bytes (index_size * sizeof *h->index);
+      for (ptrdiff_t i = 0; i < index_size; i++)
+        h->index[i] = -1;
+
+      h->next_free = 0;
+    }
+
+  h->next_weak = NULL;
+  h->purecopy = purecopy;
+  h->mutable = true;
+  return make_lisp_hash_table (h);
+}
+static ptrdiff_t
+get_key_arg (Lisp_Object key, ptrdiff_t nargs, Lisp_Object *args, char *used)
+{
+  ptrdiff_t i;
+
+  for (i = 1; i < nargs; i++)
+    if (!used[i - 1] && EQ (args[i - 1], key))
+      {
+        used[i - 1] = 1;
+        used[i] = 1;
+        return i;
+      }
+
+  return 0;
+}
+DEFUN ("make-hash-table", Fmake_hash_table, Smake_hash_table, 0, MANY, 0,
+       doc: /* Create and return a new hash table.
+
+Arguments are specified as keyword/argument pairs.  The following
+arguments are defined:
+
+:test TEST -- TEST must be a symbol that specifies how to compare
+keys.  Default is `eql'.  Predefined are the tests `eq', `eql', and
+`equal'.  User-supplied test and hash functions can be specified via
+`define-hash-table-test'.
+
+:size SIZE -- A hint as to how many elements will be put in the table.
+The table will always grow as needed; this argument may help performance
+slightly if the size is known in advance but is never required.
+
+:weakness WEAK -- WEAK must be one of nil, t, `key', `value',
+`key-or-value', or `key-and-value'.  If WEAK is not nil, the table
+returned is a weak table.  Key/value pairs are removed from a weak
+hash table when there are no non-weak references pointing to their
+key, value, one of key or value, or both key and value, depending on
+WEAK.  WEAK t is equivalent to `key-and-value'.  Default value of WEAK
+is nil.
+
+:purecopy PURECOPY -- If PURECOPY is non-nil, the table can be copied
+to pure storage when Emacs is being dumped, making the contents of the
+table read only. Any further changes to purified tables will result
+in an error.
+
+The keywords arguments :rehash-threshold and :rehash-size are obsolete
+and ignored.
+
+usage: (make-hash-table &rest KEYWORD-ARGS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  USE_SAFE_ALLOCA;
+
+  char *used = SAFE_ALLOCA (nargs * sizeof *used);
+  memset (used, 0, nargs * sizeof *used);
+
+  ptrdiff_t i = get_key_arg (QCtest, nargs, args, used);
+  Lisp_Object test = i ? maybe_remove_pos_from_symbol (args[i]) : Qeql;
+  const struct hash_table_test *testdesc;
+  if (BASE_EQ (test, Qeq))
+    testdesc = &hashtest_eq;
+  else if (BASE_EQ (test, Qeql))
+    testdesc = &hashtest_eql;
+  else if (BASE_EQ (test, Qequal))
+    testdesc = &hashtest_equal;
+  else
+    TODO; // testdesc = get_hash_table_user_test (test);
+
+  i = get_key_arg (QCpurecopy, nargs, args, used);
+  bool purecopy = i && !NILP (args[i]);
+  i = get_key_arg (QCsize, nargs, args, used);
+  Lisp_Object size_arg = i ? args[i] : Qnil;
+  EMACS_INT size;
+  if (NILP (size_arg))
+    size = DEFAULT_HASH_SIZE;
+  else if (FIXNATP (size_arg))
+    size = XFIXNAT (size_arg);
+  else
+    signal_error ("Invalid hash table size", size_arg);
+
+  i = get_key_arg (QCweakness, nargs, args, used);
+  Lisp_Object weakness = i ? args[i] : Qnil;
+  hash_table_weakness_t weak;
+  if (NILP (weakness))
+    weak = Weak_None;
+  else if (EQ (weakness, Qkey))
+    weak = Weak_Key;
+  else if (EQ (weakness, Qvalue))
+    weak = Weak_Value;
+  else if (EQ (weakness, Qkey_or_value))
+    weak = Weak_Key_Or_Value;
+  else if (EQ (weakness, Qt) || EQ (weakness, Qkey_and_value))
+    weak = Weak_Key_And_Value;
+  else
+    signal_error ("Invalid hash table weakness", weakness);
+
+  for (i = 0; i < nargs; ++i)
+    if (!used[i])
+      {
+        if (EQ (args[i], QCrehash_threshold) || EQ (args[i], QCrehash_size))
+          i++;
+        else
+          signal_error ("Invalid argument list", args[i]);
+      }
+
+  SAFE_FREE ();
+  return make_hash_table (testdesc, size, weak, purecopy);
+}
+
 void
 syms_of_fns (void)
 {
+  DEFSYM (Qeq, "eq");
+  DEFSYM (Qeql, "eql");
+  DEFSYM (Qequal, "equal");
+  DEFSYM (QCtest, ":test");
+  DEFSYM (QCsize, ":size");
+  DEFSYM (QCpurecopy, ":purecopy");
+  DEFSYM (QCrehash_size, ":rehash-size");
+  DEFSYM (QCrehash_threshold, ":rehash-threshold");
+  DEFSYM (QCweakness, ":weakness");
+  DEFSYM (Qkey, "key");
+  DEFSYM (Qvalue, "value");
+  DEFSYM (Qhash_table_test, "hash-table-test");
+  DEFSYM (Qkey_or_value, "key-or-value");
+  DEFSYM (Qkey_and_value, "key-and-value");
+
   DEFSYM (Qplistp, "plistp");
 
   defsubr (&Sget);
@@ -508,4 +851,5 @@ syms_of_fns (void)
   defsubr (&Sproper_list_p);
   defsubr (&Snconc);
   defsubr (&Snreverse);
+  defsubr (&Smake_hash_table);
 }
