@@ -725,6 +725,7 @@ syms_of_data (void)
   DEFSYM (Qvoid_variable, "void-variable");
   DEFSYM (Qsetting_constant, "setting-constant");
   DEFSYM (Qcyclic_function_indirection, "cyclic-function-indirection");
+  DEFSYM (Qinvalid_function, "invalid-function");
 
   Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -746,6 +747,7 @@ syms_of_data (void)
   PUT_ERROR (Qsetting_constant, error_tail, "Attempt to set a constant symbol");
   PUT_ERROR (Qcyclic_function_indirection, error_tail,
              "Symbol's chain of function indirections contains a loop");
+  PUT_ERROR (Qinvalid_function, error_tail, "Invalid function");
 
   defsubr (&Ssymbol_value);
   defsubr (&Sdefault_boundp);

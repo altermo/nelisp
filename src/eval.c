@@ -728,6 +728,97 @@ prog_ignore (Lisp_Object body)
   Fprogn (body);
 }
 
+Lisp_Object
+funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
+{
+  eassume (numargs >= 0);
+  if (numargs >= subr->min_args)
+    {
+      /* Conforming call to finite-arity subr.  */
+      ptrdiff_t maxargs = subr->max_args;
+      if (numargs <= maxargs && maxargs <= 8)
+        {
+          Lisp_Object argbuf[8];
+          Lisp_Object *a;
+          if (numargs < maxargs)
+            {
+              eassume (maxargs <= (long) ARRAYELTS (argbuf));
+              a = argbuf;
+              memcpy (a, args, numargs * word_size);
+              memclear (a + numargs, (maxargs - numargs) * word_size);
+            }
+          else
+            a = args;
+          switch (maxargs)
+            {
+            case 0:
+              return subr->function.a0 ();
+            case 1:
+              return subr->function.a1 (a[0]);
+            case 2:
+              return subr->function.a2 (a[0], a[1]);
+            case 3:
+              return subr->function.a3 (a[0], a[1], a[2]);
+            case 4:
+              return subr->function.a4 (a[0], a[1], a[2], a[3]);
+            case 5:
+              return subr->function.a5 (a[0], a[1], a[2], a[3], a[4]);
+            case 6:
+              return subr->function.a6 (a[0], a[1], a[2], a[3], a[4], a[5]);
+            case 7:
+              return subr->function.a7 (a[0], a[1], a[2], a[3], a[4], a[5],
+                                        a[6]);
+            case 8:
+              return subr->function.a8 (a[0], a[1], a[2], a[3], a[4], a[5],
+                                        a[6], a[7]);
+            }
+          eassume (false);
+        }
+
+      /* Call to n-adic subr.  */
+      if (maxargs == MANY || maxargs > 8)
+        return subr->function.aMANY (numargs, args);
+    }
+
+  Lisp_Object fun;
+  XSETSUBR (fun, subr);
+  if (subr->max_args == UNEVALLED)
+    xsignal1 (Qinvalid_function, fun);
+  else
+    xsignal2 (Qwrong_number_of_arguments, fun, make_fixnum (numargs));
+}
+
+Lisp_Object
+funcall_general (Lisp_Object fun, ptrdiff_t numargs, Lisp_Object *args)
+{
+  Lisp_Object original_fun = fun;
+  if (SYMBOLP (fun) && !NILP (fun)
+      && (fun = XSYMBOL (fun)->u.s.function, SYMBOLP (fun)))
+    fun = indirect_function (fun);
+
+  if (SUBRP (fun) && !NATIVE_COMP_FUNCTION_DYNP (fun))
+    return funcall_subr (XSUBR (fun), numargs, args);
+  else if (CLOSUREP (fun) || NATIVE_COMP_FUNCTION_DYNP (fun)
+           || MODULE_FUNCTIONP (fun))
+    TODO;
+  else
+    {
+      if (NILP (fun))
+        xsignal1 (Qvoid_function, original_fun);
+      if (!CONSP (fun))
+        xsignal1 (Qinvalid_function, original_fun);
+      Lisp_Object funcar = XCAR (fun);
+      if (!SYMBOLP (funcar))
+        xsignal1 (Qinvalid_function, original_fun);
+      if (EQ (funcar, Qlambda))
+        TODO;
+      else if (EQ (funcar, Qautoload))
+        TODO;
+      else
+        xsignal1 (Qinvalid_function, original_fun);
+    }
+}
+
 DEFUN ("setq", Fsetq, Ssetq, 0, UNEVALLED, 0,
        doc: /* Set each SYM to the value of its VAL.
 The symbols SYM are variables; they are literal (not evaluated).
@@ -1094,6 +1185,8 @@ init_eval (void)
 void
 syms_of_eval (void)
 {
+  DEFSYM (Qautoload, "autoload");
+
   DEFVAR_INT ("max-lisp-eval-depth", max_lisp_eval_depth,
                 doc: /* Limit on depth in `eval', `apply' and `funcall' before error.
 

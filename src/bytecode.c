@@ -368,8 +368,7 @@ setup_frame:;
               TODO; // val = funcall_subr (XSUBR (call_fun), call_nargs,
                     // call_args);
             else
-              TODO; // val = funcall_general (original_fun, call_nargs,
-                    // call_args);
+              val = funcall_general (original_fun, call_nargs, call_args);
 
             lisp_eval_depth--;
 #if TODO_NELISP_LATER_AND

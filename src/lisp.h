@@ -1555,6 +1555,8 @@ extern Lisp_Object internal_catch (Lisp_Object, Lisp_Object (*) (Lisp_Object),
 extern Lisp_Object internal_condition_case (Lisp_Object (*) (void), Lisp_Object,
                                             Lisp_Object (*) (Lisp_Object));
 extern void specbind (Lisp_Object symbol, Lisp_Object value);
+Lisp_Object funcall_general (Lisp_Object fun, ptrdiff_t numargs,
+                             Lisp_Object *args);
 
 enum Arith_Comparison
 {
