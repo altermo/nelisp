@@ -1305,6 +1305,23 @@ list5 (Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3, Lisp_Object arg4,
                 Fcons (arg2, Fcons (arg3, Fcons (arg4, Fcons (arg5, Qnil)))));
 }
 
+DEFUN ("list", Flist, Slist, 0, MANY, 0,
+       doc: /* Return a newly created list with specified arguments as elements.
+Allows any number of arguments, including zero.
+usage: (list &rest OBJECTS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  register Lisp_Object val;
+  val = Qnil;
+
+  while (nargs > 0)
+    {
+      nargs--;
+      val = Fcons (args[nargs], val);
+    }
+  return val;
+}
+
 /* --- vector allocation -- */
 
 static struct Lisp_Vector *
@@ -2911,6 +2928,7 @@ It can also be set to a hash-table, in which case this table is used to
 do hash-consing of the objects allocated to pure space.  */);
 
   defsubr (&Scons);
+  defsubr (&Slist);
   defsubr (&Smake_vector);
   defsubr (&Svector);
   defsubr (&Smake_symbol);
