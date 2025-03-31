@@ -365,8 +365,7 @@ setup_frame:;
 
             Lisp_Object val;
             if (SUBRP (call_fun) && !NATIVE_COMP_FUNCTION_DYNP (call_fun))
-              TODO; // val = funcall_subr (XSUBR (call_fun), call_nargs,
-                    // call_args);
+              val = funcall_subr (XSUBR (call_fun), call_nargs, call_args);
             else
               val = funcall_general (original_fun, call_nargs, call_args);
 
