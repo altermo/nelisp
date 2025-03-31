@@ -289,6 +289,29 @@ setup_frame:;
           op = FETCH2;
           goto docall;
 
+        case (Bstack_ref1):
+        case (Bstack_ref2):
+        case (Bstack_ref3):
+        case (Bstack_ref4):
+        case (Bstack_ref5):
+          {
+            Lisp_Object v1 = top[Bstack_ref - op];
+            PUSH (v1);
+            NEXT;
+          }
+        case (Bstack_ref6):
+          {
+            Lisp_Object v1 = top[-FETCH];
+            PUSH (v1);
+            NEXT;
+          }
+        case (Bstack_ref7):
+          {
+            Lisp_Object v1 = top[-FETCH2];
+            PUSH (v1);
+            NEXT;
+          }
+
         case (Bcall):
         case (Bcall1):
         case (Bcall2):
