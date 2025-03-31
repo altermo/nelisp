@@ -319,6 +319,27 @@ setup_frame:;
               goto exit;
           }
 
+        case (Blist1):
+          TOP = list1 (TOP);
+          NEXT;
+
+        case (Blist2):
+          {
+            Lisp_Object v1 = POP;
+            TOP = list2 (TOP, v1);
+            NEXT;
+          }
+
+        case (Blist3):
+          DISCARD (2);
+          TOP = list3 (TOP, top[1], top[2]);
+          NEXT;
+
+        case (Blist4):
+          DISCARD (3);
+          TOP = list4 (TOP, top[1], top[2], top[3]);
+          NEXT;
+
         case (Bcall6):
           op = FETCH;
           goto docall;
