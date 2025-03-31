@@ -340,6 +340,12 @@ setup_frame:;
           TOP = list4 (TOP, top[1], top[2], top[3]);
           NEXT;
 
+        case (BlistN):
+          op = FETCH;
+          DISCARD (op - 1);
+          TOP = Flist (op, &TOP);
+          NEXT;
+
         case (Bcall6):
           op = FETCH;
           goto docall;
