@@ -126,6 +126,19 @@ global value outside of any lexical scope.  */)
   xsignal1 (Qvoid_variable, symbol);
 }
 
+DEFUN ("bare-symbol", Fbare_symbol, Sbare_symbol, 1, 1, 0,
+       doc: /* Extract, if need be, the bare symbol from SYM.
+SYM is either a symbol or a symbol with position.
+Ignore `symbols-with-pos-enabled'.  */)
+(register Lisp_Object sym)
+{
+  if (BARE_SYMBOL_P (sym))
+    return sym;
+  if (SYMBOL_WITH_POS_P (sym))
+    return XSYMBOL_WITH_POS_SYM (sym);
+  xsignal2 (Qwrong_type_argument, list2 (Qsymbolp, Qsymbol_with_pos_p), sym);
+}
+
 Lisp_Object
 default_value (Lisp_Object symbol)
 {
@@ -718,6 +731,7 @@ syms_of_data (void)
   DEFSYM (Qarrayp, "arrayp");
   DEFSYM (Qnumber_or_marker_p, "number-or-marker-p");
   DEFSYM (Qbufferp, "bufferp");
+  DEFSYM (Qsymbol_with_pos_p, "symbol-with-pos-p");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");
@@ -750,6 +764,7 @@ syms_of_data (void)
   PUT_ERROR (Qinvalid_function, error_tail, "Invalid function");
 
   defsubr (&Ssymbol_value);
+  defsubr (&Sbare_symbol);
   defsubr (&Sdefault_boundp);
   defsubr (&Sset_default);
   defsubr (&Scar);
