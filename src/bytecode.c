@@ -237,7 +237,8 @@ setup_frame:;
   Lisp_Object vector = AREF (fun, CLOSURE_CONSTANTS);
   Lisp_Object maxdepth = AREF (fun, CLOSURE_STACK_DEPTH);
   ptrdiff_t const_length = ASIZE (vector);
-  // ptrdiff_t bytestr_length = SCHARS (bytestr);
+  ptrdiff_t bytestr_length = SCHARS (bytestr);
+  UNUSED (bytestr_length);
   Lisp_Object *vectorp = XVECTOR (vector)->contents;
   EMACS_INT max_stack = XFIXNAT (maxdepth);
   Lisp_Object *frame_base = bc->fp->next_stack;
@@ -281,6 +282,43 @@ setup_frame:;
 #define NEXT break
       switch (op)
         {
+        case (Breturn):
+          {
+            Lisp_Object *saved_top = bc->fp->saved_top;
+            if (saved_top)
+              {
+                Lisp_Object val = TOP;
+
+                lisp_eval_depth--;
+#if TODO_NELISP_LATER_AND
+                if (backtrace_debug_on_exit (specpdl_ptr - 1))
+                  val = call_debugger (list2 (Qexit, val));
+#endif
+                specpdl_ptr--;
+
+                top = saved_top;
+                pc = bc->fp->saved_pc;
+                struct bc_frame *fp = bc->fp->saved_fp;
+                bc->fp = fp;
+
+                Lisp_Object fun = fp->fun;
+                Lisp_Object bytestr = AREF (fun, CLOSURE_CODE);
+                Lisp_Object vector = AREF (fun, CLOSURE_CONSTANTS);
+                bytestr_data = SDATA (bytestr);
+                vectorp = XVECTOR (vector)->contents;
+                if (BYTE_CODE_SAFE)
+                  {
+                    const_length = ASIZE (vector);
+                    bytestr_length = SCHARS (bytestr);
+                  }
+
+                TOP = val;
+                NEXT;
+              }
+            else
+              goto exit;
+          }
+
         case (Bcall6):
           op = FETCH;
           goto docall;
@@ -394,7 +432,12 @@ setup_frame:;
           NEXT;
         }
     }
-  TODO;
+exit:
+
+  bc->fp = bc->fp->saved_fp;
+
+  Lisp_Object result = TOP;
+  return result;
 }
 
 DEFUN ("byte-code", Fbyte_code, Sbyte_code, 3, 3, 0,
