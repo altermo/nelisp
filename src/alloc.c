@@ -63,6 +63,9 @@ static struct gcstat
 } gcstat;
 static ptrdiff_t hash_table_allocated_bytes = 0;
 
+EMACS_INT pure[(PURESIZE + sizeof (EMACS_INT) - 1) / sizeof (EMACS_INT)] = {
+  1,
+};
 #define PUREBEG (char *) pure
 static char *purebeg;
 static ptrdiff_t pure_size;

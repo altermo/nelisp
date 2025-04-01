@@ -58,7 +58,7 @@ static void maybe_quit (void);
   ((t) (!TYPE_SIGNED (t) ? (t) - 1 \
                          : ((((t) 1 << (TYPE_WIDTH (t) - 2)) - 1) * 2 + 1)))
 // Taken from sysdep.c
-int
+static inline int
 emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
 {
   int r;
@@ -1683,7 +1683,7 @@ void unreadchar (Lisp_Object readcharfun, int c);
 Lisp_Object read0 (Lisp_Object readcharfun, bool locate_syms);
 extern void init_obarray_once (void);
 extern void syms_of_lread (void);
-void *stack_top = NULL;
+extern void *stack_top;
 typedef enum
 {
   Cookie_None,
@@ -1831,7 +1831,7 @@ extern cnd_t main_cond;
 extern cnd_t thread_cond;
 extern bool tcall_error;
 extern void (*main_func) (void);
-bool in_thread;
+extern bool in_thread;
 extern Lisp_Object userdata_to_obj (lua_State *L, int idx);
 extern void push_obj (lua_State *L, Lisp_Object obj);
 extern void check_nargs (lua_State *L, int nargs);

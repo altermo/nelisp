@@ -207,6 +207,8 @@ void (*main_func) (void) = NULL;
 
 bool in_thread = false;
 
+void *stack_top = NULL;
+
 static void (*tcall_func_cb) (lua_State *L);
 INLINE void
 tcall_func (void)
