@@ -227,6 +227,7 @@ exec_byte_code (Lisp_Object fun, ptrdiff_t args_template, ptrdiff_t nargs,
                 Lisp_Object *args)
 {
   TODO_NELISP_LATER;
+  unsigned char quitcounter = 1;
   struct bc_thread_state *bc = &bc_;
   Lisp_Object *top = NULL;
   unsigned char const *pc = NULL;
@@ -505,6 +506,45 @@ setup_frame:;
             TOP = val;
             NEXT;
           }
+
+        CASE (Bgoto):
+          op = FETCH2;
+        op_branch:
+          op -= pc - bytestr_data;
+          if (BYTE_CODE_SAFE
+              && !(bytestr_data - pc <= op
+                   && op < bytestr_data + bytestr_length - pc))
+            emacs_abort ();
+          quitcounter += op < 0;
+          if (!quitcounter)
+            {
+              quitcounter = 1;
+              maybe_gc ();
+              maybe_quit ();
+            }
+          pc += op;
+          NEXT;
+
+        CASE (Bgotoifnonnil):
+          op = FETCH2;
+          if (!NILP (POP))
+            goto op_branch;
+          NEXT;
+
+        CASE (Bgotoifnilelsepop):
+          op = FETCH2;
+          if (NILP (TOP))
+            goto op_branch;
+          DISCARD (1);
+          NEXT;
+
+        CASE (Bgotoifnonnilelsepop):
+          op = FETCH2;
+          if (!NILP (TOP))
+            goto op_branch;
+          DISCARD (1);
+          NEXT;
+
         CASE_DEFAULT
         CASE (Bconstant):
           if (BYTE_CODE_SAFE
