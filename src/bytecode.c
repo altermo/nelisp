@@ -282,6 +282,32 @@ setup_frame:;
 #define NEXT break
       switch (op)
         {
+        case (Bvarref7):
+          op = FETCH2;
+          goto varref;
+
+        case (Bvarref):
+        case (Bvarref1):
+        case (Bvarref2):
+        case (Bvarref3):
+        case (Bvarref4):
+        case (Bvarref5):
+          op -= Bvarref;
+          goto varref;
+
+        case (Bvarref6):
+          op = FETCH;
+        varref:
+          {
+            Lisp_Object v1 = vectorp[op], v2;
+            if (XBARE_SYMBOL (v1)->u.s.redirect != SYMBOL_PLAINVAL
+                || (v2 = XBARE_SYMBOL (v1)->u.s.val.value,
+                    BASE_EQ (v2, Qunbound)))
+              v2 = Fsymbol_value (v1);
+            PUSH (v2);
+            NEXT;
+          }
+
         case (Breturn):
           {
             Lisp_Object *saved_top = bc->fp->saved_top;
