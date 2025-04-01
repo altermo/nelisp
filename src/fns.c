@@ -1,5 +1,6 @@
 #include "lisp.h"
 #include "character.h"
+#include "puresize.h"
 
 enum equal_kind
 {
@@ -580,6 +581,82 @@ sxhash_obj (Lisp_Object obj, int depth)
 }
 EMACS_UINT
 sxhash (Lisp_Object obj) { return sxhash_obj (obj, 0); }
+
+/* --- hash table -- */
+static void
+CHECK_HASH_TABLE (Lisp_Object x)
+{
+  CHECK_TYPE (HASH_TABLE_P (x), Qhash_table_p, x);
+}
+static void
+set_hash_next_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, ptrdiff_t val)
+{
+  eassert (idx >= 0 && idx < h->table_size);
+  h->next[idx] = val;
+}
+static void
+set_hash_hash_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, hash_hash_t val)
+{
+  eassert (idx >= 0 && idx < h->table_size);
+  h->hash[idx] = val;
+}
+static void
+set_hash_index_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, ptrdiff_t val)
+{
+  eassert (idx >= 0 && idx < hash_table_index_size (h));
+  h->index[idx] = val;
+}
+static struct Lisp_Hash_Table *
+check_hash_table (Lisp_Object obj)
+{
+  CHECK_HASH_TABLE (obj);
+  return XHASH_TABLE (obj);
+}
+
+static ptrdiff_t
+get_key_arg (Lisp_Object key, ptrdiff_t nargs, Lisp_Object *args, char *used)
+{
+  ptrdiff_t i;
+
+  for (i = 1; i < nargs; i++)
+    if (!used[i - 1] && EQ (args[i - 1], key))
+      {
+        used[i - 1] = 1;
+        used[i] = 1;
+        return i;
+      }
+
+  return 0;
+}
+
+static ptrdiff_t
+HASH_NEXT (struct Lisp_Hash_Table *h, ptrdiff_t idx)
+{
+  eassert (idx >= 0 && idx < h->table_size);
+  return h->next[idx];
+}
+static ptrdiff_t
+HASH_INDEX (struct Lisp_Hash_Table *h, ptrdiff_t idx)
+{
+  eassert (idx >= 0 && idx < hash_table_index_size (h));
+  return h->index[idx];
+}
+
+static Lisp_Object
+cmpfn_eql (Lisp_Object key1, Lisp_Object key2, struct Lisp_Hash_Table *h)
+{
+  UNUSED (h);
+  UNUSED (key1);
+  UNUSED (key2);
+  TODO; // return Feql (key1, key2);
+}
+static Lisp_Object
+cmpfn_equal (Lisp_Object key1, Lisp_Object key2, struct Lisp_Hash_Table *h)
+{
+  UNUSED (h);
+  return Fequal (key1, key2);
+}
+
 static EMACS_INT
 sxhash_eq (Lisp_Object key)
 {
@@ -609,20 +686,7 @@ hashfn_eql (Lisp_Object key, struct Lisp_Hash_Table *h)
   UNUSED (h);
   return reduce_emacs_uint_to_hash_hash (sxhash_eql (key));
 }
-static Lisp_Object
-cmpfn_eql (Lisp_Object key1, Lisp_Object key2, struct Lisp_Hash_Table *h)
-{
-  UNUSED (h);
-  UNUSED (key1);
-  UNUSED (key2);
-  TODO; // return Feql (key1, key2);
-}
-static Lisp_Object
-cmpfn_equal (Lisp_Object key1, Lisp_Object key2, struct Lisp_Hash_Table *h)
-{
-  UNUSED (h);
-  return Fequal (key1, key2);
-}
+
 struct hash_table_test const hashtest_eq
   = { .name = LISPSYM_INITIALLY (Qeq), .cmpfn = 0, .hashfn = hashfn_eq },
   hashtest_eql = { .name = LISPSYM_INITIALLY (Qeql),
@@ -631,16 +695,10 @@ struct hash_table_test const hashtest_eq
   hashtest_equal = { .name = LISPSYM_INITIALLY (Qequal),
                      .cmpfn = cmpfn_equal,
                      .hashfn = hashfn_equal };
-INLINE Lisp_Object
-make_lisp_hash_table (struct Lisp_Hash_Table *h)
+static struct Lisp_Hash_Table *
+allocate_hash_table (void)
 {
-  eassert (PSEUDOVECTOR_TYPEP (&h->header, PVEC_HASH_TABLE));
-  return make_lisp_ptr (h, Lisp_Vectorlike);
-}
-INLINE ptrdiff_t
-hash_table_index_size (const struct Lisp_Hash_Table *h)
-{
-  return (ptrdiff_t) 1 << h->index_bits;
+  return ALLOCATE_PLAIN_PSEUDOVECTOR (struct Lisp_Hash_Table, PVEC_HASH_TABLE);
 }
 static int
 compute_hash_index_bits (hash_idx_t size)
@@ -654,11 +712,6 @@ compute_hash_index_bits (hash_idx_t size)
       || ((uintmax_t) 1 << bits) > upper_bound)
     error ("Hash table too large");
   return bits;
-}
-static struct Lisp_Hash_Table *
-allocate_hash_table (void)
-{
-  return ALLOCATE_PLAIN_PSEUDOVECTOR (struct Lisp_Hash_Table, PVEC_HASH_TABLE);
 }
 static const hash_idx_t empty_hash_index_vector[] = { -1 };
 Lisp_Object
@@ -713,21 +766,125 @@ make_hash_table (const struct hash_table_test *test, EMACS_INT size,
   h->mutable = true;
   return make_lisp_hash_table (h);
 }
-static ptrdiff_t
-get_key_arg (Lisp_Object key, ptrdiff_t nargs, Lisp_Object *args, char *used)
+
+static inline ptrdiff_t
+hash_index_index (struct Lisp_Hash_Table *h, hash_hash_t hash)
 {
-  ptrdiff_t i;
-
-  for (i = 1; i < nargs; i++)
-    if (!used[i - 1] && EQ (args[i - 1], key))
-      {
-        used[i - 1] = 1;
-        used[i] = 1;
-        return i;
-      }
-
-  return 0;
+  return knuth_hash (hash, h->index_bits);
 }
+static void
+maybe_resize_hash_table (struct Lisp_Hash_Table *h)
+{
+  if (h->next_free < 0)
+    {
+      ptrdiff_t old_size = HASH_TABLE_SIZE (h);
+      ptrdiff_t min_size = 6;
+      ptrdiff_t base_size = min (max (old_size, min_size), PTRDIFF_MAX / 2);
+      ptrdiff_t new_size
+        = old_size == 0 ? min_size
+                        : (base_size <= 64 ? base_size * 4 : base_size * 2);
+
+      hash_idx_t *next = hash_table_alloc_bytes (new_size * sizeof *next);
+      for (ptrdiff_t i = old_size; i < new_size - 1; i++)
+        next[i] = i + 1;
+      next[new_size - 1] = -1;
+
+      Lisp_Object *key_and_value
+        = hash_table_alloc_bytes (2 * new_size * sizeof *key_and_value);
+      memcpy (key_and_value, h->key_and_value,
+              2 * old_size * sizeof *key_and_value);
+      for (ptrdiff_t i = 2 * old_size; i < 2 * new_size; i++)
+        key_and_value[i] = HASH_UNUSED_ENTRY_KEY;
+
+      hash_hash_t *hash = hash_table_alloc_bytes (new_size * sizeof *hash);
+      memcpy (hash, h->hash, old_size * sizeof *hash);
+
+      ptrdiff_t old_index_size = hash_table_index_size (h);
+      ptrdiff_t index_bits = compute_hash_index_bits (new_size);
+      ptrdiff_t index_size = (ptrdiff_t) 1 << index_bits;
+      hash_idx_t *index = hash_table_alloc_bytes (index_size * sizeof *index);
+      for (ptrdiff_t i = 0; i < index_size; i++)
+        index[i] = -1;
+
+      h->index_bits = index_bits;
+      h->table_size = new_size;
+      h->next_free = old_size;
+
+      if (old_index_size > 1)
+        hash_table_free_bytes (h->index, old_index_size * sizeof *h->index);
+      h->index = index;
+
+      hash_table_free_bytes (h->key_and_value,
+                             2 * old_size * sizeof *h->key_and_value);
+      h->key_and_value = key_and_value;
+
+      hash_table_free_bytes (h->hash, old_size * sizeof *h->hash);
+      h->hash = hash;
+
+      hash_table_free_bytes (h->next, old_size * sizeof *h->next);
+      h->next = next;
+
+      h->key_and_value = key_and_value;
+
+      for (ptrdiff_t i = 0; i < old_size; i++)
+        {
+          hash_hash_t hash_code = HASH_HASH (h, i);
+          ptrdiff_t start_of_bucket = hash_index_index (h, hash_code);
+          set_hash_next_slot (h, i, HASH_INDEX (h, start_of_bucket));
+          set_hash_index_slot (h, start_of_bucket, i);
+        }
+
+#ifdef ENABLE_CHECKING
+      if (HASH_TABLE_P (Vpurify_flag) && XHASH_TABLE (Vpurify_flag) == h)
+        message ("Growing hash table to: %" pD "d", new_size);
+#endif
+    }
+}
+
+static ptrdiff_t
+hash_lookup_with_hash (struct Lisp_Hash_Table *h, Lisp_Object key,
+                       hash_hash_t hash)
+{
+  ptrdiff_t start_of_bucket = hash_index_index (h, hash);
+  for (ptrdiff_t i = HASH_INDEX (h, start_of_bucket); 0 <= i;
+       i = HASH_NEXT (h, i))
+    if (EQ (key, HASH_KEY (h, i))
+        || (h->test->cmpfn && hash == HASH_HASH (h, i)
+            && !NILP (h->test->cmpfn (key, HASH_KEY (h, i), h))))
+      return i;
+
+  return -1;
+}
+
+static void
+check_mutable_hash_table (Lisp_Object obj, struct Lisp_Hash_Table *h)
+{
+  if (!h->mutable)
+    signal_error ("hash table test modifies table", obj);
+  eassert (!PURE_P (h));
+}
+ptrdiff_t
+hash_put (struct Lisp_Hash_Table *h, Lisp_Object key, Lisp_Object value,
+          hash_hash_t hash)
+{
+  eassert (!hash_unused_entry_key_p (key));
+  maybe_resize_hash_table (h);
+  h->count++;
+
+  ptrdiff_t i = h->next_free;
+  eassert (hash_unused_entry_key_p (HASH_KEY (h, i)));
+  h->next_free = HASH_NEXT (h, i);
+  set_hash_key_slot (h, i, key);
+  set_hash_value_slot (h, i, value);
+
+  set_hash_hash_slot (h, i, hash);
+
+  ptrdiff_t start_of_bucket = hash_index_index (h, hash);
+  set_hash_next_slot (h, i, HASH_INDEX (h, start_of_bucket));
+  set_hash_index_slot (h, start_of_bucket, i);
+  return i;
+}
+
 DEFUN ("make-hash-table", Fmake_hash_table, Smake_hash_table, 0, MANY, 0,
        doc: /* Create and return a new hash table.
 
@@ -820,9 +977,29 @@ usage: (make-hash-table &rest KEYWORD-ARGS)  */)
   return make_hash_table (testdesc, size, weak, purecopy);
 }
 
+DEFUN ("puthash", Fputhash, Sputhash, 3, 3, 0,
+       doc: /* Associate KEY with VALUE in hash table TABLE.
+If KEY is already present in table, replace its current value with
+VALUE.  In any case, return VALUE.  */)
+(Lisp_Object key, Lisp_Object value, Lisp_Object table)
+{
+  struct Lisp_Hash_Table *h = check_hash_table (table);
+  check_mutable_hash_table (table, h);
+
+  EMACS_UINT hash = hash_from_key (h, key);
+  ptrdiff_t i = hash_lookup_with_hash (h, key, hash);
+  if (i >= 0)
+    set_hash_value_slot (h, i, value);
+  else
+    hash_put (h, key, value, hash);
+
+  return value;
+}
+
 void
 syms_of_fns (void)
 {
+  DEFSYM (Qhash_table_p, "hash-table-p");
   DEFSYM (Qeq, "eq");
   DEFSYM (Qeql, "eql");
   DEFSYM (Qequal, "equal");
@@ -852,4 +1029,5 @@ syms_of_fns (void)
   defsubr (&Snconc);
   defsubr (&Snreverse);
   defsubr (&Smake_hash_table);
+  defsubr (&Sputhash);
 }

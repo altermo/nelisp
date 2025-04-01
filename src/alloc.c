@@ -4,6 +4,7 @@
 #include "buffer.h"
 #include "character.h"
 #include "lua.h"
+#include "puresize.h"
 
 #define USE_ALIGNED_ALLOC 1
 #define MALLOC_0_IS_NONNULL 1
@@ -62,16 +63,6 @@ static struct gcstat
 } gcstat;
 static ptrdiff_t hash_table_allocated_bytes = 0;
 
-#define SYSTEM_PURESIZE_EXTRA 0
-#define SITELOAD_PURESIZE_EXTRA 0
-#define BASE_PURESIZE \
-  (3400000 + SYSTEM_PURESIZE_EXTRA + SITELOAD_PURESIZE_EXTRA)
-#define PURESIZE (BASE_PURESIZE * PURESIZE_RATIO * PURESIZE_CHECKING_RATIO)
-#define PURESIZE_RATIO 10 / 6
-#define PURESIZE_CHECKING_RATIO 1
-EMACS_INT pure[(PURESIZE + sizeof (EMACS_INT) - 1) / sizeof (EMACS_INT)] = {
-  1,
-};
 #define PUREBEG (char *) pure
 static char *purebeg;
 static ptrdiff_t pure_size;
@@ -497,10 +488,6 @@ hash_table_free_bytes (void *p, ptrdiff_t nbytes)
 }
 
 /* --- pure storage -- */
-
-#define puresize_h_PURE_P(ptr) \
-  ((uintptr_t) (ptr) - (uintptr_t) pure <= PURESIZE)
-#define PURE_P(ptr) puresize_h_PURE_P (ptr)
 
 static void *
 pure_alloc (size_t size, int type)

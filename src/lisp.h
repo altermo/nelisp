@@ -1039,6 +1039,74 @@ struct Lisp_Hash_Table
 } GCALIGNED_STRUCT;
 #define INVALID_LISP_VALUE make_lisp_ptr (NULL, Lisp_Float)
 #define HASH_UNUSED_ENTRY_KEY INVALID_LISP_VALUE
+INLINE bool
+hash_unused_entry_key_p (Lisp_Object key)
+{
+  return BASE_EQ (key, HASH_UNUSED_ENTRY_KEY);
+}
+INLINE bool
+HASH_TABLE_P (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_HASH_TABLE);
+}
+INLINE struct Lisp_Hash_Table *
+XHASH_TABLE (Lisp_Object a)
+{
+  eassert (HASH_TABLE_P (a));
+  return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Hash_Table);
+}
+INLINE hash_hash_t
+hash_from_key (struct Lisp_Hash_Table *h, Lisp_Object key)
+{
+  return h->test->hashfn (key, h);
+}
+INLINE Lisp_Object
+make_lisp_hash_table (struct Lisp_Hash_Table *h)
+{
+  eassert (PSEUDOVECTOR_TYPEP (&h->header, PVEC_HASH_TABLE));
+  return make_lisp_ptr (h, Lisp_Vectorlike);
+}
+INLINE Lisp_Object
+HASH_KEY (const struct Lisp_Hash_Table *h, ptrdiff_t idx)
+{
+  eassert (idx >= 0 && idx < h->table_size);
+  return h->key_and_value[2 * idx];
+}
+INLINE Lisp_Object
+HASH_VALUE (const struct Lisp_Hash_Table *h, ptrdiff_t idx)
+{
+  eassert (idx >= 0 && idx < h->table_size);
+  return h->key_and_value[2 * idx + 1];
+}
+INLINE hash_hash_t
+HASH_HASH (const struct Lisp_Hash_Table *h, ptrdiff_t idx)
+{
+  eassert (idx >= 0 && idx < h->table_size);
+  return h->hash[idx];
+}
+INLINE ptrdiff_t
+HASH_TABLE_SIZE (const struct Lisp_Hash_Table *h)
+{
+  return h->table_size;
+}
+INLINE ptrdiff_t
+hash_table_index_size (const struct Lisp_Hash_Table *h)
+{
+  return (ptrdiff_t) 1 << h->index_bits;
+}
+INLINE void
+set_hash_key_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
+{
+  eassert (idx >= 0 && idx < h->table_size);
+  h->key_and_value[2 * idx] = val;
+}
+INLINE void
+set_hash_value_slot (struct Lisp_Hash_Table *h, ptrdiff_t idx, Lisp_Object val)
+{
+  eassert (idx >= 0 && idx < h->table_size);
+  h->key_and_value[2 * idx + 1] = val;
+  ;
+}
 
 INLINE hash_hash_t
 reduce_emacs_uint_to_hash_hash (EMACS_UINT x)
