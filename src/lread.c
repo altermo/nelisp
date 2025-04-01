@@ -927,6 +927,23 @@ invalid_syntax (const char *s, Lisp_Object readcharfun)
     *p = 0;                                    \
     invalid_syntax (read_buffer, readcharfun); \
   }
+static void
+skip_space_and_comments (Lisp_Object readcharfun)
+{
+  int c;
+  do
+    {
+      c = READCHAR;
+      if (c == ';')
+        do
+          c = READCHAR;
+        while (c >= 0 && c != '\n');
+      if (c < 0)
+        end_of_file_error ();
+    }
+  while (c <= 32 || c == NO_BREAK_SPACE);
+  UNREAD (c);
+}
 static int
 read_char_escape (Lisp_Object readcharfun, int next_char)
 {
@@ -1569,7 +1586,23 @@ read_obj:;
         goto read_obj;
       }
     case '.':
-      TODO;
+      {
+        int nch = READCHAR;
+        UNREAD (nch);
+        if (nch <= 32 || nch == NO_BREAK_SPACE || nch == '"' || nch == '\''
+            || nch == ';' || nch == '(' || nch == '[' || nch == '#'
+            || nch == '?' || nch == '`' || nch == ',')
+          {
+            if (!read_stack_empty_p (base_sp)
+                && read_stack_top ()->type == RE_list)
+              {
+                read_stack_top ()->type = RE_list_dot;
+                goto read_obj;
+              }
+            invalid_syntax (".", readcharfun);
+          }
+      }
+      FALLTHROUGH;
     default:
       if (c <= 32 || c == NO_BREAK_SPACE)
         goto read_obj;
@@ -1695,7 +1728,23 @@ read_obj:;
             goto read_obj;
           }
         case RE_list_dot:
-          TODO;
+          {
+            skip_space_and_comments (readcharfun);
+            int ch = READCHAR;
+            if (ch != ')')
+              invalid_syntax ("expected )", readcharfun);
+            XSETCDR (e->u.list.tail, obj);
+            read_stack_pop ();
+            obj = e->u.list.head;
+
+#if TODO_NELISP_LATER_AND
+            if (load_force_doc_strings && BASE_EQ (XCAR (obj), Vload_file_name)
+                && !NILP (XCAR (obj)) && FIXNUMP (XCDR (obj)))
+              obj = get_lazy_string (obj);
+#endif
+
+            break;
+          }
         case RE_vector:
         case RE_record:
         case RE_char_table:
