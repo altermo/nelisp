@@ -345,6 +345,10 @@ setup_frame:;
               goto exit;
           }
 
+        case (Bdiscard):
+          DISCARD (1);
+          NEXT;
+
         case (Bcons):
           {
             Lisp_Object v1 = POP;
