@@ -1472,6 +1472,7 @@ struct handler
 
 extern Lisp_Object unbind_to (specpdl_ref, Lisp_Object);
 
+void record_unwind_protect_ptr (void (*function) (void *), void *arg);
 extern void record_unwind_protect_array (Lisp_Object *, ptrdiff_t);
 extern void record_unwind_protect_intmax (void (*) (intmax_t), intmax_t);
 extern void record_unwind_protect_int (void (*function) (int), int arg);

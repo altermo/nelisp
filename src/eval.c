@@ -49,6 +49,15 @@ grow_specpdl (void)
     grow_specpdl_allocation ();
 }
 void
+record_unwind_protect_ptr (void (*function) (void *), void *arg)
+{
+  specpdl_ptr->unwind_ptr.kind = SPECPDL_UNWIND_PTR;
+  specpdl_ptr->unwind_ptr.func = function;
+  specpdl_ptr->unwind_ptr.arg = arg;
+  specpdl_ptr->unwind_ptr.mark = NULL;
+  grow_specpdl ();
+}
+void
 record_unwind_protect_intmax (void (*function) (intmax_t), intmax_t arg)
 {
   specpdl_ptr->unwind_intmax.kind = SPECPDL_UNWIND_INTMAX;

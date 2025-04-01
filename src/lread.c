@@ -1075,6 +1075,21 @@ again:;
 
   return chr | modifiers;
 }
+static char *
+grow_read_buffer (char *buf, ptrdiff_t offset, char **buf_addr,
+                  ptrdiff_t *buf_size, specpdl_ref count)
+{
+  char *p = xpalloc (*buf_addr, buf_size, MAX_MULTIBYTE_LENGTH, -1, 1);
+  if (!*buf_addr)
+    {
+      memcpy (p, buf, offset);
+      record_unwind_protect_ptr (xfree, p);
+    }
+  else
+    set_unwind_protect_ptr (count, xfree, p);
+  *buf_addr = p;
+  return p;
+}
 static Lisp_Object
 read_string_literal (Lisp_Object readcharfun)
 {
@@ -1082,7 +1097,7 @@ read_string_literal (Lisp_Object readcharfun)
   char *read_buffer = stackbuf;
   ptrdiff_t read_buffer_size = sizeof stackbuf;
   specpdl_ref count = SPECPDL_INDEX ();
-  // char *heapbuf = NULL;
+  char *heapbuf = NULL;
   char *p = read_buffer;
   char *end = read_buffer + read_buffer_size;
   bool force_multibyte = false;
@@ -1093,8 +1108,9 @@ read_string_literal (Lisp_Object readcharfun)
     {
       if (end - p < MAX_MULTIBYTE_LENGTH)
         {
-          TODO;
           ptrdiff_t offset = p - read_buffer;
+          read_buffer = grow_read_buffer (read_buffer, offset, &heapbuf,
+                                          &read_buffer_size, count);
           p = read_buffer + offset;
           end = read_buffer + read_buffer_size;
         }
