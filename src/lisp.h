@@ -1758,6 +1758,8 @@ extern FILE *emacs_fdopen (int fd, const char *mode);
 extern void syms_of_bytecode (void);
 void init_bytecode (void);
 
+extern void syms_of_doc (void);
+
 INLINE void
 circular_list (Lisp_Object list)
 {

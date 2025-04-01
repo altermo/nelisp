@@ -408,7 +408,7 @@ The return value is undefined.  */)
   defalias (symbol, definition);
 
   if (!NILP (docstring))
-    TODO;
+    Fput (symbol, Qfunction_documentation, docstring);
   return symbol;
 }
 
