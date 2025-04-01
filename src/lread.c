@@ -922,6 +922,11 @@ invalid_syntax (const char *s, Lisp_Object readcharfun)
   UNUSED (readcharfun);
   TODO;
 }
+#define INVALID_SYNTAX_WITH_BUFFER()           \
+  {                                            \
+    *p = 0;                                    \
+    invalid_syntax (read_buffer, readcharfun); \
+  }
 static int
 read_char_escape (Lisp_Object readcharfun, int next_char)
 {
@@ -1344,6 +1349,50 @@ bytecode_from_rev_list (Lisp_Object elems, Lisp_Object readcharfun)
   XSETPVECTYPE (XVECTOR (obj), PVEC_CLOSURE);
   return obj;
 }
+static Lisp_Object
+hash_table_from_plist (Lisp_Object plist)
+{
+  Lisp_Object params[4 * 2];
+  Lisp_Object *par = params;
+
+#define ADDPARAM(name)                              \
+  do                                                \
+    {                                               \
+      Lisp_Object val = plist_get (plist, Q##name); \
+      if (!NILP (val))                              \
+        {                                           \
+          *par++ = QC##name;                        \
+          *par++ = val;                             \
+        }                                           \
+    }                                               \
+  while (0)
+
+  ADDPARAM (test);
+  ADDPARAM (weakness);
+  ADDPARAM (purecopy);
+
+  Lisp_Object data = plist_get (plist, Qdata);
+  if (!(NILP (data) || CONSP (data)))
+    error ("Hash table data is not a list");
+  ptrdiff_t data_len = list_length (data);
+  if (data_len & 1)
+    error ("Hash table data length is odd");
+  *par++ = QCsize;
+  *par++ = make_fixnum (data_len / 2);
+
+  Lisp_Object ht = Fmake_hash_table (par - params, params);
+
+  while (!NILP (data))
+    {
+      Lisp_Object key = XCAR (data);
+      data = XCDR (data);
+      Lisp_Object val = XCAR (data);
+      Fputhash (key, val, ht);
+      data = XCDR (data);
+    }
+
+  return ht;
+}
 Lisp_Object
 read0 (Lisp_Object readcharfun, bool locate_syms)
 {
@@ -1378,7 +1427,18 @@ read_obj:;
           obj = read_stack_pop ()->u.list.head;
           break;
         case RE_record:
-          TODO;
+          {
+            locate_syms = read_stack_top ()->u.vector.old_locate_syms;
+            Lisp_Object elems = Fnreverse (read_stack_pop ()->u.vector.elems);
+            if (NILP (elems))
+              invalid_syntax ("#s", readcharfun);
+
+            if (BASE_EQ (XCAR (elems), Qhash_table))
+              obj = hash_table_from_plist (XCDR (elems));
+            else
+              TODO;
+            break;
+          }
         case RE_string_props:
           TODO;
         default:
@@ -1434,7 +1494,19 @@ read_obj:;
           case '#':
             TODO;
           case 's':
-            TODO;
+            READ_AND_BUFFER (ch);
+            if (ch != '(')
+              {
+                UNREAD (ch);
+                INVALID_SYNTAX_WITH_BUFFER ();
+              }
+            read_stack_push ((struct read_stack_entry) {
+              .type = RE_record,
+              .u.vector.elems = Qnil,
+              .u.vector.old_locate_syms = locate_syms,
+            });
+            locate_syms = false;
+            goto read_obj;
           case '^':
             TODO;
           case '(':
@@ -1887,6 +1959,13 @@ syms_of_lread (void)
 It is a vector whose length ought to be prime for best results.
 The vector's contents don't make sense if examined from Lisp programs;
 to find all the symbols in an obarray, use `mapatoms'.  */);
+
+  DEFSYM (Qhash_table, "hash-table");
+  DEFSYM (Qdata, "data");
+  DEFSYM (Qtest, "test");
+  DEFSYM (Qsize, "size");
+  DEFSYM (Qpurecopy, "purecopy");
+  DEFSYM (Qweakness, "weakness");
 
   DEFSYM (Qobarray_cache, "obarray-cache");
 

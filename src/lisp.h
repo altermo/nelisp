@@ -1696,6 +1696,7 @@ extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
 extern void syms_of_fns (void);
 extern ptrdiff_t list_length (Lisp_Object);
 EMACS_UINT hash_string (char const *, ptrdiff_t);
+Lisp_Object plist_get (Lisp_Object plist, Lisp_Object prop);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
