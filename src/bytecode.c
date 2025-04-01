@@ -279,23 +279,29 @@ setup_frame:;
 
       op = FETCH;
 
+#define CASE(OP) case OP
 #define NEXT break
-      switch (op)
+#define FIRST switch (op)
+#define CASE_DEFAULT \
+  case 255:          \
+  default:
+#define CASE_ABORT case 0
+      FIRST
         {
-        case (Bvarref7):
+        CASE (Bvarref7):
           op = FETCH2;
           goto varref;
 
-        case (Bvarref):
-        case (Bvarref1):
-        case (Bvarref2):
-        case (Bvarref3):
-        case (Bvarref4):
-        case (Bvarref5):
+        CASE (Bvarref):
+        CASE (Bvarref1):
+        CASE (Bvarref2):
+        CASE (Bvarref3):
+        CASE (Bvarref4):
+        CASE (Bvarref5):
           op -= Bvarref;
           goto varref;
 
-        case (Bvarref6):
+        CASE (Bvarref6):
           op = FETCH;
         varref:
           {
@@ -308,7 +314,7 @@ setup_frame:;
             NEXT;
           }
 
-        case (Breturn):
+        CASE (Breturn):
           {
             Lisp_Object *saved_top = bc->fp->saved_top;
             if (saved_top)
@@ -345,81 +351,85 @@ setup_frame:;
               goto exit;
           }
 
-        case (Bdiscard):
+        CASE (Bdiscard):
           DISCARD (1);
           NEXT;
 
-        case (Bcons):
+        CASE (Bcons):
           {
             Lisp_Object v1 = POP;
             TOP = Fcons (TOP, v1);
             NEXT;
           }
 
-        case (Blist1):
+        CASE (Blist1):
           TOP = list1 (TOP);
           NEXT;
 
-        case (Blist2):
+        CASE (Blist2):
           {
             Lisp_Object v1 = POP;
             TOP = list2 (TOP, v1);
             NEXT;
           }
 
-        case (Blist3):
+        CASE (Blist3):
           DISCARD (2);
           TOP = list3 (TOP, top[1], top[2]);
           NEXT;
 
-        case (Blist4):
+        CASE (Blist4):
           DISCARD (3);
           TOP = list4 (TOP, top[1], top[2], top[3]);
           NEXT;
 
-        case (BlistN):
+        CASE (BlistN):
           op = FETCH;
           DISCARD (op - 1);
           TOP = Flist (op, &TOP);
           NEXT;
 
-        case (Bcall6):
+        CASE (Bcall6):
           op = FETCH;
           goto docall;
 
-        case (Bcall7):
+        CASE (Bcall7):
           op = FETCH2;
           goto docall;
 
-        case (Bstack_ref1):
-        case (Bstack_ref2):
-        case (Bstack_ref3):
-        case (Bstack_ref4):
-        case (Bstack_ref5):
+        CASE_ABORT:
+          error ("Invalid byte opcode: op=%d, ptr=%" pD "d", op,
+                 pc - 1 - bytestr_data);
+
+        CASE (Bstack_ref1):
+        CASE (Bstack_ref2):
+        CASE (Bstack_ref3):
+        CASE (Bstack_ref4):
+        CASE (Bstack_ref5):
           {
             Lisp_Object v1 = top[Bstack_ref - op];
             PUSH (v1);
             NEXT;
           }
-        case (Bstack_ref6):
+        CASE (Bstack_ref6):
           {
             Lisp_Object v1 = top[-FETCH];
             PUSH (v1);
             NEXT;
           }
-        case (Bstack_ref7):
+        CASE (Bstack_ref7):
           {
             Lisp_Object v1 = top[-FETCH2];
             PUSH (v1);
             NEXT;
           }
 
-        case (Bcall):
-        case (Bcall1):
-        case (Bcall2):
-        case (Bcall3):
-        case (Bcall4):
-        case (Bcall5):
+        CASE (Bcall):
+        CASE (Bcall1):
+        CASE (Bcall2):
+        CASE (Bcall3):
+        CASE (Bcall4):
+        CASE (Bcall5):
           op -= Bcall;
         docall:
           {
@@ -481,8 +491,8 @@ setup_frame:;
             TOP = val;
             NEXT;
           }
-        case (Bconstant):
-        default:
+        CASE_DEFAULT
+        CASE (Bconstant):
           if (BYTE_CODE_SAFE
               && !(Bconstant <= op && op < Bconstant + const_length))
             {

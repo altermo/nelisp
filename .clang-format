@@ -36,6 +36,11 @@ WhitespaceSensitiveMacros:
   - DEFVAR_INT
   - DEFVAR_KBOARD
   - DEFSYM
+Macros:
+  - CASE(op)=case op
+  - FIRST=switch (op)
+  - "CASE_DEFAULT=case 255: default:"
+  - CASE_ABORT=case 0
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 1
 PenaltyBreakBeforeFirstCallParameter: 2000
