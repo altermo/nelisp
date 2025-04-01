@@ -314,6 +314,20 @@ setup_frame:;
             NEXT;
           }
 
+        CASE (Bmemq):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fmemq (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bdup):
+          {
+            Lisp_Object v1 = TOP;
+            PUSH (v1);
+            NEXT;
+          }
+
         CASE (Breturn):
           {
             Lisp_Object *saved_top = bc->fp->saved_top;
