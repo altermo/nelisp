@@ -345,6 +345,13 @@ setup_frame:;
               goto exit;
           }
 
+        case (Bcons):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fcons (TOP, v1);
+            NEXT;
+          }
+
         case (Blist1):
           TOP = list1 (TOP);
           NEXT;
