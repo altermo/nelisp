@@ -5,6 +5,9 @@
 #define CACHEABLE
 #define clobbered_eassert(E) eassert (sizeof (E) != 0)
 
+static Lisp_Object funcall_lambda (Lisp_Object, ptrdiff_t, Lisp_Object *);
+static Lisp_Object apply_lambda (Lisp_Object, Lisp_Object, specpdl_ref);
+
 static Lisp_Object
 specpdl_symbol (union specbinding *pdl)
 {
@@ -702,7 +705,7 @@ eval_sub (Lisp_Object form)
     }
   else if (CLOSUREP (fun) || NATIVE_COMP_FUNCTION_DYNP (fun)
            || MODULE_FUNCTIONP (fun))
-    TODO;
+    return apply_lambda (fun, original_args, count);
   else
     {
       if (NILP (fun))
@@ -795,6 +798,136 @@ funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
     xsignal1 (Qinvalid_function, fun);
   else
     xsignal2 (Qwrong_number_of_arguments, fun, make_fixnum (numargs));
+}
+static Lisp_Object
+apply_lambda (Lisp_Object fun, Lisp_Object args, specpdl_ref count)
+{
+  Lisp_Object *arg_vector;
+  Lisp_Object tem;
+  USE_SAFE_ALLOCA;
+
+  ptrdiff_t numargs = list_length (args);
+  SAFE_ALLOCA_LISP (arg_vector, numargs);
+  Lisp_Object args_left = args;
+
+  for (ptrdiff_t i = 0; i < numargs; i++)
+    {
+      tem = Fcar (args_left), args_left = Fcdr (args_left);
+      tem = eval_sub (tem);
+      arg_vector[i] = tem;
+    }
+
+  set_backtrace_args (specpdl_ref_to_ptr (count), arg_vector, numargs);
+  tem = funcall_lambda (fun, numargs, arg_vector);
+
+  lisp_eval_depth--;
+#if TODO_NELISP_LATER_AND
+  if (backtrace_debug_on_exit (specpdl_ref_to_ptr (count)))
+    tem = call_debugger (list2 (Qexit, tem));
+#endif
+  SAFE_FREE ();
+  specpdl_ptr--;
+  return tem;
+}
+static Lisp_Object
+funcall_lambda (Lisp_Object fun, ptrdiff_t nargs, Lisp_Object *arg_vector)
+{
+  Lisp_Object syms_left, lexenv;
+
+  if (CONSP (fun))
+    {
+      lexenv = Qnil;
+      syms_left = XCDR (fun);
+      if (CONSP (syms_left))
+        syms_left = XCAR (syms_left);
+      else
+        xsignal1 (Qinvalid_function, fun);
+    }
+  else if (CLOSUREP (fun))
+    {
+      syms_left = AREF (fun, CLOSURE_ARGLIST);
+      if (FIXNUMP (syms_left))
+        return exec_byte_code (fun, XFIXNUM (syms_left), nargs, arg_vector);
+      lexenv = CONSP (AREF (fun, CLOSURE_CODE)) ? AREF (fun, CLOSURE_CONSTANTS)
+                                                : Qnil;
+    }
+  else
+    emacs_abort ();
+
+  specpdl_ref count = SPECPDL_INDEX ();
+  ptrdiff_t i = 0;
+  bool optional = false;
+  bool rest = false;
+  bool previous_rest = false;
+  for (; CONSP (syms_left); syms_left = XCDR (syms_left))
+    {
+      maybe_quit ();
+
+      Lisp_Object next = maybe_remove_pos_from_symbol (XCAR (syms_left));
+      if (!BARE_SYMBOL_P (next))
+        xsignal1 (Qinvalid_function, fun);
+
+      if (BASE_EQ (next, Qand_rest))
+        {
+          if (rest || previous_rest)
+            xsignal1 (Qinvalid_function, fun);
+          rest = 1;
+          previous_rest = true;
+        }
+      else if (BASE_EQ (next, Qand_optional))
+        {
+          if (optional || rest || previous_rest)
+            xsignal1 (Qinvalid_function, fun);
+          optional = 1;
+        }
+      else
+        {
+          Lisp_Object arg;
+          if (rest)
+            {
+              arg = Flist (nargs - i, &arg_vector[i]);
+              i = nargs;
+            }
+          else if (i < nargs)
+            arg = arg_vector[i++];
+          else if (!optional)
+            xsignal2 (Qwrong_number_of_arguments, fun, make_fixnum (nargs));
+          else
+            arg = Qnil;
+
+          /* Bind the argument.  */
+          if (!NILP (lexenv))
+            lexenv = Fcons (Fcons (next, arg), lexenv);
+          else
+            specbind (next, arg);
+          previous_rest = false;
+        }
+    }
+
+  if (!NILP (syms_left) || previous_rest)
+    xsignal1 (Qinvalid_function, fun);
+  else if (i < nargs)
+    xsignal2 (Qwrong_number_of_arguments, fun, make_fixnum (nargs));
+
+  if (!EQ (lexenv, Vinternal_interpreter_environment))
+    specbind (Qinternal_interpreter_environment, lexenv);
+
+  Lisp_Object val;
+  if (CONSP (fun))
+    val = Fprogn (XCDR (XCDR (fun)));
+  else if (NATIVE_COMP_FUNCTIONP (fun))
+    {
+      eassert (NATIVE_COMP_FUNCTION_DYNP (fun));
+      val = XSUBR (fun)->function.a0 ();
+    }
+  else
+    {
+      eassert (CLOSUREP (fun));
+      val = CONSP (AREF (fun, CLOSURE_CODE)) ? Fprogn (AREF (fun, CLOSURE_CODE))
+                                             : exec_byte_code (fun, 0, 0, NULL);
+    }
+
+  return unbind_to (count, val);
 }
 
 Lisp_Object
@@ -1195,6 +1328,9 @@ void
 syms_of_eval (void)
 {
   DEFSYM (Qautoload, "autoload");
+
+  DEFSYM (Qand_rest, "&rest");
+  DEFSYM (Qand_optional, "&optional");
 
   DEFVAR_INT ("max-lisp-eval-depth", max_lisp_eval_depth,
                 doc: /* Limit on depth in `eval', `apply' and `funcall' before error.

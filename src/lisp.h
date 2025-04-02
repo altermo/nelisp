@@ -1783,8 +1783,17 @@ extern FILE *emacs_fdopen (int fd, const char *mode);
 
 extern void syms_of_bytecode (void);
 void init_bytecode (void);
+extern Lisp_Object exec_byte_code (Lisp_Object, ptrdiff_t, ptrdiff_t,
+                                   Lisp_Object *);
 
 extern void syms_of_doc (void);
+
+INLINE bool
+NATIVE_COMP_FUNCTIONP (Lisp_Object a)
+{
+  UNUSED (a);
+  return false;
+}
 
 INLINE void
 circular_list (Lisp_Object list)
