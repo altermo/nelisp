@@ -666,7 +666,8 @@ sxhash_eq (Lisp_Object key)
 static EMACS_INT
 sxhash_eql (Lisp_Object key)
 {
-  return FLOATP (key) || BIGNUMP (key) ? sxhash (key) : sxhash_eq (key);
+  return FLOATP (key) || BIGNUMP (key) ? (EMACS_INT) sxhash (key)
+                                       : sxhash_eq (key);
 }
 static hash_hash_t
 hashfn_eq (Lisp_Object key, struct Lisp_Hash_Table *h)
