@@ -494,6 +494,19 @@ builtin_lisp_symbol (int index)
 {
   return make_lisp_symbol_internal (&lispsym[index]);
 }
+INLINE bool
+c_symbol_p (struct Lisp_Symbol *sym)
+{
+  char *bp = (char *) lispsym;
+  char *sp = (char *) sym;
+  if (PTRDIFF_MAX < INTPTR_MAX)
+    return bp <= sp && sp < bp + sizeof lispsym;
+  else
+    {
+      ptrdiff_t offset = sp - bp;
+      return 0 <= offset && (unsigned long) offset < sizeof lispsym;
+    }
+}
 #define FIXNUM_OVERFLOW_P(i) \
   (!((0 <= (i) || MOST_NEGATIVE_FIXNUM <= (i)) && (i) <= MOST_POSITIVE_FIXNUM))
 INLINE
@@ -1204,6 +1217,11 @@ MARKERP (Lisp_Object x)
   return PSEUDOVECTORP (x, PVEC_MARKER);
 }
 INLINE bool
+OVERLAYP (Lisp_Object x)
+{
+  return PSEUDOVECTORP (x, PVEC_OVERLAY);
+}
+INLINE bool
 BIGNUMP (Lisp_Object x)
 {
   return PSEUDOVECTORP (x, PVEC_BIGNUM);
@@ -1632,6 +1650,12 @@ extern struct buffer *allocate_buffer (void);
 #define ALLOCATE_PLAIN_PSEUDOVECTOR(type, tag) \
   ((type *) allocate_pseudovector (VECSIZE (type), 0, 0, tag))
 extern Lisp_Object make_pure_c_string (const char *, ptrdiff_t);
+extern ptrdiff_t vectorlike_nbytes (const union vectorlike_header *hdr);
+INLINE ptrdiff_t
+vector_nbytes (const struct Lisp_Vector *v)
+{
+  return vectorlike_nbytes (&v->header);
+}
 INLINE Lisp_Object
 build_pure_c_string (const char *str)
 {
@@ -1673,6 +1697,7 @@ maybe_gc (void)
 {
   TODO_NELISP_LATER;
 }
+extern Lisp_Object make_pure_string (const char *, ptrdiff_t, ptrdiff_t, bool);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
