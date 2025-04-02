@@ -855,6 +855,11 @@ hash_lookup_with_hash (struct Lisp_Hash_Table *h, Lisp_Object key,
 
   return -1;
 }
+ptrdiff_t
+hash_lookup (struct Lisp_Hash_Table *h, Lisp_Object key)
+{
+  return hash_lookup_with_hash (h, key, hash_from_key (h, key));
+}
 
 static void
 check_mutable_hash_table (Lisp_Object obj, struct Lisp_Hash_Table *h)
@@ -977,6 +982,15 @@ usage: (make-hash-table &rest KEYWORD-ARGS)  */)
   return make_hash_table (testdesc, size, weak, purecopy);
 }
 
+DEFUN ("gethash", Fgethash, Sgethash, 2, 3, 0,
+       doc: /* Look up KEY in TABLE and return its associated value.
+If KEY is not found, return DFLT which defaults to nil.  */)
+(Lisp_Object key, Lisp_Object table, Lisp_Object dflt)
+{
+  struct Lisp_Hash_Table *h = check_hash_table (table);
+  ptrdiff_t i = hash_lookup (h, key);
+  return i >= 0 ? HASH_VALUE (h, i) : dflt;
+}
 DEFUN ("puthash", Fputhash, Sputhash, 3, 3, 0,
        doc: /* Associate KEY with VALUE in hash table TABLE.
 If KEY is already present in table, replace its current value with
@@ -1029,5 +1043,6 @@ syms_of_fns (void)
   defsubr (&Snconc);
   defsubr (&Snreverse);
   defsubr (&Smake_hash_table);
+  defsubr (&Sgethash);
   defsubr (&Sputhash);
 }
