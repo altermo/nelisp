@@ -432,6 +432,14 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
   return newcdr;
 }
 
+DEFUN ("symbol-function", Fsymbol_function, Ssymbol_function, 1, 1, 0,
+       doc: /* Return SYMBOL's function definition.  */)
+(Lisp_Object symbol)
+{
+  CHECK_SYMBOL (symbol);
+  return XSYMBOL (symbol)->u.s.function;
+}
+
 DEFUN ("consp", Fconsp, Sconsp, 1, 1, 0,
        doc: /* Return t if OBJECT is a cons cell.  */
        attributes: const)
@@ -776,6 +784,7 @@ syms_of_data (void)
   defsubr (&Sdefalias);
   defsubr (&Ssetcar);
   defsubr (&Ssetcdr);
+  defsubr (&Ssymbol_function);
   defsubr (&Sconsp);
   defsubr (&Satom);
   defsubr (&Slistp);
