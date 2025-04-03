@@ -1010,6 +1010,35 @@ VALUE.  In any case, return VALUE.  */)
 
   return value;
 }
+DEFUN ("provide", Fprovide, Sprovide, 1, 2, 0,
+       doc: /* Announce that FEATURE is a feature of the current Emacs.
+The optional argument SUBFEATURES should be a list of symbols listing
+particular subfeatures supported in this version of FEATURE.  */)
+(Lisp_Object feature, Lisp_Object subfeatures)
+{
+  register Lisp_Object tem;
+  CHECK_SYMBOL (feature);
+  CHECK_LIST (subfeatures);
+#if TODO_NELISP_LATER_AND
+  if (!NILP (Vautoload_queue))
+    Vautoload_queue
+      = Fcons (Fcons (make_fixnum (0), Vfeatures), Vautoload_queue);
+#endif
+  tem = Fmemq (feature, Vfeatures);
+  if (NILP (tem))
+    Vfeatures = Fcons (feature, Vfeatures);
+  if (!NILP (subfeatures))
+    Fput (feature, Qsubfeatures, subfeatures);
+  LOADHIST_ATTACH (Fcons (Qprovide, feature));
+
+#if TODO_NELISP_LATER_AND
+  tem = Fassq (feature, Vafter_load_alist);
+  if (CONSP (tem))
+    Fmapc (Qfuncall, XCDR (tem));
+#endif
+
+  return feature;
+}
 
 void
 syms_of_fns (void)
@@ -1030,6 +1059,17 @@ syms_of_fns (void)
   DEFSYM (Qkey_or_value, "key-or-value");
   DEFSYM (Qkey_and_value, "key-and-value");
 
+  DEFSYM (Qprovide, "provide");
+
+  DEFVAR_LISP ("features", Vfeatures,
+    doc: /* A list of symbols which are the features of the executing Emacs.
+Used by `featurep' and `require', and altered by `provide'.  */);
+  Vfeatures = list1 (Qemacs);
+  DEFSYM (Qfeatures, "features");
+#if TODO_NELISP_LATER_AND
+  Fmake_var_non_special (Qfeatures);
+#endif
+  DEFSYM (Qsubfeatures, "subfeatures");
   DEFSYM (Qplistp, "plistp");
 
   defsubr (&Sget);
@@ -1046,4 +1086,5 @@ syms_of_fns (void)
   defsubr (&Smake_hash_table);
   defsubr (&Sgethash);
   defsubr (&Sputhash);
+  defsubr (&Sprovide);
 }

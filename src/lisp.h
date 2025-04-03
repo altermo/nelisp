@@ -1243,6 +1243,11 @@ MODULE_FUNCTIONP (Lisp_Object o)
 }
 
 INLINE void
+CHECK_LIST (Lisp_Object x)
+{
+  CHECK_TYPE (CONSP (x) || NILP (x), Qlistp, x);
+}
+INLINE void
 CHECK_LIST_END (Lisp_Object x, Lisp_Object y)
 {
   CHECK_TYPE (NILP (x), Qlistp, y);
@@ -1793,6 +1798,8 @@ extern Lisp_Object exec_byte_code (Lisp_Object, ptrdiff_t, ptrdiff_t,
                                    Lisp_Object *);
 
 extern void syms_of_doc (void);
+
+extern void syms_of_charset (void);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

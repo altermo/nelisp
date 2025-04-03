@@ -570,6 +570,7 @@ ret () init (lua_State *L)
   syms_of_buffer ();
   syms_of_bytecode ();
   syms_of_doc ();
+  syms_of_charset ();
 
   init_keyboard ();
   init_eval ();
