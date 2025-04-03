@@ -12,6 +12,8 @@ Lisp_Object empty_unibyte_string, empty_multibyte_string;
 
 struct emacs_globals globals;
 
+EMACS_INT consing_until_gc = 0;
+
 union emacs_align_type
 {
   // struct frame frame;
@@ -72,9 +74,6 @@ static ptrdiff_t pure_size;
 static ptrdiff_t pure_bytes_used_before_overflow;
 static ptrdiff_t pure_bytes_used_lisp;
 static ptrdiff_t pure_bytes_used_non_lisp;
-#if TODO_NELISP_LATER_ELSE
-static ptrdiff_t pure_bytes_used;
-#endif
 
 static Lisp_Object make_pure_vector (ptrdiff_t);
 
@@ -142,8 +141,7 @@ XFLOAT_INIT (Lisp_Object f, double n)
 static void
 tally_consing (ptrdiff_t nbytes)
 {
-  UNUSED (nbytes);
-  TODO_NELISP_LATER;
+  consing_until_gc -= nbytes;
 }
 
 /* --- memory full handling -- */
@@ -603,6 +601,11 @@ allocate_string (void)
 
   return s;
 }
+void
+string_overflow (void)
+{
+  error ("Maximum string size exceeded");
+}
 static void
 allocate_string_data (struct Lisp_String *s, EMACS_INT nchars, EMACS_INT nbytes,
                       bool clearit, bool immovable)
@@ -611,11 +614,7 @@ allocate_string_data (struct Lisp_String *s, EMACS_INT nchars, EMACS_INT nbytes,
   struct sblock *b;
 
   if (STRING_BYTES_MAX < nbytes)
-#if TODO_NELISP_LATER_AND
     string_overflow ();
-#else
-    TODO;
-#endif
 
   ptrdiff_t needed = sdata_size (nbytes);
 
@@ -1117,9 +1116,7 @@ DEFUN ("cons", Fcons, Scons, 2, 2, 0,
   XSETCAR (val, car);
   XSETCDR (val, cdr);
   eassert (!XCONS_MARKED_P (XCONS (val)));
-#if TODO_NELISP_LATER_AND
   consing_until_gc -= sizeof (struct Lisp_Cons);
-#endif
   cons_cells_consed++;
   return val;
 }
@@ -2966,6 +2963,12 @@ gc_sweep (void)
 extern void mark_lread (void);
 extern void mark_specpdl (void);
 void
+maybe_garbage_collect (void)
+{
+  TODO_NELISP_LATER;
+}
+
+void
 garbage_collect (void)
 {
   TODO_NELISP_LATER;
@@ -2999,6 +3002,8 @@ init_alloc_once (void)
 void
 syms_of_alloc (void)
 {
+  DEFVAR_INT ("pure-bytes-used", pure_bytes_used,
+                doc: /* Number of bytes of shareable Lisp data allocated so far.  */);
   DEFVAR_INT ("cons-cells-consed", cons_cells_consed,
                 doc: /* Number of cons cells that have been consed so far.  */);
   DEFVAR_INT ("floats-consed", floats_consed,

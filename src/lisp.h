@@ -1572,6 +1572,8 @@ extern Lisp_Object list3 (Lisp_Object, Lisp_Object, Lisp_Object);
 extern Lisp_Object list4 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object);
 extern Lisp_Object list5 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object,
                           Lisp_Object);
+extern EMACS_INT consing_until_gc;
+extern void maybe_garbage_collect (void);
 
 #define USE_STACK_LISP_OBJECTS true
 enum
@@ -1700,7 +1702,8 @@ make_uninit_vector (ptrdiff_t size)
 INLINE void
 maybe_gc (void)
 {
-  TODO_NELISP_LATER;
+  if (consing_until_gc < 0)
+    maybe_garbage_collect ();
 }
 extern Lisp_Object make_pure_string (const char *, ptrdiff_t, ptrdiff_t, bool);
 
