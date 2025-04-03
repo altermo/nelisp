@@ -572,6 +572,16 @@ DEFUN ("eq", Feq, Seq, 2, 2, 0,
   return Qnil;
 }
 
+DEFUN ("indirect-function", Findirect_function, Sindirect_function, 1, 2, 0,
+       doc: /* Return the function at the end of OBJECT's function chain.
+If OBJECT is not a symbol, just return it.  Otherwise, follow all
+function indirections to find the final function binding and return it.  */)
+(Lisp_Object object, Lisp_Object noerror)
+{
+  UNUSED (noerror);
+  return indirect_function (object);
+}
+
 static Lisp_Object
 check_number_coerce_marker (Lisp_Object x)
 {
@@ -797,6 +807,7 @@ syms_of_data (void)
   defsubr (&Srecordp);
   defsubr (&Sstringp);
   defsubr (&Snull);
+  defsubr (&Sindirect_function);
   defsubr (&Seq);
   defsubr (&Smax);
   defsubr (&Smin);

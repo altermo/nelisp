@@ -1762,6 +1762,7 @@ Lisp_Object funcall_general (Lisp_Object fun, ptrdiff_t numargs,
                              Lisp_Object *args);
 extern Lisp_Object funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs,
                                  Lisp_Object *arg_vector);
+Lisp_Object indirect_function (Lisp_Object object);
 
 enum Arith_Comparison
 {
