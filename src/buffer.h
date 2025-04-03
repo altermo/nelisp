@@ -4,6 +4,8 @@
 #include "lisp.h"
 #include "nvim.h"
 
+#define current_buffer (nvim_current_buffer ())
+
 INLINE bool
 BUFFERP (Lisp_Object a)
 {
@@ -26,7 +28,7 @@ XBUFFER (Lisp_Object a)
 INLINE struct buffer *
 decode_buffer (Lisp_Object b)
 {
-  return NILP (b) ? (TODO, NULL) : (CHECK_BUFFER (b), XBUFFER (b));
+  return NILP (b) ? current_buffer : (CHECK_BUFFER (b), XBUFFER (b));
 }
 
 #define BVAR(buf, field) nvim_bvar (buf, NVIM_BUFFER_VAR__##field)

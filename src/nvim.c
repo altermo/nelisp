@@ -196,3 +196,18 @@ nvim_set_buffer (struct buffer *b)
     lua_call (L, 1, 0);
   }
 }
+
+struct buffer *
+nvim_current_buffer (void)
+{
+  long bufid;
+  LUA (5)
+  {
+    push_vim_api (L, "nvim_get_current_buf");
+    lua_call (L, 0, 1);
+    eassert (lua_isnumber (L, -1));
+    bufid = lua_tointeger (L, -1);
+    lua_pop (L, 1);
+  }
+  return XBUFFER (nvim_bufid_to_bufobj (bufid));
+}

@@ -2,6 +2,14 @@
 #include "lisp.h"
 #include "nvim.h"
 
+void
+nsberror (Lisp_Object spec)
+{
+  if (STRINGP (spec))
+    error ("No buffer named %s", SDATA (spec));
+  error ("Invalid buffer argument");
+}
+
 DEFUN ("get-buffer", Fget_buffer, Sget_buffer, 1, 1, 0,
        doc: /* Return the buffer named BUFFER-OR-NAME.
 BUFFER-OR-NAME must be either a string or a buffer.  If BUFFER-OR-NAME
@@ -65,7 +73,7 @@ The return value is the buffer made current.  */)
   register Lisp_Object buffer;
   buffer = Fget_buffer (buffer_or_name);
   if (NILP (buffer))
-    TODO; // nsberror (buffer_or_name);
+    nsberror (buffer_or_name);
   if (!BUFFER_LIVE_P (XBUFFER (buffer)))
     error ("Selecting deleted buffer");
   set_buffer_internal (XBUFFER (buffer));

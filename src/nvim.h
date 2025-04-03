@@ -12,5 +12,6 @@ extern Lisp_Object nvim_name_to_bufobj (Lisp_Object);
 extern Lisp_Object nvim_create_buf (Lisp_Object, Lisp_Object);
 extern Lisp_Object nvim_bvar (struct buffer *, enum nvim_buffer_var_field);
 extern void nvim_set_buffer (struct buffer *);
+extern struct buffer *nvim_current_buffer (void);
 
 #endif
