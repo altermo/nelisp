@@ -1189,6 +1189,54 @@ usage: (defvar SYMBOL &optional INITVALUE DOCSTRING)  */)
   return sym;
 }
 
+DEFUN ("defconst", Fdefconst, Sdefconst, 2, UNEVALLED, 0,
+       doc: /* Define SYMBOL as a constant variable.
+This declares that neither programs nor users should ever change the
+value.  This constancy is not actually enforced by Emacs Lisp, but
+SYMBOL is marked as a special variable so that it is never lexically
+bound.
+
+The `defconst' form always sets the value of SYMBOL to the result of
+evalling INITVALUE.  If SYMBOL is buffer-local, its default value is
+what is set; buffer-local values are not affected.  If SYMBOL has a
+local binding, then this form sets the local binding's value.
+However, you should normally not make local bindings for variables
+defined with this form.
+
+The optional DOCSTRING specifies the variable's documentation string.
+usage: (defconst SYMBOL INITVALUE [DOCSTRING])  */)
+(Lisp_Object args)
+{
+  Lisp_Object sym, tem;
+
+  sym = XCAR (args);
+  CHECK_SYMBOL (sym);
+  Lisp_Object docstring = Qnil;
+  if (!NILP (XCDR (XCDR (args))))
+    {
+      if (!NILP (XCDR (XCDR (XCDR (args)))))
+        error ("Too many arguments");
+      docstring = XCAR (XCDR (XCDR (args)));
+    }
+  tem = eval_sub (XCAR (XCDR (args)));
+  return Fdefconst_1 (sym, tem, docstring);
+}
+
+DEFUN ("defconst-1", Fdefconst_1, Sdefconst_1, 2, 3, 0,
+       doc: /* Like `defconst' but as a function.
+More specifically, behaves like (defconst SYM 'INITVALUE DOCSTRING).  */)
+(Lisp_Object sym, Lisp_Object initvalue, Lisp_Object docstring)
+{
+  CHECK_SYMBOL (sym);
+  Lisp_Object tem = initvalue;
+  Finternal__define_uninitialized_variable (sym, docstring);
+  if (!NILP (Vpurify_flag))
+    tem = Fpurecopy (tem);
+  Fset_default (sym, tem);
+  Fput (sym, Qrisky_local_variable, Qt);
+  return sym;
+}
+
 DEFUN ("or", For, Sor, 0, UNEVALLED, 0,
        doc: /* Eval args until one of them yields non-nil, then return that value.
 The remaining args are not evalled at all.
@@ -1358,6 +1406,8 @@ alist of active lexical bindings.  */);
   defsubr (&Slet);
   defsubr (&Sinternal__define_uninitialized_variable);
   defsubr (&Sdefvar);
+  defsubr (&Sdefconst);
+  defsubr (&Sdefconst_1);
   defsubr (&Sprogn);
   defsubr (&Sif);
   defsubr (&Swhile);
