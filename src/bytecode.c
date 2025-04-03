@@ -404,6 +404,10 @@ setup_frame:;
           TOP = Flist (op, &TOP);
           NEXT;
 
+        CASE (Bsymbol_function):
+          TOP = Fsymbol_function (TOP);
+          NEXT;
+
         CASE (Bcall6):
           op = FETCH;
           goto docall;
