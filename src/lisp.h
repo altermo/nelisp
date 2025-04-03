@@ -1717,6 +1717,12 @@ typedef enum
   Cookie_Lex
 } lexical_cookie_t;
 extern lexical_cookie_t lisp_file_lexical_cookie (Lisp_Object readcharfun);
+INLINE void
+LOADHIST_ATTACH (Lisp_Object x)
+{
+  UNUSED (x);
+  TODO_NELISP_LATER;
+}
 
 extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
 extern void syms_of_fns (void);

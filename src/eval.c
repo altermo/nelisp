@@ -1103,9 +1103,7 @@ value.  */)
         TODO;
       Fput (symbol, Qvariable_documentation, doc);
     }
-#if TODO_NELISP_LATER_AND
   LOADHIST_ATTACH (symbol);
-#endif
   return Qnil;
 }
 
