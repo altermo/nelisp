@@ -12,10 +12,9 @@ The **N**eovim **E**macs **LISP** interpreter.
 -- Run `make` to generate a meta file for completions.
 local c = require'nelisp.c'
 
--- Emacs doesn't really give this path a name, so I call it emacs's runtime path.
--- It is the parent directory of the `data-directory` and the parent directory of root load path.
--- Typically, either `/usr/share/emacs/30.1/`(or local variant) or the git repo's root.
-c.init({runtime_path = EMACS_RUNTIME_PATH})
+-- Emacs lisp files is managed by `EMACSLOADPATH` environment variable, you need use
+-- it let nelisp can find emacs lisp file correctly.
+c.init({runtime_path = os.getenv("EMACSLOADPATH")})
 
 c.eval[[
 (message "Hello World!")
