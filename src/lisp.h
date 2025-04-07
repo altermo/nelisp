@@ -1879,6 +1879,8 @@ extern void syms_of_charset (void);
 
 extern void syms_of_chartab (void);
 
+extern void syms_of_keymap (void);
+
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)
 {
