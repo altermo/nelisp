@@ -585,6 +585,7 @@ dead_object (void)
 
 #define XSETSUBR(a, b) XSETPSEUDOVECTOR (a, b, PVEC_SUBR)
 #define XSETBUFFER(a, b) XSETPSEUDOVECTOR (a, b, PVEC_BUFFER)
+#define XSETCHAR_TABLE(a, b) XSETPSEUDOVECTOR (a, b, PVEC_CHAR_TABLE)
 
 INLINE Lisp_Object
 make_int (intmax_t n)
@@ -863,6 +864,54 @@ memclear (void *p, ptrdiff_t nbytes)
      ? 0                                                    \
      : (offsetof (type, lastlispfield) + word_size - header_size) / word_size)
 
+enum CHARTAB_SIZE_BITS
+{
+  CHARTAB_SIZE_BITS_0 = 6,
+  CHARTAB_SIZE_BITS_1 = 4,
+  CHARTAB_SIZE_BITS_2 = 5,
+  CHARTAB_SIZE_BITS_3 = 7
+};
+extern const int chartab_size[4];
+struct Lisp_Char_Table
+{
+  union vectorlike_header header;
+  Lisp_Object defalt;
+  Lisp_Object parent;
+  Lisp_Object purpose;
+  Lisp_Object ascii;
+  Lisp_Object contents[(1 << CHARTAB_SIZE_BITS_0)];
+  Lisp_Object extras[FLEXIBLE_ARRAY_MEMBER];
+} GCALIGNED_STRUCT;
+INLINE bool
+CHAR_TABLE_P (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_CHAR_TABLE);
+}
+INLINE struct Lisp_Char_Table *
+XCHAR_TABLE (Lisp_Object a)
+{
+  eassert (CHAR_TABLE_P (a));
+  return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Char_Table);
+}
+struct Lisp_Sub_Char_Table
+{
+  union vectorlike_header header;
+  int depth;
+  int min_char;
+  Lisp_Object contents[FLEXIBLE_ARRAY_MEMBER];
+} GCALIGNED_STRUCT;
+INLINE bool
+SUB_CHAR_TABLE_P (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_SUB_CHAR_TABLE);
+}
+INLINE struct Lisp_Sub_Char_Table *
+XSUB_CHAR_TABLE (Lisp_Object a)
+{
+  eassert (SUB_CHAR_TABLE_P (a));
+  return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Sub_Char_Table);
+}
+
 INLINE bool
 ASCII_CHAR_P (intmax_t c)
 {
@@ -916,6 +965,15 @@ XSUBR (Lisp_Object a)
   eassert (SUBRP (a));
   return &XUNTAG (a, Lisp_Vectorlike, union Aligned_Lisp_Subr)->s;
 }
+
+enum char_table_specials
+{
+  CHAR_TABLE_STANDARD_SLOTS = (PSEUDOVECSIZE (struct Lisp_Char_Table, contents)
+                               - 1 + (1 << CHARTAB_SIZE_BITS_0)),
+
+  SUB_CHAR_TABLE_OFFSET
+  = PSEUDOVECSIZE (struct Lisp_Sub_Char_Table, contents) - 1
+};
 
 typedef jmp_buf sys_jmp_buf;
 #define sys_setjmp(j) setjmp (j)
@@ -1279,6 +1337,12 @@ NUMBERP (Lisp_Object x)
 }
 
 INLINE void
+CHECK_FIXNAT (Lisp_Object x)
+{
+  CHECK_TYPE (FIXNATP (x), Qwholenump, x);
+}
+
+INLINE void
 CHECK_INTEGER (Lisp_Object x)
 {
   CHECK_TYPE (INTEGERP (x), Qintegerp, x);
@@ -1310,6 +1374,12 @@ NATIVE_COMP_FUNCTION_DYNP (Lisp_Object a)
 {
   UNUSED (a);
   return false;
+}
+
+INLINE void
+set_char_table_purpose (Lisp_Object table, Lisp_Object val)
+{
+  XCHAR_TABLE (table)->purpose = val;
 }
 
 INLINE bool
@@ -1706,6 +1776,7 @@ maybe_gc (void)
     maybe_garbage_collect ();
 }
 extern Lisp_Object make_pure_string (const char *, ptrdiff_t, ptrdiff_t, bool);
+extern Lisp_Object make_vector (ptrdiff_t, Lisp_Object);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -1777,6 +1848,7 @@ extern void syms_of_data (void);
 extern void set_internal (Lisp_Object symbol, Lisp_Object newval,
                           Lisp_Object where, enum Set_Internal_Bind bindflag);
 extern Lisp_Object find_symbol_value (Lisp_Object symbol);
+extern AVOID args_out_of_range (Lisp_Object, Lisp_Object);
 
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);
@@ -1804,6 +1876,8 @@ extern Lisp_Object exec_byte_code (Lisp_Object, ptrdiff_t, ptrdiff_t,
 extern void syms_of_doc (void);
 
 extern void syms_of_charset (void);
+
+extern void syms_of_chartab (void);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

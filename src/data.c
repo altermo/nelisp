@@ -9,6 +9,12 @@ wrong_type_argument (Lisp_Object predicate, Lisp_Object value)
   xsignal2 (Qwrong_type_argument, predicate, value);
 }
 
+void
+args_out_of_range (Lisp_Object a1, Lisp_Object a2)
+{
+  xsignal2 (Qargs_out_of_range, a1, a2);
+}
+
 static bool
 BOOLFWDP (lispfwd a)
 {
@@ -758,6 +764,7 @@ syms_of_data (void)
   DEFSYM (Qsetting_constant, "setting-constant");
   DEFSYM (Qcyclic_function_indirection, "cyclic-function-indirection");
   DEFSYM (Qinvalid_function, "invalid-function");
+  DEFSYM (Qargs_out_of_range, "args-out-of-range");
 
   Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -780,6 +787,7 @@ syms_of_data (void)
   PUT_ERROR (Qcyclic_function_indirection, error_tail,
              "Symbol's chain of function indirections contains a loop");
   PUT_ERROR (Qinvalid_function, error_tail, "Invalid function");
+  PUT_ERROR (Qargs_out_of_range, error_tail, "Args out of range");
 
   defsubr (&Ssymbol_value);
   defsubr (&Sbare_symbol);

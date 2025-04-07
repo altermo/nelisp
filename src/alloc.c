@@ -3024,6 +3024,8 @@ This means that certain objects should be allocated in shared (pure) space.
 It can also be set to a hash-table, in which case this table is used to
 do hash-consing of the objects allocated to pure space.  */);
 
+  DEFSYM (Qchar_table_extra_slots, "char-table-extra-slots");
+
   defsubr (&Spurecopy);
   defsubr (&Scons);
   defsubr (&Slist);
