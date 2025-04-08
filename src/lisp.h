@@ -718,6 +718,12 @@ STRING_MULTIBYTE (Lisp_Object str)
         XSTRING (STR)->u.s.size_byte = -1; \
     }                                      \
   while (false)
+INLINE void
+STRING_SET_MULTIBYTE (Lisp_Object str)
+{
+  eassert (XSTRING (str)->u.s.size > 0);
+  XSTRING (str)->u.s.size_byte = XSTRING (str)->u.s.size;
+}
 INLINE unsigned char *
 SDATA (Lisp_Object string)
 {
@@ -732,6 +738,11 @@ INLINE unsigned char
 SREF (Lisp_Object string, ptrdiff_t index)
 {
   return SDATA (string)[index];
+}
+INLINE void
+SSET (Lisp_Object string, ptrdiff_t index, unsigned char new)
+{
+  SDATA (string)[index] = new;
 }
 INLINE ptrdiff_t
 SCHARS (Lisp_Object string)
@@ -786,6 +797,11 @@ INLINE ptrdiff_t
 gc_asize (Lisp_Object array)
 {
   return XVECTOR (array)->header.size & ~ARRAY_MARK_FLAG;
+}
+INLINE ptrdiff_t
+PVSIZE (Lisp_Object pv)
+{
+  return ASIZE (pv) & PSEUDOVECTOR_SIZE_MASK;
 }
 INLINE bool
 VECTORP (Lisp_Object x)
@@ -1300,6 +1316,11 @@ MODULE_FUNCTIONP (Lisp_Object o)
   return PSEUDOVECTORP (o, PVEC_MODULE_FUNCTION);
 }
 
+INLINE bool
+ARRAYP (Lisp_Object x)
+{
+  return VECTORP (x) || STRINGP (x) || CHAR_TABLE_P (x) || BOOL_VECTOR_P (x);
+}
 INLINE void
 CHECK_LIST (Lisp_Object x)
 {
@@ -1336,6 +1357,11 @@ NUMBERP (Lisp_Object x)
   return INTEGERP (x) || FLOATP (x);
 }
 
+INLINE void
+CHECK_ARRAY (Lisp_Object x, Lisp_Object predicate)
+{
+  CHECK_TYPE (ARRAYP (x), predicate, x);
+}
 INLINE void
 CHECK_FIXNAT (Lisp_Object x)
 {
@@ -1880,6 +1906,8 @@ extern void syms_of_charset (void);
 extern void syms_of_chartab (void);
 
 extern void syms_of_keymap (void);
+
+extern void syms_of_character (void);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

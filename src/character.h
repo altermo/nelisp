@@ -54,6 +54,11 @@ enum
 extern int char_string (unsigned, unsigned char *);
 
 INLINE bool
+SINGLE_BYTE_CHAR_P (intmax_t c)
+{
+  return 0 <= c && c < 0x100;
+}
+INLINE bool
 CHAR_BYTE8_P (int c)
 {
   return MAX_5_BYTE_CHAR < c;
@@ -62,6 +67,21 @@ INLINE int
 BYTE8_TO_CHAR (int byte)
 {
   return byte + 0x3FFF00;
+}
+INLINE bool
+CHAR_VALID_P (intmax_t c)
+{
+  return 0 <= c && c <= MAX_CHAR;
+}
+INLINE bool
+CHARACTERP (Lisp_Object x)
+{
+  return FIXNUMP (x) && CHAR_VALID_P (XFIXNUM (x));
+}
+INLINE void
+CHECK_CHARACTER (Lisp_Object x)
+{
+  CHECK_TYPE (CHARACTERP (x), Qcharacterp, x);
 }
 
 INLINE int

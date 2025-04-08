@@ -183,3 +183,9 @@ parse_str_as_multibyte (const unsigned char *str, ptrdiff_t len,
   *nbytes = bytes;
   return;
 }
+
+void
+syms_of_character (void)
+{
+  DEFSYM (Qcharacterp, "characterp");
+}

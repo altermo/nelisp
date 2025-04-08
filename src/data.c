@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include "lisp.h"
+#include "character.h"
 
 AVOID
 wrong_type_argument (Lisp_Object predicate, Lisp_Object value)
@@ -588,6 +589,137 @@ function indirections to find the final function binding and return it.  */)
   return indirect_function (object);
 }
 
+DEFUN ("aref", Faref, Saref, 2, 2, 0,
+       doc: /* Return the element of ARRAY at index IDX.
+ARRAY may be a vector, a string, a char-table, a bool-vector, a record,
+or a byte-code object.  IDX starts at 0.  */)
+(register Lisp_Object array, Lisp_Object idx)
+{
+  register EMACS_INT idxval;
+
+  CHECK_FIXNUM (idx);
+  idxval = XFIXNUM (idx);
+  if (STRINGP (array))
+    {
+      int c;
+      ptrdiff_t idxval_byte;
+
+      if (idxval < 0 || idxval >= SCHARS (array))
+        args_out_of_range (array, idx);
+      if (!STRING_MULTIBYTE (array))
+        return make_fixnum ((unsigned char) SREF (array, idxval));
+      idxval_byte = string_char_to_byte (array, idxval);
+
+      c = STRING_CHAR (SDATA (array) + idxval_byte);
+      return make_fixnum (c);
+    }
+  else if (BOOL_VECTOR_P (array))
+    {
+      TODO;
+    }
+  else if (CHAR_TABLE_P (array))
+    {
+      CHECK_CHARACTER (idx);
+      TODO; // return CHAR_TABLE_REF (array, idxval);
+    }
+  else
+    {
+      ptrdiff_t size = 0;
+      if (VECTORP (array))
+        size = ASIZE (array);
+      else if (CLOSUREP (array) || RECORDP (array))
+        size = PVSIZE (array);
+      else
+        wrong_type_argument (Qarrayp, array);
+
+      if (idxval < 0 || idxval >= size)
+        args_out_of_range (array, idx);
+      return AREF (array, idxval);
+    }
+}
+
+DEFUN ("aset", Faset, Saset, 3, 3, 0,
+       doc: /* Store into the element of ARRAY at index IDX the value NEWELT.
+Return NEWELT.  ARRAY may be a vector, a string, a char-table or a
+bool-vector.  IDX starts at 0.  */)
+(register Lisp_Object array, Lisp_Object idx, Lisp_Object newelt)
+{
+  register EMACS_INT idxval;
+
+  CHECK_FIXNUM (idx);
+  idxval = XFIXNUM (idx);
+  if (!RECORDP (array))
+    CHECK_ARRAY (array, Qarrayp);
+
+  if (VECTORP (array))
+    {
+      CHECK_IMPURE (array, XVECTOR (array));
+      if (idxval < 0 || idxval >= ASIZE (array))
+        args_out_of_range (array, idx);
+      ASET (array, idxval, newelt);
+    }
+  else if (BOOL_VECTOR_P (array))
+    {
+      TODO;
+    }
+  else if (CHAR_TABLE_P (array))
+    {
+      CHECK_CHARACTER (idx);
+      TODO; // CHAR_TABLE_SET (array, idxval, newelt);
+    }
+  else if (RECORDP (array))
+    {
+      CHECK_IMPURE (array, XVECTOR (array));
+      if (idxval < 0 || idxval >= PVSIZE (array))
+        args_out_of_range (array, idx);
+      ASET (array, idxval, newelt);
+    }
+  else
+    {
+      CHECK_IMPURE (array, XSTRING (array));
+      if (idxval < 0 || idxval >= SCHARS (array))
+        args_out_of_range (array, idx);
+      CHECK_CHARACTER (newelt);
+      int c = XFIXNAT (newelt);
+      ptrdiff_t idxval_byte;
+      int prev_bytes;
+      unsigned char workbuf[MAX_MULTIBYTE_LENGTH], *p0 = workbuf, *p1;
+
+      if (STRING_MULTIBYTE (array))
+        {
+          idxval_byte = string_char_to_byte (array, idxval);
+          p1 = SDATA (array) + idxval_byte;
+          prev_bytes = BYTES_BY_CHAR_HEAD (*p1);
+        }
+      else if (SINGLE_BYTE_CHAR_P (c))
+        {
+          SSET (array, idxval, c);
+          return newelt;
+        }
+      else
+        {
+          for (ptrdiff_t i = SBYTES (array) - 1; i >= 0; i--)
+            if (!ASCII_CHAR_P (SREF (array, i)))
+              args_out_of_range (array, newelt);
+          STRING_SET_MULTIBYTE (array);
+          idxval_byte = idxval;
+          p1 = SDATA (array) + idxval_byte;
+          prev_bytes = 1;
+        }
+
+      int new_bytes = CHAR_STRING (c, p0);
+      if (prev_bytes != new_bytes)
+        TODO; // p1 = resize_string_data (array, idxval_byte, prev_bytes,
+              // new_bytes);
+
+      do
+        *p1++ = *p0++;
+      while (--new_bytes != 0);
+    }
+
+  return newelt;
+}
+
 static Lisp_Object
 check_number_coerce_marker (Lisp_Object x)
 {
@@ -756,6 +888,7 @@ syms_of_data (void)
   DEFSYM (Qnumber_or_marker_p, "number-or-marker-p");
   DEFSYM (Qbufferp, "bufferp");
   DEFSYM (Qsymbol_with_pos_p, "symbol-with-pos-p");
+  DEFSYM (Qfixnump, "fixnump");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");
@@ -816,6 +949,8 @@ syms_of_data (void)
   defsubr (&Sstringp);
   defsubr (&Snull);
   defsubr (&Sindirect_function);
+  defsubr (&Saref);
+  defsubr (&Saset);
   defsubr (&Seq);
   defsubr (&Smax);
   defsubr (&Smin);
