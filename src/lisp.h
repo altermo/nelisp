@@ -46,6 +46,10 @@ static bool unrecoverable_error;
 #ifndef USHRT_WIDTH
 # define USHRT_WIDTH 16
 #endif
+#ifndef INTMAX_WIDTH
+# define INTMAX_WIDTH 64
+# define UINTMAX_WIDTH 64
+#endif
 
 #define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
 static void maybe_quit (void);
@@ -1922,6 +1926,7 @@ Lisp_Object funcall_general (Lisp_Object fun, ptrdiff_t numargs,
 extern Lisp_Object funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs,
                                  Lisp_Object *arg_vector);
 Lisp_Object indirect_function (Lisp_Object object);
+extern void overflow_error (void);
 
 enum Arith_Comparison
 {

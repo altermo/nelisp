@@ -1,6 +1,7 @@
 #include <sys/stat.h>
 
 #include "lisp.h"
+#include "bignum.h"
 #include "character.h"
 #include "lua.h"
 
@@ -579,6 +580,7 @@ ret () init (lua_State *L)
   init_eval ();
   init_buffer ();
   init_bytecode ();
+  init_bignum ();
 
   bool err = false;
   if (mtx_init (&main_mutex, mtx_plain) != thrd_success)

@@ -3051,6 +3051,11 @@ do hash-consing of the objects allocated to pure space.  */);
 
   DEFSYM (Qchar_table_extra_slots, "char-table-extra-slots");
 
+  DEFVAR_INT ("integer-width", integer_width,
+              doc: /* Maximum number N of bits in safely-calculated integers.
+Integers with absolute values less than 2**N do not signal a range error.
+N should be nonnegative.  */);
+
   defsubr (&Spurecopy);
   defsubr (&Scons);
   defsubr (&Slist);

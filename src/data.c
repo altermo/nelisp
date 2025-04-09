@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include "lisp.h"
+#include "bignum.h"
 #include "character.h"
 
 AVOID
@@ -771,7 +772,7 @@ arithcompare (Lisp_Object num1, Lisp_Object num2,
       else if (isnan (f1))
         lt = eq = gt = false;
       else
-        TODO; // i2 = mpz_cmp_d (*xbignum_val (num2), f1);
+        i2 = mpz_cmp_d (*xbignum_val (num2), f1);
     }
   else if (FIXNUMP (num1))
     {
@@ -790,7 +791,7 @@ arithcompare (Lisp_Object num1, Lisp_Object num2,
           i2 = XFIXNUM (num2);
         }
       else
-        TODO; // i2 = mpz_sgn (*xbignum_val (num2));
+        i2 = mpz_sgn (*xbignum_val (num2));
     }
   else if (FLOATP (num2))
     {
@@ -798,12 +799,12 @@ arithcompare (Lisp_Object num1, Lisp_Object num2,
       if (isnan (f2))
         lt = eq = gt = false;
       else
-        TODO; // i1 = mpz_cmp_d (*xbignum_val (num1), f2);
+        i1 = mpz_cmp_d (*xbignum_val (num1), f2);
     }
   else if (FIXNUMP (num2))
-    TODO; // i1 = mpz_sgn (*xbignum_val (num1));
+    i1 = mpz_sgn (*xbignum_val (num1));
   else
-    TODO; // i1 = mpz_cmp (*xbignum_val (num1), *xbignum_val (num2));
+    i1 = mpz_cmp (*xbignum_val (num1), *xbignum_val (num2));
 
   if (eq)
     {
@@ -944,8 +945,8 @@ usage: (- &optional NUMBER-OR-MARKER &rest MORE-NUMBERS-OR-MARKERS)  */)
         return make_int (-XFIXNUM (a));
       if (FLOATP (a))
         return make_float (-XFLOAT_DATA (a));
-      TODO; // mpz_neg (mpz[0], *xbignum_val (a));
-      // return make_integer_mpz ();
+      mpz_neg (mpz[0], *xbignum_val (a));
+      return make_integer_mpz ();
     }
   return arith_driver (Asub, nargs, args, a);
 }
@@ -1115,6 +1116,8 @@ syms_of_data (void)
   DEFSYM (Qinvalid_function, "invalid-function");
   DEFSYM (Qargs_out_of_range, "args-out-of-range");
   DEFSYM (Qarith_error, "arith-error");
+  DEFSYM (Qoverflow_error, "overflow-error");
+  DEFSYM (Qrange_error, "range-error");
 
   Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -1142,6 +1145,10 @@ syms_of_data (void)
   Lisp_Object arith_tail = pure_cons (Qarith_error, error_tail);
   Fput (Qarith_error, Qerror_conditions, arith_tail);
   Fput (Qarith_error, Qerror_message, build_pure_c_string ("Arithmetic error"));
+
+  PUT_ERROR (Qrange_error, arith_tail, "Arithmetic range error");
+  PUT_ERROR (Qoverflow_error, Fcons (Qrange_error, arith_tail),
+             "Arithmetic overflow error");
 
   defsubr (&Ssymbol_value);
   defsubr (&Sbare_symbol);

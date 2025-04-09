@@ -1,4 +1,5 @@
 #include "lisp.h"
+#include "bignum.h"
 #include "character.h"
 #include "puresize.h"
 
@@ -562,6 +563,18 @@ sxhash_list (Lisp_Object list, int depth)
   return hash;
 }
 static EMACS_UINT
+sxhash_bignum (Lisp_Object bignum)
+{
+  mpz_t const *n = xbignum_val (bignum);
+  size_t i, nlimbs = mpz_size (*n);
+  EMACS_UINT hash = mpz_sgn (*n) < 0;
+
+  for (i = 0; i < nlimbs; ++i)
+    hash = sxhash_combine (hash, mpz_getlimbn (*n, i));
+
+  return hash;
+}
+static EMACS_UINT
 sxhash_obj (Lisp_Object obj, int depth)
 {
   if (depth > SXHASH_MAX_DEPTH)
@@ -584,7 +597,7 @@ sxhash_obj (Lisp_Object obj, int depth)
         if (!(PVEC_NORMAL_VECTOR < pvec_type && pvec_type < PVEC_CLOSURE))
           TODO;
         else if (pvec_type == PVEC_BIGNUM)
-          TODO; // return sxhash_bignum (obj);
+          return sxhash_bignum (obj);
         else if (pvec_type == PVEC_MARKER)
           TODO;
         else if (pvec_type == PVEC_BOOL_VECTOR)

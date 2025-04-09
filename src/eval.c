@@ -551,6 +551,12 @@ signal_error (const char *s, Lisp_Object arg)
 }
 
 void
+overflow_error (void)
+{
+  xsignal0 (Qoverflow_error);
+}
+
+void
 error (const char *m, ...)
 {
   UNUSED (m);
