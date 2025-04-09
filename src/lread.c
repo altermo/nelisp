@@ -511,6 +511,8 @@ Return t if the file exists and loads successfully.  */)
 
   specbind (Qlexical_binding, Qnil);
 
+  specbind (Qlread_unescaped_character_literals, Qnil);
+
   if (!(fd >= 0))
     {
       stream = NULL;
@@ -1091,6 +1093,45 @@ grow_read_buffer (char *buf, ptrdiff_t offset, char **buf_addr,
   return p;
 }
 static Lisp_Object
+read_char_literal (Lisp_Object readcharfun)
+{
+  int ch = READCHAR;
+  if (ch < 0)
+    end_of_file_error ();
+
+  if (ch == ' ' || ch == '\t')
+    return make_fixnum (ch);
+
+  if (ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == '"'
+      || ch == ';')
+    {
+      CHECK_LIST (Vlread_unescaped_character_literals);
+      Lisp_Object char_obj = make_fixed_natnum (ch);
+      if (NILP (Fmemq (char_obj, Vlread_unescaped_character_literals)))
+        Vlread_unescaped_character_literals
+          = Fcons (char_obj, Vlread_unescaped_character_literals);
+    }
+
+  if (ch == '\\')
+    ch = read_char_escape (readcharfun, READCHAR);
+
+  int modifiers = ch & CHAR_MODIFIER_MASK;
+  ch &= ~CHAR_MODIFIER_MASK;
+  if (CHAR_BYTE8_P (ch))
+    ch = CHAR_TO_BYTE8 (ch);
+  ch |= modifiers;
+
+  int nch = READCHAR;
+  UNREAD (nch);
+  if (nch <= 32 || nch == '"' || nch == '\'' || nch == ';' || nch == '('
+      || nch == ')' || nch == '[' || nch == ']' || nch == '#' || nch == '?'
+      || nch == '`' || nch == ',' || nch == '.')
+    return make_fixnum (ch);
+
+  invalid_syntax ("?", readcharfun);
+}
+
+static Lisp_Object
 read_string_literal (Lisp_Object readcharfun)
 {
   char stackbuf[1024];
@@ -1579,7 +1620,8 @@ read_obj:;
       }
       TODO;
     case '?':
-      TODO;
+      obj = read_char_literal (readcharfun);
+      break;
     case '"':
       obj = read_string_literal (readcharfun);
       break;
@@ -2049,6 +2091,14 @@ Initialized during startup as described in Info node `(elisp)Library Search'.
 Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
 and without trailing slashes.  */);
+
+  DEFVAR_LISP ("lread--unescaped-character-literals",
+               Vlread_unescaped_character_literals,
+               doc: /* List of deprecated unescaped character literals encountered by `read'.
+For internal use only.  */);
+  Vlread_unescaped_character_literals = Qnil;
+  DEFSYM (Qlread_unescaped_character_literals,
+          "lread--unescaped-character-literals");
 
   defsubr (&Sload);
   defsubr (&Sintern);
