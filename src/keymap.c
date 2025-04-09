@@ -63,6 +63,26 @@ in case you use it as a menu with `x-popup-menu'.  */)
   return Fcons (Qkeymap, Fcons (Fmake_char_table (Qkeymap, Qnil), tail));
 }
 
+DEFUN ("make-sparse-keymap", Fmake_sparse_keymap, Smake_sparse_keymap, 0, 1, 0,
+       doc: /* Construct and return a new sparse keymap.
+Its car is `keymap' and its cdr is an alist of (CHAR . DEFINITION),
+which binds the character CHAR to DEFINITION, or (SYMBOL . DEFINITION),
+which binds the function key or mouse event SYMBOL to DEFINITION.
+Initially the alist is nil.
+
+The optional arg STRING supplies a menu name for the keymap
+in case you use it as a menu with `x-popup-menu'.  */)
+(Lisp_Object string)
+{
+  if (!NILP (string))
+    {
+      if (!NILP (Vpurify_flag))
+        string = Fpurecopy (string);
+      return list2 (Qkeymap, string);
+    }
+  return list1 (Qkeymap);
+}
+
 static Lisp_Object
 store_in_keymap (Lisp_Object keymap, register Lisp_Object idx, Lisp_Object def,
                  bool remove)
@@ -326,5 +346,6 @@ syms_of_keymap (void)
   staticpro (&where_is_cache_keymaps);
 
   defsubr (&Smake_keymap);
+  defsubr (&Smake_sparse_keymap);
   defsubr (&Sdefine_key);
 }
