@@ -665,7 +665,7 @@ bool-vector.  IDX starts at 0.  */)
   else if (CHAR_TABLE_P (array))
     {
       CHECK_CHARACTER (idx);
-      TODO; // CHAR_TABLE_SET (array, idxval, newelt);
+      CHAR_TABLE_SET (array, idxval, newelt);
     }
   else if (RECORDP (array))
     {

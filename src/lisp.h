@@ -879,7 +879,11 @@ memclear (void *p, ptrdiff_t nbytes)
   (offsetof (type, lastlispfield) + word_size < header_size \
      ? 0                                                    \
      : (offsetof (type, lastlispfield) + word_size - header_size) / word_size)
-
+INLINE bool
+ASCII_CHAR_P (intmax_t c)
+{
+  return 0 <= c && c < 0x80;
+}
 enum CHARTAB_SIZE_BITS
 {
   CHARTAB_SIZE_BITS_0 = 6,
@@ -927,11 +931,15 @@ XSUB_CHAR_TABLE (Lisp_Object a)
   eassert (SUB_CHAR_TABLE_P (a));
   return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Sub_Char_Table);
 }
-
-INLINE bool
-ASCII_CHAR_P (intmax_t c)
+INLINE void set_sub_char_table_contents (Lisp_Object, ptrdiff_t, Lisp_Object);
+extern void char_table_set (Lisp_Object, int, Lisp_Object);
+INLINE void
+CHAR_TABLE_SET (Lisp_Object ct, int idx, Lisp_Object val)
 {
-  return 0 <= c && c < 0x80;
+  if (ASCII_CHAR_P (idx) && SUB_CHAR_TABLE_P (XCHAR_TABLE (ct)->ascii))
+    set_sub_char_table_contents (XCHAR_TABLE (ct)->ascii, idx, val);
+  else
+    char_table_set (ct, idx, val);
 }
 
 struct Lisp_Subr
@@ -1935,6 +1943,7 @@ extern Lisp_Object exec_byte_code (Lisp_Object, ptrdiff_t, ptrdiff_t,
 extern void syms_of_doc (void);
 
 extern void syms_of_charset (void);
+extern Lisp_Object char_table_ref (Lisp_Object, int);
 
 extern void syms_of_chartab (void);
 
