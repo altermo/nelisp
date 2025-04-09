@@ -721,6 +721,15 @@ bool-vector.  IDX starts at 0.  */)
 }
 
 static Lisp_Object
+check_integer_coerce_marker (Lisp_Object x)
+{
+  if (MARKERP (x))
+    TODO; // return make_fixnum (marker_position (x));
+  CHECK_TYPE (INTEGERP (x), Qinteger_or_marker_p, x);
+  return x;
+}
+
+static Lisp_Object
 check_number_coerce_marker (Lisp_Object x)
 {
   if (MARKERP (x))
@@ -836,6 +845,211 @@ arithcompare (Lisp_Object num1, Lisp_Object num2,
   return test ? Qt : Qnil;
 }
 
+enum arithop
+{
+  Aadd,
+  Asub,
+  Amult,
+  Adiv,
+  Alogand,
+  Alogior,
+  Alogxor
+};
+
+static Lisp_Object
+arith_driver (enum arithop code, ptrdiff_t nargs, Lisp_Object *args,
+              Lisp_Object val)
+{
+  eassume (2 <= nargs);
+
+  ptrdiff_t argnum = 0;
+  intmax_t accum = XFIXNUM_RAW (val);
+
+  if (FIXNUMP (val))
+    while (true)
+      {
+        argnum++;
+        if (argnum == nargs)
+          return make_int (accum);
+        val = check_number_coerce_marker (args[argnum]);
+
+        intmax_t next;
+        if (!(INTEGERP (val) && integer_to_intmax (val, &next)))
+          break;
+
+        bool overflow;
+        intmax_t a;
+        switch (code)
+          {
+          case Aadd:
+            overflow = ckd_add (&a, accum, next);
+            break;
+          case Amult:
+            overflow = ckd_mul (&a, accum, next);
+            break;
+          case Asub:
+            overflow = ckd_sub (&a, accum, next);
+            break;
+          case Adiv:
+            if (next == 0)
+              xsignal0 (Qarith_error);
+            accum /= next;
+            continue;
+          case Alogand:
+            accum &= next;
+            continue;
+          case Alogior:
+            accum |= next;
+            continue;
+          case Alogxor:
+            accum ^= next;
+            continue;
+          default:
+            eassume (false);
+          }
+        if (overflow)
+          break;
+        accum = a;
+      }
+
+  TODO; // return (FLOATP (val)
+        //  ? float_arith_driver (code, nargs, args, argnum, accum, val)
+        //  : bignum_arith_driver (code, nargs, args, argnum, accum, val));
+}
+
+DEFUN ("+", Fplus, Splus, 0, MANY, 0,
+       doc: /* Return sum of any number of arguments, which are numbers or markers.
+usage: (+ &rest NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 0)
+    return make_fixnum (0);
+  Lisp_Object a = check_number_coerce_marker (args[0]);
+  return nargs == 1 ? a : arith_driver (Aadd, nargs, args, a);
+}
+
+DEFUN ("-", Fminus, Sminus, 0, MANY, 0,
+       doc: /* Negate number or subtract numbers or markers and return the result.
+With one arg, negates it.  With more than one arg,
+subtracts all but the first from the first.
+usage: (- &optional NUMBER-OR-MARKER &rest MORE-NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 0)
+    return make_fixnum (0);
+  Lisp_Object a = check_number_coerce_marker (args[0]);
+  if (nargs == 1)
+    {
+      if (FIXNUMP (a))
+        return make_int (-XFIXNUM (a));
+      if (FLOATP (a))
+        return make_float (-XFLOAT_DATA (a));
+      TODO; // mpz_neg (mpz[0], *xbignum_val (a));
+      // return make_integer_mpz ();
+    }
+  return arith_driver (Asub, nargs, args, a);
+}
+
+DEFUN ("*", Ftimes, Stimes, 0, MANY, 0,
+       doc: /* Return product of any number of arguments, which are numbers or markers.
+usage: (* &rest NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 0)
+    return make_fixnum (1);
+  Lisp_Object a = check_number_coerce_marker (args[0]);
+  return nargs == 1 ? a : arith_driver (Amult, nargs, args, a);
+}
+
+DEFUN ("/", Fquo, Squo, 1, MANY, 0,
+       doc: /* Divide number by divisors and return the result.
+With two or more arguments, return first argument divided by the rest.
+With one argument, return 1 divided by the argument.
+The arguments must be numbers or markers.
+usage: (/ NUMBER &rest DIVISORS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  Lisp_Object a = check_number_coerce_marker (args[0]);
+  if (nargs == 1)
+    {
+      if (FIXNUMP (a))
+        {
+          if (XFIXNUM (a) == 0)
+            xsignal0 (Qarith_error);
+          return make_fixnum (1 / XFIXNUM (a));
+        }
+      if (FLOATP (a))
+        {
+          if (!IEEE_FLOATING_POINT && XFLOAT_DATA (a) == 0)
+            xsignal0 (Qarith_error);
+          return make_float (1 / XFLOAT_DATA (a));
+        }
+      return make_fixnum (0);
+    }
+
+  for (ptrdiff_t argnum = 2; argnum < nargs; argnum++)
+    if (FLOATP (args[argnum]))
+      TODO; // return floatop_arith_driver (Adiv, nargs, args, 0, 0, XFLOATINT
+            // (a));
+  return arith_driver (Adiv, nargs, args, a);
+}
+
+static Lisp_Object
+integer_remainder (Lisp_Object num, Lisp_Object den, bool modulo)
+{
+  if (FIXNUMP (den))
+    {
+      EMACS_INT d = XFIXNUM (den);
+      if (d == 0)
+        xsignal0 (Qarith_error);
+
+      EMACS_INT r;
+      bool have_r = false;
+      if (FIXNUMP (num))
+        {
+          r = XFIXNUM (num) % d;
+          have_r = true;
+        }
+      else if ((unsigned long) eabs (d) <= ULONG_MAX)
+        {
+          TODO;
+        }
+
+      if (have_r)
+        {
+          if (modulo && (d < 0 ? r > 0 : r < 0))
+            r += d;
+
+          return make_fixnum (r);
+        }
+    }
+
+  TODO;
+}
+
+DEFUN ("%", Frem, Srem, 2, 2, 0,
+       doc: /* Return remainder of X divided by Y.
+Both must be integers or markers.  */)
+(Lisp_Object x, Lisp_Object y)
+{
+  x = check_integer_coerce_marker (x);
+  y = check_integer_coerce_marker (y);
+  return integer_remainder (x, y, false);
+}
+
+DEFUN ("mod", Fmod, Smod, 2, 2, 0,
+       doc: /* Return X modulo Y.
+The result falls between zero (inclusive) and Y (exclusive).
+Both X and Y must be numbers or markers.  */)
+(Lisp_Object x, Lisp_Object y)
+{
+  x = check_number_coerce_marker (x);
+  y = check_number_coerce_marker (y);
+  if (FLOATP (x) || FLOATP (y))
+    TODO; // return fmod_float (x, y);
+  return integer_remainder (x, y, true);
+}
+
 static Lisp_Object
 minmax_driver (ptrdiff_t nargs, Lisp_Object *args,
                enum Arith_Comparison comparison)
@@ -890,6 +1104,7 @@ syms_of_data (void)
   DEFSYM (Qsymbol_with_pos_p, "symbol-with-pos-p");
   DEFSYM (Qfixnump, "fixnump");
   DEFSYM (Qchar_table_p, "char-table-p");
+  DEFSYM (Qinteger_or_marker_p, "integer-or-marker-p");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");
@@ -899,6 +1114,7 @@ syms_of_data (void)
   DEFSYM (Qcyclic_function_indirection, "cyclic-function-indirection");
   DEFSYM (Qinvalid_function, "invalid-function");
   DEFSYM (Qargs_out_of_range, "args-out-of-range");
+  DEFSYM (Qarith_error, "arith-error");
 
   Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -922,6 +1138,10 @@ syms_of_data (void)
              "Symbol's chain of function indirections contains a loop");
   PUT_ERROR (Qinvalid_function, error_tail, "Invalid function");
   PUT_ERROR (Qargs_out_of_range, error_tail, "Args out of range");
+
+  Lisp_Object arith_tail = pure_cons (Qarith_error, error_tail);
+  Fput (Qarith_error, Qerror_conditions, arith_tail);
+  Fput (Qarith_error, Qerror_message, build_pure_c_string ("Arithmetic error"));
 
   defsubr (&Ssymbol_value);
   defsubr (&Sbare_symbol);
@@ -953,6 +1173,12 @@ syms_of_data (void)
   defsubr (&Saref);
   defsubr (&Saset);
   defsubr (&Seq);
+  defsubr (&Splus);
+  defsubr (&Sminus);
+  defsubr (&Stimes);
+  defsubr (&Squo);
+  defsubr (&Srem);
+  defsubr (&Smod);
   defsubr (&Smax);
   defsubr (&Smin);
 }

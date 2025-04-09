@@ -3,6 +3,7 @@
 
 #include <alloca.h>
 #include <errno.h>
+#include <float.h>
 #include <ieee754.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -1271,6 +1272,9 @@ XFLOAT_DATA (Lisp_Object f)
 {
   return XFLOAT (f)->u.data;
 }
+#define IEEE_FLOATING_POINT                                    \
+  (FLT_RADIX == 2 && FLT_MANT_DIG == 24 && FLT_MIN_EXP == -125 \
+   && FLT_MAX_EXP == 128)
 
 INLINE Lisp_Object
 make_uint (uintmax_t n)
@@ -1974,6 +1978,8 @@ NATIVE_COMP_FUNCTIONP (Lisp_Object a)
   UNUSED (a);
   return false;
 }
+
+#define eabs(x) ((x) < 0 ? -(x) : (x))
 
 INLINE void
 circular_list (Lisp_Object list)
