@@ -168,4 +168,9 @@ void
 syms_of_keyboard (void)
 {
   defsubr (&Srecursive_edit);
+
+  DEFVAR_LISP ("meta-prefix-char", meta_prefix_char,
+               doc: /* Meta-prefix character code.
+Meta-foo as command input turns into this character followed by foo.  */);
+  XSETINT (meta_prefix_char, 033);
 }

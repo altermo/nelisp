@@ -534,6 +534,13 @@ XUFIXNUM (Lisp_Object a)
   eassert (FIXNUMP (a));
   return XUFIXNUM_RAW (a);
 }
+INLINE Lisp_Object
+make_fixed_natnum (EMACS_INT n)
+{
+  eassert (0 <= n && n <= MOST_POSITIVE_FIXNUM);
+  EMACS_INT int0 = Lisp_Int0;
+  return USE_LSB_TAG ? make_fixnum (n) : XIL (n + (int0 << VALBITS));
+}
 INLINE bool
 EQ (Lisp_Object x, Lisp_Object y)
 {
@@ -1349,6 +1356,15 @@ INLINE void
 CHECK_STRING_CAR (Lisp_Object x)
 {
   CHECK_TYPE (STRINGP (XCAR (x)), Qstringp, XCAR (x));
+}
+INLINE ptrdiff_t
+CHECK_VECTOR_OR_STRING (Lisp_Object x)
+{
+  if (VECTORP (x))
+    return ASIZE (x);
+  if (STRINGP (x))
+    return SCHARS (x);
+  wrong_type_argument (Qarrayp, x);
 }
 
 INLINE bool
