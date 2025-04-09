@@ -2444,6 +2444,31 @@ mark_vectorlike (union vectorlike_header *header)
 }
 
 static void
+mark_char_table (struct Lisp_Vector *ptr, enum pvec_type pvectype)
+{
+  int size = ptr->header.size & PSEUDOVECTOR_SIZE_MASK;
+  int i, idx = (pvectype == PVEC_SUB_CHAR_TABLE ? SUB_CHAR_TABLE_OFFSET : 0);
+
+  eassert (!vector_marked_p (ptr));
+  set_vector_marked (ptr);
+  for (i = idx; i < size; i++)
+    {
+      Lisp_Object val = ptr->contents[i];
+
+      if (FIXNUMP (val)
+          || (BARE_SYMBOL_P (val) && symbol_marked_p (XBARE_SYMBOL (val))))
+        continue;
+      if (SUB_CHAR_TABLE_P (val))
+        {
+          if (!vector_marked_p (XVECTOR (val)))
+            mark_char_table (XVECTOR (val), PVEC_SUB_CHAR_TABLE);
+        }
+      else
+        mark_object (val);
+    }
+}
+
+static void
 mark_buffer (struct buffer *buffer)
 {
   TODO_NELISP_LATER;
@@ -2579,7 +2604,7 @@ process_mark_stack (ptrdiff_t base_sp)
 
               case PVEC_CHAR_TABLE:
               case PVEC_SUB_CHAR_TABLE:
-                TODO;
+                mark_char_table (ptr, (enum pvec_type) pvectype);
                 break;
 
               case PVEC_BOOL_VECTOR:
