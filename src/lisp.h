@@ -990,6 +990,12 @@ enum char_table_specials
   SUB_CHAR_TABLE_OFFSET
   = PSEUDOVECSIZE (struct Lisp_Sub_Char_Table, contents) - 1
 };
+INLINE int
+CHAR_TABLE_EXTRA_SLOTS (struct Lisp_Char_Table *ct)
+{
+  return ((ct->header.size & PSEUDOVECTOR_SIZE_MASK)
+          - CHAR_TABLE_STANDARD_SLOTS);
+}
 
 typedef jmp_buf sys_jmp_buf;
 #define sys_setjmp(j) setjmp (j)
@@ -1403,9 +1409,25 @@ NATIVE_COMP_FUNCTION_DYNP (Lisp_Object a)
 }
 
 INLINE void
+set_char_table_defalt (Lisp_Object table, Lisp_Object val)
+{
+  XCHAR_TABLE (table)->defalt = val;
+}
+INLINE void
 set_char_table_purpose (Lisp_Object table, Lisp_Object val)
 {
   XCHAR_TABLE (table)->purpose = val;
+}
+INLINE void
+set_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
+{
+  eassert (0 <= idx && idx < (1 << CHARTAB_SIZE_BITS_0));
+  XCHAR_TABLE (table)->contents[idx] = val;
+}
+INLINE void
+set_sub_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
+{
+  XSUB_CHAR_TABLE (table)->contents[idx] = val;
 }
 
 INLINE bool
@@ -1794,6 +1816,17 @@ INLINE Lisp_Object
 make_uninit_vector (ptrdiff_t size)
 {
   return make_lisp_ptr (allocate_vector (size), Lisp_Vectorlike);
+}
+INLINE Lisp_Object
+make_uninit_sub_char_table (int depth, int min_char)
+{
+  int slots = SUB_CHAR_TABLE_OFFSET + chartab_size[depth];
+  Lisp_Object v = make_uninit_vector (slots);
+
+  XSETPVECTYPE (XVECTOR (v), PVEC_SUB_CHAR_TABLE);
+  XSUB_CHAR_TABLE (v)->depth = depth;
+  XSUB_CHAR_TABLE (v)->min_char = min_char;
+  return v;
 }
 INLINE void
 maybe_gc (void)

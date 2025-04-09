@@ -889,6 +889,7 @@ syms_of_data (void)
   DEFSYM (Qbufferp, "bufferp");
   DEFSYM (Qsymbol_with_pos_p, "symbol-with-pos-p");
   DEFSYM (Qfixnump, "fixnump");
+  DEFSYM (Qchar_table_p, "char-table-p");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");

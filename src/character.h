@@ -83,6 +83,16 @@ CHECK_CHARACTER (Lisp_Object x)
 {
   CHECK_TYPE (CHARACTERP (x), Qcharacterp, x);
 }
+INLINE void
+CHECK_CHARACTER_CAR (Lisp_Object x)
+{
+  CHECK_CHARACTER (XCAR (x));
+}
+INLINE void
+CHECK_CHARACTER_CDR (Lisp_Object x)
+{
+  CHECK_CHARACTER (XCDR (x));
+}
 
 INLINE int
 CHAR_STRING (int c, unsigned char *p)
