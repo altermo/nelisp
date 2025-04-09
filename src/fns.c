@@ -414,6 +414,37 @@ A proper list is neither circular nor dotted (i.e., its last cdr is nil).  */
   return make_fixnum (len);
 }
 
+DEFUN ("delq", Fdelq, Sdelq, 2, 2, 0,
+       doc: /* Delete members of LIST which are `eq' to ELT, and return the result.
+More precisely, this function skips any members `eq' to ELT at the
+front of LIST, then removes members `eq' to ELT from the remaining
+sublist by modifying its list structure, then returns the resulting
+list.
+
+Write `(setq foo (delq element foo))' to be sure of correctly changing
+the value of a list `foo'.  See also `remq', which does not modify the
+argument.  */)
+(Lisp_Object elt, Lisp_Object list)
+{
+  Lisp_Object prev = Qnil, tail = list;
+
+  FOR_EACH_TAIL (tail)
+    {
+      Lisp_Object tem = XCAR (tail);
+      if (EQ (elt, tem))
+        {
+          if (NILP (prev))
+            list = XCDR (tail);
+          else
+            Fsetcdr (prev, XCDR (tail));
+        }
+      else
+        prev = tail;
+    }
+  CHECK_LIST_END (tail, list);
+  return list;
+}
+
 DEFUN ("nconc", Fnconc, Snconc, 0, MANY, 0,
        doc: /* Concatenate any number of lists by altering them.
 Only the last argument is not altered, and need not be a list.
@@ -1081,6 +1112,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Snthcdr);
   defsubr (&Snth);
   defsubr (&Sproper_list_p);
+  defsubr (&Sdelq);
   defsubr (&Snconc);
   defsubr (&Snreverse);
   defsubr (&Smake_hash_table);
