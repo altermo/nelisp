@@ -905,8 +905,8 @@ syms_of_data (void)
   Fput (Qerror, Qerror_conditions, error_tail);
   Fput (Qerror, Qerror_message, build_pure_c_string ("error"));
 
-#define PUT_ERROR(sym, tail, msg)                   \
-  Fput (sym, Qerror_conditions, Fcons (sym, tail)); \
+#define PUT_ERROR(sym, tail, msg)                       \
+  Fput (sym, Qerror_conditions, pure_cons (sym, tail)); \
   Fput (sym, Qerror_message, build_pure_c_string (msg))
 
   PUT_ERROR (Qvoid_function, error_tail,

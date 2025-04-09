@@ -1860,6 +1860,7 @@ maybe_gc (void)
 }
 extern Lisp_Object make_pure_string (const char *, ptrdiff_t, ptrdiff_t, bool);
 extern Lisp_Object make_vector (ptrdiff_t, Lisp_Object);
+extern Lisp_Object pure_cons (Lisp_Object car, Lisp_Object cdr);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
