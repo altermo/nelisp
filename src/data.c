@@ -846,6 +846,75 @@ arithcompare (Lisp_Object num1, Lisp_Object num2,
   return test ? Qt : Qnil;
 }
 
+static Lisp_Object
+arithcompare_driver (ptrdiff_t nargs, Lisp_Object *args,
+                     enum Arith_Comparison comparison)
+{
+  for (ptrdiff_t i = 1; i < nargs; i++)
+    if (NILP (arithcompare (args[i - 1], args[i], comparison)))
+      return Qnil;
+  return Qt;
+}
+
+DEFUN ("=", Feqlsign, Seqlsign, 1, MANY, 0,
+       doc: /* Return t if args, all numbers or markers, are equal.
+usage: (= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  return arithcompare_driver (nargs, args, ARITH_EQUAL);
+}
+
+DEFUN ("<", Flss, Slss, 1, MANY, 0,
+       doc: /* Return t if each arg (a number or marker), is less than the next arg.
+usage: (< NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 2 && FIXNUMP (args[0]) && FIXNUMP (args[1]))
+    return XFIXNUM (args[0]) < XFIXNUM (args[1]) ? Qt : Qnil;
+
+  return arithcompare_driver (nargs, args, ARITH_LESS);
+}
+
+DEFUN (">", Fgtr, Sgtr, 1, MANY, 0,
+       doc: /* Return t if each arg (a number or marker) is greater than the next arg.
+usage: (> NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 2 && FIXNUMP (args[0]) && FIXNUMP (args[1]))
+    return XFIXNUM (args[0]) > XFIXNUM (args[1]) ? Qt : Qnil;
+
+  return arithcompare_driver (nargs, args, ARITH_GRTR);
+}
+
+DEFUN ("<=", Fleq, Sleq, 1, MANY, 0,
+       doc: /* Return t if each arg (a number or marker) is less than or equal to the next.
+usage: (<= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 2 && FIXNUMP (args[0]) && FIXNUMP (args[1]))
+    return XFIXNUM (args[0]) <= XFIXNUM (args[1]) ? Qt : Qnil;
+
+  return arithcompare_driver (nargs, args, ARITH_LESS_OR_EQUAL);
+}
+
+DEFUN (">=", Fgeq, Sgeq, 1, MANY, 0,
+       doc: /* Return t if each arg (a number or marker) is greater than or equal to the next.
+usage: (>= NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 2 && FIXNUMP (args[0]) && FIXNUMP (args[1]))
+    return XFIXNUM (args[0]) >= XFIXNUM (args[1]) ? Qt : Qnil;
+
+  return arithcompare_driver (nargs, args, ARITH_GRTR_OR_EQUAL);
+}
+
+DEFUN ("/=", Fneq, Sneq, 2, 2, 0,
+       doc: /* Return t if first arg is not equal to second arg.  Both must be numbers or markers.  */)
+(register Lisp_Object num1, Lisp_Object num2)
+{
+  return arithcompare (num1, num2, ARITH_NOTEQUAL);
+}
+
 enum arithop
 {
   Aadd,
@@ -1180,6 +1249,12 @@ syms_of_data (void)
   defsubr (&Saref);
   defsubr (&Saset);
   defsubr (&Seq);
+  defsubr (&Seqlsign);
+  defsubr (&Slss);
+  defsubr (&Sgtr);
+  defsubr (&Sleq);
+  defsubr (&Sgeq);
+  defsubr (&Sneq);
   defsubr (&Splus);
   defsubr (&Sminus);
   defsubr (&Stimes);
