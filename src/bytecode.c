@@ -408,6 +408,13 @@ setup_frame:;
           TOP = Fsymbol_function (TOP);
           NEXT;
 
+        CASE (Bfset):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Ffset (TOP, v1);
+            NEXT;
+          }
+
         CASE (Bcall6):
           op = FETCH;
           goto docall;
