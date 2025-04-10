@@ -1942,6 +1942,8 @@ extern void set_internal (Lisp_Object symbol, Lisp_Object newval,
                           Lisp_Object where, enum Set_Internal_Bind bindflag);
 extern Lisp_Object find_symbol_value (Lisp_Object symbol);
 extern AVOID args_out_of_range (Lisp_Object, Lisp_Object);
+extern Lisp_Object arithcompare (Lisp_Object num1, Lisp_Object num2,
+                                 enum Arith_Comparison comparison);
 
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);

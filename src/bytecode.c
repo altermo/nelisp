@@ -415,6 +415,61 @@ setup_frame:;
             NEXT;
           }
 
+        CASE (Beqlsign):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = BASE_EQ (v1, v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_EQUAL);
+            NEXT;
+          }
+
+        CASE (Bgtr):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = XFIXNUM (v1) > XFIXNUM (v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_GRTR);
+            NEXT;
+          }
+
+        CASE (Blss):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = XFIXNUM (v1) < XFIXNUM (v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_LESS);
+            NEXT;
+          }
+
+        CASE (Bleq):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = XFIXNUM (v1) <= XFIXNUM (v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_LESS_OR_EQUAL);
+            NEXT;
+          }
+
+        CASE (Bgeq):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = XFIXNUM (v1) >= XFIXNUM (v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_GRTR_OR_EQUAL);
+            NEXT;
+          }
+
         CASE (Bcall6):
           op = FETCH;
           goto docall;
