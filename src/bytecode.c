@@ -315,6 +315,13 @@ setup_frame:;
             NEXT;
           }
 
+        CASE (Beq):
+          {
+            Lisp_Object v1 = POP;
+            TOP = EQ (v1, TOP) ? Qt : Qnil;
+            NEXT;
+          }
+
         CASE (Bmemq):
           {
             Lisp_Object v1 = POP;
