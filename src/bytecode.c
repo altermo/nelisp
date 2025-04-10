@@ -473,6 +473,18 @@ setup_frame:;
             NEXT;
           }
 
+        CASE (Bsub1):
+          TOP = (FIXNUMP (TOP) && XFIXNUM (TOP) != MOST_NEGATIVE_FIXNUM
+                   ? make_fixnum (XFIXNUM (TOP) - 1)
+                   : Fsub1 (TOP));
+          NEXT;
+
+        CASE (Badd1):
+          TOP = (FIXNUMP (TOP) && XFIXNUM (TOP) != MOST_POSITIVE_FIXNUM
+                   ? make_fixnum (XFIXNUM (TOP) + 1)
+                   : Fadd1 (TOP));
+          NEXT;
+
         CASE (Beqlsign):
           {
             Lisp_Object v2 = POP;
