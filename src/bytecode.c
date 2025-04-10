@@ -315,6 +315,14 @@ setup_frame:;
             NEXT;
           }
 
+        CASE (Bgotoifnil):
+          {
+            Lisp_Object v1 = POP;
+            op = FETCH2;
+            if (NILP (v1))
+              goto op_branch;
+            NEXT;
+          }
         CASE (Beq):
           {
             Lisp_Object v1 = POP;
