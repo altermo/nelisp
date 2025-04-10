@@ -1154,6 +1154,36 @@ usage: (min NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   return minmax_driver (nargs, args, ARITH_LESS);
 }
 
+DEFUN ("1+", Fadd1, Sadd1, 1, 1, 0,
+       doc: /* Return NUMBER plus one.  NUMBER may be a number or a marker.
+Markers are converted to integers.  */)
+(Lisp_Object number)
+{
+  number = check_number_coerce_marker (number);
+
+  if (FIXNUMP (number))
+    return make_int (XFIXNUM (number) + 1);
+  if (FLOATP (number))
+    return (make_float (1.0 + XFLOAT_DATA (number)));
+  mpz_add_ui (mpz[0], *xbignum_val (number), 1);
+  return make_integer_mpz ();
+}
+
+DEFUN ("1-", Fsub1, Ssub1, 1, 1, 0,
+       doc: /* Return NUMBER minus one.  NUMBER may be a number or a marker.
+Markers are converted to integers.  */)
+(Lisp_Object number)
+{
+  number = check_number_coerce_marker (number);
+
+  if (FIXNUMP (number))
+    return make_int (XFIXNUM (number) - 1);
+  if (FLOATP (number))
+    return (make_float (-1.0 + XFLOAT_DATA (number)));
+  mpz_sub_ui (mpz[0], *xbignum_val (number), 1);
+  return make_integer_mpz ();
+}
+
 void
 syms_of_data (void)
 {
@@ -1266,4 +1296,6 @@ syms_of_data (void)
   defsubr (&Smod);
   defsubr (&Smax);
   defsubr (&Smin);
+  defsubr (&Sadd1);
+  defsubr (&Ssub1);
 }
