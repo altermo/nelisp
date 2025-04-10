@@ -404,6 +404,64 @@ setup_frame:;
           TOP = Flist (op, &TOP);
           NEXT;
 
+        CASE (Baref):
+          {
+            Lisp_Object idxval = POP;
+            Lisp_Object arrayval = TOP;
+            if (!FIXNUMP (idxval))
+              {
+                record_in_backtrace (Qaref, &TOP, 2);
+                wrong_type_argument (Qfixnump, idxval);
+              }
+            ptrdiff_t size;
+            if (((VECTORP (arrayval) && (size = ASIZE (arrayval), true))
+                 || (RECORDP (arrayval) && (size = PVSIZE (arrayval), true))))
+              {
+                ptrdiff_t idx = XFIXNUM (idxval);
+                if (idx >= 0 && idx < size)
+                  TOP = AREF (arrayval, idx);
+                else
+                  {
+                    record_in_backtrace (Qaref, &TOP, 2);
+                    args_out_of_range (arrayval, idxval);
+                  }
+              }
+            else
+              TOP = Faref (arrayval, idxval);
+            NEXT;
+          }
+
+        CASE (Baset):
+          {
+            Lisp_Object newelt = POP;
+            Lisp_Object idxval = POP;
+            Lisp_Object arrayval = TOP;
+            if (!FIXNUMP (idxval))
+              {
+                record_in_backtrace (Qaset, &TOP, 3);
+                wrong_type_argument (Qfixnump, idxval);
+              }
+            ptrdiff_t size;
+            if (((VECTORP (arrayval) && (size = ASIZE (arrayval), true))
+                 || (RECORDP (arrayval) && (size = PVSIZE (arrayval), true))))
+              {
+                ptrdiff_t idx = XFIXNUM (idxval);
+                if (idx >= 0 && idx < size)
+                  {
+                    ASET (arrayval, idx, newelt);
+                    TOP = newelt;
+                  }
+                else
+                  {
+                    record_in_backtrace (Qaset, &TOP, 3);
+                    args_out_of_range (arrayval, idxval);
+                  }
+              }
+            else
+              TOP = Faset (arrayval, idxval, newelt);
+            NEXT;
+          }
+
         CASE (Bsymbol_function):
           TOP = Fsymbol_function (TOP);
           NEXT;

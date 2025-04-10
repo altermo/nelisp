@@ -1162,6 +1162,9 @@ syms_of_data (void)
   DEFSYM (Qerror_conditions, "error-conditions");
   DEFSYM (Qerror_message, "error-message");
 
+  DEFSYM (Qaref, "aref");
+  DEFSYM (Qaset, "aset");
+
   DEFSYM (Qsymbolp, "symbolp");
   DEFSYM (Qconsp, "consp");
   DEFSYM (Qlistp, "listp");
