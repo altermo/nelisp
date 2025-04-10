@@ -603,6 +603,16 @@ setup_frame:;
             NEXT;
           }
 
+        CASE (BdiscardN):
+          op = FETCH;
+          if (op & 0x80)
+            {
+              op &= 0x7F;
+              top[-op] = TOP;
+            }
+          DISCARD (op);
+          NEXT;
+
         CASE (Bcall):
         CASE (Bcall1):
         CASE (Bcall2):
