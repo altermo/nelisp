@@ -242,11 +242,6 @@ intern_c_string_1 (const char *str, ptrdiff_t len)
     }
   return tem;
 }
-INLINE Lisp_Object
-intern_c_string (const char *str)
-{
-  return intern_c_string_1 (str, strlen (str));
-}
 
 bool
 suffix_p (Lisp_Object string, const char *suffix)

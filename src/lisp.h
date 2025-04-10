@@ -78,6 +78,11 @@ emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
 #define IS_DIRECTORY_SEP(_c_) ((_c_) == DIRECTORY_SEP)
 #define IS_ANY_SEP(_c_) (IS_DIRECTORY_SEP (_c_))
 #define IS_DEVICE_SEP(_c_) 0
+#if defined __linux__
+# define SYSTEM_TYPE "gnu/linux"
+#else
+# error "TODO: Unknown system type"
+#endif
 // Taken from conf_post.h
 #ifdef lint
 # define UNINIT \
@@ -1893,6 +1898,12 @@ LOADHIST_ATTACH (Lisp_Object x)
 {
   UNUSED (x);
   TODO_NELISP_LATER;
+}
+extern Lisp_Object intern_c_string_1 (const char *, ptrdiff_t);
+INLINE Lisp_Object
+intern_c_string (const char *str)
+{
+  return intern_c_string_1 (str, strlen (str));
 }
 
 extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
