@@ -575,6 +575,19 @@ setup_frame:;
             NEXT;
           }
 
+        CASE (Bstack_set):
+          {
+            Lisp_Object *ptr = top - FETCH;
+            *ptr = POP;
+            NEXT;
+          }
+        CASE (Bstack_set2):
+          {
+            Lisp_Object *ptr = top - FETCH2;
+            *ptr = POP;
+            NEXT;
+          }
+
         CASE (Bcall):
         CASE (Bcall1):
         CASE (Bcall2):
