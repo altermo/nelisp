@@ -24,8 +24,8 @@
 
 static inline _Noreturn void TODO_ (const char *file, int line);
 
-static lua_State *_global_lua_state;
-static bool unrecoverable_error;
+extern lua_State *_global_lua_state;
+extern bool unrecoverable_error;
 #define TODO_NELISP_LATER (void) 0
 #define TODO_NELISP_LATER_ELSE true
 #define TODO_NELISP_LATER_AND false

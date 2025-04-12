@@ -5,6 +5,9 @@
 #include "character.h"
 #include "lua.h"
 
+lua_State *_global_lua_state;
+bool unrecoverable_error;
+
 void
 _lcheckstack (lua_State *L, int n)
 {
