@@ -950,6 +950,29 @@ XSUB_CHAR_TABLE (Lisp_Object a)
 }
 INLINE void set_sub_char_table_contents (Lisp_Object, ptrdiff_t, Lisp_Object);
 extern void char_table_set (Lisp_Object, int, Lisp_Object);
+extern Lisp_Object char_table_ref (Lisp_Object, int);
+INLINE Lisp_Object
+CHAR_TABLE_REF_ASCII (Lisp_Object ct, ptrdiff_t idx)
+{
+  for (struct Lisp_Char_Table *tbl = XCHAR_TABLE (ct);;
+       tbl = XCHAR_TABLE (tbl->parent))
+    {
+      Lisp_Object val = (SUB_CHAR_TABLE_P (tbl->ascii)
+                           ? XSUB_CHAR_TABLE (tbl->ascii)->contents[idx]
+                           : tbl->ascii);
+      if (NILP (val))
+        val = tbl->defalt;
+      if (!NILP (val) || NILP (tbl->parent))
+        return val;
+    }
+}
+
+INLINE Lisp_Object
+CHAR_TABLE_REF (Lisp_Object ct, int idx)
+{
+  return (ASCII_CHAR_P (idx) ? CHAR_TABLE_REF_ASCII (ct, idx)
+                             : char_table_ref (ct, idx));
+}
 INLINE void
 CHAR_TABLE_SET (Lisp_Object ct, int idx, Lisp_Object val)
 {
@@ -1987,6 +2010,7 @@ extern Lisp_Object char_table_ref (Lisp_Object, int);
 extern void syms_of_chartab (void);
 
 extern void syms_of_keymap (void);
+#define KEYMAPP(m) (!NILP (get_keymap (m, false, false)))
 
 extern void syms_of_character (void);
 

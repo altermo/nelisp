@@ -104,6 +104,48 @@ char_table_ascii (Lisp_Object table)
   return val;
 }
 
+static Lisp_Object
+sub_char_table_ref (Lisp_Object table, int c, bool is_uniprop)
+{
+  struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
+  Lisp_Object val;
+  int idx = CHARTAB_IDX (c, tbl->depth, tbl->min_char);
+
+  val = tbl->contents[idx];
+  if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (val))
+    TODO; // val = uniprop_table_uncompress (table, idx);
+  if (SUB_CHAR_TABLE_P (val))
+    val = sub_char_table_ref (val, c, is_uniprop);
+  return val;
+}
+
+Lisp_Object
+char_table_ref (Lisp_Object table, int c)
+{
+  struct Lisp_Char_Table *tbl = XCHAR_TABLE (table);
+  Lisp_Object val;
+
+  if (ASCII_CHAR_P (c))
+    {
+      val = tbl->ascii;
+      if (SUB_CHAR_TABLE_P (val))
+        val = XSUB_CHAR_TABLE (val)->contents[c];
+    }
+  else
+    {
+      val = tbl->contents[CHARTAB_IDX (c, 0, 0)];
+      if (SUB_CHAR_TABLE_P (val))
+        val = sub_char_table_ref (val, c, UNIPROP_TABLE_P (table));
+    }
+  if (NILP (val))
+    {
+      val = tbl->defalt;
+      if (NILP (val) && CHAR_TABLE_P (tbl->parent))
+        val = char_table_ref (tbl->parent, c);
+    }
+  return val;
+}
+
 static void
 sub_char_table_set (Lisp_Object table, int c, Lisp_Object val, bool is_uniprop)
 {

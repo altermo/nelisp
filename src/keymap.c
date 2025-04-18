@@ -84,6 +84,190 @@ in case you use it as a menu with `x-popup-menu'.  */)
 }
 
 static Lisp_Object
+get_keyelt (Lisp_Object object, bool autoload)
+{
+  while (1)
+    {
+      if (!(CONSP (object)))
+        return object;
+
+      else if (EQ (XCAR (object), Qmenu_item))
+        {
+          if (CONSP (XCDR (object)))
+            {
+              Lisp_Object tem;
+
+              object = XCDR (XCDR (object));
+              tem = object;
+              if (CONSP (object))
+                object = XCAR (object);
+
+              for (; CONSP (tem) && CONSP (XCDR (tem)); tem = XCDR (tem))
+                if (EQ (XCAR (tem), QCfilter) && autoload)
+                  {
+                    Lisp_Object filter;
+                    filter = XCAR (XCDR (tem));
+                    filter = list2 (filter, list2 (Qquote, object));
+                    TODO; // object = menu_item_eval_property (filter);
+                    break;
+                  }
+            }
+          else
+            return object;
+        }
+
+      else if (STRINGP (XCAR (object)))
+        object = XCDR (object);
+
+      else
+        return object;
+    }
+}
+
+static Lisp_Object
+access_keymap_1 (Lisp_Object map, Lisp_Object idx, bool t_ok, bool noinherit,
+                 bool autoload)
+{
+  idx = EVENT_HEAD (idx);
+
+  if (SYMBOLP (idx))
+    TODO; // idx = reorder_modifiers (idx);
+  else if (FIXNUMP (idx))
+    XSETFASTINT (idx, XFIXNUM (idx) & (CHAR_META | (CHAR_META - 1)));
+
+  if (FIXNUMP (idx) && XFIXNAT (idx) & meta_modifier)
+    {
+      Lisp_Object event_meta_binding, event_meta_map;
+      if (XFIXNUM (meta_prefix_char) & CHAR_META)
+        meta_prefix_char = make_fixnum (27);
+      event_meta_binding
+        = access_keymap_1 (map, meta_prefix_char, t_ok, noinherit, autoload);
+      event_meta_map = get_keymap (event_meta_binding, 0, autoload);
+      if (CONSP (event_meta_map))
+        {
+          map = event_meta_map;
+          idx = make_fixnum (XFIXNAT (idx) & ~meta_modifier);
+        }
+      else if (t_ok)
+        idx = Qt;
+      else
+        return NILP (event_meta_binding) ? Qnil : Qunbound;
+    }
+
+  {
+    Lisp_Object tail;
+    Lisp_Object t_binding = Qunbound;
+    UNUSED (t_binding);
+    Lisp_Object retval = Qunbound;
+    Lisp_Object retval_tail = Qnil;
+
+    for (tail = (CONSP (map) && EQ (Qkeymap, XCAR (map))) ? XCDR (map) : map;
+         (CONSP (tail)
+          || (tail = get_keymap (tail, 0, autoload), CONSP (tail)));
+         tail = XCDR (tail))
+      {
+        Lisp_Object val = Qunbound;
+        Lisp_Object binding = XCAR (tail);
+        Lisp_Object submap = get_keymap (binding, 0, autoload);
+
+        if (EQ (binding, Qkeymap))
+          {
+            if (noinherit || NILP (retval))
+              break;
+            else if (!BASE_EQ (retval, Qunbound))
+              {
+                Lisp_Object parent_entry;
+                eassert (KEYMAPP (retval));
+                parent_entry
+                  = get_keymap (access_keymap_1 (tail, idx, t_ok, 0, autoload),
+                                0, autoload);
+                if (KEYMAPP (parent_entry))
+                  {
+                    if (CONSP (retval_tail))
+                      XSETCDR (retval_tail, parent_entry);
+                    else
+                      {
+                        retval_tail = Fcons (retval, parent_entry);
+                        retval = Fcons (Qkeymap, retval_tail);
+                      }
+                  }
+                break;
+              }
+          }
+        else if (CONSP (submap))
+          {
+            val = access_keymap_1 (submap, idx, t_ok, noinherit, autoload);
+          }
+        else if (CONSP (binding))
+          {
+            Lisp_Object key = XCAR (binding);
+
+            if (EQ (key, idx))
+              val = XCDR (binding);
+            else if (t_ok && EQ (key, Qt))
+              {
+                t_binding = XCDR (binding);
+                t_ok = 0;
+              }
+          }
+        else if (VECTORP (binding))
+          {
+            if (FIXNUMP (idx) && XFIXNAT (idx) < ASIZE (binding))
+              val = AREF (binding, XFIXNAT (idx));
+          }
+        else if (CHAR_TABLE_P (binding))
+          {
+            if (FIXNUMP (idx) && (XFIXNAT (idx) & CHAR_MODIFIER_MASK) == 0)
+              {
+                val = Faref (binding, idx);
+                if (NILP (val))
+                  val = Qunbound;
+              }
+          }
+
+        if (!BASE_EQ (val, Qunbound))
+          {
+            if (EQ (val, Qt))
+              val = Qnil;
+
+            val = get_keyelt (val, autoload);
+
+            if (!KEYMAPP (val))
+              {
+                if (NILP (retval) || BASE_EQ (retval, Qunbound))
+                  retval = val;
+                if (!NILP (val))
+                  break;
+              }
+            else if (NILP (retval) || BASE_EQ (retval, Qunbound))
+              retval = val;
+            else if (CONSP (retval_tail))
+              {
+                XSETCDR (retval_tail, list1 (val));
+                retval_tail = XCDR (retval_tail);
+              }
+            else
+              {
+                retval_tail = list1 (val);
+                retval = Fcons (Qkeymap, Fcons (retval, retval_tail));
+              }
+          }
+        maybe_quit ();
+      }
+
+    return BASE_EQ (Qunbound, retval) ? get_keyelt (t_binding, autoload)
+                                      : retval;
+  }
+}
+Lisp_Object
+access_keymap (Lisp_Object map, Lisp_Object idx, bool t_ok, bool noinherit,
+               bool autoload)
+{
+  Lisp_Object val = access_keymap_1 (map, idx, t_ok, noinherit, autoload);
+  return BASE_EQ (val, Qunbound) ? Qnil : val;
+}
+
+static Lisp_Object
 store_in_keymap (Lisp_Object keymap, register Lisp_Object idx, Lisp_Object def,
                  bool remove)
 {
@@ -327,7 +511,20 @@ binding KEY to DEF is added at the front of KEYMAP.  */)
       if (idx == length)
         return store_in_keymap (keymap, c, def, !NILP (remove));
 
-      TODO;
+      Lisp_Object cmd = access_keymap (keymap, c, 0, 1, 1);
+
+      if (NILP (cmd))
+        TODO; // cmd = define_as_prefix (keymap, c);
+
+      keymap = get_keymap (cmd, 0, 1);
+      if (!CONSP (keymap))
+        {
+          const char *trailing_esc = ((EQ (c, meta_prefix_char) && metized)
+                                        ? (idx == 0 ? "ESC" : " ESC")
+                                        : "");
+          UNUSED (trailing_esc);
+          TODO;
+        }
     }
 }
 

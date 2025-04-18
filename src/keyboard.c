@@ -167,6 +167,8 @@ init_keyboard (void)
 void
 syms_of_keyboard (void)
 {
+  DEFSYM (QCfilter, ":filter");
+
   defsubr (&Srecursive_edit);
 
   DEFVAR_LISP ("meta-prefix-char", meta_prefix_char,

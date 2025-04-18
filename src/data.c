@@ -621,7 +621,7 @@ or a byte-code object.  IDX starts at 0.  */)
   else if (CHAR_TABLE_P (array))
     {
       CHECK_CHARACTER (idx);
-      TODO; // return CHAR_TABLE_REF (array, idxval);
+      return CHAR_TABLE_REF (array, idxval);
     }
   else
     {
