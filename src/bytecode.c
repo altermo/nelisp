@@ -323,6 +323,7 @@ setup_frame:;
               goto op_branch;
             NEXT;
           }
+
         CASE (Bcar):
           if (CONSP (TOP))
             TOP = XCAR (TOP);
@@ -332,6 +333,7 @@ setup_frame:;
               wrong_type_argument (Qlistp, TOP);
             }
           NEXT;
+
         CASE (Beq):
           {
             Lisp_Object v1 = POP;
@@ -345,6 +347,7 @@ setup_frame:;
             TOP = Fmemq (TOP, v1);
             NEXT;
           }
+
         CASE (Bcdr):
           {
             if (CONSP (TOP))
@@ -357,6 +360,35 @@ setup_frame:;
             NEXT;
           }
 
+        CASE (Bvarset):
+        CASE (Bvarset1):
+        CASE (Bvarset2):
+        CASE (Bvarset3):
+        CASE (Bvarset4):
+        CASE (Bvarset5):
+          op -= Bvarset;
+          goto varset;
+
+        CASE (Bvarset7):
+          op = FETCH2;
+          goto varset;
+
+        CASE (Bvarset6):
+          op = FETCH;
+        varset:
+          {
+            Lisp_Object sym = vectorp[op];
+            Lisp_Object val = POP;
+
+            if (!BASE_EQ (val, Qunbound)
+                && XBARE_SYMBOL (sym)->u.s.redirect == SYMBOL_PLAINVAL
+                && !XBARE_SYMBOL (sym)->u.s.trapped_write)
+              SET_SYMBOL_VAL (XBARE_SYMBOL (sym), val);
+            else
+              set_internal (sym, val, Qnil, SET_INTERNAL_SET);
+          }
+          NEXT;
+
         CASE (Bdup):
           {
             Lisp_Object v1 = TOP;
@@ -364,253 +396,24 @@ setup_frame:;
             NEXT;
           }
 
-        CASE (Breturn):
-          {
-            Lisp_Object *saved_top = bc->fp->saved_top;
-            if (saved_top)
-              {
-                Lisp_Object val = TOP;
-
-                lisp_eval_depth--;
-#if TODO_NELISP_LATER_AND
-                if (backtrace_debug_on_exit (specpdl_ptr - 1))
-                  val = call_debugger (list2 (Qexit, val));
-#endif
-                specpdl_ptr--;
-
-                top = saved_top;
-                pc = bc->fp->saved_pc;
-                struct bc_frame *fp = bc->fp->saved_fp;
-                bc->fp = fp;
-
-                Lisp_Object fun = fp->fun;
-                Lisp_Object bytestr = AREF (fun, CLOSURE_CODE);
-                Lisp_Object vector = AREF (fun, CLOSURE_CONSTANTS);
-                bytestr_data = SDATA (bytestr);
-                vectorp = XVECTOR (vector)->contents;
-                if (BYTE_CODE_SAFE)
-                  {
-                    const_length = ASIZE (vector);
-                    bytestr_length = SCHARS (bytestr);
-                  }
-
-                TOP = val;
-                NEXT;
-              }
-            else
-              goto exit;
-          }
-
-        CASE (Bdiscard):
-          DISCARD (1);
-          NEXT;
-
-        CASE (Bsymbolp):
-          TOP = SYMBOLP (TOP) ? Qt : Qnil;
-          NEXT;
-
-        CASE (Bconsp):
-          TOP = CONSP (TOP) ? Qt : Qnil;
-          NEXT;
-
-        CASE (Bstringp):
-          TOP = STRINGP (TOP) ? Qt : Qnil;
-          NEXT;
-
-        CASE (Blistp):
-          TOP = CONSP (TOP) || NILP (TOP) ? Qt : Qnil;
-          NEXT;
-
-        CASE (Bnot):
-          TOP = NILP (TOP) ? Qt : Qnil;
-          NEXT;
-
-        CASE (Bconstant2):
-          PUSH (vectorp[FETCH2]);
-          NEXT;
-
-        CASE (Bcons):
-          {
-            Lisp_Object v1 = POP;
-            TOP = Fcons (TOP, v1);
-            NEXT;
-          }
-
-        CASE (Blist1):
-          TOP = list1 (TOP);
-          NEXT;
-
-        CASE (Blist2):
-          {
-            Lisp_Object v1 = POP;
-            TOP = list2 (TOP, v1);
-            NEXT;
-          }
-
-        CASE (Blist3):
-          DISCARD (2);
-          TOP = list3 (TOP, top[1], top[2]);
-          NEXT;
-
-        CASE (Blist4):
-          DISCARD (3);
-          TOP = list4 (TOP, top[1], top[2], top[3]);
-          NEXT;
-
-        CASE (BlistN):
+        CASE (Bvarbind6):
           op = FETCH;
-          DISCARD (op - 1);
-          TOP = Flist (op, &TOP);
+          goto varbind;
+
+        CASE (Bvarbind7):
+          op = FETCH2;
+          goto varbind;
+
+        CASE (Bvarbind):
+        CASE (Bvarbind1):
+        CASE (Bvarbind2):
+        CASE (Bvarbind3):
+        CASE (Bvarbind4):
+        CASE (Bvarbind5):
+          op -= Bvarbind;
+        varbind:
+          specbind (vectorp[op], POP);
           NEXT;
-
-        CASE (Baref):
-          {
-            Lisp_Object idxval = POP;
-            Lisp_Object arrayval = TOP;
-            if (!FIXNUMP (idxval))
-              {
-                record_in_backtrace (Qaref, &TOP, 2);
-                wrong_type_argument (Qfixnump, idxval);
-              }
-            ptrdiff_t size;
-            if (((VECTORP (arrayval) && (size = ASIZE (arrayval), true))
-                 || (RECORDP (arrayval) && (size = PVSIZE (arrayval), true))))
-              {
-                ptrdiff_t idx = XFIXNUM (idxval);
-                if (idx >= 0 && idx < size)
-                  TOP = AREF (arrayval, idx);
-                else
-                  {
-                    record_in_backtrace (Qaref, &TOP, 2);
-                    args_out_of_range (arrayval, idxval);
-                  }
-              }
-            else
-              TOP = Faref (arrayval, idxval);
-            NEXT;
-          }
-
-        CASE (Baset):
-          {
-            Lisp_Object newelt = POP;
-            Lisp_Object idxval = POP;
-            Lisp_Object arrayval = TOP;
-            if (!FIXNUMP (idxval))
-              {
-                record_in_backtrace (Qaset, &TOP, 3);
-                wrong_type_argument (Qfixnump, idxval);
-              }
-            ptrdiff_t size;
-            if (((VECTORP (arrayval) && (size = ASIZE (arrayval), true))
-                 || (RECORDP (arrayval) && (size = PVSIZE (arrayval), true))))
-              {
-                ptrdiff_t idx = XFIXNUM (idxval);
-                if (idx >= 0 && idx < size)
-                  {
-                    ASET (arrayval, idx, newelt);
-                    TOP = newelt;
-                  }
-                else
-                  {
-                    record_in_backtrace (Qaset, &TOP, 3);
-                    args_out_of_range (arrayval, idxval);
-                  }
-              }
-            else
-              TOP = Faset (arrayval, idxval, newelt);
-            NEXT;
-          }
-
-        CASE (Bsymbol_function):
-          TOP = Fsymbol_function (TOP);
-          NEXT;
-
-        CASE (Bset):
-          {
-            Lisp_Object v1 = POP;
-            TOP = Fset (TOP, v1);
-            NEXT;
-          }
-
-        CASE (Bfset):
-          {
-            Lisp_Object v1 = POP;
-            TOP = Ffset (TOP, v1);
-            NEXT;
-          }
-        CASE (Bget):
-          {
-            Lisp_Object v1 = POP;
-            TOP = Fget (TOP, v1);
-            NEXT;
-          }
-
-        CASE (Bsub1):
-          TOP = (FIXNUMP (TOP) && XFIXNUM (TOP) != MOST_NEGATIVE_FIXNUM
-                   ? make_fixnum (XFIXNUM (TOP) - 1)
-                   : Fsub1 (TOP));
-          NEXT;
-
-        CASE (Badd1):
-          TOP = (FIXNUMP (TOP) && XFIXNUM (TOP) != MOST_POSITIVE_FIXNUM
-                   ? make_fixnum (XFIXNUM (TOP) + 1)
-                   : Fadd1 (TOP));
-          NEXT;
-
-        CASE (Beqlsign):
-          {
-            Lisp_Object v2 = POP;
-            Lisp_Object v1 = TOP;
-            if (FIXNUMP (v1) && FIXNUMP (v2))
-              TOP = BASE_EQ (v1, v2) ? Qt : Qnil;
-            else
-              TOP = arithcompare (v1, v2, ARITH_EQUAL);
-            NEXT;
-          }
-
-        CASE (Bgtr):
-          {
-            Lisp_Object v2 = POP;
-            Lisp_Object v1 = TOP;
-            if (FIXNUMP (v1) && FIXNUMP (v2))
-              TOP = XFIXNUM (v1) > XFIXNUM (v2) ? Qt : Qnil;
-            else
-              TOP = arithcompare (v1, v2, ARITH_GRTR);
-            NEXT;
-          }
-
-        CASE (Blss):
-          {
-            Lisp_Object v2 = POP;
-            Lisp_Object v1 = TOP;
-            if (FIXNUMP (v1) && FIXNUMP (v2))
-              TOP = XFIXNUM (v1) < XFIXNUM (v2) ? Qt : Qnil;
-            else
-              TOP = arithcompare (v1, v2, ARITH_LESS);
-            NEXT;
-          }
-
-        CASE (Bleq):
-          {
-            Lisp_Object v2 = POP;
-            Lisp_Object v1 = TOP;
-            if (FIXNUMP (v1) && FIXNUMP (v2))
-              TOP = XFIXNUM (v1) <= XFIXNUM (v2) ? Qt : Qnil;
-            else
-              TOP = arithcompare (v1, v2, ARITH_LESS_OR_EQUAL);
-            NEXT;
-          }
-
-        CASE (Bgeq):
-          {
-            Lisp_Object v2 = POP;
-            Lisp_Object v1 = TOP;
-            if (FIXNUMP (v1) && FIXNUMP (v2))
-              TOP = XFIXNUM (v1) >= XFIXNUM (v2) ? Qt : Qnil;
-            else
-              TOP = arithcompare (v1, v2, ARITH_GRTR_OR_EQUAL);
-            NEXT;
-          }
 
         CASE (Bcall6):
           op = FETCH;
@@ -619,60 +422,6 @@ setup_frame:;
         CASE (Bcall7):
           op = FETCH2;
           goto docall;
-
-        CASE (Bnumberp):
-          TOP = NUMBERP (TOP) ? Qt : Qnil;
-          NEXT;
-
-        CASE_ABORT:
-          error ("Invalid byte opcode: op=%d, ptr=%" pD "d", op,
-                 pc - 1 - bytestr_data);
-
-        CASE (Bstack_ref1):
-        CASE (Bstack_ref2):
-        CASE (Bstack_ref3):
-        CASE (Bstack_ref4):
-        CASE (Bstack_ref5):
-          {
-            Lisp_Object v1 = top[Bstack_ref - op];
-            PUSH (v1);
-            NEXT;
-          }
-        CASE (Bstack_ref6):
-          {
-            Lisp_Object v1 = top[-FETCH];
-            PUSH (v1);
-            NEXT;
-          }
-        CASE (Bstack_ref7):
-          {
-            Lisp_Object v1 = top[-FETCH2];
-            PUSH (v1);
-            NEXT;
-          }
-
-        CASE (Bstack_set):
-          {
-            Lisp_Object *ptr = top - FETCH;
-            *ptr = POP;
-            NEXT;
-          }
-        CASE (Bstack_set2):
-          {
-            Lisp_Object *ptr = top - FETCH2;
-            *ptr = POP;
-            NEXT;
-          }
-
-        CASE (BdiscardN):
-          op = FETCH;
-          if (op & 0x80)
-            {
-              op &= 0x7F;
-              top[-op] = TOP;
-            }
-          DISCARD (op);
-          NEXT;
 
         CASE (Bcall):
         CASE (Bcall1):
@@ -742,6 +491,25 @@ setup_frame:;
             NEXT;
           }
 
+        CASE (Bunbind6):
+          op = FETCH;
+          goto dounbind;
+
+        CASE (Bunbind7):
+          op = FETCH2;
+          goto dounbind;
+
+        CASE (Bunbind):
+        CASE (Bunbind1):
+        CASE (Bunbind2):
+        CASE (Bunbind3):
+        CASE (Bunbind4):
+        CASE (Bunbind5):
+          op -= Bunbind;
+        dounbind:
+          TODO; // unbind_to (specpdl_ref_add (SPECPDL_INDEX (), -op), Qnil);
+          NEXT;
+
         CASE (Bgoto):
           op = FETCH2;
         op_branch:
@@ -780,17 +548,778 @@ setup_frame:;
           DISCARD (1);
           NEXT;
 
+        CASE (Breturn):
+          {
+            Lisp_Object *saved_top = bc->fp->saved_top;
+            if (saved_top)
+              {
+                Lisp_Object val = TOP;
+
+                lisp_eval_depth--;
+#if TODO_NELISP_LATER_AND
+                if (backtrace_debug_on_exit (specpdl_ptr - 1))
+                  val = call_debugger (list2 (Qexit, val));
+#endif
+                specpdl_ptr--;
+
+                top = saved_top;
+                pc = bc->fp->saved_pc;
+                struct bc_frame *fp = bc->fp->saved_fp;
+                bc->fp = fp;
+
+                Lisp_Object fun = fp->fun;
+                Lisp_Object bytestr = AREF (fun, CLOSURE_CODE);
+                Lisp_Object vector = AREF (fun, CLOSURE_CONSTANTS);
+                bytestr_data = SDATA (bytestr);
+                vectorp = XVECTOR (vector)->contents;
+                if (BYTE_CODE_SAFE)
+                  {
+                    const_length = ASIZE (vector);
+                    bytestr_length = SCHARS (bytestr);
+                  }
+
+                TOP = val;
+                NEXT;
+              }
+            else
+              goto exit;
+          }
+
+        CASE (Bdiscard):
+          DISCARD (1);
+          NEXT;
+
+        CASE (Bconstant2):
+          PUSH (vectorp[FETCH2]);
+          NEXT;
+
+        CASE (Bsave_excursion):
+          TODO; // record_unwind_protect_excursion ();
+          NEXT;
+
+        CASE (Bsave_current_buffer_OBSOLETE):
+        CASE (Bsave_current_buffer):
+          TODO; // record_unwind_current_buffer ();
+          NEXT;
+
+        CASE (Bsave_window_excursion):
+          {
+            TODO;
+            NEXT;
+          }
+
+        CASE (Bsave_restriction):
+          TODO; // record_unwind_protect (save_restriction_restore,
+          //                        save_restriction_save ());
+          NEXT;
+
+        CASE (Bcatch):
+          {
+            Lisp_Object v1 = POP;
+            TOP = internal_catch (TOP, eval_sub, v1);
+            NEXT;
+          }
+
+        CASE (Bpushcatch):
+          TODO; // type = CATCHER;
+          goto pushhandler;
+        CASE (Bpushconditioncase):
+          TODO; // type = CONDITION_CASE;
+        pushhandler:
+          {
+            TODO;
+            NEXT;
+          }
+
+        CASE (Bpophandler):
+          handlerlist = handlerlist->next;
+          NEXT;
+
+        CASE (Bunwind_protect):
+          {
+            TODO;
+            NEXT;
+          }
+
+        CASE (Bcondition_case):
+          {
+            TODO;
+            NEXT;
+          }
+
+        CASE (Btemp_output_buffer_setup):
+          TODO;
+          NEXT;
+
+        CASE (Btemp_output_buffer_show):
+          {
+            TODO;
+            NEXT;
+          }
+
+        CASE (Bnth):
+          {
+            TODO;
+            NEXT;
+          }
+
+        CASE (Bsymbolp):
+          TOP = SYMBOLP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Bconsp):
+          TOP = CONSP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Bstringp):
+          TOP = STRINGP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Blistp):
+          TOP = CONSP (TOP) || NILP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Bnot):
+          TOP = NILP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Bcons):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fcons (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Blist1):
+          TOP = list1 (TOP);
+          NEXT;
+
+        CASE (Blist2):
+          {
+            Lisp_Object v1 = POP;
+            TOP = list2 (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Blist3):
+          DISCARD (2);
+          TOP = list3 (TOP, top[1], top[2]);
+          NEXT;
+
+        CASE (Blist4):
+          DISCARD (3);
+          TOP = list4 (TOP, top[1], top[2], top[3]);
+          NEXT;
+
+        CASE (BlistN):
+          op = FETCH;
+          DISCARD (op - 1);
+          TOP = Flist (op, &TOP);
+          NEXT;
+
+        CASE (Blength):
+          TODO; // TOP = Flength (TOP);
+          NEXT;
+
+        CASE (Baref):
+          {
+            Lisp_Object idxval = POP;
+            Lisp_Object arrayval = TOP;
+            if (!FIXNUMP (idxval))
+              {
+                record_in_backtrace (Qaref, &TOP, 2);
+                wrong_type_argument (Qfixnump, idxval);
+              }
+            ptrdiff_t size;
+            if (((VECTORP (arrayval) && (size = ASIZE (arrayval), true))
+                 || (RECORDP (arrayval) && (size = PVSIZE (arrayval), true))))
+              {
+                ptrdiff_t idx = XFIXNUM (idxval);
+                if (idx >= 0 && idx < size)
+                  TOP = AREF (arrayval, idx);
+                else
+                  {
+                    record_in_backtrace (Qaref, &TOP, 2);
+                    args_out_of_range (arrayval, idxval);
+                  }
+              }
+            else
+              TOP = Faref (arrayval, idxval);
+            NEXT;
+          }
+
+        CASE (Baset):
+          {
+            Lisp_Object newelt = POP;
+            Lisp_Object idxval = POP;
+            Lisp_Object arrayval = TOP;
+            if (!FIXNUMP (idxval))
+              {
+                record_in_backtrace (Qaset, &TOP, 3);
+                wrong_type_argument (Qfixnump, idxval);
+              }
+            ptrdiff_t size;
+            if (((VECTORP (arrayval) && (size = ASIZE (arrayval), true))
+                 || (RECORDP (arrayval) && (size = PVSIZE (arrayval), true))))
+              {
+                ptrdiff_t idx = XFIXNUM (idxval);
+                if (idx >= 0 && idx < size)
+                  {
+                    ASET (arrayval, idx, newelt);
+                    TOP = newelt;
+                  }
+                else
+                  {
+                    record_in_backtrace (Qaset, &TOP, 3);
+                    args_out_of_range (arrayval, idxval);
+                  }
+              }
+            else
+              TOP = Faset (arrayval, idxval, newelt);
+            NEXT;
+          }
+
+        CASE (Bsymbol_value):
+          TOP = Fsymbol_value (TOP);
+          NEXT;
+
+        CASE (Bsymbol_function):
+          TOP = Fsymbol_function (TOP);
+          NEXT;
+
+        CASE (Bset):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fset (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bfset):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Ffset (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bget):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fget (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bsubstring):
+          {
+            TODO; // Lisp_Object v2 = POP, v1 = POP;
+            // TOP = Fsubstring (TOP, v1, v2);
+            NEXT;
+          }
+
+        CASE (Bconcat2):
+          DISCARD (1);
+          TODO; // TOP = Fconcat (2, &TOP);
+          NEXT;
+
+        CASE (Bconcat3):
+          DISCARD (2);
+          TODO; // TOP = Fconcat (3, &TOP);
+          NEXT;
+
+        CASE (Bconcat4):
+          DISCARD (3);
+          TODO; // TOP = Fconcat (4, &TOP);
+          NEXT;
+
+        CASE (BconcatN):
+          op = FETCH;
+          DISCARD (op - 1);
+          TODO; // TOP = Fconcat (op, &TOP);
+          NEXT;
+
+        CASE (Bsub1):
+          TOP = (FIXNUMP (TOP) && XFIXNUM (TOP) != MOST_NEGATIVE_FIXNUM
+                   ? make_fixnum (XFIXNUM (TOP) - 1)
+                   : Fsub1 (TOP));
+          NEXT;
+
+        CASE (Badd1):
+          TOP = (FIXNUMP (TOP) && XFIXNUM (TOP) != MOST_POSITIVE_FIXNUM
+                   ? make_fixnum (XFIXNUM (TOP) + 1)
+                   : Fadd1 (TOP));
+          NEXT;
+
+        CASE (Beqlsign):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = BASE_EQ (v1, v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_EQUAL);
+            NEXT;
+          }
+
+        CASE (Bgtr):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = XFIXNUM (v1) > XFIXNUM (v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_GRTR);
+            NEXT;
+          }
+
+        CASE (Blss):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = XFIXNUM (v1) < XFIXNUM (v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_LESS);
+            NEXT;
+          }
+
+        CASE (Bleq):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = XFIXNUM (v1) <= XFIXNUM (v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_LESS_OR_EQUAL);
+            NEXT;
+          }
+
+        CASE (Bgeq):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              TOP = XFIXNUM (v1) >= XFIXNUM (v2) ? Qt : Qnil;
+            else
+              TOP = arithcompare (v1, v2, ARITH_GRTR_OR_EQUAL);
+            NEXT;
+          }
+
+        CASE (Bdiff):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            EMACS_INT res;
+            if (FIXNUMP (v1) && FIXNUMP (v2)
+                && (res = XFIXNUM (v1) - XFIXNUM (v2),
+                    !FIXNUM_OVERFLOW_P (res)))
+              TOP = make_fixnum (res);
+            else
+              TOP = Fminus (2, &TOP);
+            NEXT;
+          }
+
+        CASE (Bnegate):
+          TOP = (FIXNUMP (TOP) && XFIXNUM (TOP) != MOST_NEGATIVE_FIXNUM
+                   ? make_fixnum (-XFIXNUM (TOP))
+                   : Fminus (1, &TOP));
+          NEXT;
+
+        CASE (Bplus):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            EMACS_INT res;
+            if (FIXNUMP (v1) && FIXNUMP (v2)
+                && (res = XFIXNUM (v1) + XFIXNUM (v2),
+                    !FIXNUM_OVERFLOW_P (res)))
+              TOP = make_fixnum (res);
+            else
+              TOP = Fplus (2, &TOP);
+            NEXT;
+          }
+
+        CASE (Bmax):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              {
+                if (XFIXNUM (v2) > XFIXNUM (v1))
+                  TOP = v2;
+              }
+            else
+              TOP = Fmax (2, &TOP);
+            NEXT;
+          }
+
+        CASE (Bmin):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2))
+              {
+                if (XFIXNUM (v2) < XFIXNUM (v1))
+                  TOP = v2;
+              }
+            else
+              TOP = Fmin (2, &TOP);
+            NEXT;
+          }
+
+        CASE (Bmult):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            intmax_t res;
+            if (FIXNUMP (v1) && FIXNUMP (v2)
+                && !ckd_mul (&res, XFIXNUM (v1), XFIXNUM (v2))
+                && !FIXNUM_OVERFLOW_P (res))
+              TOP = make_fixnum (res);
+            else
+              TOP = Ftimes (2, &TOP);
+            NEXT;
+          }
+
+        CASE (Bquo):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            EMACS_INT res;
+            if (FIXNUMP (v1) && FIXNUMP (v2) && XFIXNUM (v2) != 0
+                && (res = XFIXNUM (v1) / XFIXNUM (v2),
+                    !FIXNUM_OVERFLOW_P (res)))
+              TOP = make_fixnum (res);
+            else
+              TOP = Fquo (2, &TOP);
+            NEXT;
+          }
+
+        CASE (Brem):
+          {
+            Lisp_Object v2 = POP;
+            Lisp_Object v1 = TOP;
+            if (FIXNUMP (v1) && FIXNUMP (v2) && XFIXNUM (v2) != 0)
+              TOP = make_fixnum (XFIXNUM (v1) % XFIXNUM (v2));
+            else
+              TOP = Frem (v1, v2);
+            NEXT;
+          }
+
+        CASE (Bpoint):
+          TODO; // PUSH (make_fixed_natnum (PT));
+          NEXT;
+
+        CASE (Bgoto_char):
+          TODO; // TOP = Fgoto_char (TOP);
+          NEXT;
+
+        CASE (Binsert):
+          TODO; // TOP = Finsert (1, &TOP);
+          NEXT;
+
+        CASE (BinsertN):
+          op = FETCH;
+          DISCARD (op - 1);
+          TODO; // TOP = Finsert (op, &TOP);
+          NEXT;
+
+        CASE (Bpoint_max):
+          TODO; // PUSH (make_fixed_natnum (ZV));
+          NEXT;
+
+        CASE (Bpoint_min):
+          TODO; // PUSH (make_fixed_natnum (BEGV));
+          NEXT;
+
+        CASE (Bchar_after):
+          TODO; // TOP = Fchar_after (TOP);
+          NEXT;
+
+        CASE (Bfollowing_char):
+          TODO; // PUSH (Ffollowing_char ());
+          NEXT;
+
+        CASE (Bpreceding_char):
+          TODO; // PUSH (Fprevious_char ());
+          NEXT;
+
+        CASE (Bcurrent_column):
+          TODO; // PUSH (make_fixed_natnum (current_column ()));
+          NEXT;
+
+        CASE (Bindent_to):
+          TODO; // TOP = Findent_to (TOP, Qnil);
+          NEXT;
+
+        CASE (Beolp):
+          TODO; // PUSH (Feolp ());
+          NEXT;
+
+        CASE (Beobp):
+          TODO; // PUSH (Feobp ());
+          NEXT;
+
+        CASE (Bbolp):
+          TODO; // PUSH (Fbolp ());
+          NEXT;
+
+        CASE (Bbobp):
+          TODO; // PUSH (Fbobp ());
+          NEXT;
+
+        CASE (Bcurrent_buffer):
+          TODO; // PUSH (Fcurrent_buffer ());
+          NEXT;
+
+        CASE (Bset_buffer):
+          TOP = Fset_buffer (TOP);
+          NEXT;
+
+        CASE (Binteractive_p):
+          TODO; // PUSH (call0 (Qinteractive_p));
+          NEXT;
+
+        CASE (Bforward_char):
+          TODO; // TOP = Fforward_char (TOP);
+          NEXT;
+
+        CASE (Bforward_word):
+          TODO; // TOP = Fforward_word (TOP);
+          NEXT;
+
+        CASE (Bskip_chars_forward):
+          {
+            TODO; // Lisp_Object v1 = POP;
+            // TOP = Fskip_chars_forward (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bskip_chars_backward):
+          {
+            TODO; // Lisp_Object v1 = POP;
+            // TOP = Fskip_chars_backward (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bforward_line):
+          TODO; // TOP = Fforward_line (TOP);
+          NEXT;
+
+        CASE (Bchar_syntax):
+          TODO; // TOP = Fchar_syntax (TOP);
+          NEXT;
+
+        CASE (Bbuffer_substring):
+          {
+            TODO; // Lisp_Object v1 = POP;
+            // TOP = Fbuffer_substring (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bdelete_region):
+          {
+            TODO; // Lisp_Object v1 = POP;
+            // TOP = Fdelete_region (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bnarrow_to_region):
+          {
+            TODO; // Lisp_Object v1 = POP;
+            // TOP = Fnarrow_to_region (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bwiden):
+          TODO; // PUSH (Fwiden ());
+          NEXT;
+
+        CASE (Bend_of_line):
+          TODO; // TOP = Fend_of_line (TOP);
+          NEXT;
+
+        CASE (Bset_marker):
+          {
+            TODO; // Lisp_Object v2 = POP, v1 = POP;
+            // TOP = Fset_marker (TOP, v1, v2);
+            NEXT;
+          }
+
+        CASE (Bmatch_beginning):
+          TODO; // TOP = Fmatch_beginning (TOP);
+          NEXT;
+
+        CASE (Bmatch_end):
+          TODO; // TOP = Fmatch_end (TOP);
+          NEXT;
+
+        CASE (Bupcase):
+          TODO; // TOP = Fupcase (TOP);
+          NEXT;
+
+        CASE (Bdowncase):
+          TODO; // TOP = Fdowncase (TOP);
+          NEXT;
+
+        CASE (Bstringeqlsign):
+          {
+            TODO; // Lisp_Object v1 = POP;
+            // TOP = Fstring_equal (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bstringlss):
+          {
+            TODO; // Lisp_Object v1 = POP;
+            // TOP = Fstring_lessp (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bequal):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fequal (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bnthcdr):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fnthcdr (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Belt):
+          {
+            TODO;
+            NEXT;
+          }
+
+        CASE (Bmember):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fmember (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bassq):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fassq (TOP, v1);
+            NEXT;
+          }
+
+        CASE (Bnreverse):
+          TOP = Fnreverse (TOP);
+          NEXT;
+
+        CASE (Bsetcar):
+          {
+            Lisp_Object newval = POP;
+            Lisp_Object cell = TOP;
+            if (!CONSP (cell))
+              {
+                TODO; // record_in_backtrace (Qsetcar, &TOP, 2);
+                wrong_type_argument (Qconsp, cell);
+              }
+            CHECK_IMPURE (cell, XCONS (cell));
+            XSETCAR (cell, newval);
+            TOP = newval;
+            NEXT;
+          }
+
+        CASE (Bsetcdr):
+          {
+            Lisp_Object newval = POP;
+            Lisp_Object cell = TOP;
+            if (!CONSP (cell))
+              {
+                TODO; // record_in_backtrace (Qsetcdr, &TOP, 2);
+                wrong_type_argument (Qconsp, cell);
+              }
+            CHECK_IMPURE (cell, XCONS (cell));
+            XSETCDR (cell, newval);
+            TOP = newval;
+            NEXT;
+          }
+
+        CASE (Bcar_safe):
+          TOP = CAR_SAFE (TOP);
+          NEXT;
+
+        CASE (Bcdr_safe):
+          TOP = CDR_SAFE (TOP);
+          NEXT;
+
+        CASE (Bnconc):
+          DISCARD (1);
+          TOP = Fnconc (2, &TOP);
+          NEXT;
+
+        CASE (Bnumberp):
+          TOP = NUMBERP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Bintegerp):
+          TOP = INTEGERP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE_ABORT:
+          error ("Invalid byte opcode: op=%d, ptr=%" pD "d", op,
+                 pc - 1 - bytestr_data);
+
+        CASE (Bstack_ref1):
+        CASE (Bstack_ref2):
+        CASE (Bstack_ref3):
+        CASE (Bstack_ref4):
+        CASE (Bstack_ref5):
+          {
+            Lisp_Object v1 = top[Bstack_ref - op];
+            PUSH (v1);
+            NEXT;
+          }
+        CASE (Bstack_ref6):
+          {
+            Lisp_Object v1 = top[-FETCH];
+            PUSH (v1);
+            NEXT;
+          }
+        CASE (Bstack_ref7):
+          {
+            Lisp_Object v1 = top[-FETCH2];
+            PUSH (v1);
+            NEXT;
+          }
+        CASE (Bstack_set):
+          {
+            Lisp_Object *ptr = top - FETCH;
+            *ptr = POP;
+            NEXT;
+          }
+        CASE (Bstack_set2):
+          {
+            Lisp_Object *ptr = top - FETCH2;
+            *ptr = POP;
+            NEXT;
+          }
+        CASE (BdiscardN):
+          op = FETCH;
+          if (op & 0x80)
+            {
+              op &= 0x7F;
+              top[-op] = TOP;
+            }
+          DISCARD (op);
+          NEXT;
+
+        CASE (Bswitch):
+          TODO;
+          NEXT;
+
         CASE_DEFAULT
         CASE (Bconstant):
           if (BYTE_CODE_SAFE
               && !(Bconstant <= op && op < Bconstant + const_length))
-            {
-              char msg[] = "Not-implemented bytecode: op=0oxxx";
-              msg[sizeof (msg) - 2] = '0' + (op % 010);
-              msg[sizeof (msg) - 3] = '0' + (op % 0100 / 010);
-              msg[sizeof (msg) - 4] = '0' + (op / 0100);
-              TODO_msg (__FILE__, __LINE__, msg); // emacs_abort ();
-            }
+            emacs_abort ();
           PUSH (vectorp[op - Bconstant]);
           NEXT;
         }
