@@ -53,6 +53,7 @@ create_buffer (long bufid)
   register struct buffer *b;
   b = allocate_buffer ();
 
+  b->_local_var_alist = Qnil;
   b->_last_obj = Qnil;
   b->bufid = bufid;
 
@@ -180,8 +181,12 @@ nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
     {
     case NVIM_BUFFER_VAR__name:
       return buffer_name (b);
-    default:
-      emacs_abort ();
+#define X(field)                \
+  case NVIM_BUFFER_VAR_##field: \
+    return b->field;
+      Xbuffer_vars
+#undef X
+        default : emacs_abort ();
     }
 }
 

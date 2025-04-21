@@ -248,6 +248,14 @@ Elements of ALIST that are not conses are ignored.  */)
   CHECK_LIST_END (tail, alist);
   return Qnil;
 }
+Lisp_Object
+assq_no_quit (Lisp_Object key, Lisp_Object alist)
+{
+  for (; !NILP (alist); alist = XCDR (alist))
+    if (CONSP (XCAR (alist)) && EQ (XCAR (XCAR (alist)), key))
+      return XCAR (alist);
+  return Qnil;
+}
 
 enum
 {

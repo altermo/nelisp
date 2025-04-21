@@ -2,6 +2,7 @@
 
 #include "lisp.h"
 #include "bignum.h"
+#include "buffer.h"
 #include "character.h"
 
 AVOID
@@ -369,6 +370,92 @@ start:
 
   blv->local_if_set = 1;
   return variable;
+}
+
+DEFUN ("local-variable-p", Flocal_variable_p, Slocal_variable_p,
+       1, 2, 0,
+       doc: /* Non-nil if VARIABLE has a local binding in buffer BUFFER.
+BUFFER defaults to the current buffer.
+
+Also see `buffer-local-boundp'.*/)
+(Lisp_Object variable, Lisp_Object buffer)
+{
+  struct buffer *buf = decode_buffer (buffer);
+  struct Lisp_Symbol *sym;
+
+  CHECK_SYMBOL (variable);
+  sym = XSYMBOL (variable);
+
+start:
+  switch (sym->u.s.redirect)
+    {
+    case SYMBOL_VARALIAS:
+      sym = SYMBOL_ALIAS (sym);
+      goto start;
+    case SYMBOL_PLAINVAL:
+      return Qnil;
+    case SYMBOL_LOCALIZED:
+      {
+        Lisp_Object tmp;
+        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (sym);
+        XSETBUFFER (tmp, buf);
+        XSETSYMBOL (variable, sym);
+
+        if (EQ (blv->where, tmp))
+          return blv_found (blv) ? Qt : Qnil;
+        else
+          return NILP (assq_no_quit (variable, BVAR (buf, local_var_alist)))
+                   ? Qnil
+                   : Qt;
+      }
+    case SYMBOL_FORWARDED:
+      {
+        lispfwd valcontents = SYMBOL_FWD (sym);
+        if (BUFFER_OBJFWDP (valcontents))
+          TODO;
+        return Qnil;
+      }
+    default:
+      emacs_abort ();
+    }
+}
+
+DEFUN ("local-variable-if-set-p", Flocal_variable_if_set_p, Slocal_variable_if_set_p,
+       1, 2, 0,
+       doc: /* Non-nil if VARIABLE is local in buffer BUFFER when set there.
+BUFFER defaults to the current buffer.
+
+More precisely, return non-nil if either VARIABLE already has a local
+value in BUFFER, or if VARIABLE is automatically buffer-local (see
+`make-variable-buffer-local').  */)
+(register Lisp_Object variable, Lisp_Object buffer)
+{
+  struct Lisp_Symbol *sym;
+
+  CHECK_SYMBOL (variable);
+  sym = XSYMBOL (variable);
+
+start:
+  switch (sym->u.s.redirect)
+    {
+    case SYMBOL_VARALIAS:
+      sym = SYMBOL_ALIAS (sym);
+      goto start;
+    case SYMBOL_PLAINVAL:
+      return Qnil;
+    case SYMBOL_LOCALIZED:
+      {
+        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (sym);
+        if (blv->local_if_set)
+          return Qt;
+        XSETSYMBOL (variable, sym);
+        return Flocal_variable_p (variable, buffer);
+      }
+    case SYMBOL_FORWARDED:
+      return (BUFFER_OBJFWDP (SYMBOL_FWD (sym)) ? Qt : Qnil);
+    default:
+      emacs_abort ();
+    }
 }
 
 static void
@@ -1407,6 +1494,8 @@ syms_of_data (void)
   defsubr (&Scdr);
   defsubr (&Scar_safe);
   defsubr (&Scdr_safe);
+  defsubr (&Slocal_variable_p);
+  defsubr (&Slocal_variable_if_set_p);
   defsubr (&Sset);
   defsubr (&Sfset);
   defsubr (&Sdefalias);

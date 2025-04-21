@@ -3,9 +3,27 @@
 
 #include "lisp.h"
 
+#define Xbuffer_vars X (_local_var_alist)
+
+struct buffer
+{
+  union vectorlike_header header;
+
+#define X(field) Lisp_Object field;
+  Xbuffer_vars
+#undef X
+
+    Lisp_Object _last_obj;
+
+  long bufid;
+};
+
 enum nvim_buffer_var_field
 {
   NVIM_BUFFER_VAR__name,
+#define X(field) NVIM_BUFFER_VAR_##field,
+  Xbuffer_vars
+#undef X
 };
 
 extern Lisp_Object nvim_name_to_bufobj (Lisp_Object);

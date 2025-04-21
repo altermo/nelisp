@@ -1538,6 +1538,12 @@ make_symbol_constant (Lisp_Object sym)
 {
   XSYMBOL (sym)->u.s.trapped_write = SYMBOL_NOWRITE;
 }
+INLINE bool
+blv_found (struct Lisp_Buffer_Local_Value *blv)
+{
+  eassert (blv->found == !BASE_EQ (blv->defcell, blv->valcell));
+  return blv->found;
+}
 
 INLINE bool
 NATIVE_COMP_FUNCTION_DYNP (Lisp_Object a)
@@ -2012,6 +2018,7 @@ extern void syms_of_fns (void);
 extern ptrdiff_t list_length (Lisp_Object);
 EMACS_UINT hash_string (char const *, ptrdiff_t);
 Lisp_Object plist_get (Lisp_Object plist, Lisp_Object prop);
+extern Lisp_Object assq_no_quit (Lisp_Object, Lisp_Object);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)

@@ -41,15 +41,6 @@ BUFFER_LIVE_P (struct buffer *b)
   return !NILP (BVAR (b, name));
 }
 
-struct buffer
-{
-  union vectorlike_header header;
-
-  Lisp_Object _last_obj;
-
-  long bufid;
-};
-
 enum
 {
   BUFFER_LISP_SIZE = PSEUDOVECSIZE (struct buffer, _last_obj),
