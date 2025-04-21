@@ -323,6 +323,15 @@ setup_frame:;
               goto op_branch;
             NEXT;
           }
+        CASE (Bcar):
+          if (CONSP (TOP))
+            TOP = XCAR (TOP);
+          else if (!NILP (TOP))
+            {
+              record_in_backtrace (Qcar, &TOP, 1);
+              wrong_type_argument (Qlistp, TOP);
+            }
+          NEXT;
         CASE (Beq):
           {
             Lisp_Object v1 = POP;
@@ -334,6 +343,17 @@ setup_frame:;
           {
             Lisp_Object v1 = POP;
             TOP = Fmemq (TOP, v1);
+            NEXT;
+          }
+        CASE (Bcdr):
+          {
+            if (CONSP (TOP))
+              TOP = XCDR (TOP);
+            else if (!NILP (TOP))
+              {
+                record_in_backtrace (Qcdr, &TOP, 1);
+                wrong_type_argument (Qlistp, TOP);
+              }
             NEXT;
           }
 
@@ -383,6 +403,10 @@ setup_frame:;
 
         CASE (Bdiscard):
           DISCARD (1);
+          NEXT;
+
+        CASE (Bconstant2):
+          PUSH (vectorp[FETCH2]);
           NEXT;
 
         CASE (Bcons):
@@ -485,6 +509,12 @@ setup_frame:;
           {
             Lisp_Object v1 = POP;
             TOP = Ffset (TOP, v1);
+            NEXT;
+          }
+        CASE (Bget):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fget (TOP, v1);
             NEXT;
           }
 

@@ -1225,6 +1225,8 @@ syms_of_data (void)
   DEFSYM (Qerror_conditions, "error-conditions");
   DEFSYM (Qerror_message, "error-message");
 
+  DEFSYM (Qcar, "car");
+  DEFSYM (Qcdr, "cdr");
   DEFSYM (Qaref, "aref");
   DEFSYM (Qaset, "aset");
 
