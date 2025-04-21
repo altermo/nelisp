@@ -973,6 +973,51 @@ funcall_lambda (Lisp_Object fun, ptrdiff_t nargs, Lisp_Object *arg_vector)
   return unbind_to (count, val);
 }
 
+bool
+FUNCTIONP (Lisp_Object object)
+{
+  if (SYMBOLP (object) && !NILP (Ffboundp (object)))
+    {
+      object = Findirect_function (object, Qt);
+
+      if (CONSP (object) && EQ (XCAR (object), Qautoload))
+        {
+          /* Autoloaded symbols are functions, except if they load
+             macros or keymaps.  */
+          for (int i = 0; i < 4 && CONSP (object); i++)
+            object = XCDR (object);
+
+          return !(CONSP (object) && !NILP (XCAR (object)));
+        }
+    }
+
+  if (SUBRP (object))
+    return XSUBR (object)->max_args != UNEVALLED;
+  else if (CLOSUREP (object) || MODULE_FUNCTIONP (object))
+    return true;
+  else if (CONSP (object))
+    {
+      Lisp_Object car = XCAR (object);
+      return EQ (car, Qlambda);
+    }
+  else
+    return false;
+}
+DEFUN ("functionp", Ffunctionp, Sfunctionp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a function.
+
+An object is a function if it is callable via `funcall'; this includes
+symbols with function bindings, but excludes macros and special forms.
+
+Ordinarily return nil if OBJECT is not a function, although t might be
+returned in rare cases.  */)
+(Lisp_Object object)
+{
+  if (FUNCTIONP (object))
+    return Qt;
+  return Qnil;
+}
+
 Lisp_Object
 funcall_general (Lisp_Object fun, ptrdiff_t numargs, Lisp_Object *args)
 {
@@ -1529,6 +1574,7 @@ alist of active lexical bindings.  */);
 
   defsubr (&Ssignal);
   defsubr (&Sautoload);
+  defsubr (&Sfunctionp);
   defsubr (&Ssetq);
   defsubr (&Slet);
   defsubr (&Sinternal__define_uninitialized_variable);

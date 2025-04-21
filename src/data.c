@@ -681,6 +681,14 @@ start:
   return (BASE_EQ (valcontents, Qunbound) ? Qnil : Qt);
 }
 
+DEFUN ("fboundp", Ffboundp, Sfboundp, 1, 1, 0,
+       doc: /* Return t if SYMBOL's function definition is not nil.  */)
+(Lisp_Object symbol)
+{
+  CHECK_SYMBOL (symbol);
+  return NILP (XSYMBOL (symbol)->u.s.function) ? Qnil : Qt;
+}
+
 DEFUN ("symbol-function", Fsymbol_function, Ssymbol_function, 1, 1, 0,
        doc: /* Return SYMBOL's function definition.  */)
 (Lisp_Object symbol)
@@ -1517,6 +1525,7 @@ syms_of_data (void)
   defsubr (&Ssetcar);
   defsubr (&Ssetcdr);
   defsubr (&Sboundp);
+  defsubr (&Sfboundp);
   defsubr (&Ssymbol_function);
   defsubr (&Sconsp);
   defsubr (&Satom);
