@@ -405,6 +405,26 @@ setup_frame:;
           DISCARD (1);
           NEXT;
 
+        CASE (Bsymbolp):
+          TOP = SYMBOLP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Bconsp):
+          TOP = CONSP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Bstringp):
+          TOP = STRINGP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Blistp):
+          TOP = CONSP (TOP) || NILP (TOP) ? Qt : Qnil;
+          NEXT;
+
+        CASE (Bnot):
+          TOP = NILP (TOP) ? Qt : Qnil;
+          NEXT;
+
         CASE (Bconstant2):
           PUSH (vectorp[FETCH2]);
           NEXT;
