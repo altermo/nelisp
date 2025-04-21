@@ -1076,6 +1076,12 @@ SET_SYMBOL_VAL (struct Lisp_Symbol *sym, Lisp_Object v)
   sym->u.s.val.value = v;
 }
 INLINE void
+SET_SYMBOL_ALIAS (struct Lisp_Symbol *sym, struct Lisp_Symbol *v)
+{
+  eassume (sym->u.s.redirect == SYMBOL_VARALIAS && v);
+  sym->u.s.val.alias = v;
+}
+INLINE void
 SET_SYMBOL_FWD (struct Lisp_Symbol *sym, void const *v)
 {
   eassume (sym->u.s.redirect == SYMBOL_FORWARDED && v);

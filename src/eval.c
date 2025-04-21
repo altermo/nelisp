@@ -1243,6 +1243,89 @@ More specifically, behaves like (defconst SYM 'INITVALUE DOCSTRING).  */)
   return sym;
 }
 
+DEFUN ("defvaralias", Fdefvaralias, Sdefvaralias, 2, 3, 0,
+       doc: /* Make NEW-ALIAS a variable alias for symbol BASE-VARIABLE.
+Aliased variables always have the same value; setting one sets the other.
+Third arg DOCSTRING, if non-nil, is documentation for NEW-ALIAS.  If it is
+omitted or nil, NEW-ALIAS gets the documentation string of BASE-VARIABLE,
+or of the variable at the end of the chain of aliases, if BASE-VARIABLE is
+itself an alias.  If NEW-ALIAS is bound, and BASE-VARIABLE is not,
+then the value of BASE-VARIABLE is set to that of NEW-ALIAS.
+The return value is BASE-VARIABLE.
+
+If the resulting chain of variable definitions would contain a loop,
+signal a `cyclic-variable-indirection' error.  */)
+(Lisp_Object new_alias, Lisp_Object base_variable, Lisp_Object docstring)
+{
+  CHECK_SYMBOL (new_alias);
+  CHECK_SYMBOL (base_variable);
+
+  if (SYMBOL_CONSTANT_P (new_alias))
+    error ("Cannot make a constant an alias: %s",
+           SDATA (SYMBOL_NAME (new_alias)));
+
+  struct Lisp_Symbol *sym = XSYMBOL (new_alias);
+
+  /* Ensure non-circularity.  */
+  struct Lisp_Symbol *s = XSYMBOL (base_variable);
+  for (;;)
+    {
+      if (s == sym)
+        xsignal1 (Qcyclic_variable_indirection, base_variable);
+      if (s->u.s.redirect != SYMBOL_VARALIAS)
+        break;
+      s = SYMBOL_ALIAS (s);
+    }
+
+  switch (sym->u.s.redirect)
+    {
+    case SYMBOL_FORWARDED:
+      error ("Cannot make a built-in variable an alias: %s",
+             SDATA (SYMBOL_NAME (new_alias)));
+    case SYMBOL_LOCALIZED:
+      error ("Don't know how to make a buffer-local variable an alias: %s",
+             SDATA (SYMBOL_NAME (new_alias)));
+    case SYMBOL_PLAINVAL:
+    case SYMBOL_VARALIAS:
+      break;
+    default:
+      emacs_abort ();
+    }
+
+  if (NILP (Fboundp (base_variable)))
+    set_internal (base_variable, find_symbol_value (new_alias), Qnil,
+                  SET_INTERNAL_BIND);
+  else if (!NILP (Fboundp (new_alias))
+           && !EQ (find_symbol_value (new_alias),
+                   find_symbol_value (base_variable)))
+    {
+      TODO;
+    }
+
+  {
+    union specbinding *p;
+
+    for (p = specpdl_ptr; p > specpdl;)
+      if ((--p)->kind >= SPECPDL_LET && (EQ (new_alias, specpdl_symbol (p))))
+        error ("Don't know how to make a let-bound variable an alias: %s",
+               SDATA (SYMBOL_NAME (new_alias)));
+  }
+
+  if (sym->u.s.trapped_write == SYMBOL_TRAPPED_WRITE)
+    TODO; // notify_variable_watchers (new_alias, base_variable, Qdefvaralias,
+          // Qnil);
+
+  sym->u.s.declared_special = true;
+  XSYMBOL (base_variable)->u.s.declared_special = true;
+  sym->u.s.redirect = SYMBOL_VARALIAS;
+  SET_SYMBOL_ALIAS (sym, XSYMBOL (base_variable));
+  sym->u.s.trapped_write = XSYMBOL (base_variable)->u.s.trapped_write;
+  LOADHIST_ATTACH (new_alias);
+  Fput (new_alias, Qvariable_documentation, docstring);
+
+  return base_variable;
+}
+
 DEFUN ("or", For, Sor, 0, UNEVALLED, 0,
        doc: /* Eval args until one of them yields non-nil, then return that value.
 The remaining args are not evalled at all.
@@ -1414,6 +1497,7 @@ alist of active lexical bindings.  */);
   defsubr (&Sdefvar);
   defsubr (&Sdefconst);
   defsubr (&Sdefconst_1);
+  defsubr (&Sdefvaralias);
   defsubr (&Sprogn);
   defsubr (&Sif);
   defsubr (&Swhile);

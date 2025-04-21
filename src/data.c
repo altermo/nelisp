@@ -1253,6 +1253,7 @@ syms_of_data (void)
   DEFSYM (Qarith_error, "arith-error");
   DEFSYM (Qoverflow_error, "overflow-error");
   DEFSYM (Qrange_error, "range-error");
+  DEFSYM (Qcyclic_variable_indirection, "cyclic-variable-indirection");
 
   Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -1284,6 +1285,9 @@ syms_of_data (void)
   PUT_ERROR (Qrange_error, arith_tail, "Arithmetic range error");
   PUT_ERROR (Qoverflow_error, Fcons (Qrange_error, arith_tail),
              "Arithmetic overflow error");
+
+  PUT_ERROR (Qcyclic_variable_indirection, error_tail,
+             "Symbol's chain of variable indirections contains a loop");
 
   defsubr (&Ssymbol_value);
   defsubr (&Sbare_symbol);
