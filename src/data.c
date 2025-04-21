@@ -196,6 +196,20 @@ context.  Also see `default-value'.  */)
   return (BASE_EQ (value, Qunbound) ? Qnil : Qt);
 }
 
+DEFUN ("default-value", Fdefault_value, Sdefault_value, 1, 1, 0,
+       doc: /* Return SYMBOL's default value.
+This is the value that is seen in buffers that do not have their own values
+for this variable.  The default value is meaningful for variables with
+local bindings in certain buffers.  */)
+(Lisp_Object symbol)
+{
+  Lisp_Object value = default_value (symbol);
+  if (!BASE_EQ (value, Qunbound))
+    return value;
+
+  xsignal1 (Qvoid_variable, symbol);
+}
+
 void
 set_default_internal (Lisp_Object symbol, Lisp_Object value,
                       enum Set_Internal_Bind bindflag, KBOARD *where)
@@ -1488,6 +1502,7 @@ syms_of_data (void)
   defsubr (&Ssymbol_value);
   defsubr (&Sbare_symbol);
   defsubr (&Sdefault_boundp);
+  defsubr (&Sdefault_value);
   defsubr (&Sset_default);
   defsubr (&Smake_variable_buffer_local);
   defsubr (&Scar);
