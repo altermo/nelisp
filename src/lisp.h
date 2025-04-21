@@ -525,6 +525,12 @@ Lisp_Object (make_fixnum) (EMACS_INT n)
   eassert (!FIXNUM_OVERFLOW_P (n));
   return lisp_h_make_fixnum_wrap (n);
 }
+INLINE Lisp_Object
+make_ufixnum (EMACS_INT n)
+{
+  eassert (0 <= n && n <= INTMASK);
+  return lisp_h_make_fixnum_wrap (n);
+}
 INLINE bool (FIXNUMP) (Lisp_Object x) { return lisp_h_FIXNUMP (x); }
 INLINE EMACS_INT
 XFIXNUM (Lisp_Object a)
@@ -1433,6 +1439,12 @@ INLINE bool
 NUMBERP (Lisp_Object x)
 {
   return INTEGERP (x) || FLOATP (x);
+}
+
+INLINE bool
+AUTOLOADP (Lisp_Object x)
+{
+  return CONSP (x) && EQ (Qautoload, XCAR (x));
 }
 
 INLINE void

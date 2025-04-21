@@ -571,6 +571,43 @@ indirect_function (Lisp_Object object)
   return object;
 }
 
+DEFUN ("autoload", Fautoload, Sautoload, 2, 5, 0,
+       doc: /* Define FUNCTION to autoload from FILE.
+FUNCTION is a symbol; FILE is a file name string to pass to `load'.
+
+Third arg DOCSTRING is documentation for the function.
+
+Fourth arg INTERACTIVE if non-nil says function can be called
+interactively.  If INTERACTIVE is a list, it is interpreted as a list
+of modes the function is applicable for.
+
+Fifth arg TYPE indicates the type of the object:
+   nil or omitted says FUNCTION is a function,
+   `keymap' says FUNCTION is really a keymap, and
+   `macro' or t says FUNCTION is really a macro.
+
+Third through fifth args give info about the real definition.
+They default to nil.
+
+If FUNCTION is already defined other than as an autoload,
+this does nothing and returns nil.  */)
+(Lisp_Object function, Lisp_Object file, Lisp_Object docstring,
+ Lisp_Object interactive, Lisp_Object type)
+{
+  CHECK_SYMBOL (function);
+  CHECK_STRING (file);
+
+  if (!NILP (XSYMBOL (function)->u.s.function)
+      && !AUTOLOADP (XSYMBOL (function)->u.s.function))
+    return Qnil;
+
+  if (!NILP (Vpurify_flag) && BASE_EQ (docstring, make_fixnum (0)))
+    docstring = make_ufixnum (XHASH (function));
+  return Fdefalias (function,
+                    list5 (Qautoload, file, docstring, interactive, type),
+                    Qnil);
+}
+
 Lisp_Object
 eval_sub (Lisp_Object form)
 {
@@ -1491,6 +1528,7 @@ alist of active lexical bindings.  */);
   Funintern (Qinternal_interpreter_environment, Qnil);
 
   defsubr (&Ssignal);
+  defsubr (&Sautoload);
   defsubr (&Ssetq);
   defsubr (&Slet);
   defsubr (&Sinternal__define_uninitialized_variable);
