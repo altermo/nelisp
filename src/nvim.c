@@ -211,3 +211,24 @@ nvim_current_buffer (void)
   }
   return XBUFFER (nvim_bufid_to_bufobj (bufid));
 }
+
+ptrdiff_t
+nvim_get_field_zv (struct buffer *b)
+{
+  eassert (BUFFER_LIVE_P (b));
+  long bufid = b->bufid;
+  ptrdiff_t zv;
+  LUA (10)
+  {
+    push_vim_api (L, "nvim_buf_call");
+    lua_pushnumber (L, bufid);
+    push_vim_fn (L, "wordcount");
+    lua_call (L, 2, 1);
+    lua_getfield (L, -1, "chars");
+    eassert (lua_isnumber (L, -1));
+    zv = lua_tointeger (L, -1);
+    zv = zv + 1;
+    lua_pop (L, 2);
+  }
+  return zv;
+}

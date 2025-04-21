@@ -6,6 +6,8 @@
 
 #define current_buffer (nvim_current_buffer ())
 
+#define ZV (nvim_get_field_zv (current_buffer))
+
 INLINE bool
 BUFFERP (Lisp_Object a)
 {

@@ -1,6 +1,18 @@
 #include "lisp.h"
 
+#include "buffer.h"
 #include "lua.h"
+
+DEFUN ("point-max", Fpoint_max, Spoint_max, 0, 0, 0,
+       doc: /* Return the maximum permissible value of point in the current buffer.
+This is (1+ (buffer-size)), unless narrowing (a buffer restriction)
+is in effect, in which case it is less.  */)
+(void)
+{
+  Lisp_Object temp;
+  XSETFASTINT (temp, ZV);
+  return temp;
+}
 
 DEFUN ("message", Fmessage, Smessage, 1, MANY, 0,
        doc: /* Display a message at the bottom of the screen.
@@ -38,5 +50,6 @@ usage: (message FORMAT-STRING &rest ARGS)  */)
 void
 syms_of_editfns (void)
 {
+  defsubr (&Spoint_max);
   defsubr (&Smessage);
 }

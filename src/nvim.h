@@ -14,4 +14,6 @@ extern Lisp_Object nvim_bvar (struct buffer *, enum nvim_buffer_var_field);
 extern void nvim_set_buffer (struct buffer *);
 extern struct buffer *nvim_current_buffer (void);
 
+extern ptrdiff_t nvim_get_field_zv (struct buffer *);
+
 #endif
