@@ -1056,6 +1056,12 @@ SYMBOL_VAL (struct Lisp_Symbol *sym)
   eassert (sym->u.s.redirect == SYMBOL_PLAINVAL);
   return sym->u.s.val.value;
 }
+INLINE struct Lisp_Symbol *
+SYMBOL_ALIAS (struct Lisp_Symbol *sym)
+{
+  eassume (sym->u.s.redirect == SYMBOL_VARALIAS && sym->u.s.val.alias);
+  return sym->u.s.val.alias;
+}
 INLINE lispfwd
 SYMBOL_FWD (struct Lisp_Symbol *sym)
 {

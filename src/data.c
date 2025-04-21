@@ -440,6 +440,39 @@ DEFUN ("setcdr", Fsetcdr, Ssetcdr, 2, 2, 0,
   return newcdr;
 }
 
+DEFUN ("boundp", Fboundp, Sboundp, 1, 1, 0,
+       doc: /* Return t if SYMBOL's value is not void.
+Note that if `lexical-binding' is in effect, this refers to the
+global value outside of any lexical scope.  */)
+(register Lisp_Object symbol)
+{
+  Lisp_Object valcontents;
+  struct Lisp_Symbol *sym;
+  CHECK_SYMBOL (symbol);
+  sym = XSYMBOL (symbol);
+
+start:
+  switch (sym->u.s.redirect)
+    {
+    case SYMBOL_PLAINVAL:
+      valcontents = SYMBOL_VAL (sym);
+      break;
+    case SYMBOL_VARALIAS:
+      sym = SYMBOL_ALIAS (sym);
+      goto start;
+    case SYMBOL_LOCALIZED:
+      {
+        TODO;
+      }
+    case SYMBOL_FORWARDED:
+      return Qt;
+    default:
+      emacs_abort ();
+    }
+
+  return (BASE_EQ (valcontents, Qunbound) ? Qnil : Qt);
+}
+
 DEFUN ("symbol-function", Fsymbol_function, Ssymbol_function, 1, 1, 0,
        doc: /* Return SYMBOL's function definition.  */)
 (Lisp_Object symbol)
@@ -1265,6 +1298,7 @@ syms_of_data (void)
   defsubr (&Sdefalias);
   defsubr (&Ssetcar);
   defsubr (&Ssetcdr);
+  defsubr (&Sboundp);
   defsubr (&Ssymbol_function);
   defsubr (&Sconsp);
   defsubr (&Satom);
