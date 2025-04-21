@@ -1068,6 +1068,12 @@ SYMBOL_ALIAS (struct Lisp_Symbol *sym)
   eassume (sym->u.s.redirect == SYMBOL_VARALIAS && sym->u.s.val.alias);
   return sym->u.s.val.alias;
 }
+INLINE struct Lisp_Buffer_Local_Value *
+SYMBOL_BLV (struct Lisp_Symbol *sym)
+{
+  eassume (sym->u.s.redirect == SYMBOL_LOCALIZED && sym->u.s.val.blv);
+  return sym->u.s.val.blv;
+}
 INLINE lispfwd
 SYMBOL_FWD (struct Lisp_Symbol *sym)
 {
@@ -1086,6 +1092,12 @@ SET_SYMBOL_ALIAS (struct Lisp_Symbol *sym, struct Lisp_Symbol *v)
 {
   eassume (sym->u.s.redirect == SYMBOL_VARALIAS && v);
   sym->u.s.val.alias = v;
+}
+INLINE void
+SET_SYMBOL_BLV (struct Lisp_Symbol *sym, struct Lisp_Buffer_Local_Value *v)
+{
+  eassume (sym->u.s.redirect == SYMBOL_LOCALIZED && v);
+  sym->u.s.val.blv = v;
 }
 INLINE void
 SET_SYMBOL_FWD (struct Lisp_Symbol *sym, void const *v)
@@ -1300,6 +1312,48 @@ INLINE bool
 KBOARD_OBJFWDP (lispfwd a)
 {
   return XFWDTYPE (a) == Lisp_Fwd_Kboard_Obj;
+}
+
+struct Lisp_Buffer_Local_Value
+{
+  bool_bf local_if_set : 1;
+  bool_bf found : 1;
+  lispfwd fwd;
+  Lisp_Object where;
+  Lisp_Object defcell;
+  Lisp_Object valcell;
+};
+
+INLINE void
+set_blv_found (struct Lisp_Buffer_Local_Value *blv, int found)
+{
+  eassert (found == !EQ (blv->defcell, blv->valcell));
+  blv->found = found;
+}
+INLINE Lisp_Object
+blv_value (struct Lisp_Buffer_Local_Value *blv)
+{
+  return XCDR (blv->valcell);
+}
+INLINE void
+set_blv_value (struct Lisp_Buffer_Local_Value *blv, Lisp_Object val)
+{
+  XSETCDR (blv->valcell, val);
+}
+INLINE void
+set_blv_where (struct Lisp_Buffer_Local_Value *blv, Lisp_Object val)
+{
+  blv->where = val;
+}
+INLINE void
+set_blv_defcell (struct Lisp_Buffer_Local_Value *blv, Lisp_Object val)
+{
+  blv->defcell = val;
+}
+INLINE void
+set_blv_valcell (struct Lisp_Buffer_Local_Value *blv, Lisp_Object val)
+{
+  blv->valcell = val;
 }
 
 struct Lisp_Float
@@ -2071,6 +2125,7 @@ struct Lisp_Objfwd
   enum Lisp_Fwd_Type type;
   Lisp_Object *objvar;
 };
+
 extern void defvar_lisp (struct Lisp_Objfwd const *, char const *);
 #define DEFVAR_LISP(lname, vname, doc)          \
   do                                            \

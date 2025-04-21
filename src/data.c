@@ -264,6 +264,113 @@ for this variable.  */)
   return value;
 }
 
+union Lisp_Val_Fwd
+{
+  Lisp_Object value;
+  lispfwd fwd;
+};
+
+static struct Lisp_Buffer_Local_Value *
+make_blv (struct Lisp_Symbol *sym, bool forwarded,
+          union Lisp_Val_Fwd valcontents)
+{
+  struct Lisp_Buffer_Local_Value *blv = xmalloc (sizeof *blv);
+  Lisp_Object symbol;
+  Lisp_Object tem;
+
+  XSETSYMBOL (symbol, sym);
+  tem = Fcons (symbol, (forwarded ? do_symval_forwarding (valcontents.fwd)
+                                  : valcontents.value));
+
+  eassert (!(forwarded && BUFFER_OBJFWDP (valcontents.fwd)));
+  eassert (!(forwarded && KBOARD_OBJFWDP (valcontents.fwd)));
+  if (forwarded)
+    blv->fwd = valcontents.fwd;
+  else
+    blv->fwd.fwdptr = NULL;
+  set_blv_where (blv, Qnil);
+  blv->local_if_set = 0;
+  set_blv_defcell (blv, tem);
+  set_blv_valcell (blv, tem);
+  set_blv_found (blv, false);
+#if TODO_NELISP_LATER_AND
+  __lsan_ignore_object (blv);
+#endif
+  return blv;
+}
+
+DEFUN ("make-variable-buffer-local", Fmake_variable_buffer_local,
+       Smake_variable_buffer_local, 1, 1, "vMake Variable Buffer Local: ",
+       doc: /* Make VARIABLE become buffer-local whenever it is set.
+At any time, the value for the current buffer is in effect,
+unless the variable has never been set in this buffer,
+in which case the default value is in effect.
+Note that binding the variable with `let', or setting it while
+a `let'-style binding made in this buffer is in effect,
+does not make the variable buffer-local.  Return VARIABLE.
+
+This globally affects all uses of this variable, so it belongs together with
+the variable declaration, rather than with its uses (if you just want to make
+a variable local to the current buffer for one particular use, use
+`make-local-variable').  Buffer-local bindings are normally cleared
+while setting up a new major mode, unless they have a `permanent-local'
+property.
+
+The function `default-value' gets the default value and `set-default' sets it.
+
+See also `defvar-local'.  */)
+(register Lisp_Object variable)
+{
+  struct Lisp_Symbol *sym;
+  struct Lisp_Buffer_Local_Value *blv = NULL;
+  union Lisp_Val_Fwd valcontents UNINIT;
+  bool forwarded UNINIT;
+
+  CHECK_SYMBOL (variable);
+  sym = XSYMBOL (variable);
+
+start:
+  switch (sym->u.s.redirect)
+    {
+    case SYMBOL_VARALIAS:
+      sym = SYMBOL_ALIAS (sym);
+      goto start;
+    case SYMBOL_PLAINVAL:
+      forwarded = 0;
+      valcontents.value = SYMBOL_VAL (sym);
+      if (BASE_EQ (valcontents.value, Qunbound))
+        valcontents.value = Qnil;
+      break;
+    case SYMBOL_LOCALIZED:
+      blv = SYMBOL_BLV (sym);
+      break;
+    case SYMBOL_FORWARDED:
+      forwarded = 1;
+      valcontents.fwd = SYMBOL_FWD (sym);
+      if (KBOARD_OBJFWDP (valcontents.fwd))
+        error ("Symbol %s may not be buffer-local",
+               SDATA (SYMBOL_NAME (variable)));
+      else if (BUFFER_OBJFWDP (valcontents.fwd))
+        return variable;
+      break;
+    default:
+      emacs_abort ();
+    }
+
+  if (SYMBOL_CONSTANT_P (variable))
+    xsignal1 (Qsetting_constant, variable);
+
+  if (!blv)
+    {
+      blv = make_blv (sym, forwarded, valcontents);
+      sym->u.s.redirect = SYMBOL_LOCALIZED;
+      SET_SYMBOL_BLV (sym, blv);
+    }
+
+  blv->local_if_set = 1;
+  return variable;
+}
+
 static void
 store_symval_forwarding (lispfwd valcontents, Lisp_Object newval)
 {
@@ -1295,6 +1402,7 @@ syms_of_data (void)
   defsubr (&Sbare_symbol);
   defsubr (&Sdefault_boundp);
   defsubr (&Sset_default);
+  defsubr (&Smake_variable_buffer_local);
   defsubr (&Scar);
   defsubr (&Scdr);
   defsubr (&Scar_safe);
