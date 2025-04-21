@@ -505,6 +505,13 @@ setup_frame:;
           TOP = Fsymbol_function (TOP);
           NEXT;
 
+        CASE (Bset):
+          {
+            Lisp_Object v1 = POP;
+            TOP = Fset (TOP, v1);
+            NEXT;
+          }
+
         CASE (Bfset):
           {
             Lisp_Object v1 = POP;
@@ -592,6 +599,10 @@ setup_frame:;
         CASE (Bcall7):
           op = FETCH2;
           goto docall;
+
+        CASE (Bnumberp):
+          TOP = NUMBERP (TOP) ? Qt : Qnil;
+          NEXT;
 
         CASE_ABORT:
           error ("Invalid byte opcode: op=%d, ptr=%" pD "d", op,
