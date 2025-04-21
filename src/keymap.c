@@ -4,6 +4,8 @@
 #include "puresize.h"
 #include "termhooks.h"
 
+Lisp_Object current_global_map;
+
 static Lisp_Object where_is_cache;
 static Lisp_Object where_is_cache_keymaps;
 
@@ -528,6 +530,16 @@ binding KEY to DEF is added at the front of KEYMAP.  */)
     }
 }
 
+DEFUN ("use-global-map", Fuse_global_map, Suse_global_map, 1, 1, 0,
+       doc: /* Select KEYMAP as the global keymap.  */)
+(Lisp_Object keymap)
+{
+  keymap = get_keymap (keymap, 1, 1);
+  current_global_map = keymap;
+
+  return Qnil;
+}
+
 void
 syms_of_keymap (void)
 {
@@ -545,4 +557,5 @@ syms_of_keymap (void)
   defsubr (&Smake_keymap);
   defsubr (&Smake_sparse_keymap);
   defsubr (&Sdefine_key);
+  defsubr (&Suse_global_map);
 }
