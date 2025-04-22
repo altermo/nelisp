@@ -78,6 +78,7 @@ emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
 #define IS_DIRECTORY_SEP(_c_) ((_c_) == DIRECTORY_SEP)
 #define IS_ANY_SEP(_c_) (IS_DIRECTORY_SEP (_c_))
 #define IS_DEVICE_SEP(_c_) 0
+#define PACKAGE_VERSION "30.1"
 #if defined __linux__
 # define SYSTEM_TYPE "gnu/linux"
 #else
