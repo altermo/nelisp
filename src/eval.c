@@ -1049,6 +1049,46 @@ funcall_general (Lisp_Object fun, ptrdiff_t numargs, Lisp_Object *args)
     }
 }
 
+DEFUN ("funcall", Ffuncall, Sfuncall, 1, MANY, 0,
+       doc: /* Call first argument as a function, passing remaining arguments to it.
+Return the value that function returns.
+Thus, (funcall \\='cons \\='x \\='y) returns (x . y).
+usage: (funcall FUNCTION &rest ARGUMENTS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  specpdl_ref count;
+  UNUSED (count);
+
+  maybe_quit ();
+
+  if (++lisp_eval_depth > max_lisp_eval_depth)
+    {
+      if (max_lisp_eval_depth < 100)
+        max_lisp_eval_depth = 100;
+      if (lisp_eval_depth > max_lisp_eval_depth)
+        xsignal1 (Qexcessive_lisp_nesting, make_fixnum (lisp_eval_depth));
+    }
+
+  count = record_in_backtrace (args[0], &args[1], nargs - 1);
+
+  maybe_gc ();
+
+#if TODO_NELISP_LATER_AND
+  if (debug_on_next_call)
+    do_debug_on_call (Qlambda, count);
+#endif
+
+  Lisp_Object val = funcall_general (args[0], nargs - 1, args + 1);
+
+  lisp_eval_depth--;
+#if TODO_NELISP_LATER_AND
+  if (backtrace_debug_on_exit (specpdl_ref_to_ptr (count)))
+    val = call_debugger (list2 (Qexit, val));
+#endif
+  specpdl_ptr--;
+  return val;
+}
+
 DEFUN ("setq", Fsetq, Ssetq, 0, UNEVALLED, 0,
        doc: /* Set each SYM to the value of its VAL.
 The symbols SYM are variables; they are literal (not evaluated).
@@ -1575,6 +1615,7 @@ alist of active lexical bindings.  */);
   defsubr (&Ssignal);
   defsubr (&Sautoload);
   defsubr (&Sfunctionp);
+  defsubr (&Sfuncall);
   defsubr (&Ssetq);
   defsubr (&Slet);
   defsubr (&Sinternal__define_uninitialized_variable);

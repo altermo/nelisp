@@ -1486,6 +1486,8 @@ syms_of_data (void)
   DEFSYM (Qoverflow_error, "overflow-error");
   DEFSYM (Qrange_error, "range-error");
   DEFSYM (Qcyclic_variable_indirection, "cyclic-variable-indirection");
+  DEFSYM (Qexcessive_lisp_nesting, "excessive-lisp-nesting");
+  DEFSYM (Qrecursion_error, "recursion-error");
 
   Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -1520,6 +1522,14 @@ syms_of_data (void)
 
   PUT_ERROR (Qcyclic_variable_indirection, error_tail,
              "Symbol's chain of variable indirections contains a loop");
+
+  Lisp_Object recursion_tail = pure_cons (Qrecursion_error, error_tail);
+  Fput (Qrecursion_error, Qerror_conditions, recursion_tail);
+  Fput (Qrecursion_error, Qerror_message,
+        build_pure_c_string ("Excessive recursive calling error"));
+
+  PUT_ERROR (Qexcessive_lisp_nesting, recursion_tail,
+             "Lisp nesting exceeds `max-lisp-eval-depth'");
 
   defsubr (&Ssymbol_value);
   defsubr (&Sbare_symbol);
