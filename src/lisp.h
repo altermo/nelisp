@@ -1836,6 +1836,29 @@ extern Lisp_Object list5 (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object,
                           Lisp_Object);
 extern EMACS_INT consing_until_gc;
 extern void maybe_garbage_collect (void);
+INLINE Lisp_Object
+list1i (intmax_t a)
+{
+  return list1 (make_int (a));
+}
+INLINE Lisp_Object
+list2i (intmax_t a, intmax_t b)
+{
+  return list2 (make_int (a), make_int (b));
+}
+INLINE Lisp_Object
+list3i (intmax_t a, intmax_t b, intmax_t c)
+{
+  return list3 (make_int (a), make_int (b), make_int (c));
+}
+INLINE Lisp_Object
+list4i (intmax_t a, intmax_t b, intmax_t c, intmax_t d)
+{
+  return list4 (make_int (a), make_int (b), make_int (c), make_int (d));
+}
+extern Lisp_Object pure_listn (ptrdiff_t, Lisp_Object, ...);
+#define pure_list(...) \
+  pure_listn (ARRAYELTS (((Lisp_Object[]) { __VA_ARGS__ })), __VA_ARGS__)
 
 #define USE_STACK_LISP_OBJECTS true
 enum
@@ -2066,6 +2089,7 @@ extern Lisp_Object arithcompare (Lisp_Object num1, Lisp_Object num2,
 
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);
+extern Lisp_Object parse_modifiers (Lisp_Object symbol);
 
 extern void syms_of_editfns (void);
 

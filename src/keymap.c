@@ -6,6 +6,8 @@
 
 Lisp_Object current_global_map;
 
+static Lisp_Object exclude_keys;
+
 static Lisp_Object where_is_cache;
 static Lisp_Object where_is_cache_keymaps;
 
@@ -415,6 +417,22 @@ possibly_translate_key_sequence (Lisp_Object key, ptrdiff_t *length)
   return key;
 }
 
+static void
+silly_event_symbol_error (Lisp_Object c)
+{
+  Lisp_Object parsed = parse_modifiers (c);
+  int modifiers = XFIXNAT (XCAR (XCDR (parsed)));
+  Lisp_Object base = XCAR (parsed);
+  Lisp_Object name = Fsymbol_name (base);
+  Lisp_Object assoc = Fassoc (name, exclude_keys, Qnil);
+
+  if (!NILP (assoc))
+    {
+      TODO;
+      UNUSED (modifiers);
+    }
+}
+
 DEFUN ("define-key", Fdefine_key, Sdefine_key, 3, 4, 0,
        doc: /* In KEYMAP, define key sequence KEY as DEF.
 This is a legacy function; see `keymap-set' for the recommended
@@ -487,7 +505,7 @@ binding KEY to DEF is added at the front of KEYMAP.  */)
         }
 
       if (SYMBOLP (c))
-        TODO; // silly_event_symbol_error (c);
+        silly_event_symbol_error (c);
 
       if (FIXNUMP (c) && (XFIXNUM (c) & meta_bit) && !metized)
         {
@@ -553,6 +571,18 @@ syms_of_keymap (void)
   where_is_cache = Qnil;
   staticpro (&where_is_cache);
   staticpro (&where_is_cache_keymaps);
+
+  exclude_keys = pure_list (pure_cons (build_pure_c_string ("DEL"),
+                                       build_pure_c_string ("\\d")),
+                            pure_cons (build_pure_c_string ("TAB"),
+                                       build_pure_c_string ("\\t")),
+                            pure_cons (build_pure_c_string ("RET"),
+                                       build_pure_c_string ("\\r")),
+                            pure_cons (build_pure_c_string ("ESC"),
+                                       build_pure_c_string ("\\e")),
+                            pure_cons (build_pure_c_string ("SPC"),
+                                       build_pure_c_string (" ")));
+  staticpro (&exclude_keys);
 
   defsubr (&Smake_keymap);
   defsubr (&Smake_sparse_keymap);

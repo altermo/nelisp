@@ -1,5 +1,6 @@
 #include "lisp.h"
 #include "lua.h"
+#include "termhooks.h"
 
 EMACS_INT command_loop_level;
 
@@ -158,6 +159,163 @@ This function is called by the editor initialization to begin editing.  */)
   return unbind_to (count, Qnil);
 }
 
+static int
+parse_modifiers_uncached (Lisp_Object symbol, ptrdiff_t *modifier_end)
+{
+  Lisp_Object name;
+  ptrdiff_t i;
+  int modifiers;
+
+  CHECK_SYMBOL (symbol);
+
+  modifiers = 0;
+  name = SYMBOL_NAME (symbol);
+
+  for (i = 0; i < SBYTES (name) - 1;)
+    {
+      ptrdiff_t this_mod_end = 0;
+      int this_mod = 0;
+
+      switch (SREF (name, i))
+        {
+#define SINGLE_LETTER_MOD(BIT) (this_mod_end = i + 1, this_mod = BIT)
+
+        case 'A':
+          SINGLE_LETTER_MOD (alt_modifier);
+          break;
+
+        case 'C':
+          SINGLE_LETTER_MOD (ctrl_modifier);
+          break;
+
+        case 'H':
+          SINGLE_LETTER_MOD (hyper_modifier);
+          break;
+
+        case 'M':
+          SINGLE_LETTER_MOD (meta_modifier);
+          break;
+
+        case 'S':
+          SINGLE_LETTER_MOD (shift_modifier);
+          break;
+
+        case 's':
+          SINGLE_LETTER_MOD (super_modifier);
+          break;
+
+#undef SINGLE_LETTER_MOD
+
+#define MULTI_LETTER_MOD(BIT, NAME, LEN)                                     \
+  if (i + LEN + 1 <= SBYTES (name) && !memcmp (SDATA (name) + i, NAME, LEN)) \
+    {                                                                        \
+      this_mod_end = i + LEN;                                                \
+      this_mod = BIT;                                                        \
+    }
+
+        case 'd':
+          MULTI_LETTER_MOD (drag_modifier, "drag", 4);
+          MULTI_LETTER_MOD (down_modifier, "down", 4);
+          MULTI_LETTER_MOD (double_modifier, "double", 6);
+          break;
+
+        case 't':
+          MULTI_LETTER_MOD (triple_modifier, "triple", 6);
+          break;
+
+        case 'u':
+          MULTI_LETTER_MOD (up_modifier, "up", 2);
+          break;
+#undef MULTI_LETTER_MOD
+        }
+
+      if (this_mod_end == 0)
+        break;
+
+      if (this_mod_end >= SBYTES (name) || SREF (name, this_mod_end) != '-')
+        break;
+
+      modifiers |= this_mod;
+      i = this_mod_end + 1;
+    }
+
+  if (!(modifiers
+        & (down_modifier | drag_modifier | double_modifier | triple_modifier))
+      && i + 7 == SBYTES (name) && memcmp (SDATA (name) + i, "mouse-", 6) == 0
+      && ('0' <= SREF (name, i + 6) && SREF (name, i + 6) <= '9'))
+    modifiers |= click_modifier;
+
+  if (!(modifiers & (double_modifier | triple_modifier))
+      && i + 6 < SBYTES (name) && memcmp (SDATA (name) + i, "wheel-", 6) == 0)
+    modifiers |= click_modifier;
+
+  if (modifier_end)
+    *modifier_end = i;
+
+  return modifiers;
+}
+
+static const char *const modifier_names[]
+  = { "up", "down", "drag", "click", "double", "triple", 0,         0,     0, 0,
+      0,    0,      0,      0,       0,        0,        0,         0,     0, 0,
+      0,    0,      "alt",  "super", "hyper",  "shift",  "control", "meta" };
+#define NUM_MOD_NAMES ARRAYELTS (modifier_names)
+
+static Lisp_Object modifier_symbols;
+
+static Lisp_Object
+lispy_modifier_list (int modifiers)
+{
+  Lisp_Object modifier_list;
+  unsigned long i;
+
+  modifier_list = Qnil;
+  for (i = 0; (1 << i) <= modifiers && i < NUM_MOD_NAMES; i++)
+    if (modifiers & (1 << i))
+      modifier_list = Fcons (AREF (modifier_symbols, i), modifier_list);
+
+  return modifier_list;
+}
+
+#define KEY_TO_CHAR(k) (XFIXNUM (k) & ((1 << CHARACTERBITS) - 1))
+
+Lisp_Object
+parse_modifiers (Lisp_Object symbol)
+{
+  Lisp_Object elements;
+
+  if (FIXNUMP (symbol))
+    return list2i (KEY_TO_CHAR (symbol), XFIXNUM (symbol) & CHAR_MODIFIER_MASK);
+  else if (!SYMBOLP (symbol))
+    return Qnil;
+
+  elements = Fget (symbol, Qevent_symbol_element_mask);
+  if (CONSP (elements))
+    return elements;
+  else
+    {
+      ptrdiff_t end;
+      int modifiers = parse_modifiers_uncached (symbol, &end);
+      Lisp_Object unmodified;
+      Lisp_Object mask;
+
+      unmodified = Fintern (make_string (SSDATA (SYMBOL_NAME (symbol)) + end,
+                                         SBYTES (SYMBOL_NAME (symbol)) - end),
+                            Qnil);
+
+      if (modifiers & ~INTMASK)
+        emacs_abort ();
+      XSETFASTINT (mask, modifiers);
+      elements = list2 (unmodified, mask);
+
+      Fput (symbol, Qevent_symbol_element_mask, elements);
+      Fput (symbol, Qevent_symbol_elements,
+            Fcons (unmodified, lispy_modifier_list (modifiers)));
+
+      return elements;
+    }
+}
+
 void
 init_keyboard (void)
 {
@@ -168,6 +326,20 @@ void
 syms_of_keyboard (void)
 {
   DEFSYM (QCfilter, ":filter");
+
+  DEFSYM (Qevent_symbol_elements, "event-symbol-elements");
+  DEFSYM (Qevent_symbol_element_mask, "event-symbol-element-mask");
+
+  {
+    int i;
+    int len = ARRAYELTS (modifier_names);
+
+    modifier_symbols = make_nil_vector (len);
+    for (i = 0; i < len; i++)
+      if (modifier_names[i])
+        ASET (modifier_symbols, i, intern_c_string (modifier_names[i]));
+    staticpro (&modifier_symbols);
+  }
 
   defsubr (&Srecursive_edit);
 

@@ -1153,6 +1153,32 @@ list5 (Lisp_Object arg1, Lisp_Object arg2, Lisp_Object arg3, Lisp_Object arg4,
                 Fcons (arg2, Fcons (arg3, Fcons (arg4, Fcons (arg5, Qnil)))));
 }
 
+static Lisp_Object
+cons_listn (ptrdiff_t count, Lisp_Object arg,
+            Lisp_Object (*cons) (Lisp_Object, Lisp_Object), va_list ap)
+{
+  eassume (0 < count);
+  Lisp_Object val = cons (arg, Qnil);
+  Lisp_Object tail = val;
+  for (ptrdiff_t i = 1; i < count; i++)
+    {
+      Lisp_Object elem = cons (va_arg (ap, Lisp_Object), Qnil);
+      XSETCDR (tail, elem);
+      tail = elem;
+    }
+  return val;
+}
+
+Lisp_Object
+pure_listn (ptrdiff_t count, Lisp_Object arg1, ...)
+{
+  va_list ap;
+  va_start (ap, arg1);
+  Lisp_Object val = cons_listn (count, arg1, pure_cons, ap);
+  va_end (ap);
+  return val;
+}
+
 DEFUN ("list", Flist, Slist, 0, MANY, 0,
        doc: /* Return a newly created list with specified arguments as elements.
 Allows any number of arguments, including zero.
