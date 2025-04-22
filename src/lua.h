@@ -7,14 +7,16 @@ struct _lua_assertchange
 {
   struct lua_State *state;
   int change;
+  char *file;
+  int line;
 };
 
-void
+__attribute__ ((always_inline)) INLINE void
 _lua_assertchange (struct _lua_assertchange *assertchange)
 {
   TODO_NELISP_LATER;
   if (lua_gettop (assertchange->state) != assertchange->change)
-    TODO;
+    TODO_ (assertchange->file, assertchange->line);
 }
 
 // Sets the variable `L` to the global lua-state.
@@ -46,7 +48,7 @@ _lua_assertchange (struct _lua_assertchange *assertchange)
                          cleanup (                                       \
                            _lua_assertchange))) struct _lua_assertchange \
            _assertchange                                                 \
-         = { L, _top };                                                  \
+         = { L, _top, __FILE__, __LINE__ };                              \
          run; run = 0)
 
 #endif
