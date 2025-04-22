@@ -584,6 +584,10 @@ syms_of_keymap (void)
                                        build_pure_c_string (" ")));
   staticpro (&exclude_keys);
 
+  DEFVAR_LISP ("minibuffer-local-map", Vminibuffer_local_map,
+	       doc: /* Default keymap to use when reading from the minibuffer.  */);
+  Vminibuffer_local_map = Fmake_sparse_keymap (Qnil);
+
   defsubr (&Smake_keymap);
   defsubr (&Smake_sparse_keymap);
   defsubr (&Sdefine_key);
