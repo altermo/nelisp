@@ -257,6 +257,31 @@ assq_no_quit (Lisp_Object key, Lisp_Object alist)
   return Qnil;
 }
 
+DEFUN ("assoc", Fassoc, Sassoc, 2, 3, 0,
+       doc: /* Return non-nil if KEY is equal to the car of an element of ALIST.
+The value is actually the first element of ALIST whose car equals KEY.
+
+Equality is defined by the function TESTFN, defaulting to `equal'.
+TESTFN is called with 2 arguments: a car of an alist element and KEY.  */)
+(Lisp_Object key, Lisp_Object alist, Lisp_Object testfn)
+{
+  if (eq_comparable_value (key) && NILP (testfn))
+    return Fassq (key, alist);
+  Lisp_Object tail = alist;
+  FOR_EACH_TAIL (tail)
+    {
+      Lisp_Object car = XCAR (tail);
+      if (!CONSP (car))
+        continue;
+      if ((NILP (testfn)
+             ? (EQ (XCAR (car), key) || !NILP (Fequal (XCAR (car), key)))
+             : !NILP (call2 (testfn, XCAR (car), key))))
+        return car;
+    }
+  CHECK_LIST_END (tail, alist);
+  return Qnil;
+}
+
 enum
 {
   WORDS_PER_DOUBLE = (sizeof (double) / sizeof (EMACS_UINT)
@@ -1127,6 +1152,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sget);
   defsubr (&Smemq);
   defsubr (&Sassq);
+  defsubr (&Sassoc);
   defsubr (&Sput);
   defsubr (&Smember);
   defsubr (&Sequal);
