@@ -593,6 +593,81 @@ efficient.  */)
   return make_fixnum (val);
 }
 
+void
+validate_subarray (Lisp_Object array, Lisp_Object from, Lisp_Object to,
+                   ptrdiff_t size, ptrdiff_t *ifrom, ptrdiff_t *ito)
+{
+  EMACS_INT f, t;
+
+  if (FIXNUMP (from))
+    {
+      f = XFIXNUM (from);
+      if (f < 0)
+        f += size;
+    }
+  else if (NILP (from))
+    f = 0;
+  else
+    wrong_type_argument (Qintegerp, from);
+
+  if (FIXNUMP (to))
+    {
+      t = XFIXNUM (to);
+      if (t < 0)
+        t += size;
+    }
+  else if (NILP (to))
+    t = size;
+  else
+    wrong_type_argument (Qintegerp, to);
+
+  if (!(0 <= f && f <= t && t <= size))
+    args_out_of_range_3 (array, from, to);
+
+  *ifrom = f;
+  *ito = t;
+}
+
+DEFUN ("substring", Fsubstring, Ssubstring, 1, 3, 0,
+       doc: /* Return a new string whose contents are a substring of STRING.
+The returned string consists of the characters between index FROM
+\(inclusive) and index TO (exclusive) of STRING.  FROM and TO are
+zero-indexed: 0 means the first character of STRING.  Negative values
+are counted from the end of STRING.  If TO is nil, the substring runs
+to the end of STRING.
+
+The STRING argument may also be a vector.  In that case, the return
+value is a new vector that contains the elements between index FROM
+\(inclusive) and index TO (exclusive) of that vector argument.
+
+With one argument, just copy STRING (with properties, if any).  */)
+(Lisp_Object string, Lisp_Object from, Lisp_Object to)
+{
+  Lisp_Object res;
+  ptrdiff_t size, ifrom, ito;
+
+  size = CHECK_VECTOR_OR_STRING (string);
+  validate_subarray (string, from, to, size, &ifrom, &ito);
+
+  if (STRINGP (string))
+    {
+      ptrdiff_t from_byte = !ifrom ? 0 : string_char_to_byte (string, ifrom);
+      ptrdiff_t to_byte
+        = ito == size ? SBYTES (string) : string_char_to_byte (string, ito);
+      res = make_specified_string (SSDATA (string) + from_byte, ito - ifrom,
+                                   to_byte - from_byte,
+                                   STRING_MULTIBYTE (string));
+#if TODO_NELISP_LATER_AND
+      copy_text_properties (make_fixnum (ifrom), make_fixnum (ito), string,
+                            make_fixnum (0), res, Qnil);
+#endif
+    }
+  else
+    res = Fvector (ito - ifrom, aref_addr (string, ifrom));
+
+  return res;
+}
+
 #define SXHASH_MAX_DEPTH 3
 #define SXHASH_MAX_LEN 7
 enum DEFAULT_HASH_SIZE
@@ -1198,6 +1273,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Snconc);
   defsubr (&Snreverse);
   defsubr (&Slength);
+  defsubr (&Ssubstring);
   defsubr (&Smake_hash_table);
   defsubr (&Sgethash);
   defsubr (&Sputhash);

@@ -810,8 +810,8 @@ setup_frame:;
 
         CASE (Bsubstring):
           {
-            TODO; // Lisp_Object v2 = POP, v1 = POP;
-            // TOP = Fsubstring (TOP, v1, v2);
+            Lisp_Object v2 = POP, v1 = POP;
+            TOP = Fsubstring (TOP, v1, v2);
             NEXT;
           }
 

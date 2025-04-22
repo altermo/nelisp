@@ -2088,6 +2088,7 @@ extern Lisp_Object find_symbol_value (Lisp_Object symbol);
 extern AVOID args_out_of_range (Lisp_Object, Lisp_Object);
 extern Lisp_Object arithcompare (Lisp_Object num1, Lisp_Object num2,
                                  enum Arith_Comparison comparison);
+extern AVOID args_out_of_range_3 (Lisp_Object, Lisp_Object, Lisp_Object);
 
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);
