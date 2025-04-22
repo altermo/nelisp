@@ -558,6 +558,41 @@ This function may destructively modify SEQ to produce the value.  */)
   return seq;
 }
 
+DEFUN ("length", Flength, Slength, 1, 1, 0,
+       doc: /* Return the length of vector, list or string SEQUENCE.
+A byte-code function object is also allowed.
+
+If the string contains multibyte characters, this is not necessarily
+the number of bytes in the string; it is the number of characters.
+To get the number of bytes, use `string-bytes'.
+
+If the length of a list is being computed to compare to a (small)
+number, the `length<', `length>' and `length=' functions may be more
+efficient.  */)
+(Lisp_Object sequence)
+{
+  EMACS_INT val;
+
+  if (STRINGP (sequence))
+    val = SCHARS (sequence);
+  else if (CONSP (sequence))
+    val = list_length (sequence);
+  else if (NILP (sequence))
+    val = 0;
+  else if (VECTORP (sequence))
+    val = ASIZE (sequence);
+  else if (CHAR_TABLE_P (sequence))
+    val = MAX_CHAR;
+  else if (BOOL_VECTOR_P (sequence))
+    TODO; // val = bool_vector_size (sequence);
+  else if (CLOSUREP (sequence) || RECORDP (sequence))
+    val = PVSIZE (sequence);
+  else
+    wrong_type_argument (Qsequencep, sequence);
+
+  return make_fixnum (val);
+}
+
 #define SXHASH_MAX_DEPTH 3
 #define SXHASH_MAX_LEN 7
 enum DEFAULT_HASH_SIZE
@@ -1162,6 +1197,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sdelq);
   defsubr (&Snconc);
   defsubr (&Snreverse);
+  defsubr (&Slength);
   defsubr (&Smake_hash_table);
   defsubr (&Sgethash);
   defsubr (&Sputhash);

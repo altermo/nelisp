@@ -718,7 +718,7 @@ setup_frame:;
           NEXT;
 
         CASE (Blength):
-          TODO; // TOP = Flength (TOP);
+          TOP = Flength (TOP);
           NEXT;
 
         CASE (Baref):
