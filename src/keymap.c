@@ -51,6 +51,68 @@ end:
   return Qnil;
 }
 
+static Lisp_Object
+keymap_parent (Lisp_Object keymap, bool autoload)
+{
+  keymap = get_keymap (keymap, 1, autoload);
+
+  Lisp_Object list = XCDR (keymap);
+  for (; CONSP (list); list = XCDR (list))
+    {
+      if (KEYMAPP (list))
+        return list;
+    }
+
+  return get_keymap (list, 0, autoload);
+}
+
+DEFUN ("keymap-parent", Fkeymap_parent, Skeymap_parent, 1, 1, 0,
+       doc: /* Return the parent keymap of KEYMAP.
+If KEYMAP has no parent, return nil.  */)
+(Lisp_Object keymap) { return keymap_parent (keymap, 1); }
+
+static bool
+keymap_memberp (Lisp_Object map, Lisp_Object maps)
+{
+  if (NILP (map))
+    return 0;
+  while (KEYMAPP (maps) && !EQ (map, maps))
+    maps = keymap_parent (maps, 0);
+  return (EQ (map, maps));
+}
+
+DEFUN ("set-keymap-parent", Fset_keymap_parent, Sset_keymap_parent, 2, 2, 0,
+       doc: /* Modify KEYMAP to set its parent map to PARENT.
+Return PARENT.  PARENT should be nil or another keymap.  */)
+(Lisp_Object keymap, Lisp_Object parent)
+{
+  where_is_cache = Qnil;
+  where_is_cache_keymaps = Qt;
+
+  keymap = get_keymap (keymap, 1, 1);
+
+  if (!NILP (parent))
+    {
+      parent = get_keymap (parent, 1, 0);
+
+      if (keymap_memberp (keymap, parent))
+        error ("Cyclic keymap inheritance");
+    }
+
+  Lisp_Object prev = keymap;
+  while (1)
+    {
+      Lisp_Object list = XCDR (prev);
+      if (!CONSP (list) || KEYMAPP (list))
+        {
+          CHECK_IMPURE (prev, XCONS (prev));
+          XSETCDR (prev, parent);
+          return parent;
+        }
+      prev = list;
+    }
+}
+
 DEFUN ("make-keymap", Fmake_keymap, Smake_keymap, 0, 1, 0,
        doc: /* Construct and return a new keymap, of the form (keymap CHARTABLE . ALIST).
 CHARTABLE is a char-table that holds the bindings for all characters
@@ -588,6 +650,8 @@ syms_of_keymap (void)
 	       doc: /* Default keymap to use when reading from the minibuffer.  */);
   Vminibuffer_local_map = Fmake_sparse_keymap (Qnil);
 
+  defsubr (&Skeymap_parent);
+  defsubr (&Sset_keymap_parent);
   defsubr (&Smake_keymap);
   defsubr (&Smake_sparse_keymap);
   defsubr (&Sdefine_key);
