@@ -689,6 +689,20 @@ DEFUN ("fboundp", Ffboundp, Sfboundp, 1, 1, 0,
   return NILP (XSYMBOL (symbol)->u.s.function) ? Qnil : Qt;
 }
 
+DEFUN ("symbol-name", Fsymbol_name, Ssymbol_name, 1, 1, 0,
+       doc: /* Return SYMBOL's name, a string.
+
+Warning: never alter the string returned by `symbol-name'.
+Doing that might make Emacs dysfunctional, and might even crash Emacs.  */)
+(register Lisp_Object symbol)
+{
+  register Lisp_Object name;
+
+  CHECK_SYMBOL (symbol);
+  name = SYMBOL_NAME (symbol);
+  return name;
+}
+
 DEFUN ("symbol-function", Fsymbol_function, Ssymbol_function, 1, 1, 0,
        doc: /* Return SYMBOL's function definition.  */)
 (Lisp_Object symbol)
@@ -1526,6 +1540,7 @@ syms_of_data (void)
   defsubr (&Ssetcdr);
   defsubr (&Sboundp);
   defsubr (&Sfboundp);
+  defsubr (&Ssymbol_name);
   defsubr (&Ssymbol_function);
   defsubr (&Sconsp);
   defsubr (&Satom);
