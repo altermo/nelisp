@@ -1162,8 +1162,8 @@ setup_frame:;
 
         CASE (Bstringeqlsign):
           {
-            TODO; // Lisp_Object v1 = POP;
-            // TOP = Fstring_equal (TOP, v1);
+            Lisp_Object v1 = POP;
+            TOP = Fstring_equal (TOP, v1);
             NEXT;
           }
 

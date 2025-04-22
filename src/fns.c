@@ -593,6 +593,27 @@ efficient.  */)
   return make_fixnum (val);
 }
 
+DEFUN ("string-equal", Fstring_equal, Sstring_equal, 2, 2, 0,
+       doc: /* Return t if two strings have identical contents.
+Case is significant, but text properties are ignored.
+Symbols are also allowed; their print names are used instead.
+
+See also `string-equal-ignore-case'.  */)
+(register Lisp_Object s1, Lisp_Object s2)
+{
+  if (SYMBOLP (s1))
+    s1 = SYMBOL_NAME (s1);
+  if (SYMBOLP (s2))
+    s2 = SYMBOL_NAME (s2);
+  CHECK_STRING (s1);
+  CHECK_STRING (s2);
+
+  if (SCHARS (s1) != SCHARS (s2) || SBYTES (s1) != SBYTES (s2)
+      || memcmp (SDATA (s1), SDATA (s2), SBYTES (s1)))
+    return Qnil;
+  return Qt;
+}
+
 void
 validate_subarray (Lisp_Object array, Lisp_Object from, Lisp_Object to,
                    ptrdiff_t size, ptrdiff_t *ifrom, ptrdiff_t *ito)
@@ -1273,6 +1294,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Snconc);
   defsubr (&Snreverse);
   defsubr (&Slength);
+  defsubr (&Sstring_equal);
   defsubr (&Ssubstring);
   defsubr (&Smake_hash_table);
   defsubr (&Sgethash);
