@@ -1924,6 +1924,7 @@ enum Set_Internal_Bind
 extern Lisp_Object make_float (double);
 extern void syms_of_alloc (void);
 extern Lisp_Object make_unibyte_string (const char *, ptrdiff_t);
+extern Lisp_Object make_uninit_multibyte_string (EMACS_INT, EMACS_INT);
 extern void garbage_collect (void);
 extern void init_alloc_once (void);
 extern void *xmalloc (size_t);
@@ -2090,6 +2091,7 @@ extern Lisp_Object arithcompare (Lisp_Object num1, Lisp_Object num2,
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);
 extern Lisp_Object parse_modifiers (Lisp_Object symbol);
+extern Lisp_Object reorder_modifiers (Lisp_Object);
 
 extern void syms_of_editfns (void);
 

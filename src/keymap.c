@@ -294,7 +294,7 @@ store_in_keymap (Lisp_Object keymap, register Lisp_Object idx, Lisp_Object def,
     idx = EVENT_HEAD (idx);
 
   if (SYMBOLP (idx))
-    TODO; // idx = reorder_modifiers (idx);
+    idx = reorder_modifiers (idx);
   else if (FIXNUMP (idx))
     XSETFASTINT (idx, XFIXNUM (idx) & (CHAR_META | (CHAR_META - 1)));
 
