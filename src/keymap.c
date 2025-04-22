@@ -197,7 +197,7 @@ access_keymap_1 (Lisp_Object map, Lisp_Object idx, bool t_ok, bool noinherit,
   idx = EVENT_HEAD (idx);
 
   if (SYMBOLP (idx))
-    TODO; // idx = reorder_modifiers (idx);
+    idx = reorder_modifiers (idx);
   else if (FIXNUMP (idx))
     XSETFASTINT (idx, XFIXNUM (idx) & (CHAR_META | (CHAR_META - 1)));
 
@@ -468,6 +468,15 @@ store_in_keymap (Lisp_Object keymap, register Lisp_Object idx, Lisp_Object def,
 }
 
 static Lisp_Object
+define_as_prefix (Lisp_Object keymap, Lisp_Object c)
+{
+  Lisp_Object cmd = Fmake_sparse_keymap (Qnil);
+  store_in_keymap (keymap, c, cmd, false);
+
+  return cmd;
+}
+
+static Lisp_Object
 possibly_translate_key_sequence (Lisp_Object key, ptrdiff_t *length)
 {
   if (VECTORP (key) && ASIZE (key) == 1 && STRINGP (AREF (key, 0)))
@@ -596,7 +605,7 @@ binding KEY to DEF is added at the front of KEYMAP.  */)
       Lisp_Object cmd = access_keymap (keymap, c, 0, 1, 1);
 
       if (NILP (cmd))
-        TODO; // cmd = define_as_prefix (keymap, c);
+        cmd = define_as_prefix (keymap, c);
 
       keymap = get_keymap (cmd, 0, 1);
       if (!CONSP (keymap))
