@@ -745,7 +745,7 @@ the same empty object instead of its copy.  */)
     TODO; // return Frecord (PVSIZE (arg), XVECTOR (arg)->contents);
 
   if (CHAR_TABLE_P (arg))
-    TODO; // return copy_char_table (arg);
+    return copy_char_table (arg);
 
   if (BOOL_VECTOR_P (arg))
     TODO;

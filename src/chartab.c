@@ -17,6 +17,9 @@ static const int chartab_bits[4]
 #define CHARTAB_IDX(c, depth, min_char) \
   (((c) - (min_char)) >> chartab_bits[(depth)])
 
+typedef Lisp_Object (*uniprop_decoder_t) (Lisp_Object, Lisp_Object);
+typedef Lisp_Object (*uniprop_encoder_t) (Lisp_Object, Lisp_Object);
+
 #define UNIPROP_TABLE_P(TABLE)                                  \
   (EQ (XCHAR_TABLE (TABLE)->purpose, Qchar_code_property_table) \
    && CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (TABLE)) == 5)
@@ -102,6 +105,51 @@ char_table_ascii (Lisp_Object table)
   if (UNIPROP_TABLE_P (table) && UNIPROP_COMPRESSED_FORM_P (val))
     TODO; // val = uniprop_table_uncompress (sub, 0);
   return val;
+}
+
+static Lisp_Object
+copy_sub_char_table (Lisp_Object table)
+{
+  int depth = XSUB_CHAR_TABLE (table)->depth;
+  int min_char = XSUB_CHAR_TABLE (table)->min_char;
+  Lisp_Object copy = make_sub_char_table (depth, min_char, Qnil);
+  int i;
+
+  for (i = 0; i < chartab_size[depth]; i++)
+    {
+      Lisp_Object val = XSUB_CHAR_TABLE (table)->contents[i];
+      set_sub_char_table_contents (copy, i,
+                                   SUB_CHAR_TABLE_P (val)
+                                     ? copy_sub_char_table (val)
+                                     : val);
+    }
+
+  return copy;
+}
+
+Lisp_Object
+copy_char_table (Lisp_Object table)
+{
+  int size = PVSIZE (table);
+  Lisp_Object copy = make_nil_vector (size);
+  XSETPVECTYPE (XVECTOR (copy), PVEC_CHAR_TABLE);
+  set_char_table_defalt (copy, XCHAR_TABLE (table)->defalt);
+  set_char_table_parent (copy, XCHAR_TABLE (table)->parent);
+  set_char_table_purpose (copy, XCHAR_TABLE (table)->purpose);
+  for (int i = 0; i < chartab_size[0]; i++)
+    set_char_table_contents (copy, i,
+                             (SUB_CHAR_TABLE_P (
+                                XCHAR_TABLE (table)->contents[i])
+                                ? copy_sub_char_table (
+                                    XCHAR_TABLE (table)->contents[i])
+                                : XCHAR_TABLE (table)->contents[i]));
+  set_char_table_ascii (copy, char_table_ascii (copy));
+  size -= CHAR_TABLE_STANDARD_SLOTS;
+  for (int i = 0; i < size; i++)
+    set_char_table_extras (copy, i, XCHAR_TABLE (table)->extras[i]);
+
+  XSETCHAR_TABLE (copy, XCHAR_TABLE (copy));
+  return copy;
 }
 
 static Lisp_Object
@@ -304,6 +352,197 @@ or a character code.  Return VALUE.  */)
     error ("Invalid RANGE argument to `set-char-table-range'");
 
   return value;
+}
+
+static Lisp_Object
+map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
+                    Lisp_Object function, Lisp_Object table, Lisp_Object arg,
+                    Lisp_Object val, Lisp_Object range, Lisp_Object top)
+{
+  int depth;
+  int min_char, max_char;
+  int chars_in_block;
+  int from = XFIXNUM (XCAR (range)), to = XFIXNUM (XCDR (range));
+  int i, c;
+  bool is_uniprop = UNIPROP_TABLE_P (top);
+#if TODO_NELISP_LATER_AND
+  uniprop_decoder_t decoder = UNIPROP_GET_DECODER (top);
+#else
+  uniprop_decoder_t decoder = NULL;
+#endif
+
+  if (SUB_CHAR_TABLE_P (table))
+    {
+      struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
+
+      depth = tbl->depth;
+      min_char = tbl->min_char;
+      max_char = min_char + chartab_chars[depth - 1] - 1;
+    }
+  else
+    {
+      depth = 0;
+      min_char = 0;
+      max_char = MAX_CHAR;
+    }
+  chars_in_block = chartab_chars[depth];
+
+  if (to < max_char)
+    max_char = to;
+  /* Set I to the index of the first element to check.  */
+  if (from <= min_char)
+    i = 0;
+  else
+    i = (from - min_char) / chars_in_block;
+  for (c = min_char + chars_in_block * i; c <= max_char;
+       i++, c += chars_in_block)
+    {
+      Lisp_Object this
+        = (SUB_CHAR_TABLE_P (table) ? XSUB_CHAR_TABLE (table)->contents[i]
+                                    : XCHAR_TABLE (table)->contents[i]);
+      int nextc = c + chars_in_block;
+
+      if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (this))
+        TODO; // this = uniprop_table_uncompress (table, i);
+      if (SUB_CHAR_TABLE_P (this))
+        {
+          if (to >= nextc)
+            XSETCDR (range, make_fixnum (nextc - 1));
+          val = map_sub_char_table (c_function, function, this, arg, val, range,
+                                    top);
+        }
+      else
+        {
+          if (NILP (this))
+            this = XCHAR_TABLE (top)->defalt;
+          if (!EQ (val, this))
+            {
+              bool different_value = 1;
+
+              if (NILP (val))
+                {
+                  if (!NILP (XCHAR_TABLE (top)->parent))
+                    {
+                      Lisp_Object parent = XCHAR_TABLE (top)->parent;
+                      Lisp_Object temp = XCHAR_TABLE (parent)->parent;
+
+                      /* This is to get a value of FROM in PARENT
+                         without checking the parent of PARENT.  */
+                      set_char_table_parent (parent, Qnil);
+                      val = CHAR_TABLE_REF (parent, from);
+                      set_char_table_parent (parent, temp);
+                      XSETCDR (range, make_fixnum (c - 1));
+                      val = map_sub_char_table (c_function, function, parent,
+                                                arg, val, range, parent);
+                      if (EQ (val, this))
+                        different_value = 0;
+                    }
+                }
+              if (!NILP (val) && different_value)
+                {
+                  XSETCDR (range, make_fixnum (c - 1));
+                  if (EQ (XCAR (range), XCDR (range)))
+                    {
+                      if (c_function)
+                        (*c_function) (arg, XCAR (range), val);
+                      else
+                        {
+                          if (decoder)
+                            val = decoder (top, val);
+                          call2 (function, XCAR (range), val);
+                        }
+                    }
+                  else
+                    {
+                      if (c_function)
+                        (*c_function) (arg, range, val);
+                      else
+                        {
+                          if (decoder)
+                            val = decoder (top, val);
+                          call2 (function, range, val);
+                        }
+                    }
+                }
+              val = this;
+              from = c;
+              XSETCAR (range, make_fixnum (c));
+            }
+        }
+      XSETCDR (range, make_fixnum (to));
+    }
+  return val;
+}
+
+/* Map C_FUNCTION or FUNCTION over TABLE, calling it for each
+   character or group of characters that share a value.
+
+   ARG is passed to C_FUNCTION when that is called.  */
+
+void
+map_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
+                Lisp_Object function, Lisp_Object table, Lisp_Object arg)
+{
+  Lisp_Object range, val, parent;
+#if TODO_NELISP_LATER_AND
+  uniprop_decoder_t decoder = UNIPROP_GET_DECODER (table);
+#else
+  uniprop_decoder_t decoder = NULL;
+#endif
+
+  range = Fcons (make_fixnum (0), make_fixnum (MAX_CHAR));
+  parent = XCHAR_TABLE (table)->parent;
+
+  val = XCHAR_TABLE (table)->ascii;
+  if (SUB_CHAR_TABLE_P (val))
+    val = XSUB_CHAR_TABLE (val)->contents[0];
+  val
+    = map_sub_char_table (c_function, function, table, arg, val, range, table);
+
+  /* If VAL is nil and TABLE has a parent, we must consult the parent
+     recursively.  */
+  while (NILP (val) && !NILP (XCHAR_TABLE (table)->parent))
+    {
+      Lisp_Object temp;
+      int from = XFIXNUM (XCAR (range));
+
+      parent = XCHAR_TABLE (table)->parent;
+      temp = XCHAR_TABLE (parent)->parent;
+      /* This is to get a value of FROM in PARENT without checking the
+         parent of PARENT.  */
+      set_char_table_parent (parent, Qnil);
+      val = CHAR_TABLE_REF (parent, from);
+      set_char_table_parent (parent, temp);
+      val = map_sub_char_table (c_function, function, parent, arg, val, range,
+                                parent);
+      table = parent;
+    }
+
+  if (!NILP (val))
+    {
+      if (EQ (XCAR (range), XCDR (range)))
+        {
+          if (c_function)
+            (*c_function) (arg, XCAR (range), val);
+          else
+            {
+              if (decoder)
+                val = decoder (table, val);
+              call2 (function, XCAR (range), val);
+            }
+        }
+      else
+        {
+          if (c_function)
+            (*c_function) (arg, range, val);
+          else
+            {
+              if (decoder)
+                val = decoder (table, val);
+              call2 (function, range, val);
+            }
+        }
+    }
 }
 
 void

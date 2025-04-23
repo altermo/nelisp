@@ -3,7 +3,12 @@
 
 #include "lisp.h"
 
-#define Xbuffer_vars X (_local_var_alist)
+#define Xbuffer_vars    \
+  X (_local_var_alist)  \
+  X (_downcase_table)   \
+  X (_upcase_table)     \
+  X (_case_canon_table) \
+  X (_case_eqv_table)
 
 struct buffer
 {

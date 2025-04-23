@@ -1575,6 +1575,12 @@ set_char_table_purpose (Lisp_Object table, Lisp_Object val)
   XCHAR_TABLE (table)->purpose = val;
 }
 INLINE void
+set_char_table_extras (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
+{
+  eassert (0 <= idx && idx < CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (table)));
+  XCHAR_TABLE (table)->extras[idx] = val;
+}
+INLINE void
 set_char_table_contents (Lisp_Object table, ptrdiff_t idx, Lisp_Object val)
 {
   eassert (0 <= idx && idx < (1 << CHARTAB_SIZE_BITS_0));
@@ -2155,6 +2161,9 @@ extern void syms_of_charset (void);
 extern Lisp_Object char_table_ref (Lisp_Object, int);
 
 extern void syms_of_chartab (void);
+extern void map_char_table (void (*) (Lisp_Object, Lisp_Object, Lisp_Object),
+                            Lisp_Object, Lisp_Object, Lisp_Object);
+extern Lisp_Object copy_char_table (Lisp_Object table);
 
 extern void syms_of_keymap (void);
 #define KEYMAPP(m) (!NILP (get_keymap (m, false, false)))
@@ -2162,6 +2171,11 @@ extern void syms_of_keymap (void);
 extern void syms_of_character (void);
 
 extern void syms_of_process (void);
+
+extern void syms_of_casetab (void);
+extern void init_casetab_once (void);
+extern Lisp_Object Vascii_downcase_table;
+extern Lisp_Object Vascii_canon_table;
 
 extern intmax_t check_integer_range (Lisp_Object, intmax_t, intmax_t);
 

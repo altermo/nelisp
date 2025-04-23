@@ -55,6 +55,10 @@ create_buffer (long bufid)
 
   b->_local_var_alist = Qnil;
   b->_last_obj = Qnil;
+  b->_downcase_table = Vascii_downcase_table;
+  b->_upcase_table = XCHAR_TABLE (Vascii_downcase_table)->extras[0];
+  b->_case_canon_table = XCHAR_TABLE (Vascii_downcase_table)->extras[1];
+  b->_case_eqv_table = XCHAR_TABLE (Vascii_downcase_table)->extras[2];
   b->bufid = bufid;
 
   XSETBUFFER (buffer, b);

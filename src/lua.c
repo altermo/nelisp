@@ -558,6 +558,7 @@ ret () init (lua_State *L)
   init_alloc_once ();
   init_eval_once ();
   init_obarray_once ();
+  init_casetab_once ();
 
   Vload_path = list1 (make_unibyte_string (lisp_dir, len_lisp_dir));
 
@@ -579,6 +580,7 @@ ret () init (lua_State *L)
   syms_of_keymap ();
   syms_of_character ();
   syms_of_process ();
+  syms_of_casetab ();
 
   init_keyboard ();
   init_eval ();
