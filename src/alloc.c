@@ -1704,6 +1704,35 @@ usage: (vector &rest OBJECTS)  */)
   return val;
 }
 
+DEFUN ("make-closure", Fmake_closure, Smake_closure, 1, MANY, 0,
+       doc: /* Create a byte-code closure from PROTOTYPE and CLOSURE-VARS.
+Return a copy of PROTOTYPE, a byte-code object, with CLOSURE-VARS
+replacing the elements in the beginning of the constant-vector.
+usage: (make-closure PROTOTYPE &rest CLOSURE-VARS) */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  Lisp_Object protofun = args[0];
+  CHECK_TYPE (CLOSUREP (protofun), Qbyte_code_function_p, protofun);
+
+  Lisp_Object proto_constvec = AREF (protofun, CLOSURE_CONSTANTS);
+  ptrdiff_t constsize = ASIZE (proto_constvec);
+  ptrdiff_t nvars = nargs - 1;
+  if (nvars > constsize)
+    error ("Closure vars do not fit in constvec");
+  Lisp_Object constvec = make_uninit_vector (constsize);
+  memcpy (XVECTOR (constvec)->contents, args + 1, nvars * word_size);
+  memcpy (XVECTOR (constvec)->contents + nvars,
+          XVECTOR (proto_constvec)->contents + nvars,
+          (constsize - nvars) * word_size);
+
+  ptrdiff_t protosize = PVSIZE (protofun);
+  struct Lisp_Vector *v = allocate_vectorlike (protosize, false);
+  v->header = XVECTOR (protofun)->header;
+  memcpy (v->contents, XVECTOR (protofun)->contents, protosize * word_size);
+  v->contents[CLOSURE_CONSTANTS] = constvec;
+  return make_lisp_ptr (v, Lisp_Vectorlike);
+}
+
 /* --- symbol allocation -- */
 
 #define SYMBOL_BLOCK_SIZE \
@@ -3114,5 +3143,6 @@ N should be nonnegative.  */);
   defsubr (&Slist);
   defsubr (&Smake_vector);
   defsubr (&Svector);
+  defsubr (&Smake_closure);
   defsubr (&Smake_symbol);
 }
