@@ -51,6 +51,15 @@ enum
   MAX_5_BYTE_CHAR = 0x3FFF7F
 };
 
+enum
+{
+  MIN_MULTIBYTE_LEADING_CODE = 0xC0
+};
+enum
+{
+  MAX_MULTIBYTE_LEADING_CODE = 0xF8
+};
+
 extern int char_string (unsigned, unsigned char *);
 
 INLINE bool
@@ -67,6 +76,11 @@ INLINE int
 BYTE8_TO_CHAR (int byte)
 {
   return byte + 0x3FFF00;
+}
+INLINE int
+UNIBYTE_TO_CHAR (int byte)
+{
+  return ASCII_CHAR_P (byte) ? byte : BYTE8_TO_CHAR (byte);
 }
 INLINE bool
 CHAR_VALID_P (intmax_t c)
@@ -92,6 +106,17 @@ INLINE void
 CHECK_CHARACTER_CDR (Lisp_Object x)
 {
   CHECK_CHARACTER (XCDR (x));
+}
+
+INLINE int
+CHAR_LEADING_CODE (int c)
+{
+  return (c <= MAX_1_BYTE_CHAR   ? c
+          : c <= MAX_2_BYTE_CHAR ? 0xC0 | (c >> 6)
+          : c <= MAX_3_BYTE_CHAR ? 0xE0 | (c >> 12)
+          : c <= MAX_4_BYTE_CHAR ? 0xF0 | (c >> 18)
+          : c <= MAX_5_BYTE_CHAR ? 0xF8
+                                 : 0xC0 | ((c >> 6) & 0x01));
 }
 
 INLINE int
@@ -151,6 +176,11 @@ CHAR_TO_BYTE8 (int c)
 {
   return CHAR_BYTE8_P (c) ? c - 0x3FFF00 : c & 0xFF;
 }
+INLINE int
+CHAR_TO_BYTE_SAFE (int c)
+{
+  return ASCII_CHAR_P (c) ? c : CHAR_BYTE8_P (c) ? c - 0x3FFF00 : -1;
+}
 INLINE bool
 TRAILING_CODE_P (int byte)
 {
@@ -195,6 +225,15 @@ string_char_and_length (unsigned char const *p, int *length)
   eassume (MAX_4_BYTE_CHAR < d && d <= MAX_5_BYTE_CHAR);
   return d;
 }
+
+INLINE int
+raw_prev_char_len (unsigned char const *p)
+{
+  for (int len = 1;; len++)
+    if (CHAR_HEAD_P (p[-len]))
+      return len;
+}
+
 INLINE int
 string_char_advance (unsigned char const **pp)
 {
@@ -214,5 +253,14 @@ STRING_CHAR (unsigned char const *p)
 ptrdiff_t str_as_unibyte (unsigned char *str, ptrdiff_t bytes);
 void parse_str_as_multibyte (const unsigned char *str, ptrdiff_t len,
                              ptrdiff_t *nchars, ptrdiff_t *nbytes);
+
+INLINE int
+char_table_translate (Lisp_Object obj, int ch)
+{
+  eassert (CHAR_VALID_P (ch));
+  eassert (CHAR_TABLE_P (obj));
+  obj = CHAR_TABLE_REF (obj, ch);
+  return CHARACTERP (obj) ? XFIXNUM (obj) : ch;
+}
 
 #endif

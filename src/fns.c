@@ -620,6 +620,69 @@ See also `string-equal-ignore-case'.  */)
   return Qt;
 }
 
+ptrdiff_t
+string_byte_to_char (Lisp_Object string, ptrdiff_t byte_index)
+{
+  ptrdiff_t i, i_byte;
+  ptrdiff_t best_below, best_below_byte;
+  ptrdiff_t best_above, best_above_byte;
+
+  best_below = best_below_byte = 0;
+  best_above = SCHARS (string);
+  best_above_byte = SBYTES (string);
+  if (best_above == best_above_byte)
+    return byte_index;
+
+  if (BASE_EQ (string, string_char_byte_cache_string))
+    {
+      if (string_char_byte_cache_bytepos < byte_index)
+        {
+          best_below = string_char_byte_cache_charpos;
+          best_below_byte = string_char_byte_cache_bytepos;
+        }
+      else
+        {
+          best_above = string_char_byte_cache_charpos;
+          best_above_byte = string_char_byte_cache_bytepos;
+        }
+    }
+
+  if (byte_index - best_below_byte < best_above_byte - byte_index)
+    {
+      unsigned char *p = SDATA (string) + best_below_byte;
+      unsigned char *pend = SDATA (string) + byte_index;
+
+      while (p < pend)
+        {
+          p += BYTES_BY_CHAR_HEAD (*p);
+          best_below++;
+        }
+      i = best_below;
+      i_byte = p - SDATA (string);
+    }
+  else
+    {
+      unsigned char *p = SDATA (string) + best_above_byte;
+      unsigned char *pbeg = SDATA (string) + byte_index;
+
+      while (p > pbeg)
+        {
+          p--;
+          while (!CHAR_HEAD_P (*p))
+            p--;
+          best_above--;
+        }
+      i = best_above;
+      i_byte = p - SDATA (string);
+    }
+
+  string_char_byte_cache_bytepos = i_byte;
+  string_char_byte_cache_charpos = i;
+  string_char_byte_cache_string = string;
+
+  return i;
+}
+
 void
 validate_subarray (Lisp_Object array, Lisp_Object from, Lisp_Object to,
                    ptrdiff_t size, ptrdiff_t *ifrom, ptrdiff_t *ito)

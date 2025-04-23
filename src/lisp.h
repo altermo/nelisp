@@ -2083,6 +2083,7 @@ extern ptrdiff_t hash_lookup_get_hash (struct Lisp_Hash_Table *h,
 extern ptrdiff_t hash_put (struct Lisp_Hash_Table *h, Lisp_Object key,
                            Lisp_Object value, hash_hash_t hash);
 Lisp_Object nconc2 (Lisp_Object s1, Lisp_Object s2);
+extern ptrdiff_t string_byte_to_char (Lisp_Object, ptrdiff_t);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
@@ -2138,6 +2139,7 @@ extern Lisp_Object reorder_modifiers (Lisp_Object);
 extern void syms_of_editfns (void);
 
 extern void syms_of_emacs (void);
+extern bool running_asynch_code;
 
 extern void syms_of_fileio (void);
 
@@ -2178,6 +2180,10 @@ extern Lisp_Object Vascii_downcase_table;
 extern Lisp_Object Vascii_canon_table;
 
 extern intmax_t check_integer_range (Lisp_Object, intmax_t, intmax_t);
+
+extern void syms_of_search (void);
+
+extern void syms_of_xdisp (void);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

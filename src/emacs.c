@@ -1,5 +1,7 @@
 #include "lisp.h"
 
+bool running_asynch_code;
+
 static const char emacs_version[] = PACKAGE_VERSION;
 
 void

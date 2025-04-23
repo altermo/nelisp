@@ -96,6 +96,12 @@ init_buffer (void)
 void
 syms_of_buffer (void)
 {
+  DEFVAR_LISP ("case-fold-search", Vcase_fold_search,
+	       doc: /* Non-nil if searches and matches should ignore case.  */);
+  Vcase_fold_search = Qt;
+  DEFSYM (Qcase_fold_search, "case-fold-search");
+  Fmake_variable_buffer_local (Qcase_fold_search);
+
   defsubr (&Sget_buffer);
   defsubr (&Sget_buffer_create);
   defsubr (&Sset_buffer);

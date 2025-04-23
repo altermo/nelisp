@@ -227,6 +227,25 @@ xfree (void *block)
 }
 
 void *
+xnmalloc (ptrdiff_t nitems, ptrdiff_t item_size)
+{
+  eassert (0 <= nitems && 0 < item_size);
+  ptrdiff_t nbytes;
+  if (ckd_mul (&nbytes, nitems, item_size) || SIZE_MAX < (unsigned long) nbytes)
+    memory_full (SIZE_MAX);
+  return xmalloc (nbytes);
+}
+void *
+xnrealloc (void *pa, ptrdiff_t nitems, ptrdiff_t item_size)
+{
+  eassert (0 <= nitems && 0 < item_size);
+  ptrdiff_t nbytes;
+  if (ckd_mul (&nbytes, nitems, item_size) || SIZE_MAX < (unsigned long) nbytes)
+    memory_full (SIZE_MAX);
+  return xrealloc (pa, nbytes);
+}
+
+void *
 xpalloc (void *pa, ptrdiff_t *nitems, ptrdiff_t nitems_incr_min,
          ptrdiff_t nitems_max, ptrdiff_t item_size)
 {

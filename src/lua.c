@@ -581,9 +581,12 @@ ret () init (lua_State *L)
   syms_of_character ();
   syms_of_process ();
   syms_of_casetab ();
+  syms_of_search ();
+  syms_of_xdisp ();
 
   init_keyboard ();
   init_eval ();
+  running_asynch_code = false;
   init_buffer ();
   init_bytecode ();
   init_bignum ();

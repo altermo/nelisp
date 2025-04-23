@@ -20,4 +20,12 @@ extern struct bc_thread_state bc_;
 extern struct handler *handlerlist;
 extern struct handler *handlerlist_sentinel;
 
+extern struct re_registers search_regs;
+
+#ifndef EMACS_LISP_H
+typedef void Lisp_Object;
+#endif
+
+extern Lisp_Object last_thing_searched;
+
 #endif
