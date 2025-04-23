@@ -133,12 +133,14 @@ static void
 do_one_unbind (union specbinding *this_binding, bool unwinding,
                enum Set_Internal_Bind bindflag)
 {
-  UNUSED (bindflag);
+  KBOARD *kbdwhere = NULL;
   eassert (unwinding || this_binding->kind >= SPECPDL_LET);
   switch (this_binding->kind)
     {
     case SPECPDL_UNWIND:
-      TODO;
+      lisp_eval_depth = this_binding->unwind.eval_depth;
+      this_binding->unwind.func (this_binding->unwind.arg);
+      break;
     case SPECPDL_UNWIND_ARRAY:
       TODO;
     case SPECPDL_UNWIND_PTR:
@@ -183,7 +185,10 @@ do_one_unbind (union specbinding *this_binding, bool unwinding,
         TODO;
       }
     case SPECPDL_LET_DEFAULT:
-      TODO;
+      set_default_internal (specpdl_symbol (this_binding),
+                            specpdl_old_value (this_binding), bindflag,
+                            kbdwhere);
+      break;
     case SPECPDL_LET_LOCAL:
       TODO;
     }
@@ -1041,7 +1046,7 @@ funcall_general (Lisp_Object fun, ptrdiff_t numargs, Lisp_Object *args)
     return funcall_subr (XSUBR (fun), numargs, args);
   else if (CLOSUREP (fun) || NATIVE_COMP_FUNCTION_DYNP (fun)
            || MODULE_FUNCTIONP (fun))
-    TODO;
+    return funcall_lambda (fun, numargs, args);
   else
     {
       if (NILP (fun))

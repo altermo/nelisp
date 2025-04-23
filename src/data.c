@@ -292,7 +292,12 @@ start:
       return;
     case SYMBOL_LOCALIZED:
       {
-        TODO;
+        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (sym);
+
+        XSETCDR (blv->defcell, value);
+
+        if (blv->fwd.fwdptr && EQ (blv->defcell, blv->valcell))
+          store_symval_forwarding (blv->fwd, value, NULL);
         return;
       }
     case SYMBOL_FORWARDED:
