@@ -1824,6 +1824,18 @@ enum MAX_ALLOCA
   while (false)
 #define SAFE_ALLOCA(size) \
   ((long) (size) <= (long) sa_avail ? AVAIL_ALLOCA (size) : (TODO, NULL))
+#define SAFE_NALLOCA(buf, multiplier, nitems)                                  \
+  do                                                                           \
+    {                                                                          \
+      if ((unsigned long) (nitems) <= sa_avail / sizeof *(buf) / (multiplier)) \
+        (buf) = AVAIL_ALLOCA (sizeof *(buf) * (multiplier) * (nitems));        \
+      else                                                                     \
+        {                                                                      \
+          (buf) = xnmalloc (nitems, sizeof *(buf) * (multiplier));             \
+          record_unwind_protect_ptr (xfree, buf);                              \
+        }                                                                      \
+    }                                                                          \
+  while (false)
 #define SAFE_ALLOCA_STRING(ptr, string)                  \
   do                                                     \
     {                                                    \

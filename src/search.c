@@ -205,6 +205,113 @@ constructions in REGEXP.  For index of first char beyond the match, do
   return string_match_1 (regexp, string, start, 0, NILP (inhibit_modify));
 }
 
+DEFUN ("match-data", Fmatch_data, Smatch_data, 0, 3, 0,
+       doc: /* Return a list of positions that record text matched by the last search.
+Element 2N of the returned list is the position of the beginning of the
+match of the Nth subexpression; it corresponds to `(match-beginning N)';
+element 2N + 1 is the position of the end of the match of the Nth
+subexpression; it corresponds to `(match-end N)'.  See `match-beginning'
+and `match-end'.
+If the last search was on a buffer, all the elements are by default
+markers or nil (nil when the Nth pair didn't match); they are integers
+or nil if the search was on a string.  But if the optional argument
+INTEGERS is non-nil, the elements that represent buffer positions are
+always integers, not markers, and (if the search was on a buffer) the
+buffer itself is appended to the list as one additional element.
+
+Use `set-match-data' to reinstate the match data from the elements of
+this list.
+
+Note that non-matching optional groups at the end of the regexp are
+elided instead of being represented with two `nil's each.  For instance:
+
+  (progn
+    (string-match "^\\(a\\)?\\(b\\)\\(c\\)?$" "b")
+    (match-data))
+  => (0 1 nil nil 0 1)
+
+If REUSE is a list, store the value in REUSE by destructively modifying it.
+If REUSE is long enough to hold all the values, its length remains the
+same, and any unused elements are set to nil.  If REUSE is not long
+enough, it is extended.  Note that if REUSE is long enough and INTEGERS
+is non-nil, no consing is done to make the return value; this minimizes GC.
+
+If optional third argument RESEAT is non-nil, any previous markers on the
+REUSE list will be modified to point to nowhere.
+
+Return value is undefined if the last search failed.  */)
+(Lisp_Object integers, Lisp_Object reuse, Lisp_Object reseat)
+{
+  Lisp_Object tail, prev;
+  Lisp_Object *data;
+  ptrdiff_t i, len;
+
+  if (!NILP (reseat))
+    for (tail = reuse; CONSP (tail); tail = XCDR (tail))
+      if (MARKERP (XCAR (tail)))
+        {
+          TODO;
+        }
+
+  if (NILP (last_thing_searched))
+    return Qnil;
+
+  prev = Qnil;
+
+  USE_SAFE_ALLOCA;
+  SAFE_NALLOCA (data, 1, 2 * search_regs.num_regs + 1);
+
+  len = 0;
+  for (i = 0; i < search_regs.num_regs; i++)
+    {
+      ptrdiff_t start = search_regs.start[i];
+      if (start >= 0)
+        {
+          if (BASE_EQ (last_thing_searched, Qt) || !NILP (integers))
+            {
+              XSETFASTINT (data[2 * i], start);
+              XSETFASTINT (data[2 * i + 1], search_regs.end[i]);
+            }
+          else if (BUFFERP (last_thing_searched))
+            {
+              TODO;
+            }
+          else
+            emacs_abort ();
+
+          len = 2 * i + 2;
+        }
+      else
+        data[2 * i] = data[2 * i + 1] = Qnil;
+    }
+
+  if (BUFFERP (last_thing_searched) && !NILP (integers))
+    {
+      data[len] = last_thing_searched;
+      len++;
+    }
+
+  if (!CONSP (reuse))
+    reuse = Flist (len, data);
+  else
+    {
+      for (i = 0, tail = reuse; CONSP (tail); i++, tail = XCDR (tail))
+        {
+          if (i < len)
+            XSETCAR (tail, data[i]);
+          else
+            XSETCAR (tail, Qnil);
+          prev = tail;
+        }
+
+      if (i < len)
+        XSETCDR (prev, Flist (len - i, data + i));
+    }
+
+  SAFE_FREE ();
+  return reuse;
+}
+
 static void
 syms_of_search_for_pdumper (void)
 {
@@ -262,5 +369,6 @@ is to bind it with `let' around a small expression.  */);
   Vinhibit_changing_match_data = Qnil;
 
   defsubr (&Sstring_match);
+  defsubr (&Smatch_data);
   syms_of_search_for_pdumper ();
 }
