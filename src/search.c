@@ -341,6 +341,111 @@ Return value is undefined if the last search failed.  */)
   return reuse;
 }
 
+DEFUN ("set-match-data", Fset_match_data, Sset_match_data, 1, 2, 0,
+       doc: /* Set internal data on last search match from elements of LIST.
+LIST should have been created by calling `match-data' previously.
+
+If optional arg RESEAT is non-nil, make markers on LIST point nowhere.  */)
+(register Lisp_Object list, Lisp_Object reseat)
+{
+  ptrdiff_t i;
+  register Lisp_Object marker;
+
+  if (running_asynch_code)
+    TODO; // save_search_regs ();
+
+  CHECK_LIST (list);
+
+  last_thing_searched = Qt;
+
+  {
+    ptrdiff_t length = list_length (list) / 2;
+
+    if (length > search_regs.num_regs)
+      {
+        ptrdiff_t num_regs = search_regs.num_regs;
+        search_regs.start
+          = xpalloc (search_regs.start, &num_regs, length - num_regs,
+                     min (PTRDIFF_MAX, UINT_MAX), sizeof *search_regs.start);
+        search_regs.end
+          = xrealloc (search_regs.end, num_regs * sizeof *search_regs.end);
+
+        for (i = search_regs.num_regs; i < num_regs; i++)
+          search_regs.start[i] = -1;
+
+        search_regs.num_regs = num_regs;
+      }
+
+    for (i = 0; CONSP (list); i++)
+      {
+        marker = XCAR (list);
+        if (BUFFERP (marker))
+          {
+            last_thing_searched = marker;
+            break;
+          }
+        if (i >= length)
+          break;
+        if (NILP (marker))
+          {
+            search_regs.start[i] = -1;
+            list = XCDR (list);
+          }
+        else
+          {
+            Lisp_Object from;
+            Lisp_Object m;
+
+            m = marker;
+            if (MARKERP (marker))
+              TODO;
+
+            CHECK_FIXNUM_COERCE_MARKER (marker);
+            from = marker;
+
+            if (!NILP (reseat) && MARKERP (m))
+              {
+                TODO; // unchain_marker (XMARKER (m));
+                XSETCAR (list, Qnil);
+              }
+
+            if ((list = XCDR (list), !CONSP (list)))
+              break;
+
+            m = marker = XCAR (list);
+
+            if (MARKERP (marker) && (TODO, false))
+              XSETFASTINT (marker, 0);
+
+            CHECK_FIXNUM_COERCE_MARKER (marker);
+            if (PTRDIFF_MIN <= XFIXNUM (from) && XFIXNUM (from) <= PTRDIFF_MAX
+                && PTRDIFF_MIN <= XFIXNUM (marker)
+                && XFIXNUM (marker) <= PTRDIFF_MAX)
+              {
+                search_regs.start[i] = XFIXNUM (from);
+                search_regs.end[i] = XFIXNUM (marker);
+              }
+            else
+              {
+                search_regs.start[i] = -1;
+              }
+
+            if (!NILP (reseat) && MARKERP (m))
+              {
+                TODO; // unchain_marker (XMARKER (m));
+                XSETCAR (list, Qnil);
+              }
+          }
+        list = XCDR (list);
+      }
+
+    for (; i < search_regs.num_regs; i++)
+      search_regs.start[i] = -1;
+  }
+
+  return Qnil;
+}
+
 static void
 syms_of_search_for_pdumper (void)
 {
@@ -400,5 +505,6 @@ is to bind it with `let' around a small expression.  */);
   defsubr (&Sstring_match);
   defsubr (&Smatch_end);
   defsubr (&Smatch_data);
+  defsubr (&Sset_match_data);
   syms_of_search_for_pdumper ();
 }

@@ -57,6 +57,9 @@ BUFFER_PVEC_INIT (struct buffer *b)
   XSETPVECTYPESIZE (b, PVEC_BUFFER, BUFFER_LISP_SIZE, BUFFER_REST_SIZE);
 }
 
+extern EMACS_INT fix_position (Lisp_Object);
+#define CHECK_FIXNUM_COERCE_MARKER(x) ((x) = make_fixnum (fix_position (x)))
+
 INLINE void
 bset_local_var_alist (struct buffer *b, Lisp_Object val)
 {
