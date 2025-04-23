@@ -62,6 +62,9 @@ static void maybe_quit (void);
 #define TYPE_MAXIMUM(t)            \
   ((t) (!TYPE_SIGNED (t) ? (t) - 1 \
                          : ((((t) 1 << (TYPE_WIDTH (t) - 2)) - 1) * 2 + 1)))
+#define _GL_INT_NEGATE_CONVERT(e, v) ((1 ? 0 : (e)) - (v))
+#define _GL_EXPR_SIGNED(e) (_GL_INT_NEGATE_CONVERT (e, 1) < 0)
+#define EXPR_SIGNED(e) _GL_EXPR_SIGNED (e)
 // Taken from sysdep.c
 static inline int
 emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
@@ -1388,6 +1391,9 @@ make_uint (uintmax_t n)
   return make_fixnum (n);
 }
 
+#define INT_TO_INTEGER(expr) \
+  (EXPR_SIGNED (expr) ? make_int (expr) : make_uint (expr))
+
 enum Lisp_Closure
 {
   CLOSURE_ARGLIST = 0,
@@ -1582,6 +1588,19 @@ integer_to_intmax (Lisp_Object num, intmax_t *n)
     {
       *n = XFIXNUM (num);
       return true;
+    }
+  else
+    {
+      TODO;
+    }
+}
+INLINE bool
+integer_to_uintmax (Lisp_Object num, uintmax_t *n)
+{
+  if (FIXNUMP (num))
+    {
+      *n = XFIXNUM (num);
+      return 0 <= XFIXNUM (num);
     }
   else
     {
@@ -1857,9 +1876,12 @@ list4i (intmax_t a, intmax_t b, intmax_t c, intmax_t d)
 {
   return list4 (make_int (a), make_int (b), make_int (c), make_int (d));
 }
+extern Lisp_Object listn (ptrdiff_t, Lisp_Object, ...);
 extern Lisp_Object pure_listn (ptrdiff_t, Lisp_Object, ...);
 #define pure_list(...) \
   pure_listn (ARRAYELTS (((Lisp_Object[]) { __VA_ARGS__ })), __VA_ARGS__)
+#define list(...) \
+  listn (ARRAYELTS (((Lisp_Object[]) { __VA_ARGS__ })), __VA_ARGS__)
 
 #define USE_STACK_LISP_OBJECTS true
 enum
@@ -2044,6 +2066,11 @@ extern ptrdiff_t list_length (Lisp_Object);
 EMACS_UINT hash_string (char const *, ptrdiff_t);
 Lisp_Object plist_get (Lisp_Object plist, Lisp_Object prop);
 extern Lisp_Object assq_no_quit (Lisp_Object, Lisp_Object);
+extern ptrdiff_t hash_lookup_get_hash (struct Lisp_Hash_Table *h,
+                                       Lisp_Object key, hash_hash_t *phash);
+extern ptrdiff_t hash_put (struct Lisp_Hash_Table *h, Lisp_Object key,
+                           Lisp_Object value, hash_hash_t hash);
+Lisp_Object nconc2 (Lisp_Object s1, Lisp_Object s2);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
@@ -2089,6 +2116,7 @@ extern AVOID args_out_of_range (Lisp_Object, Lisp_Object);
 extern Lisp_Object arithcompare (Lisp_Object num1, Lisp_Object num2,
                                  enum Arith_Comparison comparison);
 extern AVOID args_out_of_range_3 (Lisp_Object, Lisp_Object, Lisp_Object);
+extern uintmax_t cons_to_unsigned (Lisp_Object, uintmax_t);
 
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);
@@ -2126,6 +2154,10 @@ extern void syms_of_keymap (void);
 #define KEYMAPP(m) (!NILP (get_keymap (m, false, false)))
 
 extern void syms_of_character (void);
+
+extern void syms_of_process (void);
+
+extern intmax_t check_integer_range (Lisp_Object, intmax_t, intmax_t);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

@@ -479,6 +479,12 @@ argument.  */)
   return list;
 }
 
+Lisp_Object
+nconc2 (Lisp_Object s1, Lisp_Object s2)
+{
+  return CALLN (Fnconc, s1, s2);
+}
+
 DEFUN ("nconc", Fnconc, Snconc, 0, MANY, 0,
        doc: /* Concatenate any number of lists by altering them.
 Only the last argument is not altered, and need not be a list.
@@ -1068,6 +1074,14 @@ ptrdiff_t
 hash_lookup (struct Lisp_Hash_Table *h, Lisp_Object key)
 {
   return hash_lookup_with_hash (h, key, hash_from_key (h, key));
+}
+ptrdiff_t
+hash_lookup_get_hash (struct Lisp_Hash_Table *h, Lisp_Object key,
+                      hash_hash_t *phash)
+{
+  EMACS_UINT hash = hash_from_key (h, key);
+  *phash = hash;
+  return hash_lookup_with_hash (h, key, hash);
 }
 
 static void

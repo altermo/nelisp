@@ -1184,6 +1184,57 @@ DEFUN ("/=", Fneq, Sneq, 2, 2, 0,
   return arithcompare (num1, num2, ARITH_NOTEQUAL);
 }
 
+uintmax_t
+cons_to_unsigned (Lisp_Object c, uintmax_t max)
+{
+  bool valid = false;
+  uintmax_t val UNINIT;
+
+  if (FLOATP (c))
+    {
+      double d = XFLOAT_DATA (c);
+      if (d >= 0 && d < 1.0 + max)
+        {
+          val = d;
+          valid = val == d;
+        }
+    }
+  else
+    {
+      Lisp_Object hi = CONSP (c) ? XCAR (c) : c;
+      valid = INTEGERP (hi) && integer_to_uintmax (hi, &val);
+
+      if (valid && CONSP (c))
+        {
+          uintmax_t top = val;
+          Lisp_Object rest = XCDR (c);
+          if (top <= UINTMAX_MAX >> 24 >> 16 && CONSP (rest)
+              && FIXNATP (XCAR (rest)) && XFIXNAT (XCAR (rest)) < 1 << 24
+              && FIXNATP (XCDR (rest)) && XFIXNAT (XCDR (rest)) < 1 << 16)
+            {
+              uintmax_t mid = XFIXNAT (XCAR (rest));
+              val = top << 24 << 16 | mid << 16 | XFIXNAT (XCDR (rest));
+            }
+          else
+            {
+              valid = top <= UINTMAX_MAX >> 16;
+              if (valid)
+                {
+                  if (CONSP (rest))
+                    rest = XCAR (rest);
+                  valid = FIXNATP (rest) && XFIXNAT (rest) < 1 << 16;
+                  if (valid)
+                    val = top << 16 | XFIXNAT (rest);
+                }
+            }
+        }
+    }
+
+  if (!(valid && val <= max))
+    error ("Not an in-range integer, integral float, or cons of integers");
+  return val;
+}
+
 enum arithop
 {
   Aadd,

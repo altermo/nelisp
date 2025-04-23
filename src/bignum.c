@@ -70,3 +70,13 @@ make_integer_mpz (void)
 
   return make_bignum_bits (bits);
 }
+
+intmax_t
+check_integer_range (Lisp_Object x, intmax_t lo, intmax_t hi)
+{
+  CHECK_INTEGER (x);
+  intmax_t i;
+  if (!(integer_to_intmax (x, &i) && lo <= i && i <= hi))
+    args_out_of_range_3 (x, make_int (lo), make_int (hi));
+  return i;
+}

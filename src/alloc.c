@@ -1168,7 +1168,15 @@ cons_listn (ptrdiff_t count, Lisp_Object arg,
     }
   return val;
 }
-
+Lisp_Object
+listn (ptrdiff_t count, Lisp_Object arg1, ...)
+{
+  va_list ap;
+  va_start (ap, arg1);
+  Lisp_Object val = cons_listn (count, arg1, Fcons, ap);
+  va_end (ap);
+  return val;
+}
 Lisp_Object
 pure_listn (ptrdiff_t count, Lisp_Object arg1, ...)
 {

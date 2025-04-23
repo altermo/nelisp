@@ -578,6 +578,7 @@ ret () init (lua_State *L)
   syms_of_chartab ();
   syms_of_keymap ();
   syms_of_character ();
+  syms_of_process ();
 
   init_keyboard ();
   init_eval ();
