@@ -1551,6 +1551,11 @@ blv_found (struct Lisp_Buffer_Local_Value *blv)
   eassert (blv->found == !BASE_EQ (blv->defcell, blv->valcell));
   return blv->found;
 }
+INLINE INTERVAL
+string_intervals (Lisp_Object s)
+{
+  return XSTRING (s)->u.s.intervals;
+}
 
 INLINE bool
 NATIVE_COMP_FUNCTION_DYNP (Lisp_Object a)
@@ -2028,6 +2033,7 @@ maybe_gc (void)
 extern Lisp_Object make_pure_string (const char *, ptrdiff_t, ptrdiff_t, bool);
 extern Lisp_Object make_vector (ptrdiff_t, Lisp_Object);
 extern Lisp_Object pure_cons (Lisp_Object car, Lisp_Object cdr);
+extern Lisp_Object make_uninit_string (EMACS_INT length);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;

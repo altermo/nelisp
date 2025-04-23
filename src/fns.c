@@ -695,6 +695,64 @@ With one argument, just copy STRING (with properties, if any).  */)
   return res;
 }
 
+DEFUN ("copy-sequence", Fcopy_sequence, Scopy_sequence, 1, 1, 0,
+       doc: /* Return a copy of a list, vector, string, char-table or record.
+The elements of a list, vector or record are not copied; they are
+shared with the original.  See Info node `(elisp) Sequence Functions'
+for more details about this sharing and its effects.
+If the original sequence is empty, this function may return
+the same empty object instead of its copy.  */)
+(Lisp_Object arg)
+{
+  if (NILP (arg))
+    return arg;
+
+  if (CONSP (arg))
+    {
+      Lisp_Object val = Fcons (XCAR (arg), Qnil);
+      Lisp_Object prev = val;
+      Lisp_Object tail = XCDR (arg);
+      FOR_EACH_TAIL (tail)
+        {
+          Lisp_Object c = Fcons (XCAR (tail), Qnil);
+          XSETCDR (prev, c);
+          prev = c;
+        }
+      CHECK_LIST_END (tail, tail);
+      return val;
+    }
+
+  if (STRINGP (arg))
+    {
+      ptrdiff_t bytes = SBYTES (arg);
+      ptrdiff_t chars = SCHARS (arg);
+      Lisp_Object val = STRING_MULTIBYTE (arg)
+                          ? make_uninit_multibyte_string (chars, bytes)
+                          : make_uninit_string (bytes);
+      memcpy (SDATA (val), SDATA (arg), bytes);
+      INTERVAL ivs = string_intervals (arg);
+      if (ivs)
+        {
+          TODO;
+        }
+      return val;
+    }
+
+  if (VECTORP (arg))
+    return Fvector (ASIZE (arg), XVECTOR (arg)->contents);
+
+  if (RECORDP (arg))
+    TODO; // return Frecord (PVSIZE (arg), XVECTOR (arg)->contents);
+
+  if (CHAR_TABLE_P (arg))
+    TODO; // return copy_char_table (arg);
+
+  if (BOOL_VECTOR_P (arg))
+    TODO;
+
+  wrong_type_argument (Qsequencep, arg);
+}
+
 #define SXHASH_MAX_DEPTH 3
 #define SXHASH_MAX_LEN 7
 enum DEFAULT_HASH_SIZE
@@ -1310,6 +1368,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Slength);
   defsubr (&Sstring_equal);
   defsubr (&Ssubstring);
+  defsubr (&Scopy_sequence);
   defsubr (&Smake_hash_table);
   defsubr (&Sgethash);
   defsubr (&Sputhash);
