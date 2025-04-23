@@ -69,6 +69,15 @@ record_unwind_protect_intmax (void (*function) (intmax_t), intmax_t arg)
   grow_specpdl ();
 }
 void
+record_unwind_protect (void (*function) (Lisp_Object), Lisp_Object arg)
+{
+  specpdl_ptr->unwind.kind = SPECPDL_UNWIND;
+  specpdl_ptr->unwind.func = function;
+  specpdl_ptr->unwind.arg = arg;
+  specpdl_ptr->unwind.eval_depth = lisp_eval_depth;
+  grow_specpdl ();
+}
+void
 record_unwind_protect_array (Lisp_Object *array, ptrdiff_t nelts)
 {
   specpdl_ptr->unwind_array.kind = SPECPDL_UNWIND_ARRAY;
@@ -397,11 +406,13 @@ specbind (Lisp_Object symbol, Lisp_Object value)
         specpdl_ptr->let.symbol = symbol;
         specpdl_ptr->let.old_value = ovalue;
 
-        eassert (sym->u.s.redirect != SYMBOL_LOCALIZED || (TODO, false));
+        eassert (sym->u.s.redirect != SYMBOL_LOCALIZED
+                 || (BASE_EQ (SYMBOL_BLV (sym)->where, Fcurrent_buffer ())));
 
         if (sym->u.s.redirect == SYMBOL_LOCALIZED)
           {
-            TODO;
+            if (!blv_found (SYMBOL_BLV (sym)))
+              specpdl_ptr->let.kind = SPECPDL_LET_DEFAULT;
           }
         else if (BUFFER_OBJFWDP (SYMBOL_FWD (sym)))
           {

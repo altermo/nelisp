@@ -222,6 +222,12 @@ valid_sp (struct bc_thread_state *bc, Lisp_Object *sp)
   return sp < (Lisp_Object *) fp && sp + 1 >= fp->saved_fp->next_stack;
 }
 
+static void
+bcall0 (Lisp_Object f)
+{
+  Ffuncall (1, &f);
+}
+
 Lisp_Object
 exec_byte_code (Lisp_Object fun, ptrdiff_t args_template, ptrdiff_t nargs,
                 Lisp_Object *args)
@@ -637,7 +643,9 @@ setup_frame:;
 
         CASE (Bunwind_protect):
           {
-            TODO;
+            Lisp_Object handler = POP;
+            record_unwind_protect (FUNCTIONP (handler) ? bcall0 : prog_ignore,
+                                   handler);
             NEXT;
           }
 

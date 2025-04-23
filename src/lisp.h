@@ -1789,6 +1789,7 @@ struct handler
 extern Lisp_Object unbind_to (specpdl_ref, Lisp_Object);
 
 void record_unwind_protect_ptr (void (*function) (void *), void *arg);
+extern void record_unwind_protect (void (*) (Lisp_Object), Lisp_Object);
 extern void record_unwind_protect_array (Lisp_Object *, ptrdiff_t);
 extern void record_unwind_protect_intmax (void (*) (intmax_t), intmax_t);
 extern void record_unwind_protect_int (void (*function) (int), int arg);
@@ -2123,6 +2124,8 @@ extern Lisp_Object funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs,
                                  Lisp_Object *arg_vector);
 Lisp_Object indirect_function (Lisp_Object object);
 extern void overflow_error (void);
+extern bool FUNCTIONP (Lisp_Object);
+extern void prog_ignore (Lisp_Object);
 
 enum Arith_Comparison
 {

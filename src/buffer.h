@@ -57,4 +57,9 @@ BUFFER_PVEC_INIT (struct buffer *b)
   XSETPVECTYPESIZE (b, PVEC_BUFFER, BUFFER_LISP_SIZE, BUFFER_REST_SIZE);
 }
 
+INLINE void
+bset_local_var_alist (struct buffer *b, Lisp_Object val)
+{
+  b->_local_var_alist = val;
+}
 #endif

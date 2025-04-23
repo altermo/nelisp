@@ -58,6 +58,40 @@ XOBJFWD (lispfwd a)
   return a.fwdptr;
 }
 
+Lisp_Object do_symval_forwarding (lispfwd valcontents);
+static void store_symval_forwarding (lispfwd valcontents, Lisp_Object newval,
+                                     struct buffer *buf);
+
+static void
+swap_in_symval_forwarding (struct Lisp_Symbol *symbol,
+                           struct Lisp_Buffer_Local_Value *blv)
+{
+  register Lisp_Object tem1;
+
+  eassert (blv == SYMBOL_BLV (symbol));
+
+  tem1 = blv->where;
+
+  if (NILP (tem1) || current_buffer != XBUFFER (tem1))
+    {
+      tem1 = blv->valcell;
+      if (blv->fwd.fwdptr)
+        set_blv_value (blv, do_symval_forwarding (blv->fwd));
+      {
+        Lisp_Object var;
+        XSETSYMBOL (var, symbol);
+        tem1 = assq_no_quit (var, BVAR (current_buffer, local_var_alist));
+        set_blv_where (blv, Fcurrent_buffer ());
+      }
+      if (!(blv->found = !NILP (tem1)))
+        tem1 = blv->defcell;
+
+      set_blv_valcell (blv, tem1);
+      if (blv->fwd.fwdptr)
+        store_symval_forwarding (blv->fwd, blv_value (blv), NULL);
+    }
+}
+
 DEFUN ("car", Fcar, Scar, 1, 1, 0,
        doc: /* Return the car of LIST.  If LIST is nil, return nil.
 Error if LIST is not nil and not a cons cell.  See also `car-safe'.
@@ -118,7 +152,10 @@ find_symbol_value (Lisp_Object symbol)
       return SYMBOL_VAL (sym);
     case SYMBOL_LOCALIZED:
       {
-        TODO;
+        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (sym);
+        swap_in_symval_forwarding (sym, blv);
+        return (blv->fwd.fwdptr ? do_symval_forwarding (blv->fwd)
+                                : blv_value (blv));
       }
     case SYMBOL_FORWARDED:
       return do_symval_forwarding (SYMBOL_FWD (sym));
@@ -479,8 +516,10 @@ start:
 }
 
 static void
-store_symval_forwarding (lispfwd valcontents, Lisp_Object newval)
+store_symval_forwarding (lispfwd valcontents, Lisp_Object newval,
+                         struct buffer *buf)
 {
+  UNUSED (buf);
   switch (XFWDTYPE (valcontents))
     {
     case Lisp_Fwd_Int:
@@ -546,9 +585,60 @@ set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
       SET_SYMBOL_VAL (sym, newval);
       return;
     case SYMBOL_LOCALIZED:
-      TODO;
+      {
+        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (sym);
+        if (NILP (where))
+          XSETBUFFER (where, current_buffer);
+
+        if (!EQ (blv->where, where) || (EQ (blv->valcell, blv->defcell)))
+          {
+            if (blv->fwd.fwdptr)
+              set_blv_value (blv, do_symval_forwarding (blv->fwd));
+
+            XSETSYMBOL (symbol, sym);
+            Lisp_Object tem1
+              = assq_no_quit (symbol, BVAR (XBUFFER (where), local_var_alist));
+            set_blv_where (blv, where);
+            blv->found = true;
+
+            if (NILP (tem1))
+              {
+                if (bindflag || !blv->local_if_set || (TODO, false))
+                  {
+                    blv->found = false;
+                    tem1 = blv->defcell;
+                  }
+                else
+                  {
+                    tem1 = Fcons (symbol, XCDR (blv->defcell));
+                    bset_local_var_alist (XBUFFER (where),
+                                          Fcons (tem1, BVAR (XBUFFER (where),
+                                                             local_var_alist)));
+                  }
+              }
+
+            set_blv_valcell (blv, tem1);
+          }
+
+        /* Store the new value in the cons cell.  */
+        set_blv_value (blv, newval);
+
+        if (blv->fwd.fwdptr)
+          {
+            if (voide)
+              /* If storing void (making the symbol void), forward only through
+                 buffer-local indicator, not through Lisp_Objfwd, etc.  */
+              blv->fwd.fwdptr = NULL;
+            else
+              store_symval_forwarding (blv->fwd, newval,
+                                       BUFFERP (where) ? XBUFFER (where)
+                                                       : current_buffer);
+          }
+        break;
+      }
     case SYMBOL_FORWARDED:
       {
+        struct buffer *buf = BUFFERP (where) ? XBUFFER (where) : current_buffer;
         lispfwd innercontents = SYMBOL_FWD (sym);
         if (BUFFER_OBJFWDP (innercontents))
           {
@@ -562,7 +652,7 @@ set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
           }
         else
           {
-            store_symval_forwarding (innercontents, newval);
+            store_symval_forwarding (innercontents, newval, buf);
           }
         break;
       }
