@@ -23,9 +23,27 @@ extern struct handler *handlerlist_sentinel;
 extern struct re_registers search_regs;
 
 #ifndef EMACS_LISP_H
-typedef void Lisp_Object;
+# include "lisp.h"
 #endif
 
 extern Lisp_Object last_thing_searched;
+
+INLINE bool
+THREADP (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_THREAD);
+}
+
+INLINE bool
+MUTEXP (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_MUTEX);
+}
+
+INLINE bool
+CONDVARP (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_CONDVAR);
+}
 
 #endif

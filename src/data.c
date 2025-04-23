@@ -924,6 +924,227 @@ DEFUN ("stringp", Fstringp, Sstringp, 1, 1, 0,
   return Qnil;
 }
 
+DEFUN ("multibyte-string-p", Fmultibyte_string_p, Smultibyte_string_p,
+       1, 1, 0,
+       doc: /* Return t if OBJECT is a multibyte string.
+Return nil if OBJECT is either a unibyte string, or not a string.  */)
+(Lisp_Object object)
+{
+  if (STRINGP (object) && STRING_MULTIBYTE (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("char-table-p", Fchar_table_p, Schar_table_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is a char-table.  */)
+(Lisp_Object object)
+{
+  if (CHAR_TABLE_P (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("vector-or-char-table-p", Fvector_or_char_table_p,
+       Svector_or_char_table_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is a char-table or vector.  */)
+(Lisp_Object object)
+{
+  if (VECTORP (object) || CHAR_TABLE_P (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("bool-vector-p", Fbool_vector_p, Sbool_vector_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is a bool-vector.  */)
+(Lisp_Object object)
+{
+  if (BOOL_VECTOR_P (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("arrayp", Farrayp, Sarrayp, 1, 1, 0,
+       doc: /* Return t if OBJECT is an array (string or vector).  */)
+(Lisp_Object object)
+{
+  if (ARRAYP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("sequencep", Fsequencep, Ssequencep, 1, 1, 0,
+       doc: /* Return t if OBJECT is a sequence (list or array).  */)
+(register Lisp_Object object)
+{
+  if (CONSP (object) || NILP (object) || ARRAYP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("bufferp", Fbufferp, Sbufferp, 1, 1, 0,
+       doc: /* Return t if OBJECT is an editor buffer.  */)
+(Lisp_Object object)
+{
+  if (BUFFERP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("markerp", Fmarkerp, Smarkerp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a marker (editor pointer).  */)
+(Lisp_Object object)
+{
+  if (MARKERP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("subrp", Fsubrp, Ssubrp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a built-in or native compiled Lisp function.
+
+See also `primitive-function-p' and `native-comp-function-p'.  */)
+(Lisp_Object object)
+{
+  if (SUBRP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("closurep", Fclosurep, Sclosurep,
+       1, 1, 0,
+       doc: /* Return t if OBJECT is a function of type `closure'.  */)
+(Lisp_Object object)
+{
+  if (CLOSUREP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("byte-code-function-p", Fbyte_code_function_p, Sbyte_code_function_p,
+       1, 1, 0,
+       doc: /* Return t if OBJECT is a byte-compiled function object.  */)
+(Lisp_Object object)
+{
+  if (CLOSUREP (object) && STRINGP (AREF (object, CLOSURE_CODE)))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("interpreted-function-p", Finterpreted_function_p,
+       Sinterpreted_function_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is a function of type `interpreted-function'.  */)
+(Lisp_Object object)
+{
+  if (CLOSUREP (object) && CONSP (AREF (object, CLOSURE_CODE)))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("module-function-p", Fmodule_function_p, Smodule_function_p, 1, 1, NULL,
+       doc: /* Return t if OBJECT is a function loaded from a dynamic module.  */
+       attributes: const)
+(Lisp_Object object) { return MODULE_FUNCTIONP (object) ? Qt : Qnil; }
+
+DEFUN ("char-or-string-p", Fchar_or_string_p, Schar_or_string_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is a character or a string.  */
+       attributes: const)
+(register Lisp_Object object)
+{
+  if (CHARACTERP (object) || STRINGP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("integerp", Fintegerp, Sintegerp, 1, 1, 0,
+       doc: /* Return t if OBJECT is an integer.  */
+       attributes: const)
+(Lisp_Object object)
+{
+  if (INTEGERP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("integer-or-marker-p", Finteger_or_marker_p, Sinteger_or_marker_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is an integer or a marker (editor pointer).  */)
+(register Lisp_Object object)
+{
+  if (MARKERP (object) || INTEGERP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("natnump", Fnatnump, Snatnump, 1, 1, 0,
+       doc: /* Return t if OBJECT is a nonnegative integer.  */
+       attributes: const)
+(Lisp_Object object)
+{
+  return ((FIXNUMP (object)
+             ? 0 <= XFIXNUM (object)
+             : BIGNUMP (object) && 0 <= mpz_sgn (*xbignum_val (object)))
+            ? Qt
+            : Qnil);
+}
+
+DEFUN ("numberp", Fnumberp, Snumberp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a number (floating point or integer).  */
+       attributes: const)
+(Lisp_Object object)
+{
+  if (NUMBERP (object))
+    return Qt;
+  else
+    return Qnil;
+}
+
+DEFUN ("number-or-marker-p", Fnumber_or_marker_p,
+       Snumber_or_marker_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is a number or a marker.  */)
+(Lisp_Object object)
+{
+  if (NUMBERP (object) || MARKERP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("floatp", Ffloatp, Sfloatp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a floating point number.  */
+       attributes: const)
+(Lisp_Object object)
+{
+  if (FLOATP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("threadp", Fthreadp, Sthreadp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a thread.  */)
+(Lisp_Object object)
+{
+  if (THREADP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("mutexp", Fmutexp, Smutexp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a mutex.  */)
+(Lisp_Object object)
+{
+  if (MUTEXP (object))
+    return Qt;
+  return Qnil;
+}
+
+DEFUN ("condition-variable-p", Fcondition_variable_p, Scondition_variable_p,
+       1, 1, 0,
+       doc: /* Return t if OBJECT is a condition variable.  */)
+(Lisp_Object object)
+{
+  if (CONDVARP (object))
+    return Qt;
+  return Qnil;
+}
+
 DEFUN ("null", Fnull, Snull, 1, 1, 0,
        doc: /* Return t if OBJECT is nil, and return nil otherwise.  */
        attributes: const)
@@ -1717,6 +1938,29 @@ syms_of_data (void)
   defsubr (&Svectorp);
   defsubr (&Srecordp);
   defsubr (&Sstringp);
+  defsubr (&Smultibyte_string_p);
+  defsubr (&Schar_table_p);
+  defsubr (&Svector_or_char_table_p);
+  defsubr (&Sbool_vector_p);
+  defsubr (&Sarrayp);
+  defsubr (&Ssequencep);
+  defsubr (&Sbufferp);
+  defsubr (&Smarkerp);
+  defsubr (&Ssubrp);
+  defsubr (&Sclosurep);
+  defsubr (&Sbyte_code_function_p);
+  defsubr (&Sinterpreted_function_p);
+  defsubr (&Smodule_function_p);
+  defsubr (&Schar_or_string_p);
+  defsubr (&Sintegerp);
+  defsubr (&Sinteger_or_marker_p);
+  defsubr (&Snatnump);
+  defsubr (&Snumberp);
+  defsubr (&Snumber_or_marker_p);
+  defsubr (&Sfloatp);
+  defsubr (&Sthreadp);
+  defsubr (&Smutexp);
+  defsubr (&Scondition_variable_p);
   defsubr (&Snull);
   defsubr (&Sindirect_function);
   defsubr (&Saref);
