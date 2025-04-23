@@ -205,6 +205,35 @@ constructions in REGEXP.  For index of first char beyond the match, do
   return string_match_1 (regexp, string, start, 0, NILP (inhibit_modify));
 }
 
+static Lisp_Object
+match_limit (Lisp_Object num, bool beginningp)
+{
+  EMACS_INT n;
+
+  CHECK_FIXNUM (num);
+  n = XFIXNUM (num);
+  if (n < 0)
+    args_out_of_range (num, make_fixnum (0));
+  if (search_regs.num_regs <= 0)
+    error ("No match data, because no search succeeded");
+  if (n >= search_regs.num_regs || search_regs.start[n] < 0)
+    return Qnil;
+  return (
+    make_fixnum ((beginningp) ? search_regs.start[n] : search_regs.end[n]));
+}
+
+DEFUN ("match-end", Fmatch_end, Smatch_end, 1, 1, 0,
+       doc: /* Return position of end of text matched by last search.
+SUBEXP, a number, specifies the parenthesized subexpression in the last
+  regexp for which to return the start position.
+Value is nil if SUBEXPth subexpression didn't match, or there were fewer
+  than SUBEXP subexpressions.
+SUBEXP zero means the entire text matched by the whole regexp or whole
+  string.
+
+Return value is undefined if the last search failed.  */)
+(Lisp_Object subexp) { return match_limit (subexp, 0); }
+
 DEFUN ("match-data", Fmatch_data, Smatch_data, 0, 3, 0,
        doc: /* Return a list of positions that record text matched by the last search.
 Element 2N of the returned list is the position of the beginning of the
@@ -369,6 +398,7 @@ is to bind it with `let' around a small expression.  */);
   Vinhibit_changing_match_data = Qnil;
 
   defsubr (&Sstring_match);
+  defsubr (&Smatch_end);
   defsubr (&Smatch_data);
   syms_of_search_for_pdumper ();
 }

@@ -1157,7 +1157,7 @@ setup_frame:;
           NEXT;
 
         CASE (Bmatch_end):
-          TODO; // TOP = Fmatch_end (TOP);
+          TOP = Fmatch_end (TOP);
           NEXT;
 
         CASE (Bupcase):
