@@ -53,6 +53,15 @@ even if it is dead.  The return value is never nil.  */)
   return buffer;
 }
 
+DEFUN ("current-buffer", Fcurrent_buffer, Scurrent_buffer, 0, 0, 0,
+       doc: /* Return the current buffer as a Lisp object.  */)
+(void)
+{
+  register Lisp_Object buf;
+  XSETBUFFER (buf, current_buffer);
+  return buf;
+}
+
 void
 set_buffer_internal (register struct buffer *b)
 {
@@ -104,6 +113,7 @@ syms_of_buffer (void)
 
   defsubr (&Sget_buffer);
   defsubr (&Sget_buffer_create);
+  defsubr (&Scurrent_buffer);
   defsubr (&Sset_buffer);
   defsubr (&Sbuffer_name);
 }
