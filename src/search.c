@@ -77,7 +77,9 @@ compile_pattern (Lisp_Object pattern, struct re_registers *regp,
           && STRING_MULTIBYTE (cp->regexp) == STRING_MULTIBYTE (pattern)
           && !NILP (Fstring_equal (cp->regexp, pattern))
           && BASE_EQ (cp->buf.translate, translate) && cp->posix == posix
-          && (TODO, false))
+          && (BASE_EQ (cp->syntax_table, Qt) || (TODO, false))
+          && !NILP (Fequal (cp->f_whitespace_regexp, Vsearch_spaces_regexp))
+          && cp->buf.charset_unibyte == charset_unibyte)
         break;
 
       if (cp->next == 0)

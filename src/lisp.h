@@ -1744,6 +1744,12 @@ specpdl_ref_lt (specpdl_ref a, specpdl_ref b)
 {
   return unwrap_specpdl_ref (a) < unwrap_specpdl_ref (b);
 }
+INLINE specpdl_ref
+specpdl_ref_add (specpdl_ref ref, ptrdiff_t delta)
+{
+  return wrap_specpdl_ref (unwrap_specpdl_ref (ref)
+                           + delta * sizeof (union specbinding));
+}
 INLINE union specbinding *
 specpdl_ref_to_ptr (specpdl_ref ref)
 {

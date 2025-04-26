@@ -513,7 +513,7 @@ setup_frame:;
         CASE (Bunbind5):
           op -= Bunbind;
         dounbind:
-          TODO; // unbind_to (specpdl_ref_add (SPECPDL_INDEX (), -op), Qnil);
+          unbind_to (specpdl_ref_add (SPECPDL_INDEX (), -op), Qnil);
           NEXT;
 
         CASE (Bgoto):
