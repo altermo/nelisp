@@ -1551,6 +1551,39 @@ cons_to_unsigned (Lisp_Object c, uintmax_t max)
   return val;
 }
 
+DEFUN ("string-to-number", Fstring_to_number, Sstring_to_number, 1, 2, 0,
+       doc: /* Parse STRING as a decimal number and return the number.
+Ignore leading spaces and tabs, and all trailing chars.  Return 0 if
+STRING cannot be parsed as an integer or floating point number.
+
+If BASE, interpret STRING as a number in that base.  If BASE isn't
+present, base 10 is used.  BASE must be between 2 and 16 (inclusive).
+If the base used is not 10, STRING is always parsed as an integer.  */)
+(register Lisp_Object string, Lisp_Object base)
+{
+  int b;
+
+  CHECK_STRING (string);
+
+  if (NILP (base))
+    b = 10;
+  else
+    {
+      CHECK_FIXNUM (base);
+      if (!(XFIXNUM (base) >= 2 && XFIXNUM (base) <= 16))
+        xsignal1 (Qargs_out_of_range, base);
+      b = XFIXNUM (base);
+    }
+
+  char *p = SSDATA (string);
+  while (*p == ' ' || *p == '\t')
+    p++;
+
+  Lisp_Object val = string_to_number (p, b, 0);
+  return ((IEEE_FLOATING_POINT ? NILP (val) : !NUMBERP (val)) ? make_fixnum (0)
+                                                              : val);
+}
+
 enum arithop
 {
   Aadd,
@@ -1972,6 +2005,7 @@ syms_of_data (void)
   defsubr (&Sleq);
   defsubr (&Sgeq);
   defsubr (&Sneq);
+  defsubr (&Sstring_to_number);
   defsubr (&Splus);
   defsubr (&Sminus);
   defsubr (&Stimes);

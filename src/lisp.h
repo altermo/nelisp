@@ -2084,6 +2084,7 @@ intern_c_string (const char *str)
 {
   return intern_c_string_1 (str, strlen (str));
 }
+extern Lisp_Object string_to_number (char const *, int, ptrdiff_t *);
 
 extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
 extern void syms_of_fns (void);
