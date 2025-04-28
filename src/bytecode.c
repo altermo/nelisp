@@ -271,7 +271,7 @@ setup_frame:;
   for (ptrdiff_t i = 0; i < pushedargs; i++, args++)
     PUSH (*args);
   if (nonrest < nargs)
-    TODO; // PUSH (Flist (nargs - nonrest, args));
+    PUSH (Flist (nargs - nonrest, args));
   else
     for (ptrdiff_t i = nargs - rest; i < nonrest; i++)
       PUSH (Qnil);

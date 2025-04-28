@@ -2035,6 +2035,7 @@ readevalloop (Lisp_Object readcharfun, struct infile *infile0,
   specbind (Qinternal_interpreter_environment,
             (NILP (lex_bound) || BASE_EQ (lex_bound, Qunbound) ? Qnil
                                                                : list1 (Qt)));
+  specbind (Qmacroexp__dynvars, Vmacroexp__dynvars);
 
   continue_reading_p = 1;
   while (continue_reading_p)
@@ -2114,6 +2115,12 @@ to find all the symbols in an obarray, use `mapatoms'.  */);
   DEFSYM (Qlexical_binding, "lexical-binding");
 
   DEFSYM (Qget_file_char, "get-file-char");
+
+  DEFSYM (Qmacroexp__dynvars, "macroexp--dynvars");
+  DEFVAR_LISP ("macroexp--dynvars", Vmacroexp__dynvars,
+        doc:   /* List of variables declared dynamic in the current scope.
+Only valid during macro-expansion.  Internal use only. */);
+  Vmacroexp__dynvars = Qnil;
 
   DEFVAR_LISP ("load-path", Vload_path,
                doc: /* List of directories to search for files to load.

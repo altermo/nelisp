@@ -633,6 +633,12 @@ this does nothing and returns nil.  */)
 }
 
 Lisp_Object
+apply1 (Lisp_Object fn, Lisp_Object arg)
+{
+  return NILP (arg) ? Ffuncall (1, &fn) : CALLN (Fapply, fn, arg);
+}
+
+Lisp_Object
 eval_sub (Lisp_Object form)
 {
   TODO_NELISP_LATER;
@@ -777,6 +783,39 @@ eval_sub (Lisp_Object form)
     {
       if (NILP (fun))
         xsignal1 (Qvoid_function, original_fun);
+      if (!CONSP (fun))
+        xsignal1 (Qinvalid_function, original_fun);
+      Lisp_Object funcar = XCAR (fun);
+      if (!SYMBOLP (funcar))
+        xsignal1 (Qinvalid_function, original_fun);
+      if (EQ (funcar, Qautoload))
+        TODO;
+      if (EQ (funcar, Qmacro))
+        {
+          specpdl_ref count1 = SPECPDL_INDEX ();
+          Lisp_Object exp;
+          specbind (Qlexical_binding,
+                    NILP (Vinternal_interpreter_environment) ? Qnil : Qt);
+
+          Lisp_Object dynvars = Vmacroexp__dynvars;
+          for (Lisp_Object p = Vinternal_interpreter_environment; !NILP (p);
+               p = XCDR (p))
+            {
+              Lisp_Object e = XCAR (p);
+              if (SYMBOLP (e))
+                dynvars = Fcons (e, dynvars);
+            }
+          if (!EQ (dynvars, Vmacroexp__dynvars))
+            specbind (Qmacroexp__dynvars, dynvars);
+
+          exp = apply1 (Fcdr (fun), original_args);
+          exp = unbind_to (count1, exp);
+          val = eval_sub (exp);
+        }
+      else if (EQ (funcar, Qlambda))
+        return apply_lambda (fun, original_args, count);
+      else
+        xsignal1 (Qinvalid_function, original_fun);
       TODO;
     }
   lisp_eval_depth--;
@@ -1672,6 +1711,7 @@ void
 syms_of_eval (void)
 {
   DEFSYM (Qautoload, "autoload");
+  DEFSYM (Qmacro, "macro");
 
   DEFSYM (Qand_rest, "&rest");
   DEFSYM (Qand_optional, "&optional");
