@@ -85,6 +85,13 @@ record_unwind_protect_array (Lisp_Object *array, ptrdiff_t nelts)
   specpdl_ptr->unwind_array.nelts = nelts;
   grow_specpdl ();
 }
+void
+record_unwind_protect_void (void (*function) (void))
+{
+  specpdl_ptr->unwind_void.kind = SPECPDL_UNWIND_VOID;
+  specpdl_ptr->unwind_void.func = function;
+  grow_specpdl ();
+}
 
 specpdl_ref
 record_in_backtrace (Lisp_Object function, Lisp_Object *args, ptrdiff_t nargs)
@@ -152,7 +159,8 @@ do_one_unbind (union specbinding *this_binding, bool unwinding,
       this_binding->unwind_intmax.func (this_binding->unwind_intmax.arg);
       break;
     case SPECPDL_UNWIND_VOID:
-      TODO;
+      this_binding->unwind_void.func ();
+      break;
     case SPECPDL_UNWIND_EXCURSION:
       TODO;
     case SPECPDL_BACKTRACE:

@@ -9,6 +9,10 @@ enum
 };
 enum
 {
+  MAX_UNICODE_CHAR = 0x10FFFF
+};
+enum
+{
   NO_BREAK_SPACE = 0x00A0,
   SOFT_HYPHEN = 0x00AD,
   ZERO_WIDTH_NON_JOINER = 0x200C,

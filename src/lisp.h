@@ -65,6 +65,11 @@ static void maybe_quit (void);
 #define _GL_INT_NEGATE_CONVERT(e, v) ((1 ? 0 : (e)) - (v))
 #define _GL_EXPR_SIGNED(e) (_GL_INT_NEGATE_CONVERT (e, 1) < 0)
 #define EXPR_SIGNED(e) _GL_EXPR_SIGNED (e)
+#define _GL_SIGNED_TYPE_OR_EXPR(t) _GL_TYPE_SIGNED (__typeof__ (t))
+#define INT_BITS_STRLEN_BOUND(b) (((b) * 146 + 484) / 485)
+#define INT_STRLEN_BOUND(t)                                             \
+  (INT_BITS_STRLEN_BOUND (TYPE_WIDTH (t) - _GL_SIGNED_TYPE_OR_EXPR (t)) \
+   + _GL_SIGNED_TYPE_OR_EXPR (t))
 // Taken from sysdep.c
 static inline int
 emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
@@ -1799,6 +1804,7 @@ extern void record_unwind_protect (void (*) (Lisp_Object), Lisp_Object);
 extern void record_unwind_protect_array (Lisp_Object *, ptrdiff_t);
 extern void record_unwind_protect_intmax (void (*) (intmax_t), intmax_t);
 extern void record_unwind_protect_int (void (*function) (int), int arg);
+extern void record_unwind_protect_void (void (*function) (void));
 specpdl_ref record_in_backtrace (Lisp_Object function, Lisp_Object *args,
                                  ptrdiff_t nargs);
 extern void set_unwind_protect_ptr (specpdl_ref count, void (*func) (void *),
@@ -2059,6 +2065,8 @@ extern Lisp_Object make_pure_string (const char *, ptrdiff_t, ptrdiff_t, bool);
 extern Lisp_Object make_vector (ptrdiff_t, Lisp_Object);
 extern Lisp_Object pure_cons (Lisp_Object car, Lisp_Object cdr);
 extern Lisp_Object make_uninit_string (EMACS_INT length);
+extern Lisp_Object make_string_from_bytes (const char *contents,
+                                           ptrdiff_t nchars, ptrdiff_t nbytes);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -2154,6 +2162,7 @@ extern AVOID args_out_of_range_3 (Lisp_Object, Lisp_Object, Lisp_Object);
 extern uintmax_t cons_to_unsigned (Lisp_Object, uintmax_t);
 extern void set_default_internal (Lisp_Object, Lisp_Object,
                                   enum Set_Internal_Bind, KBOARD *);
+extern char *fixnum_to_string (EMACS_INT number, char *buffer, char *end);
 
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);
@@ -2208,6 +2217,9 @@ extern intmax_t check_integer_range (Lisp_Object, intmax_t, intmax_t);
 extern void syms_of_search (void);
 
 extern void syms_of_xdisp (void);
+
+extern void syms_of_print (void);
+#define FLOAT_TO_STRING_BUFSIZE 350
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)
@@ -2271,6 +2283,15 @@ struct Lisp_Boolfwd
   enum Lisp_Fwd_Type type; /* = Lisp_Fwd_Bool */
   bool *boolvar;
 };
+extern void defvar_bool (struct Lisp_Boolfwd const *, char const *);
+#define DEFVAR_BOOL(lname, vname, doc)           \
+  do                                             \
+    {                                            \
+      static struct Lisp_Boolfwd const b_fwd     \
+        = { Lisp_Fwd_Bool, &globals.f_##vname }; \
+      defvar_bool (&b_fwd, lname);               \
+    }                                            \
+  while (false)
 #define DEFSYM(sym, name)
 extern void defsubr (union Aligned_Lisp_Subr *);
 

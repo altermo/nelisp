@@ -583,6 +583,7 @@ ret () init (lua_State *L)
   syms_of_casetab ();
   syms_of_search ();
   syms_of_xdisp ();
+  syms_of_print ();
 
   init_keyboard ();
   init_eval ();

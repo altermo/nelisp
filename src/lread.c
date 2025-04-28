@@ -678,6 +678,15 @@ defvar_int (struct Lisp_Intfwd const *i_fwd, char const *namestring)
   XBARE_SYMBOL (sym)->u.s.redirect = SYMBOL_FORWARDED;
   SET_SYMBOL_FWD (XBARE_SYMBOL (sym), i_fwd);
 }
+void
+defvar_bool (struct Lisp_Boolfwd const *b_fwd, char const *namestring)
+{
+  Lisp_Object sym = intern_c_string (namestring);
+  XBARE_SYMBOL (sym)->u.s.declared_special = true;
+  XBARE_SYMBOL (sym)->u.s.redirect = SYMBOL_FORWARDED;
+  SET_SYMBOL_FWD (XBARE_SYMBOL (sym), b_fwd);
+  Vbyte_boolean_vars = Fcons (sym, Vbyte_boolean_vars);
+}
 
 void
 defsubr (union Aligned_Lisp_Subr *aname)
@@ -2086,6 +2095,10 @@ Initialized during startup as described in Info node `(elisp)Library Search'.
 Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
 and without trailing slashes.  */);
+
+  DEFVAR_LISP ("byte-boolean-vars", Vbyte_boolean_vars,
+        doc: /* List of all DEFVAR_BOOL variables, used by the byte code optimizer.  */);
+  Vbyte_boolean_vars = Qnil;
 
   DEFVAR_LISP ("lread--unescaped-character-literals",
                Vlread_unescaped_character_literals,

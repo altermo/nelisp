@@ -122,7 +122,7 @@ do_symval_forwarding (lispfwd valcontents)
       return make_int (*XFIXNUMFWD (valcontents)->intvar);
 
     case Lisp_Fwd_Bool:
-      TODO;
+      return (*XBOOLFWD (valcontents)->boolvar ? Qt : Qnil);
 
     case Lisp_Fwd_Obj:
       return *XOBJFWD (valcontents)->objvar;
@@ -1549,6 +1549,26 @@ cons_to_unsigned (Lisp_Object c, uintmax_t max)
   if (!(valid && val <= max))
     error ("Not an in-range integer, integral float, or cons of integers");
   return val;
+}
+
+char *
+fixnum_to_string (EMACS_INT number, char *buffer, char *end)
+{
+  EMACS_INT x = number;
+  bool negative = x < 0;
+  if (negative)
+    x = -x;
+  char *p = end;
+  do
+    {
+      eassume (p > buffer && p - 1 < end);
+      *--p = '0' + x % 10;
+      x /= 10;
+    }
+  while (x);
+  if (negative)
+    *--p = '-';
+  return p;
 }
 
 DEFUN ("string-to-number", Fstring_to_number, Sstring_to_number, 1, 2, 0,
