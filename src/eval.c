@@ -784,6 +784,69 @@ eval_sub (Lisp_Object form)
   return val;
 }
 
+DEFUN ("apply", Fapply, Sapply, 1, MANY, 0,
+       doc: /* Call FUNCTION with our remaining args, using our last arg as list of args.
+Then return the value FUNCTION returns.
+With a single argument, call the argument's first element using the
+other elements as args.
+Thus, (apply \\='+ 1 2 \\='(3 4)) returns 10.
+usage: (apply FUNCTION &rest ARGUMENTS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  ptrdiff_t i, funcall_nargs;
+  Lisp_Object *funcall_args = NULL;
+  Lisp_Object spread_arg = args[nargs - 1];
+  Lisp_Object fun = args[0];
+  USE_SAFE_ALLOCA;
+
+  ptrdiff_t numargs = list_length (spread_arg);
+
+  if (numargs == 0)
+    return Ffuncall (max (1, nargs - 1), args);
+  else if (numargs == 1)
+    {
+      args[nargs - 1] = XCAR (spread_arg);
+      return Ffuncall (nargs, args);
+    }
+
+  numargs += nargs - 2;
+
+  if (SYMBOLP (fun) && !NILP (fun)
+      && (fun = XSYMBOL (fun)->u.s.function, SYMBOLP (fun)))
+    {
+      fun = indirect_function (fun);
+      if (NILP (fun))
+        fun = args[0];
+    }
+
+  if (SUBRP (fun) && XSUBR (fun)->max_args > numargs
+      && numargs >= XSUBR (fun)->min_args)
+    {
+      SAFE_ALLOCA_LISP (funcall_args, 1 + XSUBR (fun)->max_args);
+      memclear (funcall_args + numargs + 1,
+                (XSUBR (fun)->max_args - numargs) * word_size);
+      funcall_nargs = 1 + XSUBR (fun)->max_args;
+    }
+  else
+    {
+      SAFE_ALLOCA_LISP (funcall_args, 1 + numargs);
+      funcall_nargs = 1 + numargs;
+    }
+
+  memcpy (funcall_args, args, nargs * word_size);
+  i = nargs - 1;
+  while (!NILP (spread_arg))
+    {
+      funcall_args[i++] = XCAR (spread_arg);
+      spread_arg = XCDR (spread_arg);
+    }
+
+  Lisp_Object retval = Ffuncall (funcall_nargs, funcall_args);
+
+  SAFE_FREE ();
+  return retval;
+}
+
 DEFUN ("progn", Fprogn, Sprogn, 0, UNEVALLED, 0,
        doc: /* Eval BODY forms sequentially and return value of last one.
 usage: (progn BODY...)  */)
@@ -1647,6 +1710,7 @@ alist of active lexical bindings.  */);
   defsubr (&Sdefconst);
   defsubr (&Sdefconst_1);
   defsubr (&Sdefvaralias);
+  defsubr (&Sapply);
   defsubr (&Sprogn);
   defsubr (&Sif);
   defsubr (&Swhile);
