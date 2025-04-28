@@ -1991,7 +1991,20 @@ read_internal_start (Lisp_Object stream, Lisp_Object start, Lisp_Object end,
 
   if (STRINGP (stream) || ((CONSP (stream) && STRINGP (XCAR (stream)))))
     {
-      TODO;
+      ptrdiff_t startval, endval;
+      Lisp_Object string;
+
+      if (STRINGP (stream))
+        string = stream;
+      else
+        string = XCAR (stream);
+
+      validate_subarray (string, start, end, SCHARS (string), &startval,
+                         &endval);
+
+      read_from_string_index = startval;
+      read_from_string_index_byte = string_char_to_byte (string, startval);
+      read_from_string_limit = endval;
     }
 
   retval = read0 (stream, locate_syms);
@@ -2062,6 +2075,22 @@ readevalloop (Lisp_Object readcharfun, struct infile *infile0,
   unbind_to (count, Qnil);
 }
 
+DEFUN ("read-from-string", Fread_from_string, Sread_from_string, 1, 3, 0,
+       doc: /* Read one Lisp expression which is represented as text by STRING.
+Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
+FINAL-STRING-INDEX is an integer giving the position of the next
+remaining character in STRING.  START and END optionally delimit
+a substring of STRING from which to read;  they default to 0 and
+\(length STRING) respectively.  Negative values are counted from
+the end of STRING.  */)
+(Lisp_Object string, Lisp_Object start, Lisp_Object end)
+{
+  Lisp_Object ret;
+  CHECK_STRING (string);
+  ret = read_internal_start (string, start, end, false);
+  return Fcons (ret, make_fixnum (read_from_string_index));
+}
+
 void
 syms_of_lread (void)
 {
@@ -2111,4 +2140,5 @@ For internal use only.  */);
   defsubr (&Sload);
   defsubr (&Sintern);
   defsubr (&Sunintern);
+  defsubr (&Sread_from_string);
 }
