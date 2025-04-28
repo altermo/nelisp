@@ -222,7 +222,7 @@ nvim_current_buffer (void)
 }
 
 ptrdiff_t
-nvim_get_field_zv (struct buffer *b)
+nvim_get_field_zv (struct buffer *b, bool chars)
 {
   eassert (BUFFER_LIVE_P (b));
   long bufid = b->bufid;
@@ -233,11 +233,121 @@ nvim_get_field_zv (struct buffer *b)
     lua_pushnumber (L, bufid);
     push_vim_fn (L, "wordcount");
     lua_call (L, 2, 1);
-    lua_getfield (L, -1, "chars");
+    if (chars)
+      lua_getfield (L, -1, "chars");
+    else
+      lua_getfield (L, -1, "bytes");
     eassert (lua_isnumber (L, -1));
     zv = lua_tointeger (L, -1);
     zv = zv + 1;
     lua_pop (L, 2);
   }
   return zv;
+}
+
+ptrdiff_t
+nvim_get_field_begv (struct buffer *b, bool chars)
+{
+  eassert (BUFFER_LIVE_P (b));
+  UNUSED (chars);
+  return 1;
+}
+
+struct pos
+{
+  ptrdiff_t row;
+  ptrdiff_t col;
+};
+
+struct pos
+nvim_buf_byte1_to_pos0 (ptrdiff_t byte1)
+{
+  // NOTE: if ever changed to accept buffer as argument, need to temp set that
+  // buffer
+  struct pos pos;
+  eassert (byte1 >= 1);
+  ptrdiff_t byte = byte1 - 1;
+  if (byte == 0)
+    {
+      pos.row = 0;
+      pos.col = 0;
+      return pos;
+    }
+  LUA (10)
+  {
+    push_vim_fn (L, "line2byte");
+    push_vim_fn (L, "byte2line");
+    lua_pushinteger (L, byte);
+    lua_call (L, 1, 1);
+    eassert (lua_isnumber (L, -1));
+    eassert (lua_tointeger (L, -1) != -1);
+    pos.row = lua_tointeger (L, -1);
+    lua_call (L, 1, 1);
+    eassert (lua_isnumber (L, -1));
+    eassert (lua_tointeger (L, -1) != -1);
+    pos.col = lua_tointeger (L, -1);
+    lua_pop (L, 1);
+    push_vim_fn (L, "getline");
+    lua_pushnumber (L, pos.row);
+    lua_call (L, 1, 1);
+    eassert (lua_isstring (L, -1));
+    ptrdiff_t len = lua_objlen (L, -1);
+    lua_pop (L, 1);
+    if (pos.col > len)
+      {
+        pos.col = 0;
+        pos.row++;
+      }
+  }
+  return pos;
+}
+
+void
+nvim_buf_memcpy (unsigned char *dst, ptrdiff_t beg1, ptrdiff_t size)
+{
+  eassert (1 <= beg1);
+  ptrdiff_t end1 = size + beg1;
+  eassert (end1 <= ZV_BYTE);
+
+  struct pos start_pos = nvim_buf_byte1_to_pos0 (beg1);
+  struct pos end_pos = nvim_buf_byte1_to_pos0 (end1);
+
+  long bufid = current_buffer->bufid;
+  LUA (10)
+  {
+    lua_getglobal (L, "table");
+    lua_getfield (L, -1, "concat");
+    lua_remove (L, -2);
+    push_vim_api (L, "nvim_buf_get_text");
+    lua_pushnumber (L, bufid);
+    lua_pushnumber (L, start_pos.row);
+    lua_pushnumber (L, start_pos.col);
+    if (end1 == ZV_BYTE)
+      {
+        // neovim automatically adds a newline at the end of the buffer,
+        // but the api doesn't recognize this extra character,
+        // so we need to get one less char and then append the newline.
+        lua_pushnumber (L, end_pos.row - 1);
+        lua_pushnumber (L, -1);
+      }
+    else
+      {
+        lua_pushnumber (L, end_pos.row);
+        lua_pushnumber (L, end_pos.col);
+      }
+    lua_newtable (L);
+    lua_call (L, 6, 1);
+    eassert (lua_istable (L, -1));
+    lua_pushliteral (L, "\n");
+    lua_call (L, 2, 1);
+    if (end1 == ZV_BYTE)
+      {
+        lua_pushliteral (L, "\n");
+        lua_concat (L, 2);
+      }
+    eassert (lua_objlen (L, -1) == (unsigned long) size);
+    const char *text = lua_tostring (L, -1);
+    memcpy (dst, text, size);
+    lua_pop (L, 1);
+  }
 }

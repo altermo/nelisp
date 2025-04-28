@@ -6,7 +6,10 @@
 
 #define current_buffer (nvim_current_buffer ())
 
-#define ZV (nvim_get_field_zv (current_buffer))
+#define ZV (nvim_get_field_zv (current_buffer, true))
+#define ZV_BYTE (nvim_get_field_zv (current_buffer, false))
+#define BEGV (nvim_get_field_begv (current_buffer, true))
+#define BEGV_BYTE (nvim_get_field_begv (current_buffer, false))
 
 INLINE bool
 BUFFERP (Lisp_Object a)
@@ -64,5 +67,11 @@ INLINE void
 bset_local_var_alist (struct buffer *b, Lisp_Object val)
 {
   b->_local_var_alist = val;
+}
+
+INLINE void
+buffer_memcpy (unsigned char *dst, ptrdiff_t beg, ptrdiff_t size)
+{
+  nvim_buf_memcpy (dst, beg, size);
 }
 #endif

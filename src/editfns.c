@@ -14,6 +14,68 @@ is in effect, in which case it is less.  */)
   return temp;
 }
 
+Lisp_Object
+make_buffer_string_both (ptrdiff_t start, ptrdiff_t start_byte, ptrdiff_t end,
+                         ptrdiff_t end_byte, bool props)
+{
+  Lisp_Object result;
+  ptrdiff_t beg0, end0, size;
+
+  // if (start_byte < GPT_BYTE && GPT_BYTE < end_byte)
+  //   {
+  //     beg0 = start_byte;
+  //     end0 = GPT_BYTE;
+  //     beg1 = GPT_BYTE + GAP_SIZE - BEG_BYTE;
+  //     end1 = end_byte + GAP_SIZE - BEG_BYTE;
+  //   }
+  // else
+  {
+    beg0 = start_byte;
+    end0 = end_byte;
+    // beg1 = -1;
+    // end1 = -1;
+  }
+
+#if TODO_NELISP_LATER_AND
+  if (!NILP (BVAR (current_buffer, enable_multibyte_characters)))
+    result = make_uninit_multibyte_string (end - start, end_byte - start_byte);
+  else
+#endif
+    result = make_uninit_string (end - start);
+
+  size = end0 - beg0;
+  // memcpy (SDATA (result), BYTE_POS_ADDR (beg0), size);
+  // if (beg1 != -1)
+  //   memcpy (SDATA (result) + size, BEG_ADDR + beg1, end1 - beg1);
+  buffer_memcpy (SDATA (result), beg0, size);
+
+  if (props)
+    {
+#if TODO_NELISP_LATER_AND
+      update_buffer_properties (start, end);
+
+      tem
+        = Fnext_property_change (make_fixnum (start), Qnil, make_fixnum (end));
+      tem1 = Ftext_properties_at (make_fixnum (start), Qnil);
+
+      if (XFIXNUM (tem) != end || !NILP (tem1))
+        copy_intervals_to_string (result, current_buffer, start, end - start);
+#endif
+    }
+
+  return result;
+}
+
+DEFUN ("buffer-string", Fbuffer_string, Sbuffer_string, 0, 0, 0,
+       doc: /* Return the contents of the current buffer as a string.
+If narrowing is in effect, this function returns only the visible part
+of the buffer.
+
+This function copies the text properties of that part of the buffer
+into the result string; if you don’t want the text properties,
+use `buffer-substring-no-properties' instead.  */)
+(void) { return make_buffer_string_both (BEGV, BEGV_BYTE, ZV, ZV_BYTE, 1); }
+
 DEFUN ("message", Fmessage, Smessage, 1, MANY, 0,
        doc: /* Display a message at the bottom of the screen.
 The message also goes into the `*Messages*' buffer, if `message-log-max'
@@ -51,5 +113,6 @@ void
 syms_of_editfns (void)
 {
   defsubr (&Spoint_max);
+  defsubr (&Sbuffer_string);
   defsubr (&Smessage);
 }
