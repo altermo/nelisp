@@ -1353,6 +1353,9 @@ VALUE.  In any case, return VALUE.  */)
 
   return value;
 }
+DEFUN ("hash-table-p", Fhash_table_p, Shash_table_p, 1, 1, 0,
+       doc: /* Return t if OBJ is a Lisp hash table object.  */)
+(Lisp_Object obj) { return HASH_TABLE_P (obj) ? Qt : Qnil; }
 DEFUN ("provide", Fprovide, Sprovide, 1, 2, 0,
        doc: /* Announce that FEATURE is a feature of the current Emacs.
 The optional argument SUBFEATURES should be a list of symbols listing
@@ -1435,5 +1438,6 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Smake_hash_table);
   defsubr (&Sgethash);
   defsubr (&Sputhash);
+  defsubr (&Shash_table_p);
   defsubr (&Sprovide);
 }
