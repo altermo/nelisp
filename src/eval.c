@@ -1491,6 +1491,102 @@ More specifically, behaves like (defconst SYM 'INITVALUE DOCSTRING).  */)
   return sym;
 }
 
+DEFUN ("make-interpreted-closure", Fmake_interpreted_closure,
+       Smake_interpreted_closure, 3, 5, 0,
+       doc: /* Make an interpreted closure.
+ARGS should be the list of formal arguments.
+BODY should be a non-empty list of forms.
+ENV should be a lexical environment, like the second argument of `eval'.
+IFORM if non-nil should be of the form (interactive ...).  */)
+(Lisp_Object args, Lisp_Object body, Lisp_Object env, Lisp_Object docstring,
+ Lisp_Object iform)
+{
+  Lisp_Object ifcdr, value, slots[6];
+
+  CHECK_CONS (body);
+  CHECK_LIST (args);
+  CHECK_LIST (iform);
+  ifcdr = CDR (iform);
+  if (NILP (CDR (ifcdr)))
+    value = CAR (ifcdr);
+  else
+    value = CALLN (Fvector, XCAR (ifcdr), XCDR (ifcdr));
+  slots[0] = args;
+  slots[1] = body;
+  slots[2] = env;
+  slots[3] = Qnil;
+  slots[4] = docstring;
+  slots[5] = value;
+  Lisp_Object val = Fvector (!NILP (iform)       ? 6
+                             : !NILP (docstring) ? 5
+                                                 : 3,
+                             slots);
+  XSETPVECTYPE (XVECTOR (val), PVEC_CLOSURE);
+  return val;
+}
+
+DEFUN ("function", Ffunction, Sfunction, 1, UNEVALLED, 0,
+       doc: /* Like `quote', but preferred for objects which are functions.
+In byte compilation, `function' causes its argument to be handled by
+the byte compiler.  Similarly, when expanding macros and expressions,
+ARG can be examined and possibly expanded.  If `quote' is used
+instead, this doesn't happen.
+
+usage: (function ARG)  */)
+(Lisp_Object args)
+{
+  Lisp_Object quoted = XCAR (args);
+
+  if (!NILP (XCDR (args)))
+    xsignal2 (Qwrong_number_of_arguments, Qfunction, Flength (args));
+
+  if (CONSP (quoted) && EQ (XCAR (quoted), Qlambda))
+    {
+      Lisp_Object cdr = XCDR (quoted);
+      Lisp_Object args = Fcar (cdr);
+      cdr = Fcdr (cdr);
+      Lisp_Object docstring = Qnil, iform = Qnil;
+      if (CONSP (cdr))
+        {
+          docstring = XCAR (cdr);
+          if (STRINGP (docstring))
+            {
+              Lisp_Object tmp = XCDR (cdr);
+              if (!NILP (tmp))
+                cdr = tmp;
+              else
+                docstring = Qnil;
+            }
+          else if (CONSP (docstring) && EQ (QCdocumentation, XCAR (docstring))
+                   && (docstring = eval_sub (Fcar (XCDR (docstring))), true))
+            cdr = XCDR (cdr);
+          else
+            docstring = Qnil;
+        }
+      if (CONSP (cdr))
+        {
+          iform = XCAR (cdr);
+          if (CONSP (iform) && EQ (Qinteractive, XCAR (iform)))
+            cdr = XCDR (cdr);
+          else
+            iform = Qnil;
+        }
+      if (NILP (cdr))
+        cdr = Fcons (Qnil, Qnil);
+
+      if (NILP (Vinternal_interpreter_environment)
+          || NILP (Vinternal_make_interpreted_closure_function))
+        return Fmake_interpreted_closure (args, cdr,
+                                          Vinternal_interpreter_environment,
+                                          docstring, iform);
+      else
+        return call5 (Vinternal_make_interpreted_closure_function, args, cdr,
+                      Vinternal_interpreter_environment, docstring, iform);
+    }
+  else
+    return quoted;
+}
+
 DEFUN ("defvaralias", Fdefvaralias, Sdefvaralias, 2, 3, 0,
        doc: /* Make NEW-ALIAS a variable alias for symbol BASE-VARIABLE.
 Aliased variables always have the same value; setting one sets the other.
@@ -1715,6 +1811,8 @@ syms_of_eval (void)
 
   DEFSYM (Qand_rest, "&rest");
   DEFSYM (Qand_optional, "&optional");
+  DEFSYM (QCdocumentation, ":documentation");
+  DEFSYM (Qinteractive, "interactive");
 
   DEFVAR_INT ("max-lisp-eval-depth", max_lisp_eval_depth,
                 doc: /* Limit on depth in `eval', `apply' and `funcall' before error.
@@ -1726,6 +1824,11 @@ if that proves inconveniently small.  However, if you increase it too far,
 Emacs could overflow the real C stack, and crash.  */);
   max_lisp_eval_depth = 1600;
 
+  DEFVAR_LISP ("internal-make-interpreted-closure-function",
+               Vinternal_make_interpreted_closure_function,
+               doc: /* Function to filter the env when constructing a closure.  */);
+  Vinternal_make_interpreted_closure_function = Qnil;
+
   DEFSYM (Qinternal_interpreter_environment,
             "internal-interpreter-environment");
   DEFVAR_LISP ("internal-interpreter-environment",
@@ -1735,8 +1838,6 @@ When lexical binding is not being used, this variable is nil.
 A value of `(t)' indicates an empty environment, otherwise it is an
 alist of active lexical bindings.  */);
   Vinternal_interpreter_environment = Qnil;
-  /* Don't export this variable to Elisp, so no one can mess with it
-   (Just imagine if someone makes it buffer-local).  */
   Funintern (Qinternal_interpreter_environment, Qnil);
 
   defsubr (&Ssignal);
@@ -1750,6 +1851,8 @@ alist of active lexical bindings.  */);
   defsubr (&Sdefconst);
   defsubr (&Sdefconst_1);
   defsubr (&Sdefvaralias);
+  defsubr (&Smake_interpreted_closure);
+  defsubr (&Sfunction);
   defsubr (&Sapply);
   defsubr (&Sprogn);
   defsubr (&Sif);
