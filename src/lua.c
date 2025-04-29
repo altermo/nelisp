@@ -592,6 +592,7 @@ ret () init (lua_State *L)
   init_buffer ();
   init_bytecode ();
   init_bignum ();
+  init_lread ();
 
   build_details = true;
 

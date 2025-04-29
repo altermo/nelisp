@@ -1403,6 +1403,61 @@ particular subfeatures supported in this version of FEATURE.  */)
   return feature;
 }
 
+static Lisp_Object require_nesting_list;
+
+DEFUN ("require", Frequire, Srequire, 1, 3, 0,
+       doc: /* If FEATURE is not already loaded, load it from FILENAME.
+If FEATURE is not a member of the list `features', then the feature was
+not yet loaded; so load it from file FILENAME.
+
+If FILENAME is omitted, the printname of FEATURE is used as the file
+name, and `load' is called to try to load the file by that name, after
+appending the suffix `.elc', `.el', or the system-dependent suffix for
+dynamic module files, in that order; but the function will not try to
+load the file without any suffix.  See `get-load-suffixes' for the
+complete list of suffixes.
+
+To find the file, this function searches the directories in `load-path'.
+
+If the optional third argument NOERROR is non-nil, then, if
+the file is not found, the function returns nil instead of signaling
+an error.  Normally the return value is FEATURE.
+
+The normal messages issued by `load' at start and end of loading
+FILENAME are suppressed.  */)
+(Lisp_Object feature, Lisp_Object filename, Lisp_Object noerror)
+{
+  Lisp_Object tem;
+  bool from_file = load_in_progress;
+
+  CHECK_SYMBOL (feature);
+
+  if (!from_file)
+    {
+      Lisp_Object tail = Vcurrent_load_list;
+      FOR_EACH_TAIL_SAFE (tail)
+        if (NILP (XCDR (tail)) && STRINGP (XCAR (tail)))
+          from_file = true;
+    }
+
+  if (from_file)
+    {
+      tem = Fcons (Qrequire, feature);
+      if (NILP (Fmember (tem, Vcurrent_load_list)))
+        LOADHIST_ATTACH (tem);
+    }
+  tem = Fmemq (feature, Vfeatures);
+
+  if (NILP (tem))
+    {
+      TODO;
+      UNUSED (filename);
+      UNUSED (noerror);
+    }
+
+  return feature;
+}
+
 void
 syms_of_fns (void)
 {
@@ -1422,6 +1477,7 @@ syms_of_fns (void)
   DEFSYM (Qkey_or_value, "key-or-value");
   DEFSYM (Qkey_and_value, "key-and-value");
 
+  DEFSYM (Qrequire, "require");
   DEFSYM (Qprovide, "provide");
 
   DEFVAR_LISP ("features", Vfeatures,
@@ -1434,6 +1490,9 @@ Used by `featurep' and `require', and altered by `provide'.  */);
 #endif
   DEFSYM (Qsubfeatures, "subfeatures");
   DEFSYM (Qplistp, "plistp");
+
+  require_nesting_list = Qnil;
+  staticpro (&require_nesting_list);
 
   defsubr (&Sget);
   defsubr (&Smemq);
@@ -1458,4 +1517,5 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Shash_table_p);
   defsubr (&Sfeaturep);
   defsubr (&Sprovide);
+  defsubr (&Srequire);
 }

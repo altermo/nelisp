@@ -2093,6 +2093,12 @@ the end of STRING.  */)
 }
 
 void
+init_lread (void)
+{
+  load_in_progress = 0;
+}
+
+void
 syms_of_lread (void)
 {
   DEFVAR_LISP ("obarray", Vobarray,
@@ -2143,6 +2149,13 @@ For internal use only.  */);
   Vlread_unescaped_character_literals = Qnil;
   DEFSYM (Qlread_unescaped_character_literals,
           "lread--unescaped-character-literals");
+
+  DEFVAR_BOOL ("load-in-progress", load_in_progress,
+        doc: /* Non-nil if inside of `load'.  */);
+
+  DEFVAR_LISP ("current-load-list", Vcurrent_load_list,
+        doc: /* Used for internal purposes by `load'.  */);
+  Vcurrent_load_list = Qnil;
 
   defsubr (&Sload);
   defsubr (&Sintern);
