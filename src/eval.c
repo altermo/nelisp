@@ -816,7 +816,6 @@ eval_sub (Lisp_Object form)
         return apply_lambda (fun, original_args, count);
       else
         xsignal1 (Qinvalid_function, original_fun);
-      TODO;
     }
   lisp_eval_depth--;
   specpdl_ptr--;
