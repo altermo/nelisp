@@ -79,6 +79,7 @@ emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
     maybe_quit ();
   return r;
 }
+extern void init_system_name (void);
 // Taken from config.h
 #define ATTRIBUTE_FORMAT_PRINTF(string_index, first_to_check) \
   __attribute__ ((__format__ (__printf__, string_index, first_to_check)))
@@ -2176,6 +2177,7 @@ extern void syms_of_editfns (void);
 
 extern void syms_of_emacs (void);
 extern bool running_asynch_code;
+extern bool build_details;
 
 extern void syms_of_fileio (void);
 

@@ -57,3 +57,38 @@ emacs_fdopen (int fd, const char *mode)
 {
   return fdopen (fd, mode);
 }
+
+void
+init_system_name (void)
+{
+  if (!build_details)
+    {
+      Vsystem_name = Qnil;
+      return;
+    }
+  char *hostname_alloc = NULL;
+  char *hostname;
+  char hostname_buf[256];
+  ptrdiff_t hostname_size = sizeof hostname_buf;
+  hostname = hostname_buf;
+
+  for (;;)
+    {
+      gethostname (hostname, hostname_size - 1);
+      hostname[hostname_size - 1] = '\0';
+
+      if (strlen (hostname) < (unsigned long) hostname_size - 1)
+        break;
+
+      hostname = hostname_alloc = xpalloc (hostname_alloc, &hostname_size, 1,
+                                           min (PTRDIFF_MAX, SIZE_MAX), 1);
+    }
+  char *p;
+  for (p = hostname; *p; p++)
+    if (*p == ' ' || *p == '\t')
+      *p = '-';
+  if (!(STRINGP (Vsystem_name) && SBYTES (Vsystem_name) == p - hostname
+        && strcmp (SSDATA (Vsystem_name), hostname) == 0))
+    Vsystem_name = build_string (hostname);
+  xfree (hostname_alloc);
+}

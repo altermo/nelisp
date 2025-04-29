@@ -3,6 +3,15 @@
 #include "buffer.h"
 #include "lua.h"
 
+static Lisp_Object cached_system_name;
+
+static void
+init_and_cache_system_name (void)
+{
+  init_system_name ();
+  cached_system_name = Vsystem_name;
+}
+
 DEFUN ("point-max", Fpoint_max, Spoint_max, 0, 0, 0,
        doc: /* Return the maximum permissible value of point in the current buffer.
 This is (1+ (buffer-size)), unless narrowing (a buffer restriction)
@@ -12,6 +21,15 @@ is in effect, in which case it is less.  */)
   Lisp_Object temp;
   XSETFASTINT (temp, ZV);
   return temp;
+}
+
+DEFUN ("system-name", Fsystem_name, Ssystem_name, 0, 0, 0,
+       doc: /* Return the host name of the machine you are running on, as a string.  */)
+(void)
+{
+  if (EQ (Vsystem_name, cached_system_name))
+    init_and_cache_system_name ();
+  return Vsystem_name;
 }
 
 Lisp_Object
@@ -112,7 +130,12 @@ usage: (message FORMAT-STRING &rest ARGS)  */)
 void
 syms_of_editfns (void)
 {
+  DEFVAR_LISP ("system-name", Vsystem_name,
+          doc: /* The host name of the machine Emacs is running on.  */);
+  Vsystem_name = cached_system_name = Qnil;
+
   defsubr (&Spoint_max);
+  defsubr (&Ssystem_name);
   defsubr (&Sbuffer_string);
   defsubr (&Smessage);
 }

@@ -592,6 +592,8 @@ ret () init (lua_State *L)
   init_bytecode ();
   init_bignum ();
 
+  build_details = true;
+
   bool err = false;
   if (mtx_init (&main_mutex, mtx_plain) != thrd_success)
     err = true;
