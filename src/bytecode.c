@@ -1153,7 +1153,7 @@ setup_frame:;
           }
 
         CASE (Bmatch_beginning):
-          TODO; // TOP = Fmatch_beginning (TOP);
+          TOP = Fmatch_beginning (TOP);
           NEXT;
 
         CASE (Bmatch_end):

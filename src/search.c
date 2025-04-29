@@ -224,6 +224,18 @@ match_limit (Lisp_Object num, bool beginningp)
     make_fixnum ((beginningp) ? search_regs.start[n] : search_regs.end[n]));
 }
 
+DEFUN ("match-beginning", Fmatch_beginning, Smatch_beginning, 1, 1, 0,
+       doc: /* Return position of start of text matched by last search.
+SUBEXP, a number, specifies the parenthesized subexpression in the last
+  regexp for which to return the start position.
+Value is nil if SUBEXPth subexpression didn't match, or there were fewer
+  than SUBEXP subexpressions.
+SUBEXP zero means the entire text matched by the whole regexp or whole
+  string.
+
+Return value is undefined if the last search failed.  */)
+(Lisp_Object subexp) { return match_limit (subexp, 1); }
+
 DEFUN ("match-end", Fmatch_end, Smatch_end, 1, 1, 0,
        doc: /* Return position of end of text matched by last search.
 SUBEXP, a number, specifies the parenthesized subexpression in the last
@@ -505,6 +517,7 @@ is to bind it with `let' around a small expression.  */);
   Vinhibit_changing_match_data = Qnil;
 
   defsubr (&Sstring_match);
+  defsubr (&Smatch_beginning);
   defsubr (&Smatch_end);
   defsubr (&Smatch_data);
   defsubr (&Sset_match_data);
