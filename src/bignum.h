@@ -22,6 +22,23 @@ XBIGNUM (Lisp_Object a)
   return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Bignum);
 }
 
+INLINE void
+mpz_set_intmax (mpz_t result, intmax_t v)
+{
+  if (LONG_MIN <= v && v <= LONG_MAX)
+    mpz_set_si (result, v);
+  else
+    TODO; // mpz_set_intmax_slow (result, v);
+}
+INLINE void
+mpz_set_uintmax (mpz_t result, uintmax_t v)
+{
+  if (v <= ULONG_MAX)
+    mpz_set_ui (result, v);
+  else
+    TODO; // mpz_set_uintmax_slow (result, v);
+}
+
 INLINE mpz_t const *
 bignum_val (struct Lisp_Bignum const *i)
 {

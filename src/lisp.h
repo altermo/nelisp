@@ -2226,6 +2226,8 @@ extern void syms_of_xdisp (void);
 extern void syms_of_print (void);
 #define FLOAT_TO_STRING_BUFSIZE 350
 
+extern void syms_of_timefns (void);
+
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)
 {

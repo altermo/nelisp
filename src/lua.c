@@ -584,6 +584,7 @@ ret () init (lua_State *L)
   syms_of_search ();
   syms_of_xdisp ();
   syms_of_print ();
+  syms_of_timefns ();
 
   init_keyboard ();
   init_eval ();
