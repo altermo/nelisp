@@ -2117,6 +2117,7 @@ extern ptrdiff_t string_byte_to_char (Lisp_Object, ptrdiff_t);
 extern void validate_subarray (Lisp_Object array, Lisp_Object from,
                                Lisp_Object to, ptrdiff_t size, ptrdiff_t *ifrom,
                                ptrdiff_t *ito);
+extern ptrdiff_t hash_lookup (struct Lisp_Hash_Table *h, Lisp_Object key);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)

@@ -1320,7 +1320,32 @@ setup_frame:;
           NEXT;
 
         CASE (Bswitch):
-          TODO;
+          {
+            Lisp_Object jmp_table = POP;
+            if (BYTE_CODE_SAFE && !HASH_TABLE_P (jmp_table))
+              emacs_abort ();
+            Lisp_Object v1 = POP;
+            struct Lisp_Hash_Table *h = XHASH_TABLE (jmp_table);
+            if (h->count <= 5 && !h->test->cmpfn && !symbols_with_pos_enabled)
+              {
+                eassume (h->count >= 2);
+                for (ptrdiff_t i = h->count - 1; i >= 0; i--)
+                  if (BASE_EQ (v1, HASH_KEY (h, i)))
+                    {
+                      op = XFIXNUM (HASH_VALUE (h, i));
+                      goto op_branch;
+                    }
+              }
+            else
+              {
+                ptrdiff_t i = hash_lookup (h, v1);
+                if (i >= 0)
+                  {
+                    op = XFIXNUM (HASH_VALUE (h, i));
+                    goto op_branch;
+                  }
+              }
+          }
           NEXT;
 
         CASE_DEFAULT
