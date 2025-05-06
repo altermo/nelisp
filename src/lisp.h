@@ -62,9 +62,14 @@ static void maybe_quit (void);
 #define TYPE_MAXIMUM(t)            \
   ((t) (!TYPE_SIGNED (t) ? (t) - 1 \
                          : ((((t) 1 << (TYPE_WIDTH (t) - 2)) - 1) * 2 + 1)))
-#define _GL_INT_NEGATE_CONVERT(e, v) ((1 ? 0 : (e)) - (v))
-#define _GL_EXPR_SIGNED(e) (_GL_INT_NEGATE_CONVERT (e, 1) < 0)
-#define EXPR_SIGNED(e) _GL_EXPR_SIGNED (e)
+#if !defined(__clang__)
+// TODO: remove this HACK
+# define EXPR_SIGNED(e) ((typeof (e)) (-1) < (typeof (e)) (0))
+#else
+# define _GL_INT_NEGATE_CONVERT(e, v) ((1 ? 0 : (e)) - (v))
+# define _GL_EXPR_SIGNED(e) (_GL_INT_NEGATE_CONVERT (e, 1) < 0)
+# define EXPR_SIGNED(e) _GL_EXPR_SIGNED (e)
+#endif
 #define _GL_SIGNED_TYPE_OR_EXPR(t) _GL_TYPE_SIGNED (__typeof__ (t))
 #define INT_BITS_STRLEN_BOUND(b) (((b) * 146 + 484) / 485)
 #define INT_STRLEN_BOUND(t)                                             \
