@@ -354,6 +354,35 @@ or a character code.  Return VALUE.  */)
   return value;
 }
 
+DEFUN ("char-table-extra-slot", Fchar_table_extra_slot, Schar_table_extra_slot,
+       2, 2, 0,
+       doc: /* Return the value of CHAR-TABLE's extra-slot number N.  */)
+(Lisp_Object char_table, Lisp_Object n)
+{
+  CHECK_CHAR_TABLE (char_table);
+  CHECK_FIXNUM (n);
+  if (XFIXNUM (n) < 0
+      || XFIXNUM (n) >= CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (char_table)))
+    args_out_of_range (char_table, n);
+
+  return XCHAR_TABLE (char_table)->extras[XFIXNUM (n)];
+}
+DEFUN ("set-char-table-extra-slot", Fset_char_table_extra_slot,
+       Sset_char_table_extra_slot,
+       3, 3, 0,
+       doc: /* Set CHAR-TABLE's extra-slot number N to VALUE.  */)
+(Lisp_Object char_table, Lisp_Object n, Lisp_Object value)
+{
+  CHECK_CHAR_TABLE (char_table);
+  CHECK_FIXNUM (n);
+  if (XFIXNUM (n) < 0
+      || XFIXNUM (n) >= CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (char_table)))
+    args_out_of_range (char_table, n);
+
+  set_char_table_extras (char_table, XFIXNUM (n), value);
+  return value;
+}
+
 static Lisp_Object
 map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
                     Lisp_Object function, Lisp_Object table, Lisp_Object arg,
@@ -552,4 +581,6 @@ syms_of_chartab (void)
 
   defsubr (&Smake_char_table);
   defsubr (&Sset_char_table_range);
+  defsubr (&Schar_table_extra_slot);
+  defsubr (&Sset_char_table_extra_slot);
 }
