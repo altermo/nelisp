@@ -564,6 +564,65 @@ This function may destructively modify SEQ to produce the value.  */)
   return seq;
 }
 
+DEFUN ("reverse", Freverse, Sreverse, 1, 1, 0,
+       doc: /* Return the reversed copy of list, vector, or string SEQ.
+See also the function `nreverse', which is used more often.  */)
+(Lisp_Object seq)
+{
+  Lisp_Object new;
+
+  if (NILP (seq))
+    return Qnil;
+  else if (CONSP (seq))
+    {
+      new = Qnil;
+      FOR_EACH_TAIL (seq)
+        new = Fcons (XCAR (seq), new);
+      CHECK_LIST_END (seq, seq);
+    }
+  else if (VECTORP (seq))
+    {
+      ptrdiff_t i, size = ASIZE (seq);
+
+      new = make_uninit_vector (size);
+      for (i = 0; i < size; i++)
+        ASET (new, i, AREF (seq, size - i - 1));
+    }
+  else if (BOOL_VECTOR_P (seq))
+    {
+      TODO;
+    }
+  else if (STRINGP (seq))
+    {
+      ptrdiff_t size = SCHARS (seq), bytes = SBYTES (seq);
+
+      if (size == bytes)
+        {
+          ptrdiff_t i;
+
+          new = make_uninit_string (size);
+          for (i = 0; i < size; i++)
+            SSET (new, i, SREF (seq, size - i - 1));
+        }
+      else
+        {
+          unsigned char *p, *q;
+
+          new = make_uninit_multibyte_string (size, bytes);
+          p = SDATA (seq), q = SDATA (new) + bytes;
+          while (q > SDATA (new))
+            {
+              int len, ch = string_char_and_length (p, &len);
+              p += len, q -= len;
+              CHAR_STRING (ch, q);
+            }
+        }
+    }
+  else
+    wrong_type_argument (Qsequencep, seq);
+  return new;
+}
+
 DEFUN ("length", Flength, Slength, 1, 1, 0,
        doc: /* Return the length of vector, list or string SEQUENCE.
 A byte-code function object is also allowed.
@@ -1503,6 +1562,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sdelq);
   defsubr (&Snconc);
   defsubr (&Snreverse);
+  defsubr (&Sreverse);
   defsubr (&Slength);
   defsubr (&Sstring_equal);
   defsubr (&Ssubstring);
