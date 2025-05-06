@@ -1825,6 +1825,91 @@ read_obj:;
     }
   return unbind_to (base_pdl, obj);
 }
+
+struct subst
+{
+  Lisp_Object object;
+  Lisp_Object placeholder;
+
+  Lisp_Object completed;
+
+  Lisp_Object seen;
+};
+
+static Lisp_Object
+substitute_object_recurse (struct subst *subst, Lisp_Object subtree)
+{
+  if (EQ (subst->placeholder, subtree))
+    return subst->object;
+
+  if (SYMBOLP (subtree) || (STRINGP (subtree) && !string_intervals (subtree))
+      || NUMBERP (subtree))
+    return subtree;
+
+  if (!NILP (Fmemq (subtree, subst->seen)))
+    return subtree;
+
+  if (EQ (subst->completed, Qt)
+      || hash_lookup (XHASH_TABLE (subst->completed), subtree) >= 0)
+    subst->seen = Fcons (subtree, subst->seen);
+
+  switch (XTYPE (subtree))
+    {
+    case Lisp_Vectorlike:
+      {
+        ptrdiff_t i = 0, length = 0;
+        if (BOOL_VECTOR_P (subtree))
+          return subtree;
+        else if (CHAR_TABLE_P (subtree) || SUB_CHAR_TABLE_P (subtree)
+                 || CLOSUREP (subtree) || HASH_TABLE_P (subtree)
+                 || RECORDP (subtree))
+          length = PVSIZE (subtree);
+        else if (VECTORP (subtree))
+          length = ASIZE (subtree);
+        else
+          wrong_type_argument (Qsequencep, subtree);
+
+        if (SUB_CHAR_TABLE_P (subtree))
+          i = 2;
+        for (; i < length; i++)
+          ASET (subtree, i,
+                substitute_object_recurse (subst, AREF (subtree, i)));
+        return subtree;
+      }
+
+    case Lisp_Cons:
+      XSETCAR (subtree, substitute_object_recurse (subst, XCAR (subtree)));
+      XSETCDR (subtree, substitute_object_recurse (subst, XCDR (subtree)));
+      return subtree;
+
+    case Lisp_String:
+      {
+        TODO; // INTERVAL root_interval = string_intervals (subtree);
+              // traverse_intervals_noorder (root_interval,
+        // 			    substitute_in_interval, subst);
+        return subtree;
+      }
+
+    default:
+      return subtree;
+    }
+}
+DEFUN ("lread--substitute-object-in-subtree",
+       Flread__substitute_object_in_subtree,
+       Slread__substitute_object_in_subtree, 3, 3, 0,
+       doc: /* In OBJECT, replace every occurrence of PLACEHOLDER with OBJECT.
+COMPLETED is a hash table of objects that might be circular, or is t
+if any object might be circular.  */)
+(Lisp_Object object, Lisp_Object placeholder, Lisp_Object completed)
+{
+  struct subst subst = { object, placeholder, completed, Qnil };
+  Lisp_Object check_object = substitute_object_recurse (&subst, object);
+
+  if (!EQ (check_object, object))
+    error ("Unexpected mutation error in reader");
+  return Qnil;
+}
+
 void
 mark_lread (void)
 {
@@ -2160,5 +2245,6 @@ For internal use only.  */);
   defsubr (&Sload);
   defsubr (&Sintern);
   defsubr (&Sunintern);
+  defsubr (&Slread__substitute_object_in_subtree);
   defsubr (&Sread_from_string);
 }
