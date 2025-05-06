@@ -7,6 +7,9 @@
 #include <errno.h>
 #include <fcntl.h>
 
+static Lisp_Object read_objects_map;
+static Lisp_Object read_objects_completed;
+
 struct Lisp_Symbol lispsym[];
 
 static Lisp_Object initial_obarray;
@@ -1619,10 +1622,63 @@ read_obj:;
           case '_':
             TODO;
           default:
-            TODO;
+            if (ch >= '0' && ch <= '9')
+              {
+                EMACS_INT n = ch - '0';
+                int c;
+                for (;;)
+                  {
+                    READ_AND_BUFFER (c);
+                    if (c < '0' || c > '9')
+                      break;
+                    if (ckd_mul (&n, n, 10) || ckd_add (&n, n, c - '0'))
+                      INVALID_SYNTAX_WITH_BUFFER ();
+                  }
+                if (c == 'r' || c == 'R')
+                  TODO;
+                else if (n <= MOST_POSITIVE_FIXNUM && !NILP (Vread_circle))
+                  {
+                    if (c == '=')
+                      {
+                        Lisp_Object placeholder = Fcons (Qnil, Qnil);
+
+                        struct Lisp_Hash_Table *h
+                          = XHASH_TABLE (read_objects_map);
+                        Lisp_Object number = make_fixnum (n);
+                        hash_hash_t hash;
+                        ptrdiff_t i = hash_lookup_get_hash (h, number, &hash);
+                        if (i >= 0)
+                          set_hash_value_slot (h, i, placeholder);
+                        else
+                          hash_put (h, number, placeholder, hash);
+                        read_stack_push ((struct read_stack_entry) {
+                          .type = RE_numbered,
+                          .u.numbered.number = number,
+                          .u.numbered.placeholder = placeholder,
+                        });
+                        goto read_obj;
+                      }
+                    else if (c == '#')
+                      {
+                        struct Lisp_Hash_Table *h
+                          = XHASH_TABLE (read_objects_map);
+                        ptrdiff_t i = hash_lookup (h, make_fixnum (n));
+                        if (i < 0)
+                          INVALID_SYNTAX_WITH_BUFFER ();
+                        obj = HASH_VALUE (h, i);
+                        break;
+                      }
+                    else
+                      INVALID_SYNTAX_WITH_BUFFER ();
+                  }
+                else
+                  INVALID_SYNTAX_WITH_BUFFER ();
+              }
+            else
+              INVALID_SYNTAX_WITH_BUFFER ();
           }
+        break;
       }
-      TODO;
     case '?':
       obj = read_char_literal (readcharfun);
       break;
@@ -1820,7 +1876,50 @@ read_obj:;
           obj = list2 (e->u.special.symbol, obj);
           break;
         case RE_numbered:
-          TODO;
+          {
+            read_stack_pop ();
+            Lisp_Object placeholder = e->u.numbered.placeholder;
+            if (CONSP (obj))
+              {
+                if (BASE_EQ (obj, placeholder))
+                  invalid_syntax ("nonsensical self-reference", readcharfun);
+
+                Fsetcar (placeholder, XCAR (obj));
+                Fsetcdr (placeholder, XCDR (obj));
+
+                struct Lisp_Hash_Table *h2
+                  = XHASH_TABLE (read_objects_completed);
+                hash_hash_t hash;
+                ptrdiff_t i = hash_lookup_get_hash (h2, placeholder, &hash);
+                eassert (i < 0);
+                hash_put (h2, placeholder, Qnil, hash);
+                obj = placeholder;
+              }
+            else
+              {
+                if (!SYMBOLP (obj) && !NUMBERP (obj)
+                    && !(STRINGP (obj) && !string_intervals (obj)))
+                  {
+                    struct Lisp_Hash_Table *h2
+                      = XHASH_TABLE (read_objects_completed);
+                    hash_hash_t hash;
+                    ptrdiff_t i = hash_lookup_get_hash (h2, obj, &hash);
+                    eassert (i < 0);
+                    hash_put (h2, obj, Qnil, hash);
+                  }
+
+                Flread__substitute_object_in_subtree (obj, placeholder,
+                                                      read_objects_completed);
+
+                struct Lisp_Hash_Table *h = XHASH_TABLE (read_objects_map);
+                hash_hash_t hash;
+                ptrdiff_t i
+                  = hash_lookup_get_hash (h, e->u.numbered.number, &hash);
+                eassert (i >= 0);
+                set_hash_value_slot (h, i, obj);
+              }
+            break;
+          }
         }
     }
   return unbind_to (base_pdl, obj);
@@ -2074,6 +2173,14 @@ read_internal_start (Lisp_Object stream, Lisp_Object start, Lisp_Object end,
   TODO_NELISP_LATER;
   Lisp_Object retval;
 
+  if (!HASH_TABLE_P (read_objects_map) || XHASH_TABLE (read_objects_map)->count)
+    read_objects_map
+      = make_hash_table (&hashtest_eq, DEFAULT_HASH_SIZE, Weak_None, false);
+  if (!HASH_TABLE_P (read_objects_completed)
+      || XHASH_TABLE (read_objects_completed)->count)
+    read_objects_completed
+      = make_hash_table (&hashtest_eq, DEFAULT_HASH_SIZE, Weak_None, false);
+
   if (STRINGP (stream) || ((CONSP (stream) && STRINGP (XCAR (stream)))))
     {
       ptrdiff_t startval, endval;
@@ -2093,6 +2200,12 @@ read_internal_start (Lisp_Object stream, Lisp_Object start, Lisp_Object end,
     }
 
   retval = read0 (stream, locate_syms);
+  if (HASH_TABLE_P (read_objects_map)
+      && XHASH_TABLE (read_objects_map)->count > 0)
+    read_objects_map = Qnil;
+  if (HASH_TABLE_P (read_objects_completed)
+      && XHASH_TABLE (read_objects_completed)->count > 0)
+    read_objects_completed = Qnil;
   return retval;
 }
 static void
@@ -2144,6 +2257,14 @@ readevalloop (Lisp_Object readcharfun, struct infile *infile0,
           || c == NO_BREAK_SPACE)
         goto read_next;
       UNREAD (c);
+      if (!HASH_TABLE_P (read_objects_map)
+          || XHASH_TABLE (read_objects_map)->count)
+        read_objects_map
+          = make_hash_table (&hashtest_eq, DEFAULT_HASH_SIZE, Weak_None, false);
+      if (!HASH_TABLE_P (read_objects_completed)
+          || XHASH_TABLE (read_objects_completed)->count)
+        read_objects_completed
+          = make_hash_table (&hashtest_eq, DEFAULT_HASH_SIZE, Weak_None, false);
       if (!NILP (Vpurify_flag) && c == '(')
         val = read0 (readcharfun, false);
       else
@@ -2153,6 +2274,12 @@ readevalloop (Lisp_Object readcharfun, struct infile *infile0,
           else
             val = read_internal_start (readcharfun, Qnil, Qnil, false);
         }
+      if (HASH_TABLE_P (read_objects_map)
+          && XHASH_TABLE (read_objects_map)->count > 0)
+        read_objects_map = Qnil;
+      if (HASH_TABLE_P (read_objects_completed)
+          && XHASH_TABLE (read_objects_completed)->count > 0)
+        read_objects_completed = Qnil;
       unbind_to (count1, Qnil);
       val = eval_sub (val);
       if (printflag)
@@ -2213,6 +2340,10 @@ to find all the symbols in an obarray, use `mapatoms'.  */);
 Only valid during macro-expansion.  Internal use only. */);
   Vmacroexp__dynvars = Qnil;
 
+  DEFVAR_LISP ("read-circle", Vread_circle,
+               doc: /* Non-nil means read recursive structures using #N= and #N# syntax.  */);
+  Vread_circle = Qt;
+
   DEFVAR_LISP ("load-path", Vload_path,
                doc: /* List of directories to search for files to load.
 Each element is a string (directory file name) or nil (meaning
@@ -2241,6 +2372,11 @@ For internal use only.  */);
   DEFVAR_LISP ("current-load-list", Vcurrent_load_list,
         doc: /* Used for internal purposes by `load'.  */);
   Vcurrent_load_list = Qnil;
+
+  staticpro (&read_objects_map);
+  read_objects_map = Qnil;
+  staticpro (&read_objects_completed);
+  read_objects_completed = Qnil;
 
   defsubr (&Sload);
   defsubr (&Sintern);

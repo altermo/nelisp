@@ -818,10 +818,6 @@ the same empty object instead of its copy.  */)
 
 #define SXHASH_MAX_DEPTH 3
 #define SXHASH_MAX_LEN 7
-enum DEFAULT_HASH_SIZE
-{
-  DEFAULT_HASH_SIZE = 0
-};
 static EMACS_UINT sxhash_obj (Lisp_Object, int);
 static EMACS_UINT
 sxhash_float (double val)

@@ -2118,6 +2118,13 @@ extern void validate_subarray (Lisp_Object array, Lisp_Object from,
                                Lisp_Object to, ptrdiff_t size, ptrdiff_t *ifrom,
                                ptrdiff_t *ito);
 extern ptrdiff_t hash_lookup (struct Lisp_Hash_Table *h, Lisp_Object key);
+Lisp_Object make_hash_table (const struct hash_table_test *, EMACS_INT,
+                             hash_table_weakness_t, bool);
+enum DEFAULT_HASH_SIZE
+{
+  DEFAULT_HASH_SIZE = 0
+};
+extern struct hash_table_test const hashtest_eq, hashtest_eql, hashtest_equal;
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
