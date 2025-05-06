@@ -5,6 +5,8 @@
 #define CACHEABLE
 #define clobbered_eassert(E) eassert (sizeof (E) != 0)
 
+Lisp_Object Vrun_hooks;
+
 static Lisp_Object funcall_lambda (Lisp_Object, ptrdiff_t, Lisp_Object *);
 static Lisp_Object apply_lambda (Lisp_Object, Lisp_Object, specpdl_ref);
 
@@ -883,6 +885,118 @@ usage: (apply FUNCTION &rest ARGUMENTS)  */)
 
   SAFE_FREE ();
   return retval;
+}
+
+Lisp_Object
+run_hook_with_args (ptrdiff_t nargs, Lisp_Object *args,
+                    Lisp_Object (*funcall) (ptrdiff_t nargs, Lisp_Object *args))
+{
+  Lisp_Object sym, val, ret = Qnil;
+
+  if (NILP (Vrun_hooks))
+    return Qnil;
+
+  sym = args[0];
+  val = find_symbol_value (sym);
+
+  if (BASE_EQ (val, Qunbound) || NILP (val))
+    return ret;
+  else if (!CONSP (val) || FUNCTIONP (val))
+    {
+      args[0] = val;
+      return funcall (nargs, args);
+    }
+  else
+    {
+      Lisp_Object global_vals = Qnil;
+
+      for (; CONSP (val) && NILP (ret); val = XCDR (val))
+        {
+          if (EQ (XCAR (val), Qt))
+            {
+              global_vals = Fdefault_value (sym);
+              if (NILP (global_vals))
+                continue;
+
+              if (!CONSP (global_vals) || EQ (XCAR (global_vals), Qlambda))
+                {
+                  args[0] = global_vals;
+                  ret = funcall (nargs, args);
+                }
+              else
+                {
+                  for (; CONSP (global_vals) && NILP (ret);
+                       global_vals = XCDR (global_vals))
+                    {
+                      args[0] = XCAR (global_vals);
+                      if (!EQ (args[0], Qt))
+                        ret = funcall (nargs, args);
+                    }
+                }
+            }
+          else
+            {
+              args[0] = XCAR (val);
+              ret = funcall (nargs, args);
+            }
+        }
+
+      return ret;
+    }
+}
+
+void
+run_hook (Lisp_Object hook)
+{
+  Frun_hook_with_args (1, &hook);
+}
+
+static Lisp_Object
+funcall_nil (ptrdiff_t nargs, Lisp_Object *args)
+{
+  Ffuncall (nargs, args);
+  return Qnil;
+}
+
+DEFUN ("run-hooks", Frun_hooks, Srun_hooks, 0, MANY, 0,
+       doc: /* Run each hook in HOOKS.
+Each argument should be a symbol, a hook variable.
+These symbols are processed in the order specified.
+If a hook symbol has a non-nil value, that value may be a function
+or a list of functions to be called to run the hook.
+If the value is a function, it is called with no arguments.
+If it is a list, the elements are called, in order, with no arguments.
+
+Major modes should not use this function directly to run their mode
+hook; they should use `run-mode-hooks' instead.
+
+Do not use `make-local-variable' to make a hook variable buffer-local.
+Instead, use `add-hook' and specify t for the LOCAL argument.
+usage: (run-hooks &rest HOOKS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  ptrdiff_t i;
+
+  for (i = 0; i < nargs; i++)
+    run_hook (args[i]);
+
+  return Qnil;
+}
+
+DEFUN ("run-hook-with-args", Frun_hook_with_args,
+       Srun_hook_with_args, 1, MANY, 0,
+       doc: /* Run HOOK with the specified arguments ARGS.
+HOOK should be a symbol, a hook variable.  The value of HOOK
+may be nil, a function, or a list of functions.  Call each
+function in order with arguments ARGS.  The final return value
+is unspecified.
+
+Do not use `make-local-variable' to make a hook variable buffer-local.
+Instead, use `add-hook' and specify t for the LOCAL argument.
+usage: (run-hook-with-args HOOK &rest ARGS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  return run_hook_with_args (nargs, args, funcall_nil);
 }
 
 DEFUN ("progn", Fprogn, Sprogn, 0, UNEVALLED, 0,
@@ -1784,6 +1898,7 @@ init_eval_once (void)
 {
   TODO_NELISP_LATER;
   init_eval_once_for_pdumper ();
+  Vrun_hooks = Qnil;
 }
 
 void
@@ -1839,6 +1954,9 @@ alist of active lexical bindings.  */);
   Vinternal_interpreter_environment = Qnil;
   Funintern (Qinternal_interpreter_environment, Qnil);
 
+  Vrun_hooks = intern_c_string ("run-hooks");
+  staticpro (&Vrun_hooks);
+
   defsubr (&Ssignal);
   defsubr (&Sautoload);
   defsubr (&Sfunctionp);
@@ -1853,6 +1971,8 @@ alist of active lexical bindings.  */);
   defsubr (&Smake_interpreted_closure);
   defsubr (&Sfunction);
   defsubr (&Sapply);
+  defsubr (&Srun_hooks);
+  defsubr (&Srun_hook_with_args);
   defsubr (&Sprogn);
   defsubr (&Sif);
   defsubr (&Swhile);
