@@ -279,7 +279,7 @@ setup_frame:;
   while (true)
     {
       int op;
-      // enum handlertype type;
+      enum handlertype type;
 
       if (BYTE_CODE_SAFE && !valid_sp (bc, top))
         emacs_abort ();
@@ -627,13 +627,39 @@ setup_frame:;
           }
 
         CASE (Bpushcatch):
-          TODO; // type = CATCHER;
+          type = CATCHER;
           goto pushhandler;
         CASE (Bpushconditioncase):
-          TODO; // type = CONDITION_CASE;
+          type = CONDITION_CASE;
         pushhandler:
           {
-            TODO;
+            struct handler *c = push_handler (POP, type);
+            c->bytecode_dest = FETCH2;
+            c->bytecode_top = top;
+
+            if (sys_setjmp (c->jmp))
+              {
+                struct handler *c = handlerlist;
+                handlerlist = c->next;
+                top = c->bytecode_top;
+                op = c->bytecode_dest;
+                struct bc_frame *fp = bc->fp;
+
+                Lisp_Object fun = fp->fun;
+                Lisp_Object bytestr = AREF (fun, CLOSURE_CODE);
+                Lisp_Object vector = AREF (fun, CLOSURE_CONSTANTS);
+                bytestr_data = SDATA (bytestr);
+                vectorp = XVECTOR (vector)->contents;
+                if (BYTE_CODE_SAFE)
+                  {
+                    const_length = ASIZE (vector);
+                    bytestr_length = SCHARS (bytestr);
+                  }
+                pc = bytestr_data;
+                PUSH (c->val);
+                goto op_branch;
+              }
+
             NEXT;
           }
 
