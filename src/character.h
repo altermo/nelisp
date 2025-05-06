@@ -246,6 +246,28 @@ string_char_advance (unsigned char const **pp)
   *pp = p + len;
   return c;
 }
+INLINE int
+fetch_string_char_advance (Lisp_Object string, ptrdiff_t *charidx,
+                           ptrdiff_t *byteidx)
+{
+  int output;
+  ptrdiff_t b = *byteidx;
+  unsigned char *chp = SDATA (string) + b;
+  if (STRING_MULTIBYTE (string))
+    {
+      int chlen;
+      output = string_char_and_length (chp, &chlen);
+      b += chlen;
+    }
+  else
+    {
+      output = *chp;
+      b++;
+    }
+  (*charidx)++;
+  *byteidx = b;
+  return output;
+}
 
 INLINE int
 STRING_CHAR (unsigned char const *p)

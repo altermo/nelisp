@@ -479,6 +479,78 @@ argument.  */)
   return list;
 }
 
+static EMACS_INT
+mapcar1 (EMACS_INT leni, Lisp_Object *vals, Lisp_Object fn, Lisp_Object seq)
+{
+  if (NILP (seq))
+    return 0;
+  else if (CONSP (seq))
+    {
+      Lisp_Object tail = seq;
+      for (ptrdiff_t i = 0; i < leni; i++)
+        {
+          if (!CONSP (tail))
+            return i;
+          Lisp_Object dummy = call1 (fn, XCAR (tail));
+          if (vals)
+            vals[i] = dummy;
+          tail = XCDR (tail);
+        }
+    }
+  else if (VECTORP (seq) || CLOSUREP (seq))
+    {
+      for (ptrdiff_t i = 0; i < leni; i++)
+        {
+          Lisp_Object dummy = call1 (fn, AREF (seq, i));
+          if (vals)
+            vals[i] = dummy;
+        }
+    }
+  else if (STRINGP (seq))
+    {
+      ptrdiff_t i_byte = 0;
+
+      for (ptrdiff_t i = 0; i < leni;)
+        {
+          ptrdiff_t i_before = i;
+          int c = fetch_string_char_advance (seq, &i, &i_byte);
+          Lisp_Object dummy = call1 (fn, make_fixnum (c));
+          if (vals)
+            vals[i_before] = dummy;
+        }
+    }
+  else
+    {
+      eassert (BOOL_VECTOR_P (seq));
+      for (EMACS_INT i = 0; i < leni; i++)
+        {
+          TODO; // Lisp_Object dummy = call1 (fn, bool_vector_ref (seq, i));
+          // if (vals)
+          // vals[i] = dummy;
+        }
+    }
+
+  return leni;
+}
+
+DEFUN ("mapcar", Fmapcar, Smapcar, 2, 2, 0,
+       doc: /* Apply FUNCTION to each element of SEQUENCE, and make a list of the results.
+The result is a list just as long as SEQUENCE.
+SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
+(Lisp_Object function, Lisp_Object sequence)
+{
+  USE_SAFE_ALLOCA;
+  EMACS_INT leni = XFIXNAT (Flength (sequence));
+  if (CHAR_TABLE_P (sequence))
+    wrong_type_argument (Qlistp, sequence);
+  Lisp_Object *args;
+  SAFE_ALLOCA_LISP (args, leni);
+  ptrdiff_t nmapped = mapcar1 (leni, args, function, sequence);
+  Lisp_Object ret = Flist (nmapped, args);
+  SAFE_FREE ();
+  return ret;
+}
+
 Lisp_Object
 nconc2 (Lisp_Object s1, Lisp_Object s2)
 {
@@ -1560,6 +1632,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Snth);
   defsubr (&Sproper_list_p);
   defsubr (&Sdelq);
+  defsubr (&Smapcar);
   defsubr (&Snconc);
   defsubr (&Snreverse);
   defsubr (&Sreverse);
