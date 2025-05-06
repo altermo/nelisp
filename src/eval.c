@@ -640,6 +640,25 @@ apply1 (Lisp_Object fn, Lisp_Object arg)
   return NILP (arg) ? Ffuncall (1, &fn) : CALLN (Fapply, fn, arg);
 }
 
+static Lisp_Object list_of_t;
+
+DEFUN ("eval", Feval, Seval, 1, 2, 0,
+       doc: /* Evaluate FORM and return its value.
+If LEXICAL is `t', evaluate using lexical binding by default.
+This is the recommended value.
+
+If absent or `nil', use dynamic scoping only.
+
+LEXICAL can also represent an actual lexical environment; see the Info
+node `(elisp)Eval' for details.  */)
+(Lisp_Object form, Lisp_Object lexical)
+{
+  specpdl_ref count = SPECPDL_INDEX ();
+  specbind (Qinternal_interpreter_environment,
+            CONSP (lexical) || NILP (lexical) ? lexical : list_of_t);
+  return unbind_to (count, eval_sub (form));
+}
+
 Lisp_Object
 eval_sub (Lisp_Object form)
 {
@@ -1954,6 +1973,9 @@ alist of active lexical bindings.  */);
   Vinternal_interpreter_environment = Qnil;
   Funintern (Qinternal_interpreter_environment, Qnil);
 
+  staticpro (&list_of_t);
+  list_of_t = list1 (Qt);
+
   Vrun_hooks = intern_c_string ("run-hooks");
   staticpro (&Vrun_hooks);
 
@@ -1970,6 +1992,7 @@ alist of active lexical bindings.  */);
   defsubr (&Sdefvaralias);
   defsubr (&Smake_interpreted_closure);
   defsubr (&Sfunction);
+  defsubr (&Seval);
   defsubr (&Sapply);
   defsubr (&Srun_hooks);
   defsubr (&Srun_hook_with_args);
