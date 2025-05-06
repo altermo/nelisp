@@ -30,6 +30,13 @@ specpdl_old_value (union specbinding *pdl)
   return pdl->let.old_value;
 }
 
+static void
+set_specpdl_old_value (union specbinding *pdl, Lisp_Object val)
+{
+  eassert (pdl->kind >= SPECPDL_LET);
+  pdl->let.old_value = val;
+}
+
 void
 grow_specpdl_allocation (void)
 {
@@ -1444,6 +1451,28 @@ usage: (let VARLIST BODY...)  */)
   return SAFE_FREE_UNBIND_TO (count, elt);
 }
 
+static union specbinding *
+default_toplevel_binding (Lisp_Object symbol)
+{
+  union specbinding *binding = NULL;
+  union specbinding *pdl = specpdl_ptr;
+  while (pdl > specpdl)
+    {
+      switch ((--pdl)->kind)
+        {
+        case SPECPDL_LET_DEFAULT:
+        case SPECPDL_LET:
+          if (EQ (specpdl_symbol (pdl), symbol))
+            binding = pdl;
+          break;
+
+        default:
+          break;
+        }
+    }
+  return binding;
+}
+
 static bool
 lexbound_p (Lisp_Object symbol)
 {
@@ -1467,6 +1496,20 @@ lexbound_p (Lisp_Object symbol)
         }
     }
   return false;
+}
+
+DEFUN ("set-default-toplevel-value", Fset_default_toplevel_value,
+       Sset_default_toplevel_value, 2, 2, 0,
+       doc: /* Set SYMBOL's toplevel default value to VALUE.
+"Toplevel" means outside of any let binding.  */)
+(Lisp_Object symbol, Lisp_Object value)
+{
+  union specbinding *binding = default_toplevel_binding (symbol);
+  if (binding)
+    set_specpdl_old_value (binding, value);
+  else
+    Fset_default (symbol, value);
+  return Qnil;
 }
 
 DEFUN ("internal--define-uninitialized-variable",
@@ -1985,6 +2028,7 @@ alist of active lexical bindings.  */);
   defsubr (&Sfuncall);
   defsubr (&Ssetq);
   defsubr (&Slet);
+  defsubr (&Sset_default_toplevel_value);
   defsubr (&Sinternal__define_uninitialized_variable);
   defsubr (&Sdefvar);
   defsubr (&Sdefconst);
