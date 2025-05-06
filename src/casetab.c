@@ -29,6 +29,11 @@ See `set-case-table' for more information on these data structures.  */)
       : Qnil);
 }
 
+DEFUN ("standard-case-table", Fstandard_case_table, Sstandard_case_table, 0, 0, 0,
+       doc: /* Return the standard case table.
+This is the one used for new buffers.  */)
+(void) { return Vascii_downcase_table; }
+
 static Lisp_Object
 check_case_table (Lisp_Object obj)
 {
@@ -199,4 +204,5 @@ syms_of_casetab (void)
   staticpro (&Vascii_upcase_table);
 
   defsubr (&Scase_table_p);
+  defsubr (&Sstandard_case_table);
 }
