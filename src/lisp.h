@@ -2217,6 +2217,7 @@ extern void syms_of_doc (void);
 
 extern void syms_of_charset (void);
 extern Lisp_Object char_table_ref (Lisp_Object, int);
+extern void init_charset_once (void);
 
 extern void syms_of_chartab (void);
 extern void map_char_table (void (*) (Lisp_Object, Lisp_Object, Lisp_Object),

@@ -1,6 +1,7 @@
 #include "charset.h"
 #include "lisp.h"
 #include "character.h"
+#include "coding.h"
 
 Lisp_Object Vcharset_hash_table;
 
@@ -8,13 +9,25 @@ struct charset *charset_table;
 int charset_table_size;
 int charset_table_used;
 
+int charset_ascii;
 static int charset_iso_8859_1;
+
+int charset_jisx0201_roman;
+int charset_jisx0208_1978;
+int charset_jisx0208;
+int charset_ksc5601;
 
 int charset_unibyte;
 
 Lisp_Object Vcharset_ordered_list;
 
+Lisp_Object Viso_2022_charset_list;
 EMACS_UINT charset_ordered_list_tick;
+
+Lisp_Object Vemacs_mule_charset_list;
+int emacs_mule_charset[256];
+
+int iso_charset_table[ISO_MAX_DIMENSION][ISO_MAX_CHARS][ISO_MAX_FINAL];
 
 #define CODE_POINT_TO_INDEX(charset, code)                            \
   ((charset)->code_linear_p ? (int) ((code) - (charset)->min_code)    \
@@ -326,10 +339,33 @@ usage: (define-charset-internal ...)  */)
     TODO;
 
   if (charset.iso_final >= 0)
-    TODO;
+    {
+      ISO_CHARSET_TABLE (charset.dimension, charset.iso_chars_96,
+                         charset.iso_final)
+        = id;
+      if (new_definition_p)
+        Viso_2022_charset_list = nconc2 (Viso_2022_charset_list, list1i (id));
+      if (ISO_CHARSET_TABLE (1, 0, 'J') == id)
+        charset_jisx0201_roman = id;
+      else if (ISO_CHARSET_TABLE (2, 0, '@') == id)
+        charset_jisx0208_1978 = id;
+      else if (ISO_CHARSET_TABLE (2, 0, 'B') == id)
+        charset_jisx0208 = id;
+      else if (ISO_CHARSET_TABLE (2, 0, 'C') == id)
+        charset_ksc5601 = id;
+    }
 
   if (charset.emacs_mule_id >= 0)
-    TODO;
+    {
+      emacs_mule_charset[charset.emacs_mule_id] = id;
+      if (charset.emacs_mule_id < 0xA0)
+        emacs_mule_bytes[charset.emacs_mule_id] = charset.dimension + 1;
+      else
+        emacs_mule_bytes[charset.emacs_mule_id] = charset.dimension + 2;
+      if (new_definition_p)
+        Vemacs_mule_charset_list
+          = nconc2 (Vemacs_mule_charset_list, list1i (id));
+    }
 
   if (new_definition_p)
     {
@@ -422,6 +458,24 @@ DEFUN ("charset-plist", Fcharset_plist, Scharset_plist, 1, 1, 0,
   return CHARSET_ATTR_PLIST (attrs);
 }
 
+void
+init_charset_once (void)
+{
+  TODO_NELISP_LATER;
+
+  int i;
+  for (i = 0; i < 256; i++)
+    emacs_mule_charset[i] = -1;
+
+  charset_jisx0201_roman = -1;
+
+  charset_jisx0208_1978 = -1;
+
+  charset_jisx0208 = -1;
+
+  charset_ksc5601 = -1;
+}
+
 static struct charset charset_table_init[180];
 
 void
@@ -430,11 +484,18 @@ syms_of_charset (void)
   DEFSYM (Qcharsetp, "charsetp");
   DEFSYM (Qdefine_charset_internal, "define-charset-internal");
 
+  DEFSYM (Qascii, "ascii");
   DEFSYM (Qiso_8859_1, "iso-8859-1");
   DEFSYM (Qemacs, "emacs");
 
   staticpro (&Vcharset_ordered_list);
   Vcharset_ordered_list = Qnil;
+
+  staticpro (&Viso_2022_charset_list);
+  Viso_2022_charset_list = Qnil;
+
+  staticpro (&Vemacs_mule_charset_list);
+  Vemacs_mule_charset_list = Qnil;
 
   staticpro (&Vcharset_hash_table);
   Vcharset_hash_table = CALLN (Fmake_hash_table, QCtest, Qeq);
@@ -449,6 +510,9 @@ syms_of_charset (void)
   DEFVAR_LISP ("charset-list", Vcharset_list,
 	       doc: /* List of all charsets ever defined.  */);
   Vcharset_list = Qnil;
+
+  charset_ascii = define_charset_internal (Qascii, 1, "\x00\x7F\0\0\0\0\0", 0,
+                                           127, 'B', -1, 0, 1, 0, 0);
 
   charset_iso_8859_1
     = define_charset_internal (Qiso_8859_1, 1, "\x00\xFF\0\0\0\0\0", 0, 255, -1,

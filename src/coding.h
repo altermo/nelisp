@@ -14,4 +14,6 @@ encode_file_name (Lisp_Object name)
 
 #define ENCODE_FILE(NAME) encode_file_name (NAME)
 
+extern char emacs_mule_bytes[256];
+
 #endif

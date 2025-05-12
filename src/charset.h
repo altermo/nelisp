@@ -143,6 +143,14 @@ struct charset
     }                                                                  \
   while (false)
 
+#define ISO_MAX_DIMENSION 3
+#define ISO_MAX_CHARS 2
+#define ISO_MAX_FINAL 0x80
+extern int iso_charset_table[ISO_MAX_DIMENSION][ISO_MAX_CHARS][ISO_MAX_FINAL];
+
+#define ISO_CHARSET_TABLE(dimension, chars_96, final) \
+  iso_charset_table[(dimension) - 1][chars_96][final]
+
 extern int charset_unibyte;
 
 #endif

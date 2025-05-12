@@ -559,6 +559,7 @@ ret () init (lua_State *L)
   init_eval_once ();
   init_obarray_once ();
   init_casetab_once ();
+  init_charset_once ();
 
   Vload_path = list1 (make_unibyte_string (lisp_dir, len_lisp_dir));
 
