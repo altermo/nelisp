@@ -2,6 +2,7 @@
 
 bool running_asynch_code;
 bool build_details;
+bool noninteractive;
 
 static const char emacs_version[] = PACKAGE_VERSION;
 

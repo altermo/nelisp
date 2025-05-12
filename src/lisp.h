@@ -2196,6 +2196,7 @@ extern void syms_of_editfns (void);
 extern void syms_of_emacs (void);
 extern bool running_asynch_code;
 extern bool build_details;
+extern bool noninteractive;
 
 extern void syms_of_fileio (void);
 

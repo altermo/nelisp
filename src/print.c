@@ -3,6 +3,7 @@
 #include "lisp.h"
 #include "buffer.h"
 #include "character.h"
+#include "lua.h"
 
 static ptrdiff_t print_depth;
 
@@ -89,8 +90,8 @@ print_prepare (Lisp_Object printcharfun, bool special)
       print_buffer.pos = 0;
       print_buffer.pos_byte = 0;
     }
-  if (EQ (printcharfun, Qt) && (TODO, false))
-    TODO;
+  if (EQ (printcharfun, Qt) && !noninteractive)
+    TODO_NELISP_LATER; // setup_echo_area_for_printing (multibyte);
   pc.printcharfun = printcharfun;
   return pc;
 }
@@ -195,6 +196,16 @@ strout (const char *ptr, ptrdiff_t size, ptrdiff_t size_byte,
       memcpy (print_buffer.buffer + print_buffer.pos_byte, ptr, size_byte);
       print_buffer.pos += size;
       print_buffer.pos_byte += size_byte;
+    }
+  else if (EQ (printcharfun, Qt) && !noninteractive)
+    {
+      TODO_NELISP_LATER;
+      LUA (5)
+      {
+        lua_getglobal (L, "print");
+        lua_pushlstring (L, ptr, size_byte);
+        lua_pcall (L, 1, 0, 0);
+      }
     }
   else
     TODO;
@@ -493,6 +504,60 @@ print (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag)
   print_object (obj, printcharfun, escapeflag);
 }
 
+DEFUN ("prin1", Fprin1, Sprin1, 1, 3, 0,
+       doc: /* Output the printed representation of OBJECT, any Lisp object.
+Quoting characters are printed when needed to make output that `read'
+can handle, whenever this is possible.  For complex objects, the behavior
+is controlled by `print-level' and `print-length', which see.
+
+OBJECT is any of the Lisp data types: a number, a string, a symbol,
+a list, a buffer, a window, a frame, etc.
+
+A printed representation of an object is text which describes that object.
+
+Optional argument PRINTCHARFUN is the output stream, which can be one
+of these:
+
+   - a buffer, in which case output is inserted into that buffer at point;
+   - a marker, in which case output is inserted at marker's position;
+   - a function, in which case that function is called once for each
+     character of OBJECT's printed representation;
+   - a symbol, in which case that symbol's function definition is called; or
+   - t, in which case the output is displayed in the echo area.
+
+If PRINTCHARFUN is omitted, the value of `standard-output' (which see)
+is used instead.
+
+Optional argument OVERRIDES should be a list of settings for print-related
+variables.  An element in this list can be the symbol t, which means "reset
+all the values to their defaults".  Otherwise, an element should be a pair,
+where the `car' or the pair is the setting symbol, and the `cdr' is the
+value of the setting to use for this `prin1' call.
+
+For instance:
+
+  (prin1 object nil \\='((length . 100) (circle . t))).
+
+See Info node `(elisp)Output Overrides' for a list of possible values.
+
+As a special case, OVERRIDES can also simply be the symbol t, which
+means "use default values for all the print-related settings".  */)
+(Lisp_Object object, Lisp_Object printcharfun, Lisp_Object overrides)
+{
+  specpdl_ref count = SPECPDL_INDEX ();
+
+  if (NILP (printcharfun))
+    printcharfun = Vstandard_output;
+  if (!NILP (overrides))
+    TODO; // print_bind_overrides (overrides);
+
+  struct print_context pc = print_prepare (printcharfun, false);
+  print (object, pc.printcharfun, 1);
+  print_finish (&pc, true);
+
+  return unbind_to (count, object);
+}
+
 DEFUN ("prin1-to-string", Fprin1_to_string, Sprin1_to_string, 1, 3, 0,
        doc: /* Return a string containing the printed representation of OBJECT.
 OBJECT can be any Lisp object.  This function outputs quoting characters
@@ -530,6 +595,14 @@ syms_of_print (void)
 {
   DEFSYM (Qprint_escape_multibyte, "print-escape-multibyte");
   DEFSYM (Qprint_escape_nonascii, "print-escape-nonascii");
+
+  DEFVAR_LISP ("standard-output", Vstandard_output,
+               doc: /* Output stream `print' uses by default for outputting a character.
+This may be any function of one argument.
+It may also be a buffer (output is inserted before point)
+or a marker (output is inserted and the marker is advanced)
+or the symbol t (output appears in the echo area).  */);
+  Vstandard_output = Qt;
 
   DEFVAR_LISP ("float-output-format", Vfloat_output_format,
 	       doc: /* The format descriptor string used to print floats.
@@ -611,5 +684,6 @@ that need to be recorded in the table.  */);
 A value of nil means no limit.  See also `eval-expression-print-length'.  */);
   Vprint_length = Qnil;
 
+  defsubr (&Sprin1);
   defsubr (&Sprin1_to_string);
 }
