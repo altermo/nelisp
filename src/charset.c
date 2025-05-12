@@ -412,13 +412,22 @@ define_charset_internal (Lisp_Object name, int dimension,
   return XFIXNUM (CHARSET_SYMBOL_ID (name));
 }
 
+DEFUN ("charset-plist", Fcharset_plist, Scharset_plist, 1, 1, 0,
+       doc: /* Return the property list of CHARSET.  */)
+(Lisp_Object charset)
+{
+  Lisp_Object attrs;
+
+  CHECK_CHARSET_GET_ATTR (charset, attrs);
+  return CHARSET_ATTR_PLIST (attrs);
+}
+
 static struct charset charset_table_init[180];
 
 void
 syms_of_charset (void)
 {
-  TODO_NELISP_LATER;
-
+  DEFSYM (Qcharsetp, "charsetp");
   DEFSYM (Qdefine_charset_internal, "define-charset-internal");
 
   DEFSYM (Qiso_8859_1, "iso-8859-1");
@@ -435,6 +444,7 @@ syms_of_charset (void)
   charset_table_used = 0;
 
   defsubr (&Sdefine_charset_internal);
+  defsubr (&Scharset_plist);
 
   DEFVAR_LISP ("charset-list", Vcharset_list,
 	       doc: /* List of all charsets ever defined.  */);

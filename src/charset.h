@@ -135,6 +135,14 @@ struct charset
     }                                                           \
   while (false)
 
+#define CHECK_CHARSET_GET_ATTR(x, attr)                                \
+  do                                                                   \
+    {                                                                  \
+      if (!SYMBOLP (x) || NILP (attr = CHARSET_SYMBOL_ATTRIBUTES (x))) \
+        wrong_type_argument (Qcharsetp, x);                            \
+    }                                                                  \
+  while (false)
+
 extern int charset_unibyte;
 
 #endif
