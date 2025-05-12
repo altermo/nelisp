@@ -894,6 +894,14 @@ make_uninit_multibyte_string (EMACS_INT nchars, EMACS_INT nbytes)
   return make_clear_multibyte_string (nchars, nbytes, false);
 }
 Lisp_Object
+make_multibyte_string (const char *contents, ptrdiff_t nchars, ptrdiff_t nbytes)
+{
+  register Lisp_Object val;
+  val = make_uninit_multibyte_string (nchars, nbytes);
+  memcpy (SDATA (val), contents, nbytes);
+  return val;
+}
+Lisp_Object
 make_string_from_bytes (const char *contents, ptrdiff_t nchars,
                         ptrdiff_t nbytes)
 {

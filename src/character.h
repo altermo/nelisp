@@ -279,6 +279,9 @@ STRING_CHAR (unsigned char const *p)
 ptrdiff_t str_as_unibyte (unsigned char *str, ptrdiff_t bytes);
 void parse_str_as_multibyte (const unsigned char *str, ptrdiff_t len,
                              ptrdiff_t *nchars, ptrdiff_t *nbytes);
+ptrdiff_t count_size_as_multibyte (const unsigned char *str, ptrdiff_t len);
+ptrdiff_t str_to_multibyte (unsigned char *dst, const unsigned char *src,
+                            ptrdiff_t nchars);
 
 INLINE int
 char_table_translate (Lisp_Object obj, int ch)

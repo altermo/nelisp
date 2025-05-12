@@ -849,6 +849,41 @@ validate_subarray (Lisp_Object array, Lisp_Object from, Lisp_Object to,
   *ito = t;
 }
 
+Lisp_Object
+string_to_multibyte (Lisp_Object string)
+{
+  if (STRING_MULTIBYTE (string))
+    return string;
+
+  ptrdiff_t nchars = SCHARS (string);
+  ptrdiff_t nbytes = count_size_as_multibyte (SDATA (string), nchars);
+  if (nbytes == nchars)
+    return make_multibyte_string (SSDATA (string), nbytes, nbytes);
+
+  Lisp_Object ret = make_uninit_multibyte_string (nchars, nbytes);
+  str_to_multibyte (SDATA (ret), SDATA (string), nchars);
+  return ret;
+}
+
+DEFUN ("string-to-multibyte", Fstring_to_multibyte, Sstring_to_multibyte,
+       1, 1, 0,
+       doc: /* Return a multibyte string with the same individual chars as STRING.
+If STRING is multibyte, the result is STRING itself.
+Otherwise it is a newly created string, with no text properties.
+
+If STRING is unibyte and contains an 8-bit byte, it is converted to
+the corresponding multibyte character of charset `eight-bit'.
+
+This differs from `string-as-multibyte' by converting each byte of a correct
+utf-8 sequence to an eight-bit character, not just bytes that don't form a
+correct sequence.  */)
+(Lisp_Object string)
+{
+  CHECK_STRING (string);
+
+  return string_to_multibyte (string);
+}
+
 DEFUN ("substring", Fsubstring, Ssubstring, 1, 3, 0,
        doc: /* Return a new string whose contents are a substring of STRING.
 The returned string consists of the characters between index FROM
@@ -1638,6 +1673,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sreverse);
   defsubr (&Slength);
   defsubr (&Sstring_equal);
+  defsubr (&Sstring_to_multibyte);
   defsubr (&Ssubstring);
   defsubr (&Scopy_sequence);
   defsubr (&Smake_hash_table);

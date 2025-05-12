@@ -183,6 +183,35 @@ parse_str_as_multibyte (const unsigned char *str, ptrdiff_t len,
   *nbytes = bytes;
   return;
 }
+ptrdiff_t
+str_to_multibyte (unsigned char *dst, const unsigned char *src,
+                  ptrdiff_t nchars)
+{
+  unsigned char *d = dst;
+  for (ptrdiff_t i = 0; i < nchars; i++)
+    {
+      unsigned char c = src[i];
+      if (c <= 0x7f)
+        *d++ = c;
+      else
+        {
+          *d++ = 0xc0 + ((c >> 6) & 1);
+          *d++ = 0x80 + (c & 0x3f);
+        }
+    }
+  return d - dst;
+}
+ptrdiff_t
+count_size_as_multibyte (const unsigned char *str, ptrdiff_t len)
+{
+  ptrdiff_t nonascii = 0;
+  for (ptrdiff_t i = 0; i < len; i++)
+    nonascii += str[i] >> 7;
+  ptrdiff_t bytes;
+  if (ckd_add (&bytes, len, nonascii))
+    TODO; // string_overflow ();
+  return bytes;
+}
 
 void
 syms_of_character (void)

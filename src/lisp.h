@@ -2073,6 +2073,8 @@ extern Lisp_Object pure_cons (Lisp_Object car, Lisp_Object cdr);
 extern Lisp_Object make_uninit_string (EMACS_INT length);
 extern Lisp_Object make_string_from_bytes (const char *contents,
                                            ptrdiff_t nchars, ptrdiff_t nbytes);
+extern Lisp_Object make_multibyte_string (const char *contents,
+                                          ptrdiff_t nchars, ptrdiff_t nbytes);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
