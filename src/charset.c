@@ -458,6 +458,17 @@ DEFUN ("charset-plist", Fcharset_plist, Scharset_plist, 1, 1, 0,
   return CHARSET_ATTR_PLIST (attrs);
 }
 
+DEFUN ("set-charset-plist", Fset_charset_plist, Sset_charset_plist, 2, 2, 0,
+       doc: /* Set CHARSET's property list to PLIST.  */)
+(Lisp_Object charset, Lisp_Object plist)
+{
+  Lisp_Object attrs;
+
+  CHECK_CHARSET_GET_ATTR (charset, attrs);
+  ASET (attrs, charset_plist, plist);
+  return plist;
+}
+
 void
 init_charset_once (void)
 {
@@ -506,6 +517,7 @@ syms_of_charset (void)
 
   defsubr (&Sdefine_charset_internal);
   defsubr (&Scharset_plist);
+  defsubr (&Sset_charset_plist);
 
   DEFVAR_LISP ("charset-list", Vcharset_list,
 	       doc: /* List of all charsets ever defined.  */);
