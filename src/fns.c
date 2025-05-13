@@ -165,7 +165,6 @@ This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.  */)
 #endif
   return plist_get (XSYMBOL (symbol)->u.s.plist, propname);
 }
-
 Lisp_Object
 plist_put (Lisp_Object plist, Lisp_Object prop, Lisp_Object val)
 {
@@ -176,6 +175,44 @@ plist_put (Lisp_Object plist, Lisp_Object prop, Lisp_Object val)
         break;
 
       if (EQ (XCAR (tail), prop))
+        {
+          Fsetcar (XCDR (tail), val);
+          return plist;
+        }
+
+      prev = tail;
+      tail = XCDR (tail);
+    }
+  CHECK_TYPE (NILP (tail), Qplistp, plist);
+  Lisp_Object newcell
+    = Fcons (prop, Fcons (val, NILP (prev) ? plist : XCDR (XCDR (prev))));
+  if (NILP (prev))
+    return newcell;
+  Fsetcdr (XCDR (prev), newcell);
+  return plist;
+}
+DEFUN ("plist-put", Fplist_put, Splist_put, 3, 4, 0,
+       doc: /* Change value in PLIST of PROP to VAL.
+PLIST is a property list, which is a list of the form
+\(PROP1 VALUE1 PROP2 VALUE2 ...).
+
+The comparison with PROP is done using PREDICATE, which defaults to `eq'.
+
+If PROP is already a property on the list, its value is set to VAL,
+otherwise the new PROP VAL pair is added.  The new plist is returned;
+use `(setq x (plist-put x prop val))' to be sure to use the new value.
+The PLIST is modified by side effects.  */)
+(Lisp_Object plist, Lisp_Object prop, Lisp_Object val, Lisp_Object predicate)
+{
+  if (NILP (predicate))
+    return plist_put (plist, prop, val);
+  Lisp_Object prev = Qnil, tail = plist;
+  FOR_EACH_TAIL (tail)
+    {
+      if (!CONSP (XCDR (tail)))
+        break;
+
+      if (!NILP (call2 (predicate, XCAR (tail), prop)))
         {
           Fsetcar (XCDR (tail), val);
           return plist;
@@ -1660,6 +1697,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Smemq);
   defsubr (&Sassq);
   defsubr (&Sassoc);
+  defsubr (&Splist_put);
   defsubr (&Sput);
   defsubr (&Smember);
   defsubr (&Sequal);
