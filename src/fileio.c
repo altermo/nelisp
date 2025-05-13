@@ -4,6 +4,13 @@
 #include "lisp.h"
 #include "coding.h"
 
+void
+fclose_unwind (void *arg)
+{
+  FILE *stream = arg;
+  emacs_fclose (stream);
+}
+
 enum
 {
   file_name_as_directory_slop = 2

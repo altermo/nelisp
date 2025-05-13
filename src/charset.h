@@ -111,6 +111,8 @@ struct charset
 #define CHARSET_SYMBOL_ATTRIBUTES(symbol) \
   Fgethash (symbol, Vcharset_hash_table, Qnil)
 
+#define CHARSET_ATTRIBUTES(charset) (charset)->attributes
+
 #define CHARSET_ATTR_ID(attrs) AREF (attrs, charset_id)
 #define CHARSET_ATTR_NAME(attrs) AREF (attrs, charset_name)
 #define CHARSET_ATTR_PLIST(attrs) AREF (attrs, charset_plist)
@@ -121,6 +123,48 @@ struct charset
 #define CHARSET_ATTR_SUPERSET(attrs) AREF (attrs, charset_superset)
 #define CHARSET_ATTR_UNIFY_MAP(attrs) AREF (attrs, charset_unify_map)
 #define CHARSET_ATTR_DEUNIFIER(attrs) AREF (attrs, charset_deunifier)
+
+#define CHARSET_ID(charset) ((charset)->id)
+#define CHARSET_DIMENSION(charset) ((charset)->dimension)
+#define CHARSET_CODE_SPACE(charset) ((charset)->code_space)
+#define CHARSET_CODE_LINEAR_P(charset) ((charset)->code_linear_p)
+#define CHARSET_ISO_CHARS_96(charset) ((charset)->iso_chars_96)
+#define CHARSET_ISO_FINAL(charset) ((charset)->iso_final)
+#define CHARSET_ISO_PLANE(charset) ((charset)->iso_plane)
+#define CHARSET_ISO_REVISION(charset) ((charset)->iso_revision)
+#define CHARSET_EMACS_MULE_ID(charset) ((charset)->emacs_mule_id)
+#define CHARSET_ASCII_COMPATIBLE_P(charset) ((charset)->ascii_compatible_p)
+#define CHARSET_COMPACT_CODES_P(charset) ((charset)->compact_codes_p)
+#define CHARSET_METHOD(charset) ((charset)->method)
+#define CHARSET_MIN_CODE(charset) ((charset)->min_code)
+#define CHARSET_MAX_CODE(charset) ((charset)->max_code)
+#define CHARSET_INVALID_CODE(charset) ((charset)->invalid_code)
+#define CHARSET_MIN_CHAR(charset) ((charset)->min_char)
+#define CHARSET_MAX_CHAR(charset) ((charset)->max_char)
+#define CHARSET_CODE_OFFSET(charset) ((charset)->code_offset)
+#define CHARSET_UNIFIED_P(charset) ((charset)->unified_p)
+
+#define CHARSET_NAME(charset) CHARSET_ATTR_NAME (CHARSET_ATTRIBUTES (charset))
+#define CHARSET_MAP(charset) CHARSET_ATTR_MAP (CHARSET_ATTRIBUTES (charset))
+#define CHARSET_DECODER(charset) \
+  CHARSET_ATTR_DECODER (CHARSET_ATTRIBUTES (charset))
+#define CHARSET_ENCODER(charset) \
+  CHARSET_ATTR_ENCODER (CHARSET_ATTRIBUTES (charset))
+#define CHARSET_SUBSET(charset) \
+  CHARSET_ATTR_SUBSET (CHARSET_ATTRIBUTES (charset))
+#define CHARSET_SUPERSET(charset) \
+  CHARSET_ATTR_SUPERSET (CHARSET_ATTRIBUTES (charset))
+#define CHARSET_UNIFY_MAP(charset) \
+  CHARSET_ATTR_UNIFY_MAP (CHARSET_ATTRIBUTES (charset))
+#define CHARSET_DEUNIFIER(charset) \
+  CHARSET_ATTR_DEUNIFIER (CHARSET_ATTRIBUTES (charset))
+
+INLINE void
+set_charset_attr (struct charset *charset, enum charset_attr_index idx,
+                  Lisp_Object val)
+{
+  ASET (CHARSET_ATTRIBUTES (charset), idx, val);
+}
 
 #define CHARSET_SYMBOL_ID(symbol) \
   CHARSET_ATTR_ID (CHARSET_SYMBOL_ATTRIBUTES (symbol))

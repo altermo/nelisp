@@ -534,6 +534,7 @@ ret () init (lua_State *L)
     return 0;
   inited = true;
 
+  _lcheckstack (L, 10);
   lua_getfield (L, -1, "runtime_path");
   size_t len;
   const char *dir = lua_tolstring (L, -1, &len);
@@ -541,11 +542,22 @@ ret () init (lua_State *L)
     luaL_error (L, "runtime_path contains a null byte");
   if (!is_directory (dir))
     luaL_error (L, "runtime_path is not a directory");
-  lua_pushliteral (L, "/lisp");
+
+  lua_pushvalue (L, -1);
+  lua_pushliteral (L, "/lisp/");
   lua_concat (L, 2);
   size_t len_lisp_dir;
   const char *lisp_dir = lua_tolstring (L, -1, &len_lisp_dir);
   if (!is_directory (lisp_dir))
+    luaL_error (L, "runtime_path directory doesn't have subdirectory `lisp/`");
+
+  lua_pushvalue (L, -2);
+  lua_remove (L, -3);
+  lua_pushliteral (L, "/etc/");
+  lua_concat (L, 2);
+  size_t len_data_dir;
+  const char *data_dir = lua_tolstring (L, -1, &len_data_dir);
+  if (!is_directory (data_dir))
     luaL_error (L, "runtime_path directory doesn't have subdirectory `lisp/`");
 
   if (!lua_pushthread (L))
@@ -562,6 +574,7 @@ ret () init (lua_State *L)
   init_charset_once ();
 
   Vload_path = list1 (make_unibyte_string (lisp_dir, len_lisp_dir));
+  Vdata_directory = make_unibyte_string (data_dir, len_data_dir);
 
   syms_of_lread ();
   syms_of_data ();
@@ -586,6 +599,7 @@ ret () init (lua_State *L)
   syms_of_xdisp ();
   syms_of_print ();
   syms_of_timefns ();
+  syms_of_callproc ();
 
   init_keyboard ();
   init_eval ();
@@ -594,6 +608,7 @@ ret () init (lua_State *L)
   init_bytecode ();
   init_bignum ();
   init_lread ();
+  init_charset ();
 
   build_details = true;
   noninteractive = false;

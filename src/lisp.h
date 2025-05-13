@@ -75,6 +75,18 @@ static void maybe_quit (void);
 #define INT_STRLEN_BOUND(t)                                             \
   (INT_BITS_STRLEN_BOUND (TYPE_WIDTH (t) - _GL_SIGNED_TYPE_OR_EXPR (t)) \
    + _GL_SIGNED_TYPE_OR_EXPR (t))
+#define _GL_INT_CONVERT(e, v) ((1 ? 0 : (e)) + (v))
+#define _GL_INT_MINIMUM(e) \
+  (_GL_EXPR_SIGNED (e) ? ~_GL_SIGNED_INT_MAXIMUM (e) : _GL_INT_CONVERT (e, 0))
+#define _GL_SIGNED_INT_MAXIMUM(e) \
+  (((_GL_INT_CONVERT (e, 1) << (_GL_TYPE_WIDTH (+(e)) - 2)) - 1) * 2 + 1)
+#define _GL_INT_MAXIMUM(e)                          \
+  (_GL_EXPR_SIGNED (e) ? _GL_SIGNED_INT_MAXIMUM (e) \
+                       : _GL_INT_NEGATE_CONVERT (e, 1))
+#define INT_LEFT_SHIFT_OVERFLOW(a, b) \
+  INT_LEFT_SHIFT_RANGE_OVERFLOW (a, b, _GL_INT_MINIMUM (a), _GL_INT_MAXIMUM (a))
+#define INT_LEFT_SHIFT_RANGE_OVERFLOW(a, b, min, max) \
+  ((a) < 0 ? (a) < (min) >> (b) : (max) >> (b) < (a))
 // Taken from sysdep.c
 static inline int
 emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
@@ -1882,6 +1894,8 @@ extern void record_unwind_protect_array (Lisp_Object *, ptrdiff_t);
 extern void record_unwind_protect_intmax (void (*) (intmax_t), intmax_t);
 extern void record_unwind_protect_int (void (*function) (int), int arg);
 extern void record_unwind_protect_void (void (*function) (void));
+extern void record_unwind_protect_nothing (void);
+extern void clear_unwind_protect (specpdl_ref count);
 specpdl_ref record_in_backtrace (Lisp_Object function, Lisp_Object *args,
                                  ptrdiff_t nargs);
 extern void set_unwind_protect_ptr (specpdl_ref count, void (*func) (void *),
@@ -2006,6 +2020,9 @@ enum
   make_lisp_ptr (&((struct Lisp_Cons) { { { a, { b } } } }), Lisp_Cons)
 #define AUTO_LIST1(name, a) \
   Lisp_Object name = (USE_STACK_CONS ? STACK_CONS (a, Qnil) : list1 (a))
+#define AUTO_LIST2(name, a, b) \
+  Lisp_Object name             \
+    = (USE_STACK_CONS ? STACK_CONS (a, STACK_CONS (b, Qnil)) : list2 (a, b))
 #define AUTO_STRING_WITH_LEN(name, str, len)                                 \
   Lisp_Object name                                                           \
     = (USE_STACK_STRING                                                      \
@@ -2146,6 +2163,7 @@ extern Lisp_Object make_string_from_bytes (const char *contents,
                                            ptrdiff_t nchars, ptrdiff_t nbytes);
 extern Lisp_Object make_multibyte_string (const char *contents,
                                           ptrdiff_t nchars, ptrdiff_t nbytes);
+extern void *record_xmalloc (size_t size);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -2179,6 +2197,8 @@ intern_c_string (const char *str)
 }
 extern Lisp_Object string_to_number (char const *, int, ptrdiff_t *);
 extern void init_lread (void);
+extern int openp (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object *,
+                  Lisp_Object, bool, bool, void **);
 
 extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
 extern void syms_of_fns (void);
@@ -2270,6 +2290,8 @@ extern bool build_details;
 extern bool noninteractive;
 
 extern void syms_of_fileio (void);
+extern void fclose_unwind (void *);
+extern bool file_accessible_directory_p (Lisp_Object);
 
 extern void syms_of_coding (void);
 
@@ -2279,6 +2301,8 @@ extern void init_buffer (void);
 extern int emacs_close (int fd);
 extern int emacs_open (char const *file, int oflags, int mode);
 extern FILE *emacs_fdopen (int fd, const char *mode);
+#define emacs_fclose fclose
+extern int sys_faccessat (int, const char *, int, int);
 
 extern void syms_of_bytecode (void);
 void init_bytecode (void);
@@ -2290,11 +2314,14 @@ extern void syms_of_doc (void);
 extern void syms_of_charset (void);
 extern Lisp_Object char_table_ref (Lisp_Object, int);
 extern void init_charset_once (void);
+extern void init_charset (void);
 
 extern void syms_of_chartab (void);
 extern void map_char_table (void (*) (Lisp_Object, Lisp_Object, Lisp_Object),
                             Lisp_Object, Lisp_Object, Lisp_Object);
 extern Lisp_Object copy_char_table (Lisp_Object table);
+extern void char_table_set_range (Lisp_Object table, int from, int to,
+                                  Lisp_Object val);
 
 extern void syms_of_keymap (void);
 #define KEYMAPP(m) (!NILP (get_keymap (m, false, false)))
@@ -2318,6 +2345,8 @@ extern void syms_of_print (void);
 #define FLOAT_TO_STRING_BUFSIZE 350
 
 extern void syms_of_timefns (void);
+
+extern void syms_of_callproc (void);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

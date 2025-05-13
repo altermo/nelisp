@@ -295,6 +295,8 @@ ptrdiff_t count_size_as_multibyte (const unsigned char *str, ptrdiff_t len);
 ptrdiff_t str_to_multibyte (unsigned char *dst, const unsigned char *src,
                             ptrdiff_t nchars);
 
+extern Lisp_Object Vchar_unify_table;
+
 INLINE int
 char_table_translate (Lisp_Object obj, int ch)
 {
@@ -302,6 +304,14 @@ char_table_translate (Lisp_Object obj, int ch)
   eassert (CHAR_TABLE_P (obj));
   obj = CHAR_TABLE_REF (obj, ch);
   return CHARACTERP (obj) ? XFIXNUM (obj) : ch;
+}
+
+extern signed char const hexdigit[];
+
+INLINE int
+char_hexdigit (int c)
+{
+  return 0 <= c && c <= UCHAR_MAX ? hexdigit[c] - 1 : -1;
 }
 
 #endif

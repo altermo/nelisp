@@ -286,6 +286,14 @@ xpalloc (void *pa, ptrdiff_t *nitems, ptrdiff_t nitems_incr_min,
   return pa;
 }
 
+void *
+record_xmalloc (size_t size)
+{
+  void *p = xmalloc (size);
+  record_unwind_protect_ptr (xfree, p);
+  return p;
+}
+
 static void *
 lisp_malloc (size_t nbytes, bool clearit, enum mem_type type)
 {

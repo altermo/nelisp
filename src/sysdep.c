@@ -7,6 +7,12 @@
 
 #include "lisp.h"
 
+int
+sys_faccessat (int fd, const char *pathname, int mode, int flags)
+{
+  return faccessat (fd, pathname, mode, flags);
+}
+
 #define POSIX_CLOSE_RESTART 1
 static int
 posix_close (int fd, int flag)

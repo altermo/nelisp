@@ -127,6 +127,25 @@ record_unwind_protect_int (void (*function) (int), int arg)
   grow_specpdl ();
 }
 
+static void
+do_nothing (void)
+{
+}
+
+void
+record_unwind_protect_nothing (void)
+{
+  record_unwind_protect_void (do_nothing);
+}
+
+void
+clear_unwind_protect (specpdl_ref count)
+{
+  union specbinding *p = specpdl_ref_to_ptr (count);
+  p->unwind_void.kind = SPECPDL_UNWIND_VOID;
+  p->unwind_void.func = do_nothing;
+}
+
 void
 set_unwind_protect_ptr (specpdl_ref count, void (*func) (void *), void *arg)
 {

@@ -9,6 +9,7 @@ static const char emacs_version[] = PACKAGE_VERSION;
 void
 syms_of_emacs (void)
 {
+  DEFSYM (Qfile_name_handler_alist, "file-name-handler-alist");
   DEFSYM (Qrisky_local_variable, "risky-local-variable");
 
   DEFVAR_LISP ("command-line-args", Vcommand_line_args,

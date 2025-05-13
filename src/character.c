@@ -1,5 +1,7 @@
 #include "character.h"
 
+Lisp_Object Vchar_unify_table;
+
 EMACS_INT
 char_resolve_modifier_mask (EMACS_INT c)
 {
@@ -213,8 +215,18 @@ count_size_as_multibyte (const unsigned char *str, ptrdiff_t len)
   return bytes;
 }
 
+signed char const hexdigit[UCHAR_MAX + 1]
+  = { ['0'] = 1 + 0,  ['1'] = 1 + 1,  ['2'] = 1 + 2,  ['3'] = 1 + 3,
+      ['4'] = 1 + 4,  ['5'] = 1 + 5,  ['6'] = 1 + 6,  ['7'] = 1 + 7,
+      ['8'] = 1 + 8,  ['9'] = 1 + 9,  ['A'] = 1 + 10, ['B'] = 1 + 11,
+      ['C'] = 1 + 12, ['D'] = 1 + 13, ['E'] = 1 + 14, ['F'] = 1 + 15,
+      ['a'] = 1 + 10, ['b'] = 1 + 11, ['c'] = 1 + 12, ['d'] = 1 + 13,
+      ['e'] = 1 + 14, ['f'] = 1 + 15 };
 void
 syms_of_character (void)
 {
   DEFSYM (Qcharacterp, "characterp");
+
+  staticpro (&Vchar_unify_table);
+  Vchar_unify_table = Qnil;
 }
