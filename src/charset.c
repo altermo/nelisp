@@ -10,7 +10,10 @@ int charset_table_size;
 int charset_table_used;
 
 int charset_ascii;
+int charset_eight_bit;
 static int charset_iso_8859_1;
+int charset_unicode;
+static int charset_emacs;
 
 int charset_jisx0201_roman;
 int charset_jisx0208_1978;
@@ -496,8 +499,10 @@ syms_of_charset (void)
   DEFSYM (Qdefine_charset_internal, "define-charset-internal");
 
   DEFSYM (Qascii, "ascii");
+  DEFSYM (Qunicode, "unicode");
   DEFSYM (Qiso_8859_1, "iso-8859-1");
   DEFSYM (Qemacs, "emacs");
+  DEFSYM (Qeight_bit, "eight-bit");
 
   staticpro (&Vcharset_ordered_list);
   Vcharset_ordered_list = Qnil;
@@ -529,6 +534,18 @@ syms_of_charset (void)
   charset_iso_8859_1
     = define_charset_internal (Qiso_8859_1, 1, "\x00\xFF\0\0\0\0\0", 0, 255, -1,
                                -1, -1, 1, 0, 0);
+
+  charset_unicode
+    = define_charset_internal (Qunicode, 3, "\x00\xFF\x00\xFF\x00\x10\0", 0,
+                               MAX_UNICODE_CHAR, -1, 0, -1, 1, 0, 0);
+
+  charset_emacs
+    = define_charset_internal (Qemacs, 3, "\x00\xFF\x00\xFF\x00\x3F\0", 0,
+                               MAX_5_BYTE_CHAR, -1, 0, -1, 1, 1, 0);
+
+  charset_eight_bit
+    = define_charset_internal (Qeight_bit, 1, "\x80\xFF\0\0\0\0\0", 128, 255,
+                               -1, 0, -1, 0, 1, MAX_5_BYTE_CHAR + 1);
 
   charset_unibyte = charset_iso_8859_1;
 }
