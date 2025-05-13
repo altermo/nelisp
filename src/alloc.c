@@ -1002,6 +1002,75 @@ pin_string (Lisp_Object string)
     }
   s->u.s.size_byte = -3;
 }
+
+Lisp_Object
+bool_vector_fill (Lisp_Object a, Lisp_Object init)
+{
+  EMACS_INT nbits = bool_vector_size (a);
+  if (0 < nbits)
+    {
+      unsigned char *data = bool_vector_uchar_data (a);
+      int pattern = NILP (init) ? 0 : (1 << BOOL_VECTOR_BITS_PER_CHAR) - 1;
+      ptrdiff_t nbytes = bool_vector_bytes (nbits);
+      int last_mask = ~(~0u << ((nbits - 1) % BOOL_VECTOR_BITS_PER_CHAR + 1));
+      memset (data, pattern, nbytes - 1);
+      data[nbytes - 1] = pattern & last_mask;
+    }
+  return a;
+}
+
+Lisp_Object
+make_uninit_bool_vector (EMACS_INT nbits)
+{
+  Lisp_Object val;
+  EMACS_INT words = bool_vector_words (nbits);
+  EMACS_INT word_bytes = words * sizeof (bits_word);
+  EMACS_INT needed_elements
+    = ((bool_header_size - header_size + word_bytes + word_size - 1)
+       / word_size);
+  if (PTRDIFF_MAX < needed_elements)
+    memory_full (SIZE_MAX);
+  struct Lisp_Bool_Vector *p
+    = (struct Lisp_Bool_Vector *) allocate_vector (needed_elements);
+  XSETVECTOR (val, p);
+  XSETPVECTYPESIZE (XVECTOR (val), PVEC_BOOL_VECTOR, 0, 0);
+  p->size = nbits;
+
+  /* Clear padding at the end.  */
+  if (words)
+    p->data[words - 1] = 0;
+
+  return val;
+}
+
+DEFUN ("make-bool-vector", Fmake_bool_vector, Smake_bool_vector, 2, 2, 0,
+       doc: /* Return a new bool-vector of length LENGTH, using INIT for each element.
+LENGTH must be a number.  INIT matters only in whether it is t or nil.  */)
+(Lisp_Object length, Lisp_Object init)
+{
+  Lisp_Object val;
+
+  CHECK_FIXNAT (length);
+  val = make_uninit_bool_vector (XFIXNAT (length));
+  return bool_vector_fill (val, init);
+}
+
+DEFUN ("bool-vector", Fbool_vector, Sbool_vector, 0, MANY, 0,
+       doc: /* Return a new bool-vector with specified arguments as elements.
+Allows any number of arguments, including zero.
+usage: (bool-vector &rest OBJECTS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  ptrdiff_t i;
+  Lisp_Object vector;
+
+  vector = make_uninit_bool_vector (nargs);
+  for (i = 0; i < nargs; i++)
+    bool_vector_set (vector, i, !NILP (args[i]));
+
+  return vector;
+}
+
 /* --- float allocation -- */
 
 #define FLOAT_BLOCK_SIZE                                  \
@@ -3158,6 +3227,8 @@ Integers with absolute values less than 2**N do not signal a range error.
 N should be nonnegative.  */);
 
   defsubr (&Spurecopy);
+  defsubr (&Smake_bool_vector);
+  defsubr (&Sbool_vector);
   defsubr (&Scons);
   defsubr (&Slist);
   defsubr (&Smake_vector);

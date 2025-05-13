@@ -172,6 +172,12 @@ enum
 };
 #define EMACS_INT_MAX LONG_MAX
 #define pI "l"
+enum
+{
+  BOOL_VECTOR_BITS_PER_CHAR =
+#define BOOL_VECTOR_BITS_PER_CHAR 8
+    BOOL_VECTOR_BITS_PER_CHAR
+};
 typedef size_t bits_word;
 #define BITS_WORD_MAX SIZE_MAX
 enum
@@ -873,11 +879,76 @@ enum
   bool_header_size = offsetof (struct Lisp_Bool_Vector, data),
   word_size = sizeof (Lisp_Object)
 };
-
+INLINE EMACS_INT
+bool_vector_words (EMACS_INT size)
+{
+  eassume (0 <= size && size <= EMACS_INT_MAX - (BITS_PER_BITS_WORD - 1));
+  return (size + BITS_PER_BITS_WORD - 1) / BITS_PER_BITS_WORD;
+}
+INLINE EMACS_INT
+bool_vector_bytes (EMACS_INT size)
+{
+  eassume (0 <= size && size <= EMACS_INT_MAX - (BITS_PER_BITS_WORD - 1));
+  return (size + BOOL_VECTOR_BITS_PER_CHAR - 1) / BOOL_VECTOR_BITS_PER_CHAR;
+}
 INLINE bool
 BOOL_VECTOR_P (Lisp_Object a)
 {
   return PSEUDOVECTORP (a, PVEC_BOOL_VECTOR);
+}
+INLINE void
+CHECK_BOOL_VECTOR (Lisp_Object x)
+{
+  CHECK_TYPE (BOOL_VECTOR_P (x), Qbool_vector_p, x);
+}
+INLINE struct Lisp_Bool_Vector *
+XBOOL_VECTOR (Lisp_Object a)
+{
+  eassert (BOOL_VECTOR_P (a));
+  return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Bool_Vector);
+}
+INLINE EMACS_INT
+bool_vector_size (Lisp_Object a)
+{
+  EMACS_INT size = XBOOL_VECTOR (a)->size;
+  eassume (0 <= size);
+  return size;
+}
+INLINE bits_word *
+bool_vector_data (Lisp_Object a)
+{
+  return XBOOL_VECTOR (a)->data;
+}
+INLINE unsigned char *
+bool_vector_uchar_data (Lisp_Object a)
+{
+  return (unsigned char *) bool_vector_data (a);
+}
+INLINE bool
+bool_vector_bitref (Lisp_Object a, EMACS_INT i)
+{
+  eassume (0 <= i);
+  eassert (i < bool_vector_size (a));
+  return !!(bool_vector_uchar_data (a)[i / BOOL_VECTOR_BITS_PER_CHAR]
+            & (1 << (i % BOOL_VECTOR_BITS_PER_CHAR)));
+}
+INLINE Lisp_Object
+bool_vector_ref (Lisp_Object a, EMACS_INT i)
+{
+  return bool_vector_bitref (a, i) ? Qt : Qnil;
+}
+INLINE void
+bool_vector_set (Lisp_Object a, EMACS_INT i, bool b)
+{
+  eassume (0 <= i);
+  eassert (i < bool_vector_size (a));
+
+  unsigned char *addr
+    = &bool_vector_uchar_data (a)[i / BOOL_VECTOR_BITS_PER_CHAR];
+  if (b)
+    *addr |= 1 << (i % BOOL_VECTOR_BITS_PER_CHAR);
+  else
+    *addr &= ~(1 << (i % BOOL_VECTOR_BITS_PER_CHAR));
 }
 
 INLINE Lisp_Object

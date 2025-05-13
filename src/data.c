@@ -1901,6 +1901,7 @@ syms_of_data (void)
   DEFSYM (Qinteger_or_marker_p, "integer-or-marker-p");
   DEFSYM (Qsequencep, "sequencep");
   DEFSYM (Qbyte_code_function_p, "byte-code-function-p");
+  DEFSYM (Qbool_vector_p, "bool-vector-p");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");
