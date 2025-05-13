@@ -451,6 +451,19 @@ define_charset_internal (Lisp_Object name, int dimension,
   return XFIXNUM (CHARSET_SYMBOL_ID (name));
 }
 
+DEFUN ("define-charset-alias", Fdefine_charset_alias,
+       Sdefine_charset_alias, 2, 2, 0,
+       doc: /* Define ALIAS as an alias for charset CHARSET.  */)
+(Lisp_Object alias, Lisp_Object charset)
+{
+  Lisp_Object attr;
+
+  CHECK_CHARSET_GET_ATTR (charset, attr);
+  Fputhash (alias, attr, Vcharset_hash_table);
+  Vcharset_list = Fcons (alias, Vcharset_list);
+  return Qnil;
+}
+
 DEFUN ("charset-plist", Fcharset_plist, Scharset_plist, 1, 1, 0,
        doc: /* Return the property list of CHARSET.  */)
 (Lisp_Object charset)
@@ -521,6 +534,7 @@ syms_of_charset (void)
   charset_table_used = 0;
 
   defsubr (&Sdefine_charset_internal);
+  defsubr (&Sdefine_charset_alias);
   defsubr (&Scharset_plist);
   defsubr (&Sset_charset_plist);
 
