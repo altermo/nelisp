@@ -151,6 +151,33 @@ plist_get (Lisp_Object plist, Lisp_Object prop)
     }
   return Qnil;
 }
+DEFUN ("plist-get", Fplist_get, Splist_get, 2, 3, 0,
+       doc: /* Extract a value from a property list.
+PLIST is a property list, which is a list of the form
+\(PROP1 VALUE1 PROP2 VALUE2...).
+
+This function returns the value corresponding to the given PROP, or
+nil if PROP is not one of the properties on the list.  The comparison
+with PROP is done using PREDICATE, which defaults to `eq'.
+
+This function doesn't signal an error if PLIST is invalid.  */)
+(Lisp_Object plist, Lisp_Object prop, Lisp_Object predicate)
+{
+  if (NILP (predicate))
+    return plist_get (plist, prop);
+
+  Lisp_Object tail = plist;
+  FOR_EACH_TAIL_SAFE (tail)
+    {
+      if (!CONSP (XCDR (tail)))
+        break;
+      if (!NILP (call2 (predicate, XCAR (tail), prop)))
+        return XCAR (XCDR (tail));
+      tail = XCDR (tail);
+    }
+
+  return Qnil;
+}
 DEFUN ("get", Fget, Sget, 2, 2, 0,
        doc: /* Return the value of SYMBOL's PROPNAME property.
 This is the last value stored with `(put SYMBOL PROPNAME VALUE)'.  */)
@@ -1693,6 +1720,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   require_nesting_list = Qnil;
   staticpro (&require_nesting_list);
 
+  defsubr (&Splist_get);
   defsubr (&Sget);
   defsubr (&Smemq);
   defsubr (&Sassq);
