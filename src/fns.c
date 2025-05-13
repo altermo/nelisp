@@ -988,6 +988,85 @@ With one argument, just copy STRING (with properties, if any).  */)
   return res;
 }
 
+Lisp_Object
+concat_to_vector (ptrdiff_t nargs, Lisp_Object *args)
+{
+  EMACS_INT result_len = 0;
+  for (ptrdiff_t i = 0; i < nargs; i++)
+    {
+      Lisp_Object arg = args[i];
+      if (!(VECTORP (arg) || CONSP (arg) || NILP (arg) || STRINGP (arg)
+            || BOOL_VECTOR_P (arg) || CLOSUREP (arg)))
+        wrong_type_argument (Qsequencep, arg);
+      EMACS_INT len = XFIXNAT (Flength (arg));
+      result_len += len;
+      if (MOST_POSITIVE_FIXNUM < result_len)
+        memory_full (SIZE_MAX);
+    }
+
+  Lisp_Object result = make_uninit_vector (result_len);
+  Lisp_Object *dst = XVECTOR (result)->contents;
+
+  for (ptrdiff_t i = 0; i < nargs; i++)
+    {
+      Lisp_Object arg = args[i];
+      if (VECTORP (arg))
+        {
+          ptrdiff_t size = ASIZE (arg);
+          memcpy (dst, XVECTOR (arg)->contents, size * sizeof *dst);
+          dst += size;
+        }
+      else if (CONSP (arg))
+        do
+          {
+            *dst++ = XCAR (arg);
+            arg = XCDR (arg);
+          }
+        while (!NILP (arg));
+      else if (NILP (arg))
+        ;
+      else if (STRINGP (arg))
+        {
+          ptrdiff_t size = SCHARS (arg);
+          if (STRING_MULTIBYTE (arg))
+            {
+              ptrdiff_t byte = 0;
+              for (ptrdiff_t i = 0; i < size;)
+                {
+                  int c = fetch_string_char_advance_no_check (arg, &i, &byte);
+                  *dst++ = make_fixnum (c);
+                }
+            }
+          else
+            for (ptrdiff_t i = 0; i < size; i++)
+              *dst++ = make_fixnum (SREF (arg, i));
+        }
+      else if (BOOL_VECTOR_P (arg))
+        {
+          ptrdiff_t size = bool_vector_size (arg);
+          for (ptrdiff_t i = 0; i < size; i++)
+            *dst++ = bool_vector_ref (arg, i);
+        }
+      else
+        {
+          eassert (CLOSUREP (arg));
+          ptrdiff_t size = PVSIZE (arg);
+          memcpy (dst, XVECTOR (arg)->contents, size * sizeof *dst);
+          dst += size;
+        }
+    }
+  eassert (dst == XVECTOR (result)->contents + result_len);
+
+  return result;
+}
+
+DEFUN ("vconcat", Fvconcat, Svconcat, 0, MANY, 0,
+       doc: /* Concatenate all the arguments and make the result a vector.
+The result is a vector whose elements are the elements of all the arguments.
+Each argument may be a list, vector or string.
+usage: (vconcat &rest SEQUENCES)   */)
+(ptrdiff_t nargs, Lisp_Object *args) { return concat_to_vector (nargs, args); }
+
 DEFUN ("copy-sequence", Fcopy_sequence, Scopy_sequence, 1, 1, 0,
        doc: /* Return a copy of a list, vector, string, char-table or record.
 The elements of a list, vector or record are not copied; they are
@@ -1741,6 +1820,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sstring_equal);
   defsubr (&Sstring_to_multibyte);
   defsubr (&Ssubstring);
+  defsubr (&Svconcat);
   defsubr (&Scopy_sequence);
   defsubr (&Smake_hash_table);
   defsubr (&Sgethash);

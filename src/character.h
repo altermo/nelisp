@@ -270,6 +270,18 @@ fetch_string_char_advance (Lisp_Object string, ptrdiff_t *charidx,
 }
 
 INLINE int
+fetch_string_char_advance_no_check (Lisp_Object string, ptrdiff_t *charidx,
+                                    ptrdiff_t *byteidx)
+{
+  ptrdiff_t b = *byteidx;
+  unsigned char *chp = SDATA (string) + b;
+  int chlen, output = string_char_and_length (chp, &chlen);
+  (*charidx)++;
+  *byteidx = b + chlen;
+  return output;
+}
+
+INLINE int
 STRING_CHAR (unsigned char const *p)
 {
   int len;
