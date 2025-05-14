@@ -2348,6 +2348,8 @@ extern void syms_of_timefns (void);
 
 extern void syms_of_callproc (void);
 
+extern void syms_of_display (void);
+
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)
 {

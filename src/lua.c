@@ -600,6 +600,7 @@ ret () init (lua_State *L)
   syms_of_print ();
   syms_of_timefns ();
   syms_of_callproc ();
+  syms_of_display ();
 
   init_keyboard ();
   init_eval ();
