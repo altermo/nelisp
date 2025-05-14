@@ -2194,6 +2194,11 @@ extern Lisp_Object make_multibyte_string (const char *contents,
                                           ptrdiff_t nchars, ptrdiff_t nbytes);
 extern void *record_xmalloc (size_t size);
 extern void string_overflow (void);
+INLINE Lisp_Object
+build_unibyte_string (const char *str)
+{
+  return make_unibyte_string (str, strlen (str));
+}
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -2370,6 +2375,8 @@ extern intmax_t check_integer_range (Lisp_Object, intmax_t, intmax_t);
 extern void syms_of_search (void);
 
 extern void syms_of_xdisp (void);
+extern void message1 (const char *);
+extern void message3 (Lisp_Object);
 
 extern void syms_of_print (void);
 #define FLOAT_TO_STRING_BUFSIZE 350

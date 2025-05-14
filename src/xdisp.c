@@ -1,4 +1,28 @@
 #include "lisp.h"
+#include "lua.h"
+
+void
+message3 (Lisp_Object m)
+{
+  TODO_NELISP_LATER;
+  if (STRINGP (m))
+    {
+      LUA (5)
+      {
+        lua_getglobal (L, "print");
+        lua_pushlstring (L, (char *) SDATA (m), SBYTES (m));
+        lua_call (L, 1, 0);
+      }
+    }
+  else
+    TODO;
+}
+
+void
+message1 (const char *m)
+{
+  message3 (m ? build_unibyte_string (m) : Qnil);
+}
 
 void
 syms_of_xdisp (void)

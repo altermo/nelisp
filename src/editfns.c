@@ -116,15 +116,17 @@ also `current-message'.
 usage: (message FORMAT-STRING &rest ARGS)  */)
 (ptrdiff_t nargs, Lisp_Object *args)
 {
-  UNUSED (nargs);
-  TODO_NELISP_LATER;
-  LUA (5)
-  {
-    lua_getglobal (L, "print");
-    lua_pushlstring (L, (char *) SDATA (args[0]), SBYTES (args[0]));
-    lua_pcall (L, 1, 0, 0);
-  }
-  return args[0];
+  if (NILP (args[0]) || (STRINGP (args[0]) && SBYTES (args[0]) == 0))
+    {
+      message1 (0);
+      return args[0];
+    }
+  else
+    {
+      Lisp_Object val = Fformat_message (nargs, args);
+      message3 (val);
+      return val;
+    }
 }
 
 static ptrdiff_t
