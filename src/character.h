@@ -306,6 +306,11 @@ char_table_translate (Lisp_Object obj, int ch)
   return CHARACTERP (obj) ? XFIXNUM (obj) : ch;
 }
 
+extern ptrdiff_t lisp_string_width (Lisp_Object string, ptrdiff_t from,
+                                    ptrdiff_t to, ptrdiff_t precision,
+                                    ptrdiff_t *nchars, ptrdiff_t *nbytes,
+                                    bool auto_comp);
+
 extern signed char const hexdigit[];
 
 INLINE int

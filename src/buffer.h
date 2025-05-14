@@ -74,4 +74,15 @@ buffer_memcpy (unsigned char *dst, ptrdiff_t beg, ptrdiff_t size)
 {
   nvim_buf_memcpy (dst, beg, size);
 }
+
+INLINE int
+CHARACTER_WIDTH (int c)
+{
+  return (0x20 <= c && c < 0x7f  ? 1
+          : 0x7f < c             ? (TODO, 0)
+          : c == '\t'            ? (TODO, 0)
+          : c == '\n'            ? 0
+          : !NILP ((TODO, Qnil)) ? 2
+                                 : 4);
+}
 #endif

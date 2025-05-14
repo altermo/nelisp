@@ -53,6 +53,34 @@ extern bool unrecoverable_error;
 
 #define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
 static void maybe_quit (void);
+// Taken from lib/c-ctypes.h
+#define _GL_INLINE extern inline
+#define C_CTYPE_INLINE _GL_INLINE
+#define _C_CTYPE_DIGIT \
+case '0':              \
+case '1':              \
+case '2':              \
+case '3':              \
+case '4':              \
+case '5':              \
+case '6':              \
+case '7':              \
+case '8':              \
+case '9'
+C_CTYPE_INLINE bool
+c_isdigit (int c)
+{
+  switch (c)
+    {
+    _C_CTYPE_DIGIT:
+      return true;
+    default:
+      return false;
+    }
+}
+// Taken from lib/verify.h
+#define _GL_VERIFY(R, DIAGNOSTIC, ...) _Static_assert (R, DIAGNOSTIC)
+#define verify(R) _GL_VERIFY (R, "verify (" #R ")", -)
 // Taken from lib/intprops.h
 #define _GL_TYPE_SIGNED(t) (!((t) 0 < (t) - 1))
 #define _GL_TYPE_WIDTH(t) (sizeof (t) * CHAR_BIT)
@@ -62,12 +90,12 @@ static void maybe_quit (void);
 #define TYPE_MAXIMUM(t)            \
   ((t) (!TYPE_SIGNED (t) ? (t) - 1 \
                          : ((((t) 1 << (TYPE_WIDTH (t) - 2)) - 1) * 2 + 1)))
+#define _GL_INT_NEGATE_CONVERT(e, v) ((1 ? 0 : (e)) - (v))
+#define _GL_EXPR_SIGNED(e) (_GL_INT_NEGATE_CONVERT (e, 1) < 0)
 #if !defined(__clang__)
 // TODO: remove this HACK
 # define EXPR_SIGNED(e) ((typeof (e)) (-1) < (typeof (e)) (0))
 #else
-# define _GL_INT_NEGATE_CONVERT(e, v) ((1 ? 0 : (e)) - (v))
-# define _GL_EXPR_SIGNED(e) (_GL_INT_NEGATE_CONVERT (e, 1) < 0)
 # define EXPR_SIGNED(e) _GL_EXPR_SIGNED (e)
 #endif
 #define _GL_SIGNED_TYPE_OR_EXPR(t) _GL_TYPE_SIGNED (__typeof__ (t))
@@ -1926,8 +1954,9 @@ enum MAX_ALLOCA
         }                                                   \
     }                                                       \
   while (false)
-#define SAFE_ALLOCA(size) \
-  ((long) (size) <= (long) sa_avail ? AVAIL_ALLOCA (size) : (TODO, NULL))
+#define SAFE_ALLOCA(size)                                 \
+  ((long) (size) <= (long) sa_avail ? AVAIL_ALLOCA (size) \
+                                    : record_xmalloc (size))
 #define SAFE_NALLOCA(buf, multiplier, nitems)                                  \
   do                                                                           \
     {                                                                          \
@@ -2164,6 +2193,7 @@ extern Lisp_Object make_string_from_bytes (const char *contents,
 extern Lisp_Object make_multibyte_string (const char *contents,
                                           ptrdiff_t nchars, ptrdiff_t nbytes);
 extern void *record_xmalloc (size_t size);
+extern void string_overflow (void);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -2349,6 +2379,10 @@ extern void syms_of_timefns (void);
 extern void syms_of_callproc (void);
 
 extern void syms_of_display (void);
+
+extern ptrdiff_t copy_text (const unsigned char *from_addr,
+                            unsigned char *to_addr, ptrdiff_t nbytes,
+                            bool from_multibyte, bool to_multibyte);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

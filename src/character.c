@@ -1,4 +1,5 @@
 #include "character.h"
+#include "buffer.h"
 
 Lisp_Object Vchar_unify_table;
 
@@ -213,6 +214,89 @@ count_size_as_multibyte (const unsigned char *str, ptrdiff_t len)
   if (ckd_add (&bytes, len, nonascii))
     TODO; // string_overflow ();
   return bytes;
+}
+
+static ptrdiff_t
+char_width (int c, struct Lisp_Char_Table *dp)
+{
+  ptrdiff_t width = CHARACTER_WIDTH (c);
+
+  if (dp)
+    TODO;
+  return width;
+}
+
+ptrdiff_t
+lisp_string_width (Lisp_Object string, ptrdiff_t from, ptrdiff_t to,
+                   ptrdiff_t precision, ptrdiff_t *nchars, ptrdiff_t *nbytes,
+                   bool auto_comp)
+{
+  UNUSED (auto_comp);
+  bool multibyte = SCHARS (string) < SBYTES (string);
+  ptrdiff_t i = from, i_byte = from ? string_char_to_byte (string, from) : 0;
+  ptrdiff_t from_byte = i_byte;
+  ptrdiff_t width = 0;
+#if TODO_NELISP_LATER_AND
+  struct Lisp_Char_Table *dp = buffer_display_table ();
+#else
+  struct Lisp_Char_Table *dp = NULL;
+#endif
+
+  eassert (precision <= 0 || (nchars && nbytes));
+
+  while (i < to)
+    {
+      ptrdiff_t chars, bytes, thiswidth;
+#if TODO_NELISP_LATER_AND
+      Lisp_Object val;
+      ptrdiff_t cmp_id;
+      ptrdiff_t ignore, end;
+
+      if (find_composition (i, -1, &ignore, &end, &val, string)
+          && ((cmp_id = get_composition_id (i, i_byte, end - i, val, string))
+              >= 0))
+        {
+          thiswidth = composition_table[cmp_id]->width;
+          chars = end - i;
+          bytes = string_char_to_byte (string, end) - i_byte;
+        }
+      else
+#endif
+        {
+          int c;
+          unsigned char *str = SDATA (string);
+
+          if (multibyte)
+            {
+              int cbytes;
+              c = string_char_and_length (str + i_byte, &cbytes);
+              bytes = cbytes;
+            }
+          else
+            c = str[i_byte], bytes = 1;
+          chars = 1;
+          thiswidth = char_width (c, dp);
+        }
+
+      if (0 < precision && precision - width < thiswidth)
+        {
+          *nchars = i - from;
+          *nbytes = i_byte - from_byte;
+          return width;
+        }
+      if (ckd_add (&width, width, thiswidth))
+        string_overflow ();
+      i += chars;
+      i_byte += bytes;
+    }
+
+  if (precision > 0)
+    {
+      *nchars = i - from;
+      *nbytes = i_byte - from_byte;
+    }
+
+  return width;
 }
 
 signed char const hexdigit[UCHAR_MAX + 1]
