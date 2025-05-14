@@ -620,8 +620,7 @@ usage: (define-charset-internal ...)  */)
 
       val = args[charset_arg_subset];
       parent = Fcar (val);
-      TODO;
-      UNUSED (parent); // CHECK_CHARSET_GET_CHARSET (parent, parent_charset);
+      CHECK_CHARSET_GET_CHARSET (parent, parent_charset);
       parent_min_code = Fnth (make_fixnum (1), val);
       CHECK_FIXNAT (parent_min_code);
       parent_max_code = Fnth (make_fixnum (2), val);

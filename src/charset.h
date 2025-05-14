@@ -124,6 +124,9 @@ struct charset
 #define CHARSET_ATTR_UNIFY_MAP(attrs) AREF (attrs, charset_unify_map)
 #define CHARSET_ATTR_DEUNIFIER(attrs) AREF (attrs, charset_deunifier)
 
+#define CHARSET_SYMBOL_HASH_INDEX(symbol) \
+  hash_lookup (XHASH_TABLE (Vcharset_hash_table), symbol)
+
 #define CHARSET_ID(charset) ((charset)->id)
 #define CHARSET_DIMENSION(charset) ((charset)->dimension)
 #define CHARSET_CODE_SPACE(charset) ((charset)->code_space)
@@ -179,12 +182,33 @@ set_charset_attr (struct charset *charset, enum charset_attr_index idx,
     }                                                           \
   while (false)
 
+#define CHECK_CHARSET_GET_ID(x, id)                                            \
+  do                                                                           \
+    {                                                                          \
+      ptrdiff_t idx;                                                           \
+                                                                               \
+      if (!SYMBOLP (x) || (idx = CHARSET_SYMBOL_HASH_INDEX (x)) < 0)           \
+        wrong_type_argument (Qcharsetp, x);                                    \
+      id = XFIXNUM (AREF (HASH_VALUE (XHASH_TABLE (Vcharset_hash_table), idx), \
+                          charset_id));                                        \
+    }                                                                          \
+  while (false)
+
 #define CHECK_CHARSET_GET_ATTR(x, attr)                                \
   do                                                                   \
     {                                                                  \
       if (!SYMBOLP (x) || NILP (attr = CHARSET_SYMBOL_ATTRIBUTES (x))) \
         wrong_type_argument (Qcharsetp, x);                            \
     }                                                                  \
+  while (false)
+
+#define CHECK_CHARSET_GET_CHARSET(x, charset) \
+  do                                          \
+    {                                         \
+      int csid;                               \
+      CHECK_CHARSET_GET_ID (x, csid);         \
+      charset = CHARSET_FROM_ID (csid);       \
+    }                                         \
   while (false)
 
 #define ISO_MAX_DIMENSION 3
