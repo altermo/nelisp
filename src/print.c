@@ -336,6 +336,68 @@ float_to_string (char *buf, double data)
 }
 
 static void
+print_string (Lisp_Object string, Lisp_Object printcharfun)
+{
+  if (EQ (printcharfun, Qt) || NILP (printcharfun))
+    {
+      ptrdiff_t chars;
+
+      if (print_escape_nonascii)
+        string = string_escape_byte8 (string);
+
+      if (STRING_MULTIBYTE (string))
+        chars = SCHARS (string);
+      else if (!print_escape_nonascii && (TODO, false))
+        {
+          Lisp_Object newstr;
+          ptrdiff_t bytes;
+
+          chars = SBYTES (string);
+          bytes = count_size_as_multibyte (SDATA (string), chars);
+          if (chars < bytes)
+            {
+              newstr = make_uninit_multibyte_string (chars, bytes);
+              str_to_multibyte (SDATA (newstr), SDATA (string), chars);
+              string = newstr;
+            }
+        }
+      else
+        chars = SBYTES (string);
+
+      if (EQ (printcharfun, Qt))
+        {
+          ptrdiff_t nbytes = SBYTES (string);
+
+          USE_SAFE_ALLOCA;
+          char *buffer = SAFE_ALLOCA (nbytes);
+          memcpy (buffer, SDATA (string), nbytes);
+
+          strout (buffer, chars, nbytes, printcharfun);
+
+          SAFE_FREE ();
+        }
+      else
+        strout (SSDATA (string), chars, SBYTES (string), printcharfun);
+    }
+  else
+    {
+      ptrdiff_t i;
+      ptrdiff_t size = SCHARS (string);
+      ptrdiff_t size_byte = SBYTES (string);
+      if (size == size_byte)
+        for (i = 0; i < size; i++)
+          printchar (SREF (string, i), printcharfun);
+      else
+        for (i = 0; i < size_byte;)
+          {
+            int len, ch = string_char_and_length (SDATA (string) + i, &len);
+            printchar (ch, printcharfun);
+            i += len;
+          }
+    }
+}
+
+static void
 print_object (Lisp_Object obj, Lisp_Object printcharfun, bool escapeflag)
 {
   ptrdiff_t base_depth = print_depth;
@@ -393,8 +455,10 @@ print_obj:
       break;
 
     case Lisp_String:
-      UNUSED (escapeflag);
-      TODO;
+      if (!escapeflag)
+        print_string (obj, printcharfun);
+      else
+        TODO;
       break;
 
     case Lisp_Symbol:
@@ -402,7 +466,64 @@ print_obj:
       break;
 
     case Lisp_Cons:
-      TODO;
+      if (FIXNUMP (Vprint_level) && print_depth > XFIXNUM (Vprint_level))
+        print_c_string ("...", printcharfun);
+      else if (print_quoted && CONSP (XCDR (obj)) && NILP (XCDR (XCDR (obj)))
+               && EQ (XCAR (obj), Qquote))
+        {
+          printchar ('\'', printcharfun);
+          obj = XCAR (XCDR (obj));
+          --print_depth; /* tail recursion */
+          goto print_obj;
+        }
+      else if (print_quoted && CONSP (XCDR (obj)) && NILP (XCDR (XCDR (obj)))
+               && EQ (XCAR (obj), Qfunction))
+        {
+          print_c_string ("#'", printcharfun);
+          obj = XCAR (XCDR (obj));
+          --print_depth; /* tail recursion */
+          goto print_obj;
+        }
+      else if (print_quoted && CONSP (XCDR (obj)) && NILP (XCDR (XCDR (obj)))
+               && EQ (XCAR (obj), Qbackquote))
+        {
+          printchar ('`', printcharfun);
+          new_backquote_output++;
+          print_object (XCAR (XCDR (obj)), printcharfun, escapeflag);
+          new_backquote_output--;
+        }
+      else if (print_quoted && CONSP (XCDR (obj)) && NILP (XCDR (XCDR (obj)))
+               && (EQ (XCAR (obj), Qcomma) || EQ (XCAR (obj), Qcomma_at))
+               && new_backquote_output)
+        {
+          print_object (XCAR (obj), printcharfun, false);
+          new_backquote_output--;
+          print_object (XCAR (XCDR (obj)), printcharfun, escapeflag);
+          new_backquote_output++;
+        }
+      else
+        {
+          printchar ('(', printcharfun);
+
+          intmax_t print_length
+            = (FIXNATP (Vprint_length) ? XFIXNAT (Vprint_length) : INTMAX_MAX);
+          if (print_length == 0)
+            print_c_string ("...)", printcharfun);
+          else
+            {
+              print_stack_push ((struct print_stack_entry) {
+                .type = PE_list,
+                .u.list.last = obj,
+                .u.list.maxlen = print_length,
+                .u.list.tortoise = obj,
+                .u.list.n = 2,
+                .u.list.m = 2,
+                .u.list.tortoise_idx = 0,
+              });
+              obj = XCAR (obj);
+              goto print_obj;
+            }
+        }
       break;
 
     case Lisp_Vectorlike:
@@ -480,7 +601,83 @@ next_obj:
 
   if (prstack.sp > base_sp)
     {
-      TODO;
+      struct print_stack_entry *e = &prstack.stack[prstack.sp - 1];
+      switch (e->type)
+        {
+        case PE_list:
+          {
+            Lisp_Object next = XCDR (e->u.list.last);
+            if (NILP (next))
+              {
+                printchar (')', printcharfun);
+                --prstack.sp;
+                --print_depth;
+                goto next_obj;
+              }
+            else if (CONSP (next))
+              {
+                if (!NILP (Vprint_circle))
+                  {
+                    Lisp_Object num
+                      = Fgethash (next, Vprint_number_table, Qnil);
+                    if (!(NILP (num) || EQ (num, Qt)))
+                      {
+                        print_c_string (" . ", printcharfun);
+                        obj = next;
+                        e->type = PE_rbrac;
+                        goto print_obj;
+                      }
+                  }
+
+                printchar (' ', printcharfun);
+
+                --e->u.list.maxlen;
+                if (e->u.list.maxlen <= 0)
+                  {
+                    print_c_string ("...)", printcharfun);
+                    --prstack.sp;
+                    --print_depth;
+                    goto next_obj;
+                  }
+
+                e->u.list.last = next;
+                e->u.list.n--;
+                if (e->u.list.n == 0)
+                  {
+                    e->u.list.tortoise_idx += e->u.list.m;
+                    e->u.list.m <<= 1;
+                    e->u.list.n = e->u.list.m;
+                    e->u.list.tortoise = next;
+                  }
+                else if (BASE_EQ (next, e->u.list.tortoise))
+                  {
+                    int len = sprintf (buf, ". #%" PRIdMAX ")",
+                                       e->u.list.tortoise_idx);
+                    strout (buf, len, len, printcharfun);
+                    --prstack.sp;
+                    --print_depth;
+                    goto next_obj;
+                  }
+                obj = XCAR (next);
+              }
+            else
+              {
+                print_c_string (" . ", printcharfun);
+                obj = next;
+                e->type = PE_rbrac;
+              }
+            break;
+          }
+
+        case PE_rbrac:
+          TODO;
+
+        case PE_vector:
+          TODO;
+
+        case PE_hash:
+          TODO;
+        }
       goto print_obj;
     }
   eassert (print_depth == base_depth);
@@ -683,6 +880,16 @@ that need to be recorded in the table.  */);
 	       doc: /* Maximum length of list to print before abbreviating.
 A value of nil means no limit.  See also `eval-expression-print-length'.  */);
   Vprint_length = Qnil;
+
+  DEFVAR_LISP ("print-level", Vprint_level,
+	       doc: /* Maximum depth of list nesting to print before abbreviating.
+A value of nil means no limit.  See also `eval-expression-print-level'.  */);
+  Vprint_level = Qnil;
+
+  DEFVAR_BOOL ("print-quoted", print_quoted,
+	       doc: /* Non-nil means print quoted forms with reader syntax.
+I.e., (quote foo) prints as \\='foo, (function foo) as #\\='foo.  */);
+  print_quoted = true;
 
   defsubr (&Sprin1);
   defsubr (&Sprin1_to_string);

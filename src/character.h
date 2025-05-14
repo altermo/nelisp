@@ -310,6 +310,7 @@ extern ptrdiff_t lisp_string_width (Lisp_Object string, ptrdiff_t from,
                                     ptrdiff_t to, ptrdiff_t precision,
                                     ptrdiff_t *nchars, ptrdiff_t *nbytes,
                                     bool auto_comp);
+extern Lisp_Object string_escape_byte8 (Lisp_Object);
 
 extern signed char const hexdigit[];
 

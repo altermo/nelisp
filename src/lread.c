@@ -2334,6 +2334,10 @@ to find all the symbols in an obarray, use `mapatoms'.  */);
 
   DEFSYM (Qget_file_char, "get-file-char");
 
+  DEFSYM (Qbackquote, "`");
+  DEFSYM (Qcomma, ",");
+  DEFSYM (Qcomma_at, ",@");
+
   DEFSYM (Qmacroexp__dynvars, "macroexp--dynvars");
   DEFVAR_LISP ("macroexp--dynvars", Vmacroexp__dynvars,
         doc:   /* List of variables declared dynamic in the current scope.

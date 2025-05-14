@@ -217,6 +217,106 @@ count_size_as_multibyte (const unsigned char *str, ptrdiff_t len)
 }
 
 static ptrdiff_t
+string_count_byte8 (Lisp_Object string)
+{
+  bool multibyte = STRING_MULTIBYTE (string);
+  ptrdiff_t nbytes = SBYTES (string);
+  unsigned char *p = SDATA (string);
+  unsigned char *pend = p + nbytes;
+  ptrdiff_t count = 0;
+  int c, len;
+
+  if (multibyte)
+    while (p < pend)
+      {
+        c = *p;
+        len = BYTES_BY_CHAR_HEAD (c);
+
+        if (CHAR_BYTE8_HEAD_P (c))
+          count++;
+        p += len;
+      }
+  else
+    while (p < pend)
+      {
+        if (*p++ >= 0x80)
+          count++;
+      }
+  return count;
+}
+
+Lisp_Object
+string_escape_byte8 (Lisp_Object string)
+{
+  ptrdiff_t nchars = SCHARS (string);
+  ptrdiff_t nbytes = SBYTES (string);
+  bool multibyte = STRING_MULTIBYTE (string);
+  ptrdiff_t byte8_count;
+  ptrdiff_t uninit_nchars = 0;
+  ptrdiff_t uninit_nbytes = 0;
+  ptrdiff_t thrice_byte8_count;
+  const unsigned char *src, *src_end;
+  unsigned char *dst;
+  Lisp_Object val;
+  int c, len;
+
+  if (multibyte && nchars == nbytes)
+    return string;
+
+  byte8_count = string_count_byte8 (string);
+
+  if (byte8_count == 0)
+    return string;
+
+  if (ckd_mul (&thrice_byte8_count, byte8_count, 3))
+    string_overflow ();
+
+  if (multibyte)
+    {
+      if (ckd_add (&uninit_nchars, nchars, thrice_byte8_count)
+          || ckd_add (&uninit_nbytes, nbytes, 2 * byte8_count))
+        string_overflow ();
+      val = make_uninit_multibyte_string (uninit_nchars, uninit_nbytes);
+    }
+  else
+    {
+      if (ckd_add (&uninit_nbytes, thrice_byte8_count, nbytes))
+        string_overflow ();
+      val = make_uninit_string (uninit_nbytes);
+    }
+
+  src = SDATA (string);
+  src_end = src + nbytes;
+  dst = SDATA (val);
+  if (multibyte)
+    while (src < src_end)
+      {
+        c = *src;
+        len = BYTES_BY_CHAR_HEAD (c);
+
+        if (CHAR_BYTE8_HEAD_P (c))
+          {
+            c = string_char_advance (&src);
+            c = CHAR_TO_BYTE8 (c);
+            dst += sprintf ((char *) dst, "\\%03o", c + 0u);
+          }
+        else
+          while (len--)
+            *dst++ = *src++;
+      }
+  else
+    while (src < src_end)
+      {
+        c = *src++;
+        if (c >= 0x80)
+          dst += sprintf ((char *) dst, "\\%03o", c + 0u);
+        else
+          *dst++ = c;
+      }
+  return val;
+}
+
+static ptrdiff_t
 char_width (int c, struct Lisp_Char_Table *dp)
 {
   ptrdiff_t width = CHARACTER_WIDTH (c);
