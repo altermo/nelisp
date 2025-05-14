@@ -804,6 +804,24 @@ Doing that might make Emacs dysfunctional, and might even crash Emacs.  */)
   return name;
 }
 
+DEFUN ("fmakunbound", Ffmakunbound, Sfmakunbound, 1, 1, 0,
+       doc: /* Make SYMBOL's function definition be nil.
+Return SYMBOL.
+
+If a function definition is nil, trying to call a function by
+that name will cause a `void-function' error.  For more details, see
+Info node `(elisp) Function Cells'.
+
+See also `makunbound'.  */)
+(register Lisp_Object symbol)
+{
+  CHECK_SYMBOL (symbol);
+  if (NILP (symbol) || EQ (symbol, Qt))
+    xsignal1 (Qsetting_constant, symbol);
+  set_symbol_function (symbol, Qnil);
+  return symbol;
+}
+
 DEFUN ("symbol-function", Fsymbol_function, Ssymbol_function, 1, 1, 0,
        doc: /* Return SYMBOL's function definition.  */)
 (Lisp_Object symbol)
@@ -1979,6 +1997,7 @@ syms_of_data (void)
   defsubr (&Ssetcdr);
   defsubr (&Sboundp);
   defsubr (&Sfboundp);
+  defsubr (&Sfmakunbound);
   defsubr (&Ssymbol_name);
   defsubr (&Ssymbol_function);
   defsubr (&Sconsp);
