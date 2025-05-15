@@ -642,7 +642,7 @@ usage: (define-charset-internal ...)  */)
     {
       val = args[charset_arg_superset];
       charset.method = CHARSET_METHOD_SUPERSET;
-      TODO; // val = Fcopy_sequence (val);
+      val = Fcopy_sequence (val);
       ASET (attrs, charset_superset, val);
 
       charset.min_char = MAX_CHAR;
@@ -658,18 +658,17 @@ usage: (define-charset-internal ...)  */)
             {
               car_part = XCAR (elt);
               cdr_part = XCDR (elt);
-              TODO;
-              UNUSED (car_part); // CHECK_CHARSET_GET_ID (car_part, this_id);
+              CHECK_CHARSET_GET_ID (car_part, this_id);
               offset = check_integer_range (cdr_part, INT_MIN, INT_MAX);
             }
           else
             {
-              TODO; // CHECK_CHARSET_GET_ID (elt, this_id);
+              CHECK_CHARSET_GET_ID (elt, this_id);
               offset = 0;
             }
           XSETCAR (val, Fcons (make_fixnum (this_id), make_fixnum (offset)));
 
-          TODO; // this_charset = CHARSET_FROM_ID (this_id);
+          this_charset = CHARSET_FROM_ID (this_id);
           if (charset.min_char > this_charset->min_char)
             charset.min_char = this_charset->min_char;
           if (charset.max_char < this_charset->max_char)
