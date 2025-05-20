@@ -2,6 +2,8 @@
 #include "lisp.h"
 #include "nvim.h"
 
+struct buffer buffer_defaults;
+
 EMACS_INT
 fix_position (Lisp_Object pos)
 {

@@ -59,7 +59,12 @@ create_buffer (long bufid)
   b->_upcase_table = XCHAR_TABLE (Vascii_downcase_table)->extras[0];
   b->_case_canon_table = XCHAR_TABLE (Vascii_downcase_table)->extras[1];
   b->_case_eqv_table = XCHAR_TABLE (Vascii_downcase_table)->extras[2];
+
   b->bufid = bufid;
+
+#if TODO_NELISP_LATER_ELSE
+  b->_syntax_table = BVAR (&buffer_defaults, syntax_table);
+#endif
 
   XSETBUFFER (buffer, b);
   return buffer;

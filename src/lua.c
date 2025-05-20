@@ -572,6 +572,7 @@ ret () init (lua_State *L)
   init_obarray_once ();
   init_casetab_once ();
   init_charset_once ();
+  init_syntax_once ();
 
   Vload_path = list1 (make_unibyte_string (lisp_dir, len_lisp_dir));
   Vdata_directory = make_unibyte_string (data_dir, len_data_dir);
@@ -601,6 +602,8 @@ ret () init (lua_State *L)
   syms_of_timefns ();
   syms_of_callproc ();
   syms_of_display ();
+  syms_of_casefiddle ();
+  syms_of_syntax ();
 
   init_keyboard ();
   init_eval ();

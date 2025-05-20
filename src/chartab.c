@@ -574,6 +574,52 @@ map_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
     }
 }
 
+static Lisp_Object
+uniprop_decode_value_run_length (Lisp_Object table, Lisp_Object value)
+{
+  if (VECTORP (XCHAR_TABLE (table)->extras[4]))
+    {
+      Lisp_Object valvec = XCHAR_TABLE (table)->extras[4];
+
+      if (XFIXNUM (value) >= 0 && XFIXNUM (value) < ASIZE (valvec))
+        value = AREF (valvec, XFIXNUM (value));
+    }
+  return value;
+}
+
+static uniprop_decoder_t __attribute__ ((unused)) uniprop_decoder[]
+  = { uniprop_decode_value_run_length };
+
+static const int uniprop_decoder_count = ARRAYELTS (uniprop_decoder);
+
+Lisp_Object
+uniprop_table (Lisp_Object prop)
+{
+  Lisp_Object val, table, result;
+
+  val = Fassq (prop, Vchar_code_property_alist);
+  if (!CONSP (val))
+    return Qnil;
+  table = XCDR (val);
+  if (STRINGP (table))
+    {
+      TODO; // AUTO_STRING (intl, "international/");
+      // result = save_match_data_load (concat2 (intl, table), Qt, Qt, Qt, Qt);
+      if (NILP (result))
+        return Qnil;
+      table = XCDR (val);
+    }
+  if (!CHAR_TABLE_P (table) || !UNIPROP_TABLE_P (table))
+    return Qnil;
+  val = XCHAR_TABLE (table)->extras[1];
+  if (FIXNUMP (val)
+        ? (XFIXNUM (val) < 0 || XFIXNUM (val) >= uniprop_decoder_count)
+        : !NILP (val))
+    return Qnil;
+  set_char_table_ascii (table, char_table_ascii (table));
+  return table;
+}
+
 void
 syms_of_chartab (void)
 {
@@ -583,4 +629,9 @@ syms_of_chartab (void)
   defsubr (&Sset_char_table_range);
   defsubr (&Schar_table_extra_slot);
   defsubr (&Sset_char_table_extra_slot);
+
+  DEFVAR_LISP ("char-code-property-alist", Vchar_code_property_alist,
+	       doc: /* Alist of character property name vs char-table containing property values.
+Internal use only.  */);
+  Vchar_code_property_alist = Qnil;
 }

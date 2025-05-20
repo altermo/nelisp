@@ -8,7 +8,8 @@
   X (_downcase_table)   \
   X (_upcase_table)     \
   X (_case_canon_table) \
-  X (_case_eqv_table)
+  X (_case_eqv_table)   \
+  X (_syntax_table)
 
 struct buffer
 {

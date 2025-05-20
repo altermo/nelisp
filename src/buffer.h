@@ -6,6 +6,8 @@
 
 #define current_buffer (nvim_current_buffer ())
 
+extern struct buffer buffer_defaults;
+
 #define ZV (nvim_get_field_zv (current_buffer, true))
 #define ZV_BYTE (nvim_get_field_zv (current_buffer, false))
 #define BEGV (nvim_get_field_begv (current_buffer, true))
@@ -84,5 +86,21 @@ CHARACTER_WIDTH (int c)
           : c == '\n'            ? 0
           : !NILP ((TODO, Qnil)) ? 2
                                  : 4);
+}
+
+INLINE int
+downcase (int c)
+{
+  Lisp_Object downcase_table = BVAR (current_buffer, downcase_table);
+  Lisp_Object down = CHAR_TABLE_REF (downcase_table, c);
+  return FIXNATP (down) ? XFIXNAT (down) : c;
+}
+
+INLINE int
+upcase (int c)
+{
+  Lisp_Object upcase_table = BVAR (current_buffer, upcase_table);
+  Lisp_Object up = CHAR_TABLE_REF (upcase_table, c);
+  return FIXNATP (up) ? XFIXNAT (up) : c;
 }
 #endif

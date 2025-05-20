@@ -2369,6 +2369,7 @@ extern void syms_of_casetab (void);
 extern void init_casetab_once (void);
 extern Lisp_Object Vascii_downcase_table;
 extern Lisp_Object Vascii_canon_table;
+extern Lisp_Object uniprop_table (Lisp_Object);
 
 extern intmax_t check_integer_range (Lisp_Object, intmax_t, intmax_t);
 
@@ -2390,6 +2391,11 @@ extern void syms_of_display (void);
 extern ptrdiff_t copy_text (const unsigned char *from_addr,
                             unsigned char *to_addr, ptrdiff_t nbytes,
                             bool from_multibyte, bool to_multibyte);
+
+extern void syms_of_casefiddle (void);
+
+extern void syms_of_syntax (void);
+extern void init_syntax_once (void);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

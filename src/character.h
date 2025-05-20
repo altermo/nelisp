@@ -176,6 +176,12 @@ CHAR_BYTE8_HEAD_P (int byte)
   return byte == 0xC0 || byte == 0xC1;
 }
 INLINE int
+make_char_multibyte (int c)
+{
+  eassert (SINGLE_BYTE_CHAR_P (c));
+  return UNIBYTE_TO_CHAR (c);
+}
+INLINE int
 CHAR_TO_BYTE8 (int c)
 {
   return CHAR_BYTE8_P (c) ? c - 0x3FFF00 : c & 0xFF;
