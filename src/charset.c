@@ -870,6 +870,164 @@ DEFUN ("set-charset-plist", Fset_charset_plist, Sset_charset_plist, 2, 2, 0,
   return plist;
 }
 
+static int
+maybe_unify_char (int c, Lisp_Object val)
+{
+  struct charset *charset;
+
+  if (FIXNUMP (val))
+    return XFIXNAT (val);
+  if (NILP (val))
+    return c;
+
+  CHECK_CHARSET_GET_CHARSET (val, charset);
+  load_charset (charset, 1);
+  if (!inhibit_load_charset_map)
+    {
+      val = CHAR_TABLE_REF (Vchar_unify_table, c);
+      if (!NILP (val))
+        c = XFIXNAT (val);
+    }
+  else
+    {
+      int code_index = c - CHARSET_CODE_OFFSET (charset);
+      int unified = GET_TEMP_CHARSET_WORK_DECODER (code_index);
+
+      if (unified > 0)
+        c = unified;
+    }
+  return c;
+}
+
+int
+decode_char (struct charset *charset, unsigned int code)
+{
+  int c, char_index;
+  enum charset_method method = CHARSET_METHOD (charset);
+
+  if (code < CHARSET_MIN_CODE (charset) || code > CHARSET_MAX_CODE (charset))
+    return -1;
+
+  if (method == CHARSET_METHOD_SUBSET)
+    {
+      Lisp_Object subset_info;
+
+      subset_info = CHARSET_SUBSET (charset);
+      charset = CHARSET_FROM_ID (XFIXNAT (AREF (subset_info, 0)));
+      code -= XFIXNUM (AREF (subset_info, 3));
+      if (code < XFIXNAT (AREF (subset_info, 1))
+          || code > XFIXNAT (AREF (subset_info, 2)))
+        c = -1;
+      else
+        c = DECODE_CHAR (charset, code);
+    }
+  else if (method == CHARSET_METHOD_SUPERSET)
+    {
+      Lisp_Object parents;
+
+      parents = CHARSET_SUPERSET (charset);
+      c = -1;
+      for (; CONSP (parents); parents = XCDR (parents))
+        {
+          int id = XFIXNUM (XCAR (XCAR (parents)));
+          int code_offset = XFIXNUM (XCDR (XCAR (parents)));
+          unsigned this_code = code - code_offset;
+
+          charset = CHARSET_FROM_ID (id);
+          if ((c = DECODE_CHAR (charset, this_code)) >= 0)
+            break;
+        }
+    }
+  else
+    {
+      char_index = CODE_POINT_TO_INDEX (charset, code);
+      if (char_index < 0)
+        return -1;
+
+      if (method == CHARSET_METHOD_MAP)
+        {
+          Lisp_Object decoder;
+
+          decoder = CHARSET_DECODER (charset);
+          if (!VECTORP (decoder))
+            {
+              load_charset (charset, 1);
+              decoder = CHARSET_DECODER (charset);
+            }
+          if (VECTORP (decoder))
+            c = XFIXNUM (AREF (decoder, char_index));
+          else
+            c = GET_TEMP_CHARSET_WORK_DECODER (char_index);
+        }
+      else
+        {
+          c = char_index + CHARSET_CODE_OFFSET (charset);
+          if (CHARSET_UNIFIED_P (charset) && MAX_UNICODE_CHAR < c
+              && c <= MAX_5_BYTE_CHAR)
+            {
+              Lisp_Object val = CHAR_TABLE_REF (Vchar_unify_table, c);
+              c = maybe_unify_char (c, val);
+            }
+        }
+    }
+
+  return c;
+}
+
+DEFUN ("unify-charset", Funify_charset, Sunify_charset, 1, 3, 0,
+       doc: /* Unify characters of CHARSET with Unicode.
+This means reading the relevant file and installing the table defined
+by CHARSET's `:unify-map' property.
+
+Optional second arg UNIFY-MAP is a file name string or a vector.  It has
+the same meaning as the `:unify-map' attribute in the function
+`define-charset' (which see).
+
+Optional third argument DEUNIFY, if non-nil, means to de-unify CHARSET.  */)
+(Lisp_Object charset, Lisp_Object unify_map, Lisp_Object deunify)
+{
+  int id;
+  struct charset *cs;
+
+  CHECK_CHARSET_GET_ID (charset, id);
+  cs = CHARSET_FROM_ID (id);
+  if (NILP (deunify) ? CHARSET_UNIFIED_P (cs) && !NILP (CHARSET_DEUNIFIER (cs))
+                     : !CHARSET_UNIFIED_P (cs))
+    return Qnil;
+
+  CHARSET_UNIFIED_P (cs) = 0;
+  if (NILP (deunify))
+    {
+      if (CHARSET_METHOD (cs) != CHARSET_METHOD_OFFSET
+          || CHARSET_CODE_OFFSET (cs) < 0x110000)
+        error ("Can't unify charset: %s", SDATA (SYMBOL_NAME (charset)));
+      if (NILP (unify_map))
+        unify_map = CHARSET_UNIFY_MAP (cs);
+      else
+        {
+          if (!STRINGP (unify_map) && !VECTORP (unify_map))
+            signal_error ("Bad unify-map", unify_map);
+          set_charset_attr (cs, charset_unify_map, unify_map);
+        }
+      if (NILP (Vchar_unify_table))
+        Vchar_unify_table = Fmake_char_table (Qnil, Qnil);
+      char_table_set_range (Vchar_unify_table, cs->min_char, cs->max_char,
+                            charset);
+      CHARSET_UNIFIED_P (cs) = 1;
+    }
+  else if (CHAR_TABLE_P (Vchar_unify_table))
+    {
+      unsigned min_code = CHARSET_MIN_CODE (cs);
+      unsigned max_code = CHARSET_MAX_CODE (cs);
+      int min_char = DECODE_CHAR (cs, min_code);
+      int max_char = DECODE_CHAR (cs, max_code);
+
+      char_table_set_range (Vchar_unify_table, min_char, max_char, Qnil);
+    }
+
+  return Qnil;
+}
+
 void
 init_charset (void)
 {
@@ -952,6 +1110,7 @@ syms_of_charset (void)
   defsubr (&Sdefine_charset_alias);
   defsubr (&Scharset_plist);
   defsubr (&Sset_charset_plist);
+  defsubr (&Sunify_charset);
 
   DEFVAR_LISP ("charset-map-path", Vcharset_map_path,
         doc: /* List of directories to search for charset map files.  */);

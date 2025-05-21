@@ -211,6 +211,21 @@ set_charset_attr (struct charset *charset, enum charset_attr_index idx,
     }                                         \
   while (false)
 
+#define DECODE_CHAR(charset, code)                                            \
+  ((ASCII_CHAR_P (code) && (charset)->ascii_compatible_p)           ? (code)  \
+   : ((code) < (charset)->min_code || (code) > (charset)->max_code) ? -1      \
+   : (charset)->unified_p ? decode_char (charset, code)                       \
+   : (charset)->method == CHARSET_METHOD_OFFSET                               \
+     ? ((charset)->code_linear_p                                              \
+          ? (int) ((code) - (charset)->min_code) + (charset)->code_offset     \
+          : decode_char (charset, code))                                      \
+   : (charset)->method == CHARSET_METHOD_MAP                                  \
+     ? (((charset)->code_linear_p && VECTORP (CHARSET_DECODER (charset)))     \
+          ? XFIXNUM (                                                         \
+              AREF (CHARSET_DECODER (charset), (code) - (charset)->min_code)) \
+          : decode_char (charset, code))                                      \
+     : decode_char (charset, code))
+
 #define ISO_MAX_DIMENSION 3
 #define ISO_MAX_CHARS 2
 #define ISO_MAX_FINAL 0x80
