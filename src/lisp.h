@@ -892,6 +892,11 @@ VECTORP (Lisp_Object x)
 {
   return VECTORLIKEP (x) && !(ASIZE (x) & PSEUDOVECTOR_FLAG);
 }
+INLINE void
+CHECK_VECTOR (Lisp_Object x)
+{
+  CHECK_TYPE (VECTORP (x), Qvectorp, x);
+}
 INLINE enum pvec_type
 PSEUDOVECTOR_TYPE (const struct Lisp_Vector *v)
 {
@@ -1623,6 +1628,11 @@ NUMBERP (Lisp_Object x)
 {
   return INTEGERP (x) || FLOATP (x);
 }
+INLINE bool
+RANGED_FIXNUMP (intmax_t lo, Lisp_Object x, intmax_t hi)
+{
+  return FIXNUMP (x) && lo <= XFIXNUM (x) && XFIXNUM (x) <= hi;
+}
 
 INLINE bool
 AUTOLOADP (Lisp_Object x)
@@ -2234,6 +2244,12 @@ extern Lisp_Object string_to_number (char const *, int, ptrdiff_t *);
 extern void init_lread (void);
 extern int openp (Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object *,
                   Lisp_Object, bool, bool, void **);
+extern Lisp_Object intern_1 (const char *, ptrdiff_t);
+INLINE Lisp_Object
+intern (const char *str)
+{
+  return intern_1 (str, strlen (str));
+}
 
 extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
 extern void syms_of_fns (void);
@@ -2329,6 +2345,7 @@ extern void fclose_unwind (void *);
 extern bool file_accessible_directory_p (Lisp_Object);
 
 extern void syms_of_coding (void);
+extern void init_coding_once (void);
 
 extern void syms_of_buffer (void);
 extern void init_buffer (void);
@@ -2396,6 +2413,8 @@ extern void syms_of_casefiddle (void);
 
 extern void syms_of_syntax (void);
 extern void init_syntax_once (void);
+
+extern void syms_of_ccl (void);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

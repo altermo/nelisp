@@ -1921,6 +1921,7 @@ syms_of_data (void)
   DEFSYM (Qbyte_code_function_p, "byte-code-function-p");
   DEFSYM (Qbool_vector_p, "bool-vector-p");
   DEFSYM (Qchar_or_string_p, "char-or-string-p");
+  DEFSYM (Qvectorp, "vectorp");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");

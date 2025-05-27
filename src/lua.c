@@ -573,6 +573,7 @@ ret () init (lua_State *L)
   init_casetab_once ();
   init_charset_once ();
   init_syntax_once ();
+  init_coding_once ();
 
   Vload_path = list1 (make_unibyte_string (lisp_dir, len_lisp_dir));
   Vdata_directory = make_unibyte_string (data_dir, len_data_dir);
@@ -586,7 +587,6 @@ ret () init (lua_State *L)
   syms_of_editfns ();
   syms_of_emacs ();
   syms_of_fileio ();
-  syms_of_coding ();
   syms_of_buffer ();
   syms_of_bytecode ();
   syms_of_doc ();
@@ -604,6 +604,8 @@ ret () init (lua_State *L)
   syms_of_display ();
   syms_of_casefiddle ();
   syms_of_syntax ();
+  syms_of_ccl ();
+  syms_of_coding (); // after charset
 
   init_keyboard ();
   init_eval ();

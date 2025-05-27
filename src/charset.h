@@ -3,6 +3,9 @@
 
 #include "lisp.h"
 
+extern Lisp_Object Vcharset_hash_table;
+extern struct charset *charset_table;
+
 enum define_charset_arg_index
 {
   charset_arg_name,

@@ -223,6 +223,17 @@ intern_driver (Lisp_Object string, Lisp_Object obarray, Lisp_Object index)
 }
 
 Lisp_Object
+intern_1 (const char *str, ptrdiff_t len)
+{
+  Lisp_Object obarray = check_obarray (Vobarray);
+  Lisp_Object tem = oblookup (obarray, str, len, len);
+
+  return (BARE_SYMBOL_P (tem)
+            ? tem
+            : intern_driver (make_unibyte_string (str, len), obarray, tem));
+}
+
+Lisp_Object
 intern_c_string_1 (const char *str, ptrdiff_t len)
 {
   Lisp_Object obarray = check_obarray (Vobarray);
