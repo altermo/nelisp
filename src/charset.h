@@ -173,6 +173,8 @@ set_charset_attr (struct charset *charset, enum charset_attr_index idx,
   ASET (CHARSET_ATTRIBUTES (charset), idx, val);
 }
 
+#define CHARSETP(obj) (CHARSET_SYMBOL_HASH_INDEX (obj) >= 0)
+
 #define CHARSET_SYMBOL_ID(symbol) \
   CHARSET_ATTR_ID (CHARSET_SYMBOL_ATTRIBUTES (symbol))
 

@@ -432,6 +432,10 @@ load_charset (struct charset *charset, int control_flag)
     TODO; // load_charset_map_from_vector (charset, map, control_flag);
 }
 
+DEFUN ("charsetp", Fcharsetp, Scharsetp, 1, 1, 0,
+       doc: /* Return non-nil if and only if OBJECT is a charset.*/)
+(Lisp_Object object) { return (CHARSETP (object) ? Qt : Qnil); }
+
 DEFUN ("define-charset-internal", Fdefine_charset_internal,
        Sdefine_charset_internal, charset_arg_max, MANY, 0,
        doc: /* For internal use only.
@@ -1106,6 +1110,7 @@ syms_of_charset (void)
   charset_table_size = ARRAYELTS (charset_table_init);
   charset_table_used = 0;
 
+  defsubr (&Scharsetp);
   defsubr (&Sdefine_charset_internal);
   defsubr (&Sdefine_charset_alias);
   defsubr (&Scharset_plist);
