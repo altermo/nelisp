@@ -989,6 +989,82 @@ With one argument, just copy STRING (with properties, if any).  */)
 }
 
 Lisp_Object
+concat_to_list (ptrdiff_t nargs, Lisp_Object *args, Lisp_Object last_tail)
+{
+  Lisp_Object result = Qnil;
+  Lisp_Object last = Qnil; /* Last cons in result if nonempty.  */
+
+  for (ptrdiff_t i = 0; i < nargs; i++)
+    {
+      Lisp_Object arg = args[i];
+      if (CONSP (arg))
+        {
+          Lisp_Object head = Fcons (XCAR (arg), Qnil);
+          Lisp_Object prev = head;
+          arg = XCDR (arg);
+          FOR_EACH_TAIL (arg)
+            {
+              Lisp_Object next = Fcons (XCAR (arg), Qnil);
+              XSETCDR (prev, next);
+              prev = next;
+            }
+          CHECK_LIST_END (arg, arg);
+          if (NILP (result))
+            result = head;
+          else
+            XSETCDR (last, head);
+          last = prev;
+        }
+      else if (NILP (arg))
+        ;
+      else if (VECTORP (arg) || STRINGP (arg) || BOOL_VECTOR_P (arg)
+               || CLOSUREP (arg))
+        {
+          ptrdiff_t arglen = XFIXNUM (Flength (arg));
+          ptrdiff_t argindex_byte = 0;
+
+          for (ptrdiff_t argindex = 0; argindex < arglen; argindex++)
+            {
+              Lisp_Object elt;
+              if (STRINGP (arg))
+                {
+                  int c;
+                  if (STRING_MULTIBYTE (arg))
+                    {
+                      ptrdiff_t char_idx = argindex;
+                      c = fetch_string_char_advance_no_check (arg, &char_idx,
+                                                              &argindex_byte);
+                    }
+                  else
+                    c = SREF (arg, argindex);
+                  elt = make_fixed_natnum (c);
+                }
+              else if (BOOL_VECTOR_P (arg))
+                elt = bool_vector_ref (arg, argindex);
+              else
+                elt = AREF (arg, argindex);
+
+              Lisp_Object node = Fcons (elt, Qnil);
+              if (NILP (result))
+                result = node;
+              else
+                XSETCDR (last, node);
+              last = node;
+            }
+        }
+      else
+        wrong_type_argument (Qsequencep, arg);
+    }
+
+  if (NILP (result))
+    result = last_tail;
+  else
+    XSETCDR (last, last_tail);
+
+  return result;
+}
+
+Lisp_Object
 concat_to_vector (ptrdiff_t nargs, Lisp_Object *args)
 {
   EMACS_INT result_len = 0;
@@ -1058,6 +1134,27 @@ concat_to_vector (ptrdiff_t nargs, Lisp_Object *args)
   eassert (dst == XVECTOR (result)->contents + result_len);
 
   return result;
+}
+
+DEFUN ("append", Fappend, Sappend, 0, MANY, 0,
+       doc: /* Concatenate all the arguments and make the result a list.
+The result is a list whose elements are the elements of all the arguments.
+Each argument may be a list, vector or string.
+
+All arguments except the last argument are copied.  The last argument
+is just used as the tail of the new list.  If the last argument is not
+a list, this results in a dotted list.
+
+As an exception, if all the arguments except the last are nil, and the
+last argument is not a list, the return value is that last argument
+unaltered, not a list.
+
+usage: (append &rest SEQUENCES)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 0)
+    return Qnil;
+  return concat_to_list (nargs - 1, args, args[nargs - 1]);
 }
 
 DEFUN ("vconcat", Fvconcat, Svconcat, 0, MANY, 0,
@@ -1820,6 +1917,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sstring_equal);
   defsubr (&Sstring_to_multibyte);
   defsubr (&Ssubstring);
+  defsubr (&Sappend);
   defsubr (&Svconcat);
   defsubr (&Scopy_sequence);
   defsubr (&Smake_hash_table);
