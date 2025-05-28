@@ -838,6 +838,43 @@ short_args:
            Fcons (Qdefine_coding_system_internal, make_fixnum (nargs)));
 }
 
+DEFUN ("define-coding-system-alias", Fdefine_coding_system_alias,
+       Sdefine_coding_system_alias, 2, 2, 0,
+       doc: /* Define ALIAS as an alias for CODING-SYSTEM.  */)
+(Lisp_Object alias, Lisp_Object coding_system)
+{
+  Lisp_Object spec, aliases, eol_type, val;
+
+  CHECK_SYMBOL (alias);
+  CHECK_CODING_SYSTEM_GET_SPEC (coding_system, spec);
+  aliases = AREF (spec, 1);
+
+  while (!NILP (XCDR (aliases)))
+    aliases = XCDR (aliases);
+  XSETCDR (aliases, list1 (alias));
+
+  eol_type = AREF (spec, 2);
+  if (VECTORP (eol_type))
+    {
+      Lisp_Object subsidiaries;
+      int i;
+
+      subsidiaries = make_subsidiaries (alias);
+      for (i = 0; i < 3; i++)
+        Fdefine_coding_system_alias (AREF (subsidiaries, i),
+                                     AREF (eol_type, i));
+    }
+
+  Fputhash (alias, spec, Vcoding_system_hash_table);
+  Vcoding_system_list = Fcons (alias, Vcoding_system_list);
+  val = Fassoc (Fsymbol_name (alias), Vcoding_system_alist, Qnil);
+  if (NILP (val))
+    Vcoding_system_alist
+      = Fcons (Fcons (Fsymbol_name (alias), Qnil), Vcoding_system_alist);
+
+  return Qnil;
+}
+
 void
 init_coding_once (void)
 {
@@ -939,6 +976,7 @@ syms_of_coding (void)
         intern_c_string ("coding-category-undecided"));
 
   defsubr (&Sdefine_coding_system_internal);
+  defsubr (&Sdefine_coding_system_alias);
 
   DEFVAR_LISP ("coding-system-list", Vcoding_system_list,
         doc: /* List of coding systems.

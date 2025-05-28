@@ -128,8 +128,25 @@ enum coding_attr_index
 #define CODING_ID_EOL_TYPE(id) \
   AREF (HASH_VALUE (XHASH_TABLE (Vcoding_system_hash_table), id), 2)
 
+#define CODING_SYSTEM_SPEC(coding_system_symbol) \
+  Fgethash (coding_system_symbol, Vcoding_system_hash_table, Qnil)
+
 #define CODING_SYSTEM_ID(coding_system_symbol) \
   hash_lookup (XHASH_TABLE (Vcoding_system_hash_table), coding_system_symbol)
+
+#define CHECK_CODING_SYSTEM_GET_SPEC(x, spec)      \
+  do                                               \
+    {                                              \
+      spec = CODING_SYSTEM_SPEC (x);               \
+      if (NILP (spec))                             \
+        {                                          \
+          TODO; /*Fcheck_coding_system (x);*/      \
+          spec = CODING_SYSTEM_SPEC (x);           \
+        }                                          \
+      if (NILP (spec))                             \
+        wrong_type_argument (Qcoding_system_p, x); \
+    }                                              \
+  while (false)
 
 #define CHECK_CODING_SYSTEM_GET_ID(x, id)          \
   do                                               \
