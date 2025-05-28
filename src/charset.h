@@ -4,6 +4,7 @@
 #include "lisp.h"
 
 extern Lisp_Object Vcharset_hash_table;
+extern Lisp_Object Vemacs_mule_charset_list;
 extern struct charset *charset_table;
 
 enum define_charset_arg_index

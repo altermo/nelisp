@@ -215,7 +215,35 @@ setup_coding_system (Lisp_Object coding_system, struct coding_system *coding)
             | CODING_REQUIRE_FLUSHING_MASK);
     }
   else if (EQ (coding_type, Qemacs_mule))
-    TODO;
+    {
+#if TODO_NELISP_LATER_AND
+      coding->detector = detect_coding_emacs_mule;
+      coding->decoder = decode_coding_emacs_mule;
+      coding->encoder = encode_coding_emacs_mule;
+#endif
+      coding->common_flags
+        |= (CODING_REQUIRE_DECODING_MASK | CODING_REQUIRE_ENCODING_MASK);
+      if (!NILP (AREF (attrs, coding_attr_emacs_mule_full))
+          && !EQ (CODING_ATTR_CHARSET_LIST (attrs), Vemacs_mule_charset_list))
+        {
+          Lisp_Object tail, safe_charsets;
+          int max_charset_id = 0;
+
+          for (tail = Vemacs_mule_charset_list; CONSP (tail);
+               tail = XCDR (tail))
+            if (max_charset_id < XFIXNAT (XCAR (tail)))
+              max_charset_id = XFIXNAT (XCAR (tail));
+          safe_charsets = make_uninit_string (max_charset_id + 1);
+          memset (SDATA (safe_charsets), 255, max_charset_id + 1);
+          for (tail = Vemacs_mule_charset_list; CONSP (tail);
+               tail = XCDR (tail))
+            SSET (safe_charsets, XFIXNAT (XCAR (tail)), 0);
+          coding->max_charset_id = max_charset_id;
+          coding->safe_charsets = SDATA (safe_charsets);
+        }
+      coding->spec.emacs_mule.cmp_status.state = COMPOSING_NO;
+      coding->spec.emacs_mule.cmp_status.method = COMPOSITION_NO;
+    }
   else if (EQ (coding_type, Qshift_jis))
     {
 #if TODO_NELISP_LATER_AND
@@ -378,7 +406,7 @@ usage: (define-coding-system-internal ...)  */)
         {
           if (!EQ (coding_type, Qemacs_mule))
             error ("Invalid charset-list");
-          TODO; // charset_list = Vemacs_mule_charset_list;
+          charset_list = Vemacs_mule_charset_list;
         }
       for (Lisp_Object tail = charset_list; CONSP (tail); tail = XCDR (tail))
         {
@@ -565,9 +593,9 @@ usage: (define-coding-system-internal ...)  */)
         {
           CHECK_CONS (bom);
           val = XCAR (bom);
-          TODO; // CHECK_CODING_SYSTEM (val);
+          CHECK_CODING_SYSTEM (val);
           val = XCDR (bom);
-          TODO; // CHECK_CODING_SYSTEM (val);
+          CHECK_CODING_SYSTEM (val);
         }
       ASET (attrs, coding_attr_utf_bom, bom);
 
@@ -749,9 +777,9 @@ usage: (define-coding-system-internal ...)  */)
         {
           CHECK_CONS (bom);
           val = XCAR (bom);
-          TODO; // CHECK_CODING_SYSTEM (val);
+          CHECK_CODING_SYSTEM (val);
           val = XCDR (bom);
-          TODO; // CHECK_CODING_SYSTEM (val);
+          CHECK_CODING_SYSTEM (val);
         }
       ASET (attrs, coding_attr_utf_bom, bom);
       if (NILP (bom))
