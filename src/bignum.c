@@ -3,6 +3,46 @@
 
 mpz_t mpz[5];
 
+enum
+{
+  GMP_NLIMBS_MAX = min (INT_MAX, ULONG_MAX / GMP_NUMB_BITS)
+};
+
+enum
+{
+  NLIMBS_LIMIT = min (min (GMP_NLIMBS_MAX,
+
+                           min (PTRDIFF_MAX, SIZE_MAX) / sizeof (mp_limb_t)),
+
+                      MOST_POSITIVE_FIXNUM / GMP_NUMB_BITS)
+};
+
+static int
+emacs_mpz_size (mpz_t const op)
+{
+  mp_size_t size = mpz_size (op);
+  eassume (0 <= size && size <= INT_MAX);
+  return size;
+}
+
+void
+emacs_mpz_mul_2exp (mpz_t rop, mpz_t const op1, EMACS_INT op2)
+{
+  enum
+  {
+    mul_2exp_extra_limbs = 1
+  };
+  enum
+  {
+    lim = min (NLIMBS_LIMIT, GMP_NLIMBS_MAX - mul_2exp_extra_limbs)
+  };
+
+  EMACS_INT op2limbs = op2 / GMP_NUMB_BITS;
+  if (lim - emacs_mpz_size (op1) < op2limbs)
+    overflow_error ();
+  mpz_mul_2exp (rop, op1, op2);
+}
+
 static void *
 xrealloc_for_gmp (void *ptr, size_t ignore, size_t size)
 {

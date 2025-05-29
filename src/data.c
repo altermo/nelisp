@@ -1861,6 +1861,62 @@ usage: (min NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   return minmax_driver (nargs, args, ARITH_LESS);
 }
 
+DEFUN ("ash", Fash, Sash, 2, 2, 0,
+       doc: /* Return integer VALUE with its bits shifted left by COUNT bit positions.
+If COUNT is negative, shift VALUE to the right instead.
+VALUE and COUNT must be integers.
+Mathematically, the return value is VALUE multiplied by 2 to the
+power of COUNT, rounded down.  If the result is non-zero, its sign
+is the same as that of VALUE.
+In terms of bits, when COUNT is positive, the function moves
+the bits of VALUE to the left, adding zero bits on the right; when
+COUNT is negative, it moves the bits of VALUE to the right,
+discarding bits.  */)
+(Lisp_Object value, Lisp_Object count)
+{
+  CHECK_INTEGER (value);
+  CHECK_INTEGER (count);
+
+  if (!FIXNUMP (count))
+    {
+      if (BASE_EQ (value, make_fixnum (0)))
+        return value;
+      if (mpz_sgn (*xbignum_val (count)) < 0)
+        {
+          EMACS_INT v = (FIXNUMP (value) ? XFIXNUM (value)
+                                         : mpz_sgn (*xbignum_val (value)));
+          return make_fixnum (v < 0 ? -1 : 0);
+        }
+      overflow_error ();
+    }
+
+  if (XFIXNUM (count) <= 0)
+    {
+      if (XFIXNUM (count) == 0)
+        return value;
+
+      if ((EMACS_INT) -1 >> 1 == -1 && FIXNUMP (value))
+        {
+          EMACS_INT shift = -XFIXNUM (count);
+          EMACS_INT result = (shift < EMACS_INT_WIDTH ? XFIXNUM (value) >> shift
+                              : XFIXNUM (value) < 0   ? -1
+                                                      : 0);
+          return make_fixnum (result);
+        }
+    }
+
+  mpz_t const *zval = bignum_integer (&mpz[0], value);
+  if (XFIXNUM (count) < 0)
+    {
+      if (TYPE_MAXIMUM (mp_bitcnt_t) < (unsigned long) (-XFIXNUM (count)))
+        return make_fixnum (mpz_sgn (*zval) < 0 ? -1 : 0);
+      mpz_fdiv_q_2exp (mpz[0], *zval, -XFIXNUM (count));
+    }
+  else
+    emacs_mpz_mul_2exp (mpz[0], *zval, XFIXNUM (count));
+  return make_integer_mpz ();
+}
+
 DEFUN ("1+", Fadd1, Sadd1, 1, 1, 0,
        doc: /* Return NUMBER plus one.  NUMBER may be a number or a marker.
 Markers are converted to integers.  */)
@@ -2056,6 +2112,7 @@ syms_of_data (void)
   defsubr (&Smod);
   defsubr (&Smax);
   defsubr (&Smin);
+  defsubr (&Sash);
   defsubr (&Sadd1);
   defsubr (&Ssub1);
 }

@@ -14,6 +14,7 @@ struct Lisp_Bignum
 
 extern Lisp_Object make_integer_mpz (void);
 extern void init_bignum (void);
+extern void emacs_mpz_mul_2exp (mpz_t, mpz_t const, EMACS_INT);
 
 INLINE struct Lisp_Bignum *
 XBIGNUM (Lisp_Object a)
@@ -48,6 +49,17 @@ INLINE mpz_t const *
 xbignum_val (Lisp_Object i)
 {
   return bignum_val (XBIGNUM (i));
+}
+
+INLINE mpz_t const *
+bignum_integer (mpz_t *tmp, Lisp_Object i)
+{
+  if (FIXNUMP (i))
+    {
+      mpz_set_intmax (*tmp, XFIXNUM (i));
+      return (mpz_t const *) tmp;
+    }
+  return xbignum_val (i);
 }
 
 #endif
