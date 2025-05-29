@@ -295,9 +295,9 @@ setup_iso_safe_charsets (Lisp_Object attrs)
 
   charset_list = CODING_ATTR_CHARSET_LIST (attrs);
   if ((flags & CODING_ISO_FLAG_FULL_SUPPORT)
-      && (TODO, false)) // && ! EQ (charset_list, Viso_2022_charset_list))
+      && !EQ (charset_list, Viso_2022_charset_list))
     {
-      TODO; // charset_list = Viso_2022_charset_list;
+      charset_list = Viso_2022_charset_list;
       ASET (attrs, coding_attr_charset_list, charset_list);
       ASET (attrs, coding_attr_safe_charsets, Qnil);
     }
@@ -400,7 +400,7 @@ usage: (define-coding-system-internal ...)  */)
         {
           if (!EQ (coding_type, Qiso_2022))
             error ("Invalid charset-list");
-          TODO; // charset_list = Viso_2022_charset_list;
+          charset_list = Viso_2022_charset_list;
         }
       else if (EQ (charset_list, Qemacs_mule))
         {
