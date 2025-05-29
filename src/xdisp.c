@@ -27,6 +27,10 @@ message1 (const char *m)
 void
 syms_of_xdisp (void)
 {
+  DEFSYM (Qeval, "eval");
+
+  DEFSYM (Qinhibit_redisplay, "inhibit-redisplay");
+
   DEFVAR_INT ("max-redisplay-ticks", max_redisplay_ticks,
     doc: /* Maximum number of redisplay ticks before aborting redisplay of a window.
 

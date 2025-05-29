@@ -2306,6 +2306,9 @@ extern bool FUNCTIONP (Lisp_Object);
 extern void prog_ignore (Lisp_Object);
 extern struct handler *push_handler (Lisp_Object tag_ch_val,
                                      enum handlertype handlertype);
+extern Lisp_Object safe_eval (Lisp_Object);
+#define safe_calln(...) \
+  CALLMANY (safe_funcall, ((Lisp_Object[]) { __VA_ARGS__ }))
 
 enum Arith_Comparison
 {

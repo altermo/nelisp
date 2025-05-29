@@ -60,6 +60,40 @@ encode_inhibit_flag (Lisp_Object flag)
   return NILP (flag) ? -1 : EQ (flag, Qt);
 }
 
+DEFUN ("coding-system-p", Fcoding_system_p, Scoding_system_p, 1, 1, 0,
+       doc: /* Return t if OBJECT is nil or a coding-system.
+See the documentation of `define-coding-system' for information
+about coding-system objects.  */)
+(Lisp_Object object)
+{
+  if (NILP (object) || CODING_SYSTEM_ID (object) >= 0)
+    return Qt;
+  if (!SYMBOLP (object) || NILP (Fget (object, Qcoding_system_define_form)))
+    return Qnil;
+  return Qt;
+}
+
+DEFUN ("check-coding-system", Fcheck_coding_system, Scheck_coding_system,
+       1, 1, 0,
+       doc: /* Check validity of CODING-SYSTEM.
+If valid, return CODING-SYSTEM, else signal a `coding-system-error' error.
+It is valid if it is nil or a symbol defined as a coding system by the
+function `define-coding-system'.  */)
+(Lisp_Object coding_system)
+{
+  Lisp_Object define_form;
+
+  define_form = Fget (coding_system, Qcoding_system_define_form);
+  if (!NILP (define_form))
+    {
+      Fput (coding_system, Qcoding_system_define_form, Qnil);
+      safe_eval (define_form);
+    }
+  if (!NILP (Fcoding_system_p (coding_system)))
+    return coding_system;
+  xsignal1 (Qcoding_system_error, coding_system);
+}
+
 static void setup_iso_safe_charsets (Lisp_Object attrs);
 
 void
@@ -1025,6 +1059,12 @@ syms_of_coding (void)
 
   DEFSYM (Qcoding_system_p, "coding-system-p");
 
+  DEFSYM (Qcoding_system_error, "coding-system-error");
+  Fput (Qcoding_system_error, Qerror_conditions,
+        pure_list (Qcoding_system_error, Qerror));
+  Fput (Qcoding_system_error, Qerror_message,
+        build_pure_c_string ("Invalid coding system"));
+
   DEFSYM (Qcharset, "charset");
 
   Vcoding_category_table = make_nil_vector (coding_category_max);
@@ -1072,6 +1112,10 @@ syms_of_coding (void)
   ASET (Vcoding_category_table, coding_category_undecided,
         intern_c_string ("coding-category-undecided"));
 
+  DEFSYM (Qcoding_system_define_form, "coding-system-define-form");
+
+  defsubr (&Scoding_system_p);
+  defsubr (&Scheck_coding_system);
   defsubr (&Sdefine_coding_system_internal);
   defsubr (&Scoding_system_put);
   defsubr (&Sdefine_coding_system_alias);

@@ -365,6 +365,29 @@ internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
     }
 }
 
+Lisp_Object
+internal_condition_case_n (
+  Lisp_Object (*bfun) (ptrdiff_t, Lisp_Object *), ptrdiff_t nargs,
+  Lisp_Object *args, Lisp_Object handlers,
+  Lisp_Object (*hfun) (Lisp_Object err, ptrdiff_t nargs, Lisp_Object *args))
+{
+  struct handler *c = push_handler (handlers, CONDITION_CASE);
+  if (sys_setjmp (c->jmp))
+    {
+      Lisp_Object val = handlerlist->val;
+      clobbered_eassert (handlerlist == c);
+      handlerlist = handlerlist->next;
+      return hfun (val, nargs, args);
+    }
+  else
+    {
+      Lisp_Object val = bfun (nargs, args);
+      eassert (handlerlist == c);
+      handlerlist = c->next;
+      return val;
+    }
+}
+
 static AVOID
 unwind_to_catch (struct handler *catch, enum nonlocal_exit type,
                  Lisp_Object value)
@@ -1371,6 +1394,36 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
 #endif
   specpdl_ptr--;
   return val;
+}
+
+static Lisp_Object
+safe_eval_handler (Lisp_Object arg, ptrdiff_t nargs, Lisp_Object *args)
+{
+#if TODO_NELISP_LATER_AND
+  add_to_log ("Error muted by safe_call: %S signaled %S", Flist (nargs, args),
+              arg);
+#else
+  UNUSED (nargs);
+  UNUSED (args);
+  UNUSED (arg);
+#endif
+  return Qnil;
+}
+
+Lisp_Object
+safe_funcall (ptrdiff_t nargs, Lisp_Object *args)
+{
+  specpdl_ref count = SPECPDL_INDEX ();
+  specbind (Qinhibit_redisplay, Qt);
+  Lisp_Object val
+    = internal_condition_case_n (Ffuncall, nargs, args, Qt, safe_eval_handler);
+  return unbind_to (count, val);
+}
+
+Lisp_Object
+safe_eval (Lisp_Object sexp)
+{
+  return safe_calln (Qeval, sexp, Qt);
 }
 
 DEFUN ("setq", Fsetq, Ssetq, 0, UNEVALLED, 0,
