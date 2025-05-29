@@ -866,6 +866,75 @@ short_args:
            Fcons (Qdefine_coding_system_internal, make_fixnum (nargs)));
 }
 
+DEFUN ("coding-system-put", Fcoding_system_put, Scoding_system_put,
+       3, 3, 0,
+       doc: /* Change value of CODING-SYSTEM's property PROP to VAL.
+
+The following properties, if set by this function, override the values
+of the corresponding attributes set by `define-coding-system':
+
+  `:mnemonic', `:default-char', `:ascii-compatible-p'
+  `:decode-translation-table', `:encode-translation-table',
+  `:post-read-conversion', `:pre-write-conversion'
+
+See `define-coding-system' for the description of these properties.
+See `coding-system-get' and `coding-system-plist' for accessing the
+property list of a coding-system.  */)
+(Lisp_Object coding_system, Lisp_Object prop, Lisp_Object val)
+{
+  Lisp_Object spec, attrs;
+
+  CHECK_CODING_SYSTEM_GET_SPEC (coding_system, spec);
+  attrs = AREF (spec, 0);
+  if (EQ (prop, QCmnemonic))
+    {
+      /* decode_mode_spec_coding assumes the mnemonic is a single character.  */
+      if (STRINGP (val))
+        val = make_fixnum (STRING_CHAR (SDATA (val)));
+      else
+        CHECK_CHARACTER (val);
+      ASET (attrs, coding_attr_mnemonic, val);
+    }
+  else if (EQ (prop, QCdefault_char))
+    {
+      if (NILP (val))
+        val = make_fixnum (' ');
+      else
+        CHECK_CHARACTER (val);
+      ASET (attrs, coding_attr_default_char, val);
+    }
+  else if (EQ (prop, QCdecode_translation_table))
+    {
+      if (!CHAR_TABLE_P (val) && !CONSP (val))
+        CHECK_SYMBOL (val);
+      ASET (attrs, coding_attr_decode_tbl, val);
+    }
+  else if (EQ (prop, QCencode_translation_table))
+    {
+      if (!CHAR_TABLE_P (val) && !CONSP (val))
+        CHECK_SYMBOL (val);
+      ASET (attrs, coding_attr_encode_tbl, val);
+    }
+  else if (EQ (prop, QCpost_read_conversion))
+    {
+      CHECK_SYMBOL (val);
+      ASET (attrs, coding_attr_post_read, val);
+    }
+  else if (EQ (prop, QCpre_write_conversion))
+    {
+      CHECK_SYMBOL (val);
+      ASET (attrs, coding_attr_pre_write, val);
+    }
+  else if (EQ (prop, QCascii_compatible_p))
+    {
+      ASET (attrs, coding_attr_ascii_compat, val);
+    }
+
+  ASET (attrs, coding_attr_plist,
+        plist_put (CODING_ATTR_PLIST (attrs), prop, val));
+  return val;
+}
+
 DEFUN ("define-coding-system-alias", Fdefine_coding_system_alias,
        Sdefine_coding_system_alias, 2, 2, 0,
        doc: /* Define ALIAS as an alias for CODING-SYSTEM.  */)
@@ -1004,6 +1073,7 @@ syms_of_coding (void)
         intern_c_string ("coding-category-undecided"));
 
   defsubr (&Sdefine_coding_system_internal);
+  defsubr (&Scoding_system_put);
   defsubr (&Sdefine_coding_system_alias);
 
   DEFVAR_LISP ("coding-system-list", Vcoding_system_list,

@@ -2274,6 +2274,7 @@ enum DEFAULT_HASH_SIZE
   DEFAULT_HASH_SIZE = 0
 };
 extern struct hash_table_test const hashtest_eq, hashtest_eql, hashtest_equal;
+extern Lisp_Object plist_put (Lisp_Object, Lisp_Object, Lisp_Object);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
