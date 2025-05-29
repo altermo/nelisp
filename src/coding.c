@@ -1231,6 +1231,18 @@ See info node `Coding Systems' and info node `Text and Binary' concerning
 such conversion.  */);
   inhibit_eol_conversion = 0;
 
+  DEFVAR_LISP ("latin-extra-code-table", Vlatin_extra_code_table,
+        doc: /*
+Table of extra Latin codes in the range 128..159 (inclusive).
+This is a vector of length 256.
+If Nth element is non-nil, the existence of code N in a file
+\(or output of subprocess) doesn't prevent it to be detected as
+a coding system of ISO 2022 variant which has a flag
+`accept-latin-extra-code' t (e.g. iso-latin-1) on reading a file
+or reading output of a subprocess.
+Only 128th through 159th elements have a meaning.  */);
+  Vlatin_extra_code_table = make_nil_vector (256);
+
   Lisp_Object args[coding_arg_undecided_max];
   memclear (args, sizeof args);
 
