@@ -1006,6 +1006,73 @@ DEFUN ("define-coding-system-alias", Fdefine_coding_system_alias,
   return Qnil;
 }
 
+DEFUN ("set-coding-system-priority", Fset_coding_system_priority,
+       Sset_coding_system_priority, 0, MANY, 0,
+       doc: /* Assign higher priority to the coding systems given as arguments.
+If multiple coding systems belong to the same category,
+all but the first one are ignored.
+
+usage: (set-coding-system-priority &rest coding-systems)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  ptrdiff_t i, j;
+  bool changed[coding_category_max];
+  enum coding_category priorities[coding_category_max];
+
+  memset (changed, 0, sizeof changed);
+
+  for (i = j = 0; i < nargs; i++)
+    {
+      enum coding_category category;
+      Lisp_Object spec, attrs;
+
+      CHECK_CODING_SYSTEM_GET_SPEC (args[i], spec);
+      attrs = AREF (spec, 0);
+      category = XFIXNUM (CODING_ATTR_CATEGORY (attrs));
+      if (changed[category])
+        continue;
+      changed[category] = 1;
+      priorities[j++] = category;
+      if (coding_categories[category].id >= 0
+          && !EQ (args[i], CODING_ID_NAME (coding_categories[category].id)))
+        setup_coding_system (args[i], &coding_categories[category]);
+      Fset (AREF (Vcoding_category_table, category), args[i]);
+    }
+
+  for (i = j, j = 0; i < coding_category_max; i++, j++)
+    {
+      while (j < coding_category_max && changed[coding_priorities[j]])
+        j++;
+      if (j == coding_category_max)
+        emacs_abort ();
+      priorities[i] = coding_priorities[j];
+    }
+
+  memcpy (coding_priorities, priorities, sizeof priorities);
+
+  Vcoding_category_list = Qnil;
+  for (i = coding_category_max; i-- > 0;)
+    Vcoding_category_list = Fcons (AREF (Vcoding_category_table, priorities[i]),
+                                   Vcoding_category_list);
+
+  return Qnil;
+}
+
+DEFUN ("set-safe-terminal-coding-system-internal",
+       Fset_safe_terminal_coding_system_internal,
+       Sset_safe_terminal_coding_system_internal, 1, 1, 0,
+       doc: /* Internal use only.  */)
+(Lisp_Object coding_system)
+{
+  CHECK_SYMBOL (coding_system);
+  setup_coding_system (Fcheck_coding_system (coding_system),
+                       &safe_terminal_coding);
+  safe_terminal_coding.common_flags &= ~CODING_ANNOTATE_COMPOSITION_MASK;
+  safe_terminal_coding.src_multibyte = 1;
+  safe_terminal_coding.dst_multibyte = 0;
+  return Qnil;
+}
+
 void
 init_coding_once (void)
 {
@@ -1119,6 +1186,8 @@ syms_of_coding (void)
   defsubr (&Sdefine_coding_system_internal);
   defsubr (&Scoding_system_put);
   defsubr (&Sdefine_coding_system_alias);
+  defsubr (&Sset_coding_system_priority);
+  defsubr (&Sset_safe_terminal_coding_system_internal);
 
   DEFVAR_LISP ("coding-system-list", Vcoding_system_list,
         doc: /* List of coding systems.
@@ -1136,6 +1205,24 @@ This variable is given to `completing-read' as COLLECTION argument.
 Do not alter the value of this variable manually.  This variable should be
 updated by `define-coding-system-alias'.  */);
   Vcoding_system_alist = Qnil;
+
+  DEFVAR_LISP ("coding-category-list", Vcoding_category_list,
+	       doc: /* List of coding-categories (symbols) ordered by priority.
+
+On detecting a coding system, Emacs tries code detection algorithms
+associated with each coding-category one by one in this order.  When
+one algorithm agrees with a byte sequence of source text, the coding
+system bound to the corresponding coding-category is selected.
+
+Don't modify this variable directly, but use `set-coding-system-priority'.  */);
+  {
+    int i;
+
+    Vcoding_category_list = Qnil;
+    for (i = coding_category_max - 1; i >= 0; i--)
+      Vcoding_category_list
+        = Fcons (AREF (Vcoding_category_table, i), Vcoding_category_list);
+  }
 
   DEFVAR_BOOL ("inhibit-eol-conversion", inhibit_eol_conversion,
         doc: /*
