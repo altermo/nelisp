@@ -1861,6 +1861,42 @@ usage: (min NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)  */)
   return minmax_driver (nargs, args, ARITH_LESS);
 }
 
+DEFUN ("logand", Flogand, Slogand, 0, MANY, 0,
+       doc: /* Return bitwise-and of all the arguments.
+Arguments may be integers, or markers converted to integers.
+usage: (logand &rest INTS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 0)
+    return make_fixnum (-1);
+  Lisp_Object a = check_integer_coerce_marker (args[0]);
+  return nargs == 1 ? a : arith_driver (Alogand, nargs, args, a);
+}
+
+DEFUN ("logior", Flogior, Slogior, 0, MANY, 0,
+       doc: /* Return bitwise-or of all the arguments.
+Arguments may be integers, or markers converted to integers.
+usage: (logior &rest INTS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 0)
+    return make_fixnum (0);
+  Lisp_Object a = check_integer_coerce_marker (args[0]);
+  return nargs == 1 ? a : arith_driver (Alogior, nargs, args, a);
+}
+
+DEFUN ("logxor", Flogxor, Slogxor, 0, MANY, 0,
+       doc: /* Return bitwise-exclusive-or of all the arguments.
+Arguments may be integers, or markers converted to integers.
+usage: (logxor &rest INTS-OR-MARKERS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  if (nargs == 0)
+    return make_fixnum (0);
+  Lisp_Object a = check_integer_coerce_marker (args[0]);
+  return nargs == 1 ? a : arith_driver (Alogxor, nargs, args, a);
+}
+
 DEFUN ("ash", Fash, Sash, 2, 2, 0,
        doc: /* Return integer VALUE with its bits shifted left by COUNT bit positions.
 If COUNT is negative, shift VALUE to the right instead.
@@ -2112,6 +2148,9 @@ syms_of_data (void)
   defsubr (&Smod);
   defsubr (&Smax);
   defsubr (&Smin);
+  defsubr (&Slogand);
+  defsubr (&Slogior);
+  defsubr (&Slogxor);
   defsubr (&Sash);
   defsubr (&Sadd1);
   defsubr (&Ssub1);
