@@ -2209,6 +2209,7 @@ build_unibyte_string (const char *str)
 {
   return make_unibyte_string (str, strlen (str));
 }
+INTERVAL make_interval (void);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -2419,6 +2420,16 @@ extern void syms_of_syntax (void);
 extern void init_syntax_once (void);
 
 extern void syms_of_ccl (void);
+
+extern void syms_of_textprop (void);
+
+INLINE void
+set_string_intervals (Lisp_Object s, INTERVAL i)
+{
+  XSTRING (s)->u.s.intervals = i;
+}
+
+extern void syms_of_xfaces (void);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

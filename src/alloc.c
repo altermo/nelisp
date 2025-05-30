@@ -3,6 +3,7 @@
 #include "lisp.h"
 #include "buffer.h"
 #include "character.h"
+#include "intervals.h"
 #include "lua.h"
 #include "puresize.h"
 
@@ -515,6 +516,69 @@ hash_table_free_bytes (void *p, ptrdiff_t nbytes)
   tally_consing (-nbytes);
   hash_table_allocated_bytes -= nbytes;
   xfree (p);
+}
+
+/* --- interval allocation -- */
+#define ASAN_POISON_INTERVAL_BLOCK(b) ((void) 0)
+#define ASAN_UNPOISON_INTERVAL_BLOCK(b) ((void) 0)
+#define ASAN_POISON_INTERVAL(i) ((void) 0)
+#define ASAN_UNPOISON_INTERVAL(i) ((void) 0)
+
+enum
+{
+  INTERVAL_BLOCK_SIZE
+  = ((MALLOC_SIZE_NEAR (1024) - sizeof (struct interval_block *))
+     / sizeof (struct interval))
+};
+
+struct interval_block
+{
+  struct interval intervals[INTERVAL_BLOCK_SIZE];
+  struct interval_block *next;
+};
+
+static struct interval_block *interval_block;
+static int interval_block_index = INTERVAL_BLOCK_SIZE;
+static INTERVAL interval_free_list;
+
+INTERVAL
+make_interval (void)
+{
+  INTERVAL val;
+
+  MALLOC_BLOCK_INPUT;
+
+  if (interval_free_list)
+    {
+      val = interval_free_list;
+      ASAN_UNPOISON_INTERVAL (val);
+      interval_free_list = INTERVAL_PARENT (interval_free_list);
+    }
+  else
+    {
+      if (interval_block_index == INTERVAL_BLOCK_SIZE)
+        {
+          struct interval_block *newi
+            = lisp_malloc (sizeof *newi, false, MEM_TYPE_NON_LISP);
+
+          newi->next = interval_block;
+          ASAN_POISON_INTERVAL_BLOCK (newi);
+          interval_block = newi;
+          interval_block_index = 0;
+        }
+      val = &interval_block->intervals[interval_block_index++];
+      ASAN_UNPOISON_INTERVAL (val);
+    }
+
+  MALLOC_UNBLOCK_INPUT;
+
+  tally_consing (sizeof (struct interval));
+#if TODO_NELISP_LATER_AND
+  intervals_consed++;
+#endif
+  RESET_INTERVAL (val);
+  val->gcmarkbit = 0;
+  return val;
 }
 
 /* --- string allocation -- */

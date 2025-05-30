@@ -1,7 +1,6 @@
 #include "lisp.h"
 #include "buffer.h"
 #include "character.h"
-#include "lua.h"
 
 static Lisp_Object cached_system_name;
 
@@ -938,9 +937,40 @@ usage: (format-message STRING &rest OBJECTS)  */)
   return styled_format (nargs, args, true);
 }
 
+DEFUN ("propertize", Fpropertize, Spropertize, 1, MANY, 0,
+       doc: /* Return a copy of STRING with text properties added.
+First argument is the string to copy.
+Remaining arguments form a sequence of PROPERTY VALUE pairs for text
+properties to add to the result.
+
+See Info node `(elisp) Text Properties' for more information.
+usage: (propertize STRING &rest PROPERTIES)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  Lisp_Object properties, string;
+  ptrdiff_t i;
+
+  if ((nargs & 1) == 0)
+    xsignal2 (Qwrong_number_of_arguments, Qpropertize, make_fixnum (nargs));
+
+  properties = string = Qnil;
+
+  CHECK_STRING (args[0]);
+  string = Fcopy_sequence (args[0]);
+
+  for (i = 1; i < nargs; i += 2)
+    properties = Fcons (args[i], Fcons (args[i + 1], properties));
+
+  Fadd_text_properties (make_fixnum (0), make_fixnum (SCHARS (string)),
+                        properties, string);
+  return string;
+}
+
 void
 syms_of_editfns (void)
 {
+  DEFSYM (Qpropertize, "propertize");
+
   DEFVAR_LISP ("system-name", Vsystem_name,
           doc: /* The host name of the machine Emacs is running on.  */);
   Vsystem_name = cached_system_name = Qnil;
@@ -963,4 +993,5 @@ it to be non-nil.  */);
   defsubr (&Smessage);
   defsubr (&Sformat);
   defsubr (&Sformat_message);
+  defsubr (&Spropertize);
 }

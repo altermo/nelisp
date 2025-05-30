@@ -606,6 +606,8 @@ ret () init (lua_State *L)
   syms_of_syntax ();
   syms_of_ccl ();
   syms_of_coding (); // after charset
+  syms_of_textprop ();
+  syms_of_xfaces ();
 
   init_keyboard ();
   init_eval ();
