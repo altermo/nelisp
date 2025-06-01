@@ -1,3 +1,4 @@
+#include "keymap.h"
 #include "lisp.h"
 #include "character.h"
 #include "keyboard.h"
@@ -50,6 +51,16 @@ end:
     wrong_type_argument (Qkeymapp, object);
   return Qnil;
 }
+
+DEFUN ("keymapp", Fkeymapp, Skeymapp, 1, 1, 0,
+       doc: /* Return t if OBJECT is a keymap.
+
+A keymap is a list (keymap . ALIST),
+or a symbol whose function definition is itself a keymap.
+ALIST elements look like (CHAR . DEFN) or (SYMBOL . DEFN);
+a vector of densely packed bindings for small character codes
+is also allowed as an element.  */)
+(Lisp_Object object) { return (KEYMAPP (object) ? Qt : Qnil); }
 
 static Lisp_Object
 keymap_parent (Lisp_Object keymap, bool autoload)
@@ -659,6 +670,7 @@ syms_of_keymap (void)
 	       doc: /* Default keymap to use when reading from the minibuffer.  */);
   Vminibuffer_local_map = Fmake_sparse_keymap (Qnil);
 
+  defsubr (&Skeymapp);
   defsubr (&Skeymap_parent);
   defsubr (&Sset_keymap_parent);
   defsubr (&Smake_keymap);
