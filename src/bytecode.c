@@ -693,7 +693,23 @@ setup_frame:;
 
         CASE (Bnth):
           {
-            TODO;
+            Lisp_Object v2 = POP, v1 = TOP;
+            if (RANGED_FIXNUMP (0, v1, SMALL_LIST_LEN_MAX))
+              {
+                for (EMACS_INT n = XFIXNUM (v1); 0 < n && CONSP (v2); n--)
+                  v2 = XCDR (v2);
+                if (CONSP (v2))
+                  TOP = XCAR (v2);
+                else if (NILP (v2))
+                  TOP = Qnil;
+                else
+                  {
+                    record_in_backtrace (Qnth, &TOP, 2);
+                    wrong_type_argument (Qlistp, v2);
+                  }
+              }
+            else
+              TOP = Fnth (v1, v2);
             NEXT;
           }
 

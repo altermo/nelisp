@@ -1993,6 +1993,7 @@ syms_of_data (void)
 
   DEFSYM (Qcar, "car");
   DEFSYM (Qcdr, "cdr");
+  DEFSYM (Qnth, "nth");
   DEFSYM (Qaref, "aref");
   DEFSYM (Qaset, "aset");
 
