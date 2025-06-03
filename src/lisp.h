@@ -81,6 +81,17 @@ c_isdigit (int c)
 // Taken from lib/verify.h
 #define _GL_VERIFY(R, DIAGNOSTIC, ...) _Static_assert (R, DIAGNOSTIC)
 #define verify(R) _GL_VERIFY (R, "verify (" #R ")", -)
+
+#define _GL_VERIFY_TYPE(R, DIAGNOSTIC) \
+  struct                               \
+  {                                    \
+    _Static_assert (R, DIAGNOSTIC);    \
+    int _gl_dummy;                     \
+  }
+#define _GL_VERIFY_TRUE(R, DIAGNOSTIC) \
+  (!!sizeof (_GL_VERIFY_TYPE (R, DIAGNOSTIC)))
+#define verify_expr(R, E) \
+  (_GL_VERIFY_TRUE (R, "verify_expr (" #R ", " #E ")") ? (E) : (E))
 // Taken from lib/intprops.h
 #define _GL_TYPE_SIGNED(t) (!((t) 0 < (t) - 1))
 #define _GL_TYPE_WIDTH(t) (sizeof (t) * CHAR_BIT)
@@ -158,7 +169,6 @@ extern void init_system_name (void);
 typedef bool bool_bf;
 #define FALLTHROUGH __attribute__ ((fallthrough))
 
-#define symbols_with_pos_enabled 1
 _Noreturn INLINE void
 emacs_abort (void)
 {
@@ -2210,6 +2220,7 @@ build_unibyte_string (const char *str)
   return make_unibyte_string (str, strlen (str));
 }
 INTERVAL make_interval (void);
+extern bool survives_gc_p (Lisp_Object);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -2276,6 +2287,8 @@ enum DEFAULT_HASH_SIZE
 };
 extern struct hash_table_test const hashtest_eq, hashtest_eql, hashtest_equal;
 extern Lisp_Object plist_put (Lisp_Object, Lisp_Object, Lisp_Object);
+extern void mark_fns (void);
+extern bool sweep_weak_table (struct Lisp_Hash_Table *, bool);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
@@ -2372,6 +2385,7 @@ extern void syms_of_charset (void);
 extern Lisp_Object char_table_ref (Lisp_Object, int);
 extern void init_charset_once (void);
 extern void init_charset (void);
+extern void mark_charset (void);
 
 extern void syms_of_chartab (void);
 extern void map_char_table (void (*) (Lisp_Object, Lisp_Object, Lisp_Object),

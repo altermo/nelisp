@@ -1033,6 +1033,13 @@ Optional third argument DEUNIFY, if non-nil, means to de-unify CHARSET.  */)
 }
 
 void
+mark_charset (void)
+{
+  for (int i = 0; i < charset_table_used; i++)
+    mark_object (charset_table[i].attributes);
+}
+
+void
 init_charset (void)
 {
   Lisp_Object tempdir;

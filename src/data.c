@@ -2156,4 +2156,10 @@ syms_of_data (void)
   defsubr (&Sash);
   defsubr (&Sadd1);
   defsubr (&Ssub1);
+
+  DEFSYM (Qsymbols_with_pos_enabled, "symbols-with-pos-enabled");
+  DEFVAR_BOOL ("symbols-with-pos-enabled", symbols_with_pos_enabled,
+               doc: /* If non-nil, a symbol with position ordinarily behaves as its bare symbol.
+Bind this to non-nil in applications such as the byte compiler.  */);
+  symbols_with_pos_enabled = false;
 }

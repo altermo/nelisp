@@ -37,6 +37,27 @@ set_specpdl_old_value (union specbinding *pdl, Lisp_Object val)
   pdl->let.old_value = val;
 }
 
+Lisp_Object
+backtrace_function (union specbinding *pdl)
+{
+  eassert (pdl->kind == SPECPDL_BACKTRACE);
+  return pdl->bt.function;
+}
+
+static ptrdiff_t
+backtrace_nargs (union specbinding *pdl)
+{
+  eassert (pdl->kind == SPECPDL_BACKTRACE);
+  return pdl->bt.nargs;
+}
+
+Lisp_Object *
+backtrace_args (union specbinding *pdl)
+{
+  eassert (pdl->kind == SPECPDL_BACKTRACE);
+  return pdl->bt.args;
+}
+
 void
 grow_specpdl_allocation (void)
 {
@@ -271,14 +292,25 @@ mark_specpdl (void)
         case SPECPDL_UNWIND_EXCURSION:
           TODO;
         case SPECPDL_BACKTRACE:
-          TODO;
+          {
+            ptrdiff_t nargs = backtrace_nargs (pdl);
+            mark_object (backtrace_function (pdl));
+            if (nargs == UNEVALLED)
+              nargs = 1;
+            mark_objects (backtrace_args (pdl), nargs);
+          }
+          break;
         case SPECPDL_LET_DEFAULT:
         case SPECPDL_LET_LOCAL:
           TODO;
         case SPECPDL_LET:
-          TODO;
+          mark_object (specpdl_symbol (pdl));
+          mark_object (specpdl_old_value (pdl));
+          break;
         case SPECPDL_UNWIND_PTR:
-          TODO;
+          if (pdl->unwind_ptr.mark)
+            pdl->unwind_ptr.mark (pdl->unwind_ptr.arg);
+          break;
         case SPECPDL_UNWIND_INT:
         case SPECPDL_UNWIND_INTMAX:
         case SPECPDL_UNWIND_VOID:

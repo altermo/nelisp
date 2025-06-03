@@ -1652,6 +1652,93 @@ hash_put (struct Lisp_Hash_Table *h, Lisp_Object key, Lisp_Object value,
   return i;
 }
 
+static inline bool
+keep_entry_p (hash_table_weakness_t weakness, bool strong_key,
+              bool strong_value)
+{
+  switch (weakness)
+    {
+    case Weak_None:
+      return true;
+    case Weak_Key:
+      return strong_key;
+    case Weak_Value:
+      return strong_value;
+    case Weak_Key_Or_Value:
+      return strong_key || strong_value;
+    case Weak_Key_And_Value:
+      return strong_key && strong_value;
+    }
+  emacs_abort ();
+}
+
+bool
+sweep_weak_table (struct Lisp_Hash_Table *h, bool remove_entries_p)
+{
+  ptrdiff_t n = hash_table_index_size (h);
+  bool marked = false;
+
+  for (ptrdiff_t bucket = 0; bucket < n; ++bucket)
+    {
+      ptrdiff_t prev = -1;
+      ptrdiff_t next;
+      for (ptrdiff_t i = HASH_INDEX (h, bucket); 0 <= i; i = next)
+        {
+          bool key_known_to_survive_p = survives_gc_p (HASH_KEY (h, i));
+          bool value_known_to_survive_p = survives_gc_p (HASH_VALUE (h, i));
+          bool remove_p = !keep_entry_p (h->weakness, key_known_to_survive_p,
+                                         value_known_to_survive_p);
+
+          next = HASH_NEXT (h, i);
+
+          if (remove_entries_p)
+            {
+              eassert (!remove_p
+                       == (key_known_to_survive_p && value_known_to_survive_p));
+              if (remove_p)
+                {
+                  if (prev < 0)
+                    set_hash_index_slot (h, bucket, next);
+                  else
+                    set_hash_next_slot (h, prev, next);
+
+                  set_hash_next_slot (h, i, h->next_free);
+                  h->next_free = i;
+
+                  set_hash_key_slot (h, i, HASH_UNUSED_ENTRY_KEY);
+                  set_hash_value_slot (h, i, Qnil);
+
+                  eassert (h->count != 0);
+                  h->count--;
+                }
+              else
+                {
+                  prev = i;
+                }
+            }
+          else
+            {
+              if (!remove_p)
+                {
+                  if (!key_known_to_survive_p)
+                    {
+                      mark_object (HASH_KEY (h, i));
+                      marked = true;
+                    }
+
+                  if (!value_known_to_survive_p)
+                    {
+                      mark_object (HASH_VALUE (h, i));
+                      marked = true;
+                    }
+                }
+            }
+        }
+    }
+
+  return marked;
+}
+
 DEFUN ("make-hash-table", Fmake_hash_table, Smake_hash_table, 0, MANY, 0,
        doc: /* Create and return a new hash table.
 
