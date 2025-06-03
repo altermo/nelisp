@@ -108,5 +108,9 @@ extern INTERVAL split_interval_left (INTERVAL interval, ptrdiff_t offset);
 extern void copy_properties (INTERVAL source, INTERVAL target);
 extern INTERVAL create_root_interval (Lisp_Object parent);
 extern INTERVAL find_interval (INTERVAL tree, ptrdiff_t position);
+extern INTERVAL balance_intervals (INTERVAL tree);
+extern void traverse_intervals_noorder (INTERVAL tree,
+                                        void (*function) (INTERVAL, void *),
+                                        void *arg);
 
 #endif

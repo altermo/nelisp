@@ -399,6 +399,25 @@ lisp_string_width (Lisp_Object string, ptrdiff_t from, ptrdiff_t to,
   return width;
 }
 
+ptrdiff_t
+multibyte_chars_in_text (const unsigned char *ptr, ptrdiff_t nbytes)
+{
+  const unsigned char *endp = ptr + nbytes;
+  ptrdiff_t chars = 0;
+
+  while (ptr < endp)
+    {
+      int len = multibyte_length (ptr, endp, true, true);
+
+      if (len == 0)
+        emacs_abort ();
+      ptr += len;
+      chars++;
+    }
+
+  return chars;
+}
+
 signed char const hexdigit[UCHAR_MAX + 1]
   = { ['0'] = 1 + 0,  ['1'] = 1 + 1,  ['2'] = 1 + 2,  ['3'] = 1 + 3,
       ['4'] = 1 + 4,  ['5'] = 1 + 5,  ['6'] = 1 + 6,  ['7'] = 1 + 7,

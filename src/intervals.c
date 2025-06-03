@@ -44,6 +44,23 @@ create_root_interval (Lisp_Object parent)
   return new;
 }
 
+void
+traverse_intervals_noorder (INTERVAL tree, void (*function) (INTERVAL, void *),
+                            void *arg)
+{
+  while (tree)
+    {
+      (*function) (tree, arg);
+      if (!tree->right)
+        tree = tree->left;
+      else
+        {
+          traverse_intervals_noorder (tree->left, function, arg);
+          tree = tree->right;
+        }
+    }
+}
+
 static INTERVAL
 rotate_right (INTERVAL A)
 {
@@ -180,6 +197,22 @@ balance_possible_root_interval (INTERVAL interval)
     }
 
   return interval;
+}
+
+static INTERVAL
+balance_intervals_internal (register INTERVAL tree)
+{
+  if (tree->left)
+    balance_intervals_internal (tree->left);
+  if (tree->right)
+    balance_intervals_internal (tree->right);
+  return balance_an_interval (tree);
+}
+
+INTERVAL
+balance_intervals (INTERVAL tree)
+{
+  return tree ? balance_intervals_internal (tree) : NULL;
 }
 
 INTERVAL

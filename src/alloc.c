@@ -77,6 +77,8 @@ static ptrdiff_t pure_bytes_used_lisp;
 static ptrdiff_t pure_bytes_used_non_lisp;
 
 static Lisp_Object make_pure_vector (ptrdiff_t);
+static bool interval_marked_p (INTERVAL);
+static void set_interval_marked (INTERVAL);
 
 enum mem_type
 {
@@ -581,6 +583,22 @@ make_interval (void)
   return val;
 }
 
+static void
+mark_interval_tree_1 (INTERVAL i, void *dummy)
+{
+  UNUSED (dummy);
+  eassert (!interval_marked_p (i));
+  set_interval_marked (i);
+  mark_object (i->plist);
+}
+
+static void
+mark_interval_tree (INTERVAL i)
+{
+  if (i && !interval_marked_p (i))
+    traverse_intervals_noorder (i, mark_interval_tree_1, NULL);
+}
+
 /* --- string allocation -- */
 
 enum
@@ -890,9 +908,7 @@ sweep_strings (void)
                 {
                   XUNMARK_STRING (s);
 
-#if TODO_NELISP_LATER_AND
                   s->u.s.intervals = balance_intervals (s->u.s.intervals);
-#endif
 
                   gcstat.total_strings++;
                   gcstat.total_string_bytes += STRING_BYTES (s);
@@ -994,7 +1010,8 @@ make_specified_string (const char *contents, ptrdiff_t nchars, ptrdiff_t nbytes,
     {
       if (multibyte)
         {
-          TODO;
+          nchars = multibyte_chars_in_text ((const unsigned char *) contents,
+                                            nbytes);
         }
       else
         nchars = nbytes;
@@ -1040,7 +1057,7 @@ make_string (const char *contents, ptrdiff_t nbytes)
   if (nbytes == nchars || nbytes != multibyte_nbytes)
     val = make_unibyte_string (contents, nbytes);
   else
-    TODO;
+    val = make_multibyte_string (contents, nchars, nbytes);
   return val;
 }
 
@@ -1567,8 +1584,12 @@ vectorlike_nbytes (const union vectorlike_header *hdr)
     {
       if (PSEUDOVECTOR_TYPEP (hdr, PVEC_BOOL_VECTOR))
         {
-          TODO;
-          nwords = 0;
+          struct Lisp_Bool_Vector *bv = (struct Lisp_Bool_Vector *) hdr;
+          ptrdiff_t word_bytes
+            = (bool_vector_words (bv->size) * sizeof (bits_word));
+          ptrdiff_t boolvec_bytes = bool_header_size + word_bytes;
+          verify (header_size <= bool_header_size);
+          nwords = (boolvec_bytes - header_size + word_size - 1) / word_size;
         }
       else
         return pseudovector_nbytes (hdr);
@@ -2040,6 +2061,20 @@ set_cons_marked (struct Lisp_Cons *c)
     pdumper_set_marked (c);
   else
     XMARK_CONS (c);
+}
+
+static bool
+interval_marked_p (INTERVAL i)
+{
+  return pdumper_object_p (i) ? pdumper_marked_p (i) : i->gcmarkbit;
+}
+static void
+set_interval_marked (INTERVAL i)
+{
+  if (pdumper_object_p (i))
+    pdumper_set_marked (i);
+  else
+    i->gcmarkbit = true;
 }
 
 /* --- c stack marking --- */
@@ -2643,8 +2678,8 @@ purecopy (Lisp_Object obj)
     TODO; // obj = make_pure_bignum (obj);
   else
     {
-      TODO; // AUTO_STRING (fmt, "Don't know how to purify: %S");
-            // Fsignal (Qerror, list1 (CALLN (Fformat, fmt, obj)));
+      AUTO_STRING (fmt, "Don't know how to purify: %S");
+      Fsignal (Qerror, list1 (CALLN (Fformat, fmt, obj)));
     }
 
   if (HASH_TABLE_P (Vpurify_flag))
@@ -2804,9 +2839,7 @@ process_mark_stack (ptrdiff_t base_sp)
               break;
             CHECK_ALLOCATED_AND_LIVE (live_string_p, MEM_TYPE_STRING);
             set_string_marked (ptr);
-#if TODO_NELISP_LATER_AND
             mark_interval_tree (ptr->u.s.intervals);
-#endif
           }
           break;
 
@@ -2907,9 +2940,7 @@ process_mark_stack (ptrdiff_t base_sp)
               }
             if (!PURE_P (XSTRING (ptr->u.s.name)))
               set_string_marked (XSTRING (ptr->u.s.name));
-#if TODO_NELISP_LATER_AND
             mark_interval_tree (string_intervals (ptr->u.s.name));
-#endif
             po = ptr = ptr->u.s.next;
             UNUSED (po);
             if (ptr)
