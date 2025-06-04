@@ -640,6 +640,10 @@ DEFUN ("use-global-map", Fuse_global_map, Suse_global_map, 1, 1, 0,
   return Qnil;
 }
 
+DEFUN ("current-global-map", Fcurrent_global_map, Scurrent_global_map, 0, 0, 0,
+       doc: /* Return the current global keymap.  */)
+(void) { return current_global_map; }
+
 void
 syms_of_keymap (void)
 {
@@ -677,4 +681,5 @@ syms_of_keymap (void)
   defsubr (&Smake_sparse_keymap);
   defsubr (&Sdefine_key);
   defsubr (&Suse_global_map);
+  defsubr (&Scurrent_global_map);
 }
