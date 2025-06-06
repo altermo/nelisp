@@ -160,6 +160,121 @@ in case you use it as a menu with `x-popup-menu'.  */)
   return list1 (Qkeymap);
 }
 
+static void
+map_keymap_item (map_keymap_function_t fun, Lisp_Object args, Lisp_Object key,
+                 Lisp_Object val, void *data)
+{
+  if (EQ (val, Qt))
+    val = Qnil;
+  (*fun) (key, val, args, data);
+}
+
+union map_keymap
+{
+  struct
+  {
+    map_keymap_function_t fun;
+    Lisp_Object args;
+    void *data;
+  } s;
+  GCALIGNED_UNION_MEMBER
+};
+
+static void
+map_keymap_char_table_item (Lisp_Object args, Lisp_Object key, Lisp_Object val)
+{
+  if (!NILP (val))
+    {
+      if (CONSP (key))
+        key = Fcons (XCAR (key), XCDR (key));
+      union map_keymap *md = XFIXNUMPTR (args);
+      map_keymap_item (md->s.fun, md->s.args, key, val, md->s.data);
+    }
+}
+
+static Lisp_Object
+map_keymap_internal (Lisp_Object map, map_keymap_function_t fun,
+                     Lisp_Object args, void *data)
+{
+  Lisp_Object tail
+    = (CONSP (map) && EQ (Qkeymap, XCAR (map))) ? XCDR (map) : map;
+
+  for (; CONSP (tail) && !EQ (Qkeymap, XCAR (tail)); tail = XCDR (tail))
+    {
+      Lisp_Object binding = XCAR (tail);
+
+      if (KEYMAPP (binding))
+        break;
+      else if (CONSP (binding))
+        map_keymap_item (fun, args, XCAR (binding), XCDR (binding), data);
+      else if (VECTORP (binding))
+        {
+          int len = ASIZE (binding);
+          int c;
+          for (c = 0; c < len; c++)
+            {
+              Lisp_Object character;
+              XSETFASTINT (character, c);
+              map_keymap_item (fun, args, character, AREF (binding, c), data);
+            }
+        }
+      else if (CHAR_TABLE_P (binding))
+        {
+          union map_keymap mapdata = { { fun, args, data } };
+          map_char_table (map_keymap_char_table_item, Qnil, binding,
+                          make_pointer_integer (&mapdata));
+        }
+    }
+
+  return tail;
+}
+
+static void
+map_keymap_call (Lisp_Object key, Lisp_Object val, Lisp_Object fun, void *dummy)
+{
+  call2 (fun, key, val);
+}
+
+void
+map_keymap (Lisp_Object map, map_keymap_function_t fun, Lisp_Object args,
+            void *data, bool autoload)
+{
+  map = get_keymap (map, 1, autoload);
+  while (CONSP (map))
+    {
+      if (KEYMAPP (XCAR (map)))
+        {
+          map_keymap (XCAR (map), fun, args, data, autoload);
+          map = XCDR (map);
+        }
+      else
+        map = map_keymap_internal (map, fun, args, data);
+      if (!CONSP (map))
+        map = get_keymap (map, 0, autoload);
+    }
+}
+
+DEFUN ("map-keymap", Fmap_keymap, Smap_keymap, 2, 3, 0,
+       doc: /* Call FUNCTION once for each event binding in KEYMAP.
+FUNCTION is called with two arguments: the event that is bound, and
+the definition it is bound to.  The event may be a character range.
+
+If KEYMAP has a parent, the parent's bindings are included as well.
+This works recursively: if the parent has itself a parent, then the
+grandparent's bindings are also included and so on.
+
+For more information, see Info node `(elisp) Keymaps'.
+
+usage: (map-keymap FUNCTION KEYMAP)  */)
+(Lisp_Object function, Lisp_Object keymap, Lisp_Object sort_first)
+{
+  if (!NILP (sort_first))
+    return call2 (Qmap_keymap_sorted, function, keymap);
+
+  map_keymap (keymap, map_keymap_call, function, NULL, 1);
+  return Qnil;
+}
+
 static Lisp_Object
 get_keyelt (Lisp_Object object, bool autoload)
 {
@@ -649,6 +764,7 @@ syms_of_keymap (void)
 {
   DEFSYM (Qkeymapp, "keymapp");
   DEFSYM (Qmenu_item, "menu-item");
+  DEFSYM (Qmap_keymap_sorted, "map-keymap-sorted");
 
   DEFSYM (Qkeymap, "keymap");
   Fput (Qkeymap, Qchar_table_extra_slots, make_fixnum (0));
@@ -679,6 +795,7 @@ syms_of_keymap (void)
   defsubr (&Sset_keymap_parent);
   defsubr (&Smake_keymap);
   defsubr (&Smake_sparse_keymap);
+  defsubr (&Smap_keymap);
   defsubr (&Sdefine_key);
   defsubr (&Suse_global_map);
   defsubr (&Scurrent_global_map);
