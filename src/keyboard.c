@@ -4,6 +4,29 @@
 
 EMACS_INT command_loop_level;
 
+bool
+lucid_event_type_list_p (Lisp_Object object)
+{
+  if (!CONSP (object))
+    return false;
+
+  if (EQ (XCAR (object), Qhelp_echo) || EQ (XCAR (object), Qvertical_line)
+      || EQ (XCAR (object), Qmode_line) || EQ (XCAR (object), Qtab_line)
+      || EQ (XCAR (object), Qheader_line))
+    return false;
+
+  Lisp_Object tail = object;
+  FOR_EACH_TAIL_SAFE (object)
+    {
+      Lisp_Object elt = XCAR (object);
+      if (!(FIXNUMP (elt) || SYMBOLP (elt)))
+        return false;
+      tail = XCDR (object);
+    }
+
+  return NILP (tail);
+}
+
 static Lisp_Object
 cmd_error (Lisp_Object data)
 {
@@ -441,6 +464,10 @@ init_keyboard (void)
 void
 syms_of_keyboard (void)
 {
+  DEFSYM (Qhelp_echo, "help-echo");
+
+  DEFSYM (Qvertical_line, "vertical-line");
+
   DEFSYM (QCfilter, ":filter");
 
   DEFSYM (Qevent_kind, "event-kind");

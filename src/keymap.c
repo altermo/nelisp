@@ -745,6 +745,79 @@ binding KEY to DEF is added at the front of KEYMAP.  */)
     }
 }
 
+static Lisp_Object
+lookup_key_1 (Lisp_Object keymap, Lisp_Object key, Lisp_Object accept_default)
+{
+  bool t_ok = !NILP (accept_default);
+
+  if (!CONSP (keymap) && !NILP (keymap))
+    keymap = get_keymap (keymap, true, true);
+
+  ptrdiff_t length = CHECK_VECTOR_OR_STRING (key);
+  if (length == 0)
+    return keymap;
+
+  key = possibly_translate_key_sequence (key, &length);
+
+  ptrdiff_t idx = 0;
+  while (1)
+    {
+      Lisp_Object c = Faref (key, make_fixnum (idx++));
+
+      if (CONSP (c) && lucid_event_type_list_p (c))
+        TODO; // c = Fevent_convert_list (c);
+
+      if (STRINGP (key) && XFIXNUM (c) & 0x80 && !STRING_MULTIBYTE (key))
+        XSETINT (c, (XFIXNUM (c) | meta_modifier) & ~0x80);
+
+      if (!FIXNUMP (c) && !SYMBOLP (c) && !CONSP (c) && !STRINGP (c))
+        TODO; // message_with_string ("Key sequence contains invalid event %s",
+              // c, 1);
+
+      Lisp_Object cmd = access_keymap (keymap, c, t_ok, 0, 1);
+      if (idx == length)
+        return cmd;
+
+      keymap = get_keymap (cmd, 0, 1);
+      if (!CONSP (keymap))
+        return make_fixnum (idx);
+
+      maybe_quit ();
+    }
+}
+
+DEFUN ("lookup-key", Flookup_key, Slookup_key, 2, 3, 0,
+       doc: /* Look up key sequence KEY in KEYMAP.  Return the definition.
+This is a legacy function; see `keymap-lookup' for the recommended
+function to use instead.
+
+A value of nil means undefined.  See doc of `define-key'
+for kinds of definitions.
+
+A number as value means KEY is "too long";
+that is, characters or symbols in it except for the last one
+fail to be a valid sequence of prefix characters in KEYMAP.
+The number is how many characters at the front of KEY
+it takes to reach a non-prefix key.
+KEYMAP can also be a list of keymaps.
+
+Normally, `lookup-key' ignores bindings for t, which act as default
+bindings, used when nothing else in the keymap applies; this makes it
+usable as a general function for probing keymaps.  However, if the
+third optional argument ACCEPT-DEFAULT is non-nil, `lookup-key' will
+recognize the default bindings, just as `read-key-sequence' does.  */)
+(Lisp_Object keymap, Lisp_Object key, Lisp_Object accept_default)
+{
+  Lisp_Object found = lookup_key_1 (keymap, key, accept_default);
+  if (!NILP (found) && !NUMBERP (found))
+    return found;
+
+  if (!VECTORP (key) || !(ASIZE (key) > 0) || !EQ (AREF (key, 0), Qmenu_bar))
+    return found;
+
+  TODO;
+}
+
 DEFUN ("use-global-map", Fuse_global_map, Suse_global_map, 1, 1, 0,
        doc: /* Select KEYMAP as the global keymap.  */)
 (Lisp_Object keymap)
@@ -767,6 +840,7 @@ syms_of_keymap (void)
   DEFSYM (Qmap_keymap_sorted, "map-keymap-sorted");
 
   DEFSYM (Qkeymap, "keymap");
+  DEFSYM (Qmode_line, "mode-line");
   Fput (Qkeymap, Qchar_table_extra_slots, make_fixnum (0));
 
   where_is_cache_keymaps = Qt;
@@ -790,6 +864,8 @@ syms_of_keymap (void)
 	       doc: /* Default keymap to use when reading from the minibuffer.  */);
   Vminibuffer_local_map = Fmake_sparse_keymap (Qnil);
 
+  DEFSYM (Qmenu_bar, "menu-bar");
+
   defsubr (&Skeymapp);
   defsubr (&Skeymap_parent);
   defsubr (&Sset_keymap_parent);
@@ -797,6 +873,7 @@ syms_of_keymap (void)
   defsubr (&Smake_sparse_keymap);
   defsubr (&Smap_keymap);
   defsubr (&Sdefine_key);
+  defsubr (&Slookup_key);
   defsubr (&Suse_global_map);
   defsubr (&Scurrent_global_map);
 }
