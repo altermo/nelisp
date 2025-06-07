@@ -698,7 +698,10 @@ binding KEY to DEF is added at the front of KEYMAP.  */)
 
       if (CONSP (c))
         {
-          TODO;
+          if (lucid_event_type_list_p (c))
+            c = Fevent_convert_list (c);
+          else if (CHARACTERP (XCAR (c)))
+            CHECK_CHARACTER_CDR (c);
         }
 
       if (SYMBOLP (c))

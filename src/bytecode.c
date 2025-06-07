@@ -867,23 +867,23 @@ setup_frame:;
 
         CASE (Bconcat2):
           DISCARD (1);
-          TODO; // TOP = Fconcat (2, &TOP);
+          TOP = Fconcat (2, &TOP);
           NEXT;
 
         CASE (Bconcat3):
           DISCARD (2);
-          TODO; // TOP = Fconcat (3, &TOP);
+          TOP = Fconcat (3, &TOP);
           NEXT;
 
         CASE (Bconcat4):
           DISCARD (3);
-          TODO; // TOP = Fconcat (4, &TOP);
+          TOP = Fconcat (4, &TOP);
           NEXT;
 
         CASE (BconcatN):
           op = FETCH;
           DISCARD (op - 1);
-          TODO; // TOP = Fconcat (op, &TOP);
+          TOP = Fconcat (op, &TOP);
           NEXT;
 
         CASE (Bsub1):
