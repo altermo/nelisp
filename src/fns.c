@@ -1004,6 +1004,179 @@ With one argument, just copy STRING (with properties, if any).  */)
   return res;
 }
 
+struct textprop_rec
+{
+  ptrdiff_t argnum;
+  ptrdiff_t to;
+};
+
+static Lisp_Object
+concat_to_string (ptrdiff_t nargs, Lisp_Object *args)
+{
+  USE_SAFE_ALLOCA;
+
+  EMACS_INT result_len = 0;
+  EMACS_INT result_len_byte = 0;
+  bool dest_multibyte = false;
+  bool some_unibyte = false;
+  for (ptrdiff_t i = 0; i < nargs; i++)
+    {
+      Lisp_Object arg = args[i];
+      EMACS_INT len;
+
+      if (STRINGP (arg))
+        {
+          ptrdiff_t arg_len_byte = SBYTES (arg);
+          len = SCHARS (arg);
+          if (STRING_MULTIBYTE (arg))
+            dest_multibyte = true;
+          else
+            some_unibyte = true;
+          if (STRING_BYTES_BOUND - result_len_byte < arg_len_byte)
+            string_overflow ();
+          result_len_byte += arg_len_byte;
+        }
+      else if (VECTORP (arg))
+        {
+          len = ASIZE (arg);
+          ptrdiff_t arg_len_byte = 0;
+          for (ptrdiff_t j = 0; j < len; j++)
+            {
+              Lisp_Object ch = AREF (arg, j);
+              CHECK_CHARACTER (ch);
+              int c = XFIXNAT (ch);
+              arg_len_byte += CHAR_BYTES (c);
+              if (!ASCII_CHAR_P (c) && !CHAR_BYTE8_P (c))
+                dest_multibyte = true;
+            }
+          if (STRING_BYTES_BOUND - result_len_byte < arg_len_byte)
+            string_overflow ();
+          result_len_byte += arg_len_byte;
+        }
+      else if (NILP (arg))
+        continue;
+      else if (CONSP (arg))
+        {
+          len = XFIXNAT (Flength (arg));
+          ptrdiff_t arg_len_byte = 0;
+          for (; CONSP (arg); arg = XCDR (arg))
+            {
+              Lisp_Object ch = XCAR (arg);
+              CHECK_CHARACTER (ch);
+              int c = XFIXNAT (ch);
+              arg_len_byte += CHAR_BYTES (c);
+              if (!ASCII_CHAR_P (c) && !CHAR_BYTE8_P (c))
+                dest_multibyte = true;
+            }
+          if (STRING_BYTES_BOUND - result_len_byte < arg_len_byte)
+            string_overflow ();
+          result_len_byte += arg_len_byte;
+        }
+      else
+        wrong_type_argument (Qsequencep, arg);
+
+      result_len += len;
+      if (MOST_POSITIVE_FIXNUM < result_len)
+        memory_full (SIZE_MAX);
+    }
+
+  if (dest_multibyte && some_unibyte)
+    {
+      for (ptrdiff_t i = 0; i < nargs; i++)
+        {
+          Lisp_Object arg = args[i];
+          if (STRINGP (arg) && !STRING_MULTIBYTE (arg))
+            {
+              ptrdiff_t bytes = SCHARS (arg);
+              const unsigned char *s = SDATA (arg);
+              ptrdiff_t nonascii = 0;
+              for (ptrdiff_t j = 0; j < bytes; j++)
+                nonascii += s[j] >> 7;
+              if (STRING_BYTES_BOUND - result_len_byte < nonascii)
+                string_overflow ();
+              result_len_byte += nonascii;
+            }
+        }
+    }
+
+  if (!dest_multibyte)
+    result_len_byte = result_len;
+
+  Lisp_Object result
+    = dest_multibyte
+        ? make_uninit_multibyte_string (result_len, result_len_byte)
+        : make_uninit_string (result_len);
+
+  ptrdiff_t toindex = 0;
+  ptrdiff_t toindex_byte = 0;
+
+  struct textprop_rec *textprops;
+  ptrdiff_t num_textprops = 0;
+  SAFE_NALLOCA (textprops, 1, nargs);
+
+  for (ptrdiff_t i = 0; i < nargs; i++)
+    {
+      Lisp_Object arg = args[i];
+      if (STRINGP (arg))
+        {
+          if (string_intervals (arg))
+            {
+              textprops[num_textprops].argnum = i;
+              textprops[num_textprops].to = toindex;
+              num_textprops++;
+            }
+          ptrdiff_t nchars = SCHARS (arg);
+          if (STRING_MULTIBYTE (arg) == dest_multibyte)
+            {
+              ptrdiff_t arg_len_byte = SBYTES (arg);
+              memcpy (SDATA (result) + toindex_byte, SDATA (arg), arg_len_byte);
+              toindex_byte += arg_len_byte;
+            }
+          else
+            {
+              toindex_byte += str_to_multibyte (SDATA (result) + toindex_byte,
+                                                SDATA (arg), nchars);
+            }
+          toindex += nchars;
+        }
+      else if (VECTORP (arg))
+        {
+          ptrdiff_t len = ASIZE (arg);
+          for (ptrdiff_t j = 0; j < len; j++)
+            {
+              int c = XFIXNAT (AREF (arg, j));
+              if (dest_multibyte)
+                toindex_byte += CHAR_STRING (c, SDATA (result) + toindex_byte);
+              else
+                SSET (result, toindex_byte++, c);
+              toindex++;
+            }
+        }
+      else
+        for (Lisp_Object tail = arg; !NILP (tail); tail = XCDR (tail))
+          {
+            int c = XFIXNAT (XCAR (tail));
+            if (dest_multibyte)
+              toindex_byte += CHAR_STRING (c, SDATA (result) + toindex_byte);
+            else
+              SSET (result, toindex_byte++, c);
+            toindex++;
+          }
+    }
+
+  if (num_textprops > 0)
+    {
+      ptrdiff_t last_to_end = -1;
+      for (ptrdiff_t i = 0; i < num_textprops; i++)
+        {
+          TODO;
+        }
+    }
+
+  SAFE_FREE ();
+  return result;
+}
+
 Lisp_Object
 concat_to_list (ptrdiff_t nargs, Lisp_Object *args, Lisp_Object last_tail)
 {
@@ -1172,6 +1345,16 @@ usage: (append &rest SEQUENCES)  */)
     return Qnil;
   return concat_to_list (nargs - 1, args, args[nargs - 1]);
 }
+
+DEFUN ("concat", Fconcat, Sconcat, 0, MANY, 0,
+       doc: /* Concatenate all the arguments and make the result a string.
+The result is a string whose elements are the elements of all the arguments.
+Each argument may be a string or a list or vector of characters (integers).
+
+Values of the `composition' property of the result are not guaranteed
+to be `eq'.
+usage: (concat &rest SEQUENCES)  */)
+(ptrdiff_t nargs, Lisp_Object *args) { return concat_to_string (nargs, args); }
 
 DEFUN ("vconcat", Fvconcat, Svconcat, 0, MANY, 0,
        doc: /* Concatenate all the arguments and make the result a vector.
@@ -2022,6 +2205,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sstring_to_multibyte);
   defsubr (&Ssubstring);
   defsubr (&Sappend);
+  defsubr (&Sconcat);
   defsubr (&Svconcat);
   defsubr (&Scopy_sequence);
   defsubr (&Smake_hash_table);

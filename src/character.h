@@ -113,6 +113,14 @@ CHECK_CHARACTER_CDR (Lisp_Object x)
 }
 
 INLINE int
+CHAR_BYTES (int c)
+{
+  return ((MAX_5_BYTE_CHAR < c ? -2 : 1) + (MAX_1_BYTE_CHAR < c)
+          + (MAX_2_BYTE_CHAR < c) + (MAX_3_BYTE_CHAR < c)
+          + (MAX_4_BYTE_CHAR < c));
+}
+
+INLINE int
 CHAR_LEADING_CODE (int c)
 {
   return (c <= MAX_1_BYTE_CHAR   ? c
