@@ -4,6 +4,120 @@
 
 EMACS_INT command_loop_level;
 
+int
+make_ctrl_char (int c)
+{
+  int upper = c & ~0177;
+
+  if (!ASCII_CHAR_P (c))
+    return c |= ctrl_modifier;
+
+  c &= 0177;
+
+  if (c >= 0100 && c < 0140)
+    {
+      int oc = c;
+      c &= ~0140;
+      if (oc >= 'A' && oc <= 'Z')
+        c |= shift_modifier;
+    }
+
+  else if (c >= 'a' && c <= 'z')
+    c &= ~0140;
+
+  else if (c >= ' ')
+    c |= ctrl_modifier;
+
+  c |= (upper & ~ctrl_modifier);
+
+  return c;
+}
+
+int
+parse_solitary_modifier (Lisp_Object symbol)
+{
+  Lisp_Object name;
+
+  if (!SYMBOLP (symbol))
+    return 0;
+
+  name = SYMBOL_NAME (symbol);
+
+  switch (SREF (name, 0))
+    {
+#define SINGLE_LETTER_MOD(BIT) \
+  if (SBYTES (name) == 1)      \
+    return BIT;
+
+#define MULTI_LETTER_MOD(BIT, NAME, LEN)                         \
+  if (LEN == SBYTES (name) && !memcmp (SDATA (name), NAME, LEN)) \
+    return BIT;
+
+    case 'A':
+      SINGLE_LETTER_MOD (alt_modifier);
+      break;
+
+    case 'a':
+      MULTI_LETTER_MOD (alt_modifier, "alt", 3);
+      break;
+
+    case 'C':
+      SINGLE_LETTER_MOD (ctrl_modifier);
+      break;
+
+    case 'c':
+      MULTI_LETTER_MOD (ctrl_modifier, "ctrl", 4);
+      MULTI_LETTER_MOD (ctrl_modifier, "control", 7);
+      MULTI_LETTER_MOD (click_modifier, "click", 5);
+      break;
+
+    case 'H':
+      SINGLE_LETTER_MOD (hyper_modifier);
+      break;
+
+    case 'h':
+      MULTI_LETTER_MOD (hyper_modifier, "hyper", 5);
+      break;
+
+    case 'M':
+      SINGLE_LETTER_MOD (meta_modifier);
+      break;
+
+    case 'm':
+      MULTI_LETTER_MOD (meta_modifier, "meta", 4);
+      break;
+
+    case 'S':
+      SINGLE_LETTER_MOD (shift_modifier);
+      break;
+
+    case 's':
+      MULTI_LETTER_MOD (shift_modifier, "shift", 5);
+      MULTI_LETTER_MOD (super_modifier, "super", 5);
+      SINGLE_LETTER_MOD (super_modifier);
+      break;
+
+    case 'd':
+      MULTI_LETTER_MOD (drag_modifier, "drag", 4);
+      MULTI_LETTER_MOD (down_modifier, "down", 4);
+      MULTI_LETTER_MOD (double_modifier, "double", 6);
+      break;
+
+    case 't':
+      MULTI_LETTER_MOD (triple_modifier, "triple", 6);
+      break;
+
+    case 'u':
+      MULTI_LETTER_MOD (up_modifier, "up", 2);
+      break;
+
+#undef SINGLE_LETTER_MOD
+#undef MULTI_LETTER_MOD
+    }
+
+  return 0;
+}
+
 bool
 lucid_event_type_list_p (Lisp_Object object)
 {
@@ -25,6 +139,61 @@ lucid_event_type_list_p (Lisp_Object object)
     }
 
   return NILP (tail);
+}
+
+DEFUN ("event-convert-list", Fevent_convert_list, Sevent_convert_list, 1, 1, 0,
+       doc: /* Convert the event description list EVENT-DESC to an event type.
+EVENT-DESC should contain one base event type (a character or symbol)
+and zero or more modifier names (control, meta, hyper, super, shift, alt,
+drag, down, double or triple).  The base must be last.
+
+The return value is an event type (a character or symbol) which has
+essentially the same base event type and all the specified modifiers.
+(Some compatibility base types, like symbols that represent a
+character, are not returned verbatim.)  */)
+(Lisp_Object event_desc)
+{
+  Lisp_Object base = Qnil;
+  int modifiers = 0;
+
+  FOR_EACH_TAIL_SAFE (event_desc)
+    {
+      Lisp_Object elt = XCAR (event_desc);
+      int this = 0;
+
+      if (SYMBOLP (elt) && CONSP (XCDR (event_desc)))
+        this = parse_solitary_modifier (elt);
+
+      if (this != 0)
+        modifiers |= this;
+      else if (!NILP (base))
+        error ("Two bases given in one event");
+      else
+        base = elt;
+    }
+
+  if (SYMBOLP (base) && SCHARS (SYMBOL_NAME (base)) == 1)
+    XSETINT (base, SREF (SYMBOL_NAME (base), 0));
+
+  if (FIXNUMP (base))
+    {
+      if ((modifiers & shift_modifier) != 0
+          && (XFIXNUM (base) >= 'a' && XFIXNUM (base) <= 'z'))
+        {
+          XSETINT (base, XFIXNUM (base) - ('a' - 'A'));
+          modifiers &= ~shift_modifier;
+        }
+
+      if (modifiers & ctrl_modifier)
+        return make_fixnum ((modifiers & ~ctrl_modifier)
+                            | make_ctrl_char (XFIXNUM (base)));
+      else
+        return make_fixnum (modifiers | XFIXNUM (base));
+    }
+  else if (SYMBOLP (base))
+    TODO; // return apply_modifiers (modifiers, base);
+  else
+    error ("Invalid base event");
 }
 
 static Lisp_Object
@@ -487,6 +656,7 @@ syms_of_keyboard (void)
     staticpro (&modifier_symbols);
   }
 
+  defsubr (&Sevent_convert_list);
   defsubr (&Srecursive_edit);
 
   DEFVAR_LISP ("meta-prefix-char", meta_prefix_char,
