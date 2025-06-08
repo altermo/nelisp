@@ -966,6 +966,21 @@ usage: (propertize STRING &rest PROPERTIES)  */)
   return string;
 }
 
+DEFUN ("char-to-string", Fchar_to_string, Schar_to_string, 1, 1, 0,
+       doc: /* Convert arg CHAR to a string containing that character.
+usage: (char-to-string CHAR)  */)
+(Lisp_Object character)
+{
+  int c, len;
+  unsigned char str[MAX_MULTIBYTE_LENGTH];
+
+  CHECK_CHARACTER (character);
+  c = XFIXNAT (character);
+
+  len = CHAR_STRING (c, str);
+  return make_string_from_bytes ((char *) str, 1, len);
+}
+
 void
 syms_of_editfns (void)
 {
@@ -994,4 +1009,5 @@ it to be non-nil.  */);
   defsubr (&Sformat);
   defsubr (&Sformat_message);
   defsubr (&Spropertize);
+  defsubr (&Schar_to_string);
 }
