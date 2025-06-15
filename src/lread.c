@@ -3,6 +3,7 @@
 #include "lisp.h"
 #include "character.h"
 #include "coding.h"
+#include "termhooks.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -1117,7 +1118,13 @@ again:;
 
   while (ncontrol > 0)
     {
-      TODO;
+      if ((chr >= '@' && chr <= '_') || (chr >= 'a' && chr <= 'z'))
+        chr &= 0x1f;
+      else if (chr == '?')
+        chr = 127;
+      else
+        modifiers |= ctrl_modifier;
+      ncontrol--;
     }
 
   return chr | modifiers;
