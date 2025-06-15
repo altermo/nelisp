@@ -3158,7 +3158,7 @@ analyze_first_fastmap (const re_char *p, void *arg)
 
       if (/* Any leading code can possibly start a character
              which doesn't match the specified set of characters.  */
-          not||
+          not ||
           /* If we can match a character class, we can match any
              multibyte characters.  */
           (CHARSET_RANGE_TABLE_EXISTS_P (&p[-2])
@@ -3174,7 +3174,7 @@ analyze_first_fastmap (const re_char *p, void *arg)
             }
         }
 
-      else if (!not&&CHARSET_RANGE_TABLE_EXISTS_P (&p[-2])
+      else if (!not && CHARSET_RANGE_TABLE_EXISTS_P (&p[-2])
                && data->match_any_multibyte_characters == false)
         {
           /* Set fastmap[I] to 1 where I is a leading code of each
@@ -4961,7 +4961,7 @@ re_match_2_internal (struct re_pattern_buffer *bufp, re_char *string1,
         case notwordbound:
           {
             bool not = (re_opcode_t) * (p - 1) == notwordbound;
-            DEBUG_PRINT ("EXECUTING %swordbound.\n", not? "not" : "");
+            DEBUG_PRINT ("EXECUTING %swordbound.\n", not ? "not" : "");
 
             /* We SUCCEED (or FAIL) in one of the following cases: */
 
@@ -5039,7 +5039,8 @@ re_match_2_internal (struct re_pattern_buffer *bufp, re_char *string1,
           {
             bool not = (re_opcode_t) * (p - 1) == notsyntaxspec;
             mcnt = *p++;
-            DEBUG_PRINT ("EXECUTING %ssyntaxspec %d.\n", not? "not" : "", mcnt);
+            DEBUG_PRINT ("EXECUTING %ssyntaxspec %d.\n", not ? "not" : "",
+                         mcnt);
             PREFETCH ();
             {
               TODO;
@@ -5069,7 +5070,7 @@ re_match_2_internal (struct re_pattern_buffer *bufp, re_char *string1,
           {
             bool not = (re_opcode_t) * (p - 1) == notcategoryspec;
             mcnt = *p++;
-            DEBUG_PRINT ("EXECUTING %scategoryspec %d.\n", not? "not" : "",
+            DEBUG_PRINT ("EXECUTING %scategoryspec %d.\n", not ? "not" : "",
                          mcnt);
             PREFETCH ();
 
