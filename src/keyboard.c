@@ -663,4 +663,12 @@ syms_of_keyboard (void)
                doc: /* Meta-prefix character code.
 Meta-foo as command input turns into this character followed by foo.  */);
   XSETINT (meta_prefix_char, 033);
+
+  DEFVAR_LISP ("function-key-map", Vfunction_key_map,
+               doc: /* The parent keymap of all `local-function-key-map' instances.
+Function key definitions that apply to all terminal devices should go
+here.  If a mapping is defined in both the current
+`local-function-key-map' binding and this variable, then the local
+definition will take precedence.  */);
+  Vfunction_key_map = Fmake_sparse_keymap (Qnil);
 }
