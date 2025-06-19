@@ -141,6 +141,113 @@ lucid_event_type_list_p (Lisp_Object object)
   return NILP (tail);
 }
 
+static Lisp_Object
+apply_modifiers_uncached (int modifiers, char *base, int base_len,
+                          int base_len_byte)
+{
+  char new_mods[sizeof "A-C-H-M-S-s-up-down-drag-double-triple-"];
+  int mod_len;
+
+  {
+    char *p = new_mods;
+
+    if (modifiers & alt_modifier)
+      {
+        *p++ = 'A';
+        *p++ = '-';
+      }
+    if (modifiers & ctrl_modifier)
+      {
+        *p++ = 'C';
+        *p++ = '-';
+      }
+    if (modifiers & hyper_modifier)
+      {
+        *p++ = 'H';
+        *p++ = '-';
+      }
+    if (modifiers & meta_modifier)
+      {
+        *p++ = 'M';
+        *p++ = '-';
+      }
+    if (modifiers & shift_modifier)
+      {
+        *p++ = 'S';
+        *p++ = '-';
+      }
+    if (modifiers & super_modifier)
+      {
+        *p++ = 's';
+        *p++ = '-';
+      }
+    if (modifiers & double_modifier)
+      p = stpcpy (p, "double-");
+    if (modifiers & triple_modifier)
+      p = stpcpy (p, "triple-");
+    if (modifiers & up_modifier)
+      p = stpcpy (p, "up-");
+    if (modifiers & down_modifier)
+      p = stpcpy (p, "down-");
+    if (modifiers & drag_modifier)
+      p = stpcpy (p, "drag-");
+
+    *p = '\0';
+
+    mod_len = p - new_mods;
+  }
+
+  {
+    Lisp_Object new_name;
+
+    new_name = make_uninit_multibyte_string (mod_len + base_len,
+                                             mod_len + base_len_byte);
+    memcpy (SDATA (new_name), new_mods, mod_len);
+    memcpy (SDATA (new_name) + mod_len, base, base_len_byte);
+
+    return Fintern (new_name, Qnil);
+  }
+}
+
+static Lisp_Object
+apply_modifiers (int modifiers, Lisp_Object base)
+{
+  Lisp_Object cache, idx, entry, new_symbol;
+
+  modifiers &= INTMASK;
+
+  if (FIXNUMP (base))
+    return make_fixnum (XFIXNUM (base) | modifiers);
+
+  cache = Fget (base, Qmodifier_cache);
+  XSETFASTINT (idx, (modifiers & ~click_modifier));
+  entry = assq_no_quit (idx, cache);
+
+  if (CONSP (entry))
+    new_symbol = XCDR (entry);
+  else
+    {
+      new_symbol
+        = apply_modifiers_uncached (modifiers, SSDATA (SYMBOL_NAME (base)),
+                                    SCHARS (SYMBOL_NAME (base)),
+                                    SBYTES (SYMBOL_NAME (base)));
+
+      entry = Fcons (idx, new_symbol);
+      Fput (base, Qmodifier_cache, Fcons (entry, cache));
+    }
+
+  if (NILP (Fget (new_symbol, Qevent_kind)))
+    {
+      Lisp_Object kind;
+
+      kind = Fget (base, Qevent_kind);
+      if (!NILP (kind))
+        Fput (new_symbol, Qevent_kind, kind);
+    }
+
+  return new_symbol;
+}
+
 DEFUN ("event-convert-list", Fevent_convert_list, Sevent_convert_list, 1, 1, 0,
        doc: /* Convert the event description list EVENT-DESC to an event type.
 EVENT-DESC should contain one base event type (a character or symbol)
@@ -191,7 +298,7 @@ character, are not returned verbatim.)  */)
         return make_fixnum (modifiers | XFIXNUM (base));
     }
   else if (SYMBOLP (base))
-    TODO; // return apply_modifiers (modifiers, base);
+    return apply_modifiers (modifiers, base);
   else
     error ("Invalid base event");
 }
@@ -447,74 +554,6 @@ parse_modifiers_uncached (Lisp_Object symbol, ptrdiff_t *modifier_end)
   return modifiers;
 }
 
-static Lisp_Object
-apply_modifiers_uncached (int modifiers, char *base, int base_len,
-                          int base_len_byte)
-{
-  char new_mods[sizeof "A-C-H-M-S-s-up-down-drag-double-triple-"];
-  int mod_len;
-
-  {
-    char *p = new_mods;
-
-    if (modifiers & alt_modifier)
-      {
-        *p++ = 'A';
-        *p++ = '-';
-      }
-    if (modifiers & ctrl_modifier)
-      {
-        *p++ = 'C';
-        *p++ = '-';
-      }
-    if (modifiers & hyper_modifier)
-      {
-        *p++ = 'H';
-        *p++ = '-';
-      }
-    if (modifiers & meta_modifier)
-      {
-        *p++ = 'M';
-        *p++ = '-';
-      }
-    if (modifiers & shift_modifier)
-      {
-        *p++ = 'S';
-        *p++ = '-';
-      }
-    if (modifiers & super_modifier)
-      {
-        *p++ = 's';
-        *p++ = '-';
-      }
-    if (modifiers & double_modifier)
-      p = stpcpy (p, "double-");
-    if (modifiers & triple_modifier)
-      p = stpcpy (p, "triple-");
-    if (modifiers & up_modifier)
-      p = stpcpy (p, "up-");
-    if (modifiers & down_modifier)
-      p = stpcpy (p, "down-");
-    if (modifiers & drag_modifier)
-      p = stpcpy (p, "drag-");
-
-    *p = '\0';
-
-    mod_len = p - new_mods;
-  }
-
-  {
-    Lisp_Object new_name;
-
-    new_name = make_uninit_multibyte_string (mod_len + base_len,
-                                             mod_len + base_len_byte);
-    memcpy (SDATA (new_name), new_mods, mod_len);
-    memcpy (SDATA (new_name) + mod_len, base, base_len_byte);
-
-    return Fintern (new_name, Qnil);
-  }
-}
-
 static const char *const modifier_names[]
   = { "up", "down", "drag", "click", "double", "triple", 0,         0,     0, 0,
       0,    0,      0,      0,       0,        0,        0,         0,     0, 0,
@@ -574,45 +613,6 @@ parse_modifiers (Lisp_Object symbol)
 
       return elements;
     }
-}
-
-static Lisp_Object
-apply_modifiers (int modifiers, Lisp_Object base)
-{
-  Lisp_Object cache, idx, entry, new_symbol;
-
-  modifiers &= INTMASK;
-
-  if (FIXNUMP (base))
-    return make_fixnum (XFIXNUM (base) | modifiers);
-
-  cache = Fget (base, Qmodifier_cache);
-  XSETFASTINT (idx, (modifiers & ~click_modifier));
-  entry = assq_no_quit (idx, cache);
-
-  if (CONSP (entry))
-    new_symbol = XCDR (entry);
-  else
-    {
-      new_symbol
-        = apply_modifiers_uncached (modifiers, SSDATA (SYMBOL_NAME (base)),
-                                    SCHARS (SYMBOL_NAME (base)),
-                                    SBYTES (SYMBOL_NAME (base)));
-
-      entry = Fcons (idx, new_symbol);
-      Fput (base, Qmodifier_cache, Fcons (entry, cache));
-    }
-
-  if (NILP (Fget (new_symbol, Qevent_kind)))
-    {
-      Lisp_Object kind;
-
-      kind = Fget (base, Qevent_kind);
-      if (!NILP (kind))
-        Fput (new_symbol, Qevent_kind, kind);
-    }
-
-  return new_symbol;
 }
 
 Lisp_Object

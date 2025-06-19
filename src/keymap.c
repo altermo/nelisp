@@ -686,7 +686,16 @@ binding KEY to DEF is added at the front of KEYMAP.  */)
 
   if (VECTORP (def) && ASIZE (def) > 0 && CONSP (AREF (def, 0)))
     {
-      TODO;
+      Lisp_Object tmp = make_nil_vector (ASIZE (def));
+      ptrdiff_t i = ASIZE (def);
+      while (--i >= 0)
+        {
+          Lisp_Object defi = AREF (def, i);
+          if (CONSP (defi) && lucid_event_type_list_p (defi))
+            defi = Fevent_convert_list (defi);
+          ASET (tmp, i, defi);
+        }
+      def = tmp;
     }
 
   key = possibly_translate_key_sequence (key, &length);
