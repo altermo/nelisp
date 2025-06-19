@@ -418,6 +418,18 @@ multibyte_chars_in_text (const unsigned char *ptr, ptrdiff_t nbytes)
   return chars;
 }
 
+DEFUN ("characterp", Fcharacterp, Scharacterp, 1, 2, 0,
+       doc: /* Return non-nil if OBJECT is a character.
+In Emacs Lisp, characters are represented by character codes, which
+are non-negative integers.  The function `max-char' returns the
+maximum character code.
+usage: (characterp OBJECT)  */
+       attributes: const)
+(Lisp_Object object, Lisp_Object ignore)
+{
+  return (CHARACTERP (object) ? Qt : Qnil);
+}
+
 signed char const hexdigit[UCHAR_MAX + 1]
   = { ['0'] = 1 + 0,  ['1'] = 1 + 1,  ['2'] = 1 + 2,  ['3'] = 1 + 3,
       ['4'] = 1 + 4,  ['5'] = 1 + 5,  ['6'] = 1 + 6,  ['7'] = 1 + 7,
@@ -432,4 +444,6 @@ syms_of_character (void)
 
   staticpro (&Vchar_unify_table);
   Vchar_unify_table = Qnil;
+
+  defsubr (&Scharacterp);
 }
