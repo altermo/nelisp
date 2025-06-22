@@ -593,6 +593,14 @@ store_in_keymap (Lisp_Object keymap, register Lisp_Object idx, Lisp_Object def,
   return def;
 }
 
+void
+initial_define_lispy_key (Lisp_Object keymap, const char *keyname,
+                          const char *defname)
+{
+  store_in_keymap (keymap, intern_c_string (keyname), intern_c_string (defname),
+                   false);
+}
+
 static Lisp_Object
 define_as_prefix (Lisp_Object keymap, Lisp_Object c)
 {

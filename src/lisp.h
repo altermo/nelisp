@@ -2368,6 +2368,7 @@ extern void syms_of_keyboard (void);
 extern void init_keyboard (void);
 extern Lisp_Object parse_modifiers (Lisp_Object symbol);
 extern Lisp_Object reorder_modifiers (Lisp_Object);
+extern void keys_of_keyboard (void);
 
 extern void syms_of_editfns (void);
 

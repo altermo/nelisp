@@ -1,4 +1,5 @@
 #include "lisp.h"
+#include "keymap.h"
 #include "lua.h"
 #include "termhooks.h"
 
@@ -671,4 +672,40 @@ here.  If a mapping is defined in both the current
 `local-function-key-map' binding and this variable, then the local
 definition will take precedence.  */);
   Vfunction_key_map = Fmake_sparse_keymap (Qnil);
+
+  DEFVAR_LISP ("special-event-map", Vspecial_event_map,
+        doc: /* Keymap defining bindings for special events to execute at low level.  */);
+  Vspecial_event_map = list1 (Qkeymap);
+}
+
+void
+keys_of_keyboard (void)
+{
+  initial_define_lispy_key (Vspecial_event_map, "delete-frame",
+                            "handle-delete-frame");
+  initial_define_lispy_key (Vspecial_event_map, "ns-put-working-text",
+                            "ns-put-working-text");
+  initial_define_lispy_key (Vspecial_event_map, "ns-unput-working-text",
+                            "ns-unput-working-text");
+  initial_define_lispy_key (Vspecial_event_map, "iconify-frame", "ignore");
+  initial_define_lispy_key (Vspecial_event_map, "make-frame-visible", "ignore");
+  initial_define_lispy_key (Vspecial_event_map, "save-session",
+                            "handle-save-session");
+#ifdef THREADS_ENABLED
+  initial_define_lispy_key (Vspecial_event_map, "thread-event",
+                            "thread-handle-event");
+#endif
+
+#ifdef USE_FILE_NOTIFY
+  initial_define_lispy_key (Vspecial_event_map, "file-notify",
+                            "file-notify-handle-event");
+#endif
+  initial_define_lispy_key (Vspecial_event_map, "config-changed-event",
+                            "ignore");
+
+  initial_define_lispy_key (Vspecial_event_map, "focus-in", "handle-focus-in");
+  initial_define_lispy_key (Vspecial_event_map, "focus-out",
+                            "handle-focus-out");
+  initial_define_lispy_key (Vspecial_event_map, "move-frame",
+                            "handle-move-frame");
 }
