@@ -1518,6 +1518,11 @@ sxhash_obj (Lisp_Object obj, int depth)
 EMACS_UINT
 sxhash (Lisp_Object obj) { return sxhash_obj (obj, 0); }
 
+DEFUN ("secure-hash-algorithms", Fsecure_hash_algorithms,
+       Ssecure_hash_algorithms, 0, 0, 0,
+       doc: /* Return a list of all the supported `secure-hash' algorithms. */)
+(void) { return list (Qmd5, Qsha1, Qsha224, Qsha256, Qsha384, Qsha512); }
+
 /* --- hash table -- */
 static void
 CHECK_HASH_TABLE (Lisp_Object x)
@@ -2149,6 +2154,13 @@ FILENAME are suppressed.  */)
 void
 syms_of_fns (void)
 {
+  DEFSYM (Qmd5,    "md5");
+  DEFSYM (Qsha1,   "sha1");
+  DEFSYM (Qsha224, "sha224");
+  DEFSYM (Qsha256, "sha256");
+  DEFSYM (Qsha384, "sha384");
+  DEFSYM (Qsha512, "sha512");
+
   DEFSYM (Qhash_table_p, "hash-table-p");
   DEFSYM (Qeq, "eq");
   DEFSYM (Qeql, "eql");
@@ -2208,6 +2220,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sconcat);
   defsubr (&Svconcat);
   defsubr (&Scopy_sequence);
+  defsubr (&Ssecure_hash_algorithms);
   defsubr (&Smake_hash_table);
   defsubr (&Sgethash);
   defsubr (&Sputhash);
