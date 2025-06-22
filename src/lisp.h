@@ -2464,6 +2464,8 @@ set_string_intervals (Lisp_Object s, INTERVAL i)
 
 extern void syms_of_xfaces (void);
 
+extern void syms_of_window (void);
+
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)
 {
