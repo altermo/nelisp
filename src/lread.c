@@ -2353,6 +2353,8 @@ void
 init_lread (void)
 {
   load_in_progress = 0;
+
+  Vload_file_name = Qnil;
 }
 
 void
@@ -2402,6 +2404,14 @@ Initialized during startup as described in Info node `(elisp)Library Search'.
 Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
 and without trailing slashes.  */);
+
+  DEFVAR_LISP ("load-file-name", Vload_file_name,
+        doc: /* Full name of file being loaded by `load'.
+
+In case of native code being loaded this is indicating the
+corresponding bytecode filename.  Use `load-true-file-name' to obtain
+the .eln filename.  */);
+  Vload_file_name = Qnil;
 
   DEFVAR_LISP ("byte-boolean-vars", Vbyte_boolean_vars,
         doc: /* List of all DEFVAR_BOOL variables, used by the byte code optimizer.  */);
