@@ -1602,6 +1602,19 @@ lexbound_p (Lisp_Object symbol)
   return false;
 }
 
+DEFUN ("default-toplevel-value", Fdefault_toplevel_value, Sdefault_toplevel_value, 1, 1, 0,
+       doc: /* Return SYMBOL's toplevel default value.
+"Toplevel" means outside of any let binding.  */)
+(Lisp_Object symbol)
+{
+  union specbinding *binding = default_toplevel_binding (symbol);
+  Lisp_Object value
+    = binding ? specpdl_old_value (binding) : Fdefault_value (symbol);
+  if (!BASE_EQ (value, Qunbound))
+    return value;
+  xsignal1 (Qvoid_variable, symbol);
+}
+
 DEFUN ("set-default-toplevel-value", Fset_default_toplevel_value,
        Sset_default_toplevel_value, 2, 2, 0,
        doc: /* Set SYMBOL's toplevel default value to VALUE.
@@ -2132,6 +2145,7 @@ alist of active lexical bindings.  */);
   defsubr (&Sfuncall);
   defsubr (&Ssetq);
   defsubr (&Slet);
+  defsubr (&Sdefault_toplevel_value);
   defsubr (&Sset_default_toplevel_value);
   defsubr (&Sinternal__define_uninitialized_variable);
   defsubr (&Sdefvar);
