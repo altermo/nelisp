@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -11,6 +12,21 @@ int
 sys_faccessat (int fd, const char *pathname, int mode, int flags)
 {
   return faccessat (fd, pathname, mode, flags);
+}
+
+_Noreturn void
+emacs_abort (void)
+{
+  TODO;
+  __builtin_unreachable ();
+}
+int
+emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
+{
+  int r;
+  while ((r = fstatat (dirfd, filename, st, flags)) != 0 && errno == EINTR)
+    maybe_quit ();
+  return r;
 }
 
 #define POSIX_CLOSE_RESTART 1

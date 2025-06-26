@@ -2,7 +2,6 @@
 #define EMACS_LISP_H
 
 #include <alloca.h>
-#include <errno.h>
 #include <float.h>
 #include <ieee754.h>
 #include <inttypes.h>
@@ -22,6 +21,8 @@
 #include <luajit-2.1/lauxlib.h>
 #include <luajit-2.1/lua.h>
 
+#include "config.h"
+
 static inline _Noreturn void TODO_ (const char *file, int line);
 
 extern lua_State *_global_lua_state;
@@ -35,7 +36,7 @@ extern bool unrecoverable_error;
   (void) (sizeof (struct { int static_error___##msg##__ : ((expr) ? 1 : -1); }))
 
 // LSP being anyoing about them existing and not existing, so just define them
-// here
+// here // TODO: lsp HACK
 #ifndef LONG_WIDTH
 # define LONG_WIDTH __LONG_WIDTH__
 # define ULONG_WIDTH __LONG_WIDTH__
@@ -51,8 +52,6 @@ extern bool unrecoverable_error;
 # define UINTMAX_WIDTH 64
 #endif
 
-#define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
-static void maybe_quit (void);
 // Taken from lib/c-ctypes.h
 #define _GL_INLINE extern inline
 #define C_CTYPE_INLINE _GL_INLINE
@@ -78,7 +77,9 @@ c_isdigit (int c)
       return false;
     }
 }
+
 // Taken from lib/verify.h
+#define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
 #define _GL_VERIFY(R, DIAGNOSTIC, ...) _Static_assert (R, DIAGNOSTIC)
 #define verify(R) _GL_VERIFY (R, "verify (" #R ")", -)
 
@@ -92,6 +93,7 @@ c_isdigit (int c)
   (!!sizeof (_GL_VERIFY_TYPE (R, DIAGNOSTIC)))
 #define verify_expr(R, E) \
   (_GL_VERIFY_TRUE (R, "verify_expr (" #R ", " #E ")") ? (E) : (E))
+
 // Taken from lib/intprops.h
 #define _GL_TYPE_SIGNED(t) (!((t) 0 < (t) - 1))
 #define _GL_TYPE_WIDTH(t) (sizeof (t) * CHAR_BIT)
@@ -126,83 +128,6 @@ c_isdigit (int c)
   INT_LEFT_SHIFT_RANGE_OVERFLOW (a, b, _GL_INT_MINIMUM (a), _GL_INT_MAXIMUM (a))
 #define INT_LEFT_SHIFT_RANGE_OVERFLOW(a, b, min, max) \
   ((a) < 0 ? (a) < (min) >> (b) : (max) >> (b) < (a))
-// Taken from sysdep.c
-static inline int
-emacs_fstatat (int dirfd, char const *filename, void *st, int flags)
-{
-  int r;
-  while ((r = fstatat (dirfd, filename, st, flags)) != 0 && errno == EINTR)
-    maybe_quit ();
-  return r;
-}
-extern void init_system_name (void);
-// Taken from config.h
-#define ATTRIBUTE_FORMAT_PRINTF(string_index, first_to_check) \
-  __attribute__ ((__format__ (__printf__, string_index, first_to_check)))
-#define DIRECTORY_SEP '/'
-#define IS_DIRECTORY_SEP(_c_) ((_c_) == DIRECTORY_SEP)
-#define IS_ANY_SEP(_c_) (IS_DIRECTORY_SEP (_c_))
-#define IS_DEVICE_SEP(_c_) 0
-#define PACKAGE_VERSION "30.1"
-#if defined __linux__
-# define SYSTEM_TYPE "gnu/linux"
-#else
-# error "TODO: Unknown system type"
-#endif
-// Taken from conf_post.h
-#ifdef lint
-# define UNINIT \
-   = {          \
-     0,         \
-   }
-#else
-# define UNINIT
-#endif
-#define INLINE EXTERN_INLINE
-#define EXTERN_INLINE static inline __attribute__ ((unused))
-#define NO_INLINE __attribute__ ((__noinline__))
-#define FLEXIBLE_ARRAY_MEMBER /**/
-#define FLEXALIGNOF(type) (sizeof (type) & ~(sizeof (type) - 1))
-#define FLEXSIZEOF(type, member, n)                         \
-  ((offsetof (type, member) + FLEXALIGNOF (type) - 1 + (n)) \
-   & ~(FLEXALIGNOF (type) - 1))
-typedef bool bool_bf;
-#define FALLTHROUGH __attribute__ ((fallthrough))
-
-_Noreturn INLINE void
-emacs_abort (void)
-{
-  TODO;
-  __builtin_unreachable ();
-}
-
-INLINE bool
-pdumper_object_p (const void *obj)
-{
-  UNUSED (obj);
-  TODO_NELISP_LATER;
-  return false;
-}
-INLINE bool
-pdumper_marked_p (const void *obj)
-{
-  UNUSED (obj);
-  TODO_NELISP_LATER;
-  return false;
-}
-INLINE void
-pdumper_set_marked (const void *obj)
-{
-  UNUSED (obj);
-  TODO_NELISP_LATER;
-}
-INLINE bool
-pdumper_cold_object_p (const void *obj)
-{
-  UNUSED (obj);
-  TODO_NELISP_LATER;
-  return false;
-}
 
 //! IMPORTANT: just to get things started, a lot of things will be presumed
 //! (like 64-bit ptrs) or not optimized
@@ -2392,6 +2317,9 @@ extern int emacs_open (char const *file, int oflags, int mode);
 extern FILE *emacs_fdopen (int fd, const char *mode);
 #define emacs_fclose fclose
 extern int sys_faccessat (int, const char *, int, int);
+extern void init_system_name (void);
+extern int emacs_fstatat (int dirfd, char const *filename, void *st, int flags);
+extern _Noreturn void emacs_abort (void);
 
 extern void syms_of_bytecode (void);
 void init_bytecode (void);

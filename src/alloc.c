@@ -5,6 +5,7 @@
 #include "character.h"
 #include "intervals.h"
 #include "lua.h"
+#include "pdumper.h"
 #include "puresize.h"
 
 #define USE_ALIGNED_ALLOC 1
