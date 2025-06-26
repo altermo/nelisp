@@ -1,6 +1,5 @@
 local env={
     memtbl=setmetatable({},{__mode='v'}),
-    buftbl=setmetatable({},{__mode='k'}),
 }
 
 local path
@@ -20,6 +19,5 @@ local M=vim.defaulttable(function (k)
 end)
 
 M._memtbl=env.memtbl
-M._buftbl=env.buftbl
 
 return M

@@ -76,36 +76,40 @@ nvim_bufid_to_bufobj (long bufid)
   Lisp_Object obj;
   LUA (10)
   {
-    lua_getfield (L, LUA_ENVIRONINDEX, "buftbl");
-    eassert (lua_istable (L, -1));
-    // buftbl
     push_vim_b (L, bufid);
-    // buftbl, vim.b
+    // vim.b
     lua_getfield (L, -1, "nelisp_reference");
-    // buftbl, vim.b, nil/nelisp_reference
+    // vim.b, nil/nelisp_reference
     if (!lua_isnil (L, -1))
       {
         eassert (lua_isfunction (L, -1));
-        lua_gettable (L, -3);
-        // buftbl, vim.b, userdata
+        // vim.b, nelisp_reference
+        lua_getfenv (L, -1);
+        // vim.b, nelisp_reference, fenv
+        lua_rawgeti (L, -1, 1);
+        eassert (lua_isuserdata (L, -1));
+        // vim.b, nelisp_reference, fenv, obj
         obj = userdata_to_obj (L, -1);
-        lua_pop (L, 1);
-        goto done;
+        lua_pop (L, 4);
+        return obj;
       }
     lua_pop (L, 1);
-    // buftbl, vim.b
+    // vim.b
     luaL_dostring (L, "return function() end");
-    // buftbl, vim.b, nelisp_reference
+    // vim.b, nelisp_reference
     lua_pushvalue (L, -1);
-    // buftbl, vim.b, nelisp_reference, nelisp_reference
+    // vim.b, nelisp_reference, nelisp_reference
     lua_setfield (L, -3, "nelisp_reference");
-    // buftbl, vim.b, nelisp_reference
+    // vim.b, nelisp_reference
+    lua_createtable (L, 1, 0);
+    // vim.b, nelisp_reference, fenv
     obj = create_buffer (bufid);
     push_obj (L, obj);
-    // buftbl, vim.b, nelisp_reference, obj
-    lua_settable (L, -4);
-  done:
-    // buftbl, vim.b
+    // vim.b, nelisp_reference, fenv, obj
+    lua_rawseti (L, -2, 1);
+    // vim.b, nelisp_reference, fenv
+    lua_setfenv (L, -2);
+    // vim.b, nelisp_reference
     lua_pop (L, 2);
   }
   return obj;
