@@ -7,7 +7,7 @@ all:
 	[ Makefile -nt compile_commands.json ] && intercept-build make nelisp || make nelisp
 
 nelisp: doc
-	$(CC) src/link.c -lluajit-5.1 -shared -o nelisp.so -Wall -Wextra -Werror -pedantic -Wimplicit-fallthrough -Wno-sign-compare -Wno-unused-variable -Wno-unused-parameter $(CFLAGS) -fvisibility=hidden -fPIC -std=gnu17 -lgmp
+	$(CC) src/link.c -lluajit-5.1 -shared -o nelisp.so -Wall -Wextra -Werror -pedantic -Wimplicit-fallthrough -Wno-sign-compare -Wno-unused-variable -Wno-unused-parameter $(CFLAGS) -fvisibility=hidden -fPIC -std=gnu17 -lgmp -I./lib
 
 doc:
 	./lua/nelisp/scripts/makedoc.lua src/lua.c lua/nelisp/_c_meta.lua src src/globals.h src/link.c

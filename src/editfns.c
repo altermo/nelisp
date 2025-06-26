@@ -2,6 +2,8 @@
 #include "buffer.h"
 #include "character.h"
 
+#include <c-ctype.h>
+
 static Lisp_Object cached_system_name;
 
 static void

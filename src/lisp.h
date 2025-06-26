@@ -16,6 +16,9 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <intprops.h>
+#include <verify.h>
+
 #include <threads.h>
 
 #include <luajit-2.1/lauxlib.h>
@@ -52,83 +55,6 @@ extern bool unrecoverable_error;
 # define UINTMAX_WIDTH 64
 #endif
 
-// Taken from lib/c-ctypes.h
-#define _GL_INLINE extern inline
-#define C_CTYPE_INLINE _GL_INLINE
-#define _C_CTYPE_DIGIT \
-case '0':              \
-case '1':              \
-case '2':              \
-case '3':              \
-case '4':              \
-case '5':              \
-case '6':              \
-case '7':              \
-case '8':              \
-case '9'
-C_CTYPE_INLINE bool
-c_isdigit (int c)
-{
-  switch (c)
-    {
-    _C_CTYPE_DIGIT:
-      return true;
-    default:
-      return false;
-    }
-}
-
-// Taken from lib/verify.h
-#define assume(R) ((R) ? (void) 0 : __builtin_unreachable ())
-#define _GL_VERIFY(R, DIAGNOSTIC, ...) _Static_assert (R, DIAGNOSTIC)
-#define verify(R) _GL_VERIFY (R, "verify (" #R ")", -)
-
-#define _GL_VERIFY_TYPE(R, DIAGNOSTIC) \
-  struct                               \
-  {                                    \
-    _Static_assert (R, DIAGNOSTIC);    \
-    int _gl_dummy;                     \
-  }
-#define _GL_VERIFY_TRUE(R, DIAGNOSTIC) \
-  (!!sizeof (_GL_VERIFY_TYPE (R, DIAGNOSTIC)))
-#define verify_expr(R, E) \
-  (_GL_VERIFY_TRUE (R, "verify_expr (" #R ", " #E ")") ? (E) : (E))
-
-// Taken from lib/intprops.h
-#define _GL_TYPE_SIGNED(t) (!((t) 0 < (t) - 1))
-#define _GL_TYPE_WIDTH(t) (sizeof (t) * CHAR_BIT)
-#define TYPE_SIGNED(t) _GL_TYPE_SIGNED (t)
-#define TYPE_WIDTH(t) _GL_TYPE_WIDTH (t)
-#define TYPE_MINIMUM(t) ((t) ~TYPE_MAXIMUM (t))
-#define TYPE_MAXIMUM(t)            \
-  ((t) (!TYPE_SIGNED (t) ? (t) - 1 \
-                         : ((((t) 1 << (TYPE_WIDTH (t) - 2)) - 1) * 2 + 1)))
-#define _GL_INT_NEGATE_CONVERT(e, v) ((1 ? 0 : (e)) - (v))
-#define _GL_EXPR_SIGNED(e) (_GL_INT_NEGATE_CONVERT (e, 1) < 0)
-#if !defined(__clang__)
-// TODO: remove this HACK
-# define EXPR_SIGNED(e) ((typeof (e)) (-1) < (typeof (e)) (0))
-#else
-# define EXPR_SIGNED(e) _GL_EXPR_SIGNED (e)
-#endif
-#define _GL_SIGNED_TYPE_OR_EXPR(t) _GL_TYPE_SIGNED (__typeof__ (t))
-#define INT_BITS_STRLEN_BOUND(b) (((b) * 146 + 484) / 485)
-#define INT_STRLEN_BOUND(t)                                             \
-  (INT_BITS_STRLEN_BOUND (TYPE_WIDTH (t) - _GL_SIGNED_TYPE_OR_EXPR (t)) \
-   + _GL_SIGNED_TYPE_OR_EXPR (t))
-#define _GL_INT_CONVERT(e, v) ((1 ? 0 : (e)) + (v))
-#define _GL_INT_MINIMUM(e) \
-  (_GL_EXPR_SIGNED (e) ? ~_GL_SIGNED_INT_MAXIMUM (e) : _GL_INT_CONVERT (e, 0))
-#define _GL_SIGNED_INT_MAXIMUM(e) \
-  (((_GL_INT_CONVERT (e, 1) << (_GL_TYPE_WIDTH (+(e)) - 2)) - 1) * 2 + 1)
-#define _GL_INT_MAXIMUM(e)                          \
-  (_GL_EXPR_SIGNED (e) ? _GL_SIGNED_INT_MAXIMUM (e) \
-                       : _GL_INT_NEGATE_CONVERT (e, 1))
-#define INT_LEFT_SHIFT_OVERFLOW(a, b) \
-  INT_LEFT_SHIFT_RANGE_OVERFLOW (a, b, _GL_INT_MINIMUM (a), _GL_INT_MAXIMUM (a))
-#define INT_LEFT_SHIFT_RANGE_OVERFLOW(a, b, min, max) \
-  ((a) < 0 ? (a) < (min) >> (b) : (max) >> (b) < (a))
-
 //! IMPORTANT: just to get things started, a lot of things will be presumed
 //! (like 64-bit ptrs) or not optimized
 
@@ -159,6 +85,7 @@ enum
 {
   BITS_PER_BITS_WORD = SIZE_WIDTH
 };
+verify (BITS_WORD_MAX >> (BITS_PER_BITS_WORD - 1) == 1);
 #define pD "t"
 #define AVOID _Noreturn void
 #define eassert(cond) (cond ? (void) 0 : TODO)
@@ -178,6 +105,7 @@ enum Lisp_Bits
 #define GCALIGNMENT 8
 #define GCALIGNED_UNION_MEMBER char alignas (GCALIGNMENT) gcaligned;
 #define GCALIGNED_STRUCT
+#define GCALIGNED(type) (alignof (type) % GCALIGNMENT == 0)
 #if !(EMACS_INT_MAX == INTPTR_MAX)
 # error "TODO"
 #endif
@@ -326,6 +254,7 @@ struct Lisp_Symbol
     GCALIGNED_UNION_MEMBER
   } u;
 };
+verify (GCALIGNED (struct Lisp_Symbol));
 #define EXFUN(fnname, maxargs) extern Lisp_Object fnname DEFUN_ARGS_##maxargs
 #define DEFUN_ARGS_MANY (ptrdiff_t, Lisp_Object *)
 #define DEFUN_ARGS_UNEVALLED (Lisp_Object)
@@ -647,6 +576,7 @@ struct Lisp_Cons
     GCALIGNED_UNION_MEMBER
   } u;
 };
+verify (GCALIGNED (struct Lisp_Cons));
 INLINE bool (NILP) (Lisp_Object x) { return lisp_h_NILP (x); }
 INLINE void
 CHECK_CONS (Lisp_Object x)
@@ -723,6 +653,7 @@ struct Lisp_String
     GCALIGNED_UNION_MEMBER
   } u;
 };
+verify (GCALIGNED (struct Lisp_String));
 INLINE bool
 STRINGP (Lisp_Object x)
 {
@@ -1108,6 +1039,7 @@ union Aligned_Lisp_Subr
   struct Lisp_Subr s;
   GCALIGNED_UNION_MEMBER
 };
+verify (GCALIGNED (union Aligned_Lisp_Subr));
 INLINE bool
 SUBRP (Lisp_Object a)
 {
@@ -1128,6 +1060,11 @@ enum char_table_specials
   SUB_CHAR_TABLE_OFFSET
   = PSEUDOVECSIZE (struct Lisp_Sub_Char_Table, contents) - 1
 };
+verify (offsetof (struct Lisp_Char_Table, defalt) == header_size);
+verify (offsetof (struct Lisp_Char_Table, extras)
+        == header_size + CHAR_TABLE_STANDARD_SLOTS * sizeof (Lisp_Object));
+verify (offsetof (struct Lisp_Sub_Char_Table, contents)
+        == header_size + SUB_CHAR_TABLE_OFFSET * sizeof (Lisp_Object));
 INLINE int
 CHAR_TABLE_EXTRA_SLOTS (struct Lisp_Char_Table *ct)
 {
@@ -1449,6 +1386,7 @@ struct Lisp_Float
     GCALIGNED_UNION_MEMBER
   } u;
 };
+verify (GCALIGNED (struct Lisp_Float));
 INLINE struct Lisp_Float *
 XFLOAT (Lisp_Object a)
 {
