@@ -1,16 +1,28 @@
 CC=gcc
 
-CFLAGS=
+WFLAGS= -Wall -Wextra -Werror -pedantic
+WEFLAGS= -Wimplicit-fallthrough -Wno-sign-compare -Wno-unused-variable -Wno-unused-parameter
+LFLAGS= -lgmp -lluajit-5.1 -I./lib
+OFLAGS= -fvisibility=hidden -fPIC -std=gnu17 -fno-sanitize=undefined
+CFLAGS= $(WFLAGS) $(WEFLAGS) $(LFLAGS) $(OFLAGS)
+
+SOURCES := $(wildcard src/*.c)
 
 all:
 	which jq >/dev/null && test $$(jq length compile_commands.json) = 0 && rm compile_commands.json || true
-	[ Makefile -nt compile_commands.json ] && intercept-build make nelisp || make nelisp
+	[ Makefile -nt compile_commands.json ] && intercept-build make nelisp || make nelisp.so
 
-nelisp: doc
-	$(CC) src/link.c -lluajit-5.1 -shared -o nelisp.so -Wall -Wextra -Werror -pedantic -Wimplicit-fallthrough -Wno-sign-compare -Wno-unused-variable -Wno-unused-parameter $(CFLAGS) -fvisibility=hidden -fPIC -std=gnu17 -lgmp -I./lib
+nelisp.so: src/globals.h $(SOURCES)
+	make nelisp
+
+nelisp: src/globals.h $(SOURCES)
+	$(CC) $(SOURCES) $(CFLAGS) -shared -o nelisp.so
+
+src/globals.h: $(SOURCES)
+	make doc
 
 doc:
-	./lua/nelisp/scripts/makedoc.lua src/lua.c lua/nelisp/_c_meta.lua src src/globals.h src/link.c
+	./lua/nelisp/scripts/makedoc.lua src/lua.c lua/nelisp/_c_meta.lua src src/globals.h
 
 format:
 	clang-format src/*.c src/*.h -i --style=file
