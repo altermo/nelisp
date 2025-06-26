@@ -12,6 +12,9 @@ all:
 	which jq >/dev/null && test $$(jq length compile_commands.json) = 0 && rm compile_commands.json || true
 	[ Makefile -nt compile_commands.json ] && intercept-build make nelisp || make nelisp.so
 
+fast: src/globals.h
+	echo $(SOURCES)|sed 's/src\/\([^ ]*\)/\n#include "\1"/g'|$(CC) -xc - $(CFLAGS) -I./src -shared -o nelisp.so
+
 nelisp.so: src/globals.h $(SOURCES)
 	make nelisp
 
