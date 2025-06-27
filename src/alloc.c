@@ -3719,6 +3719,8 @@ init_alloc_once (void)
 void
 syms_of_alloc (void)
 {
+  DEFSYM (Qmemory_info, "memory-info");
+
   DEFSYM (Qconses, "conses");
   DEFSYM (Qsymbols, "symbols");
   DEFSYM (Qstrings, "strings");
@@ -3728,6 +3730,12 @@ syms_of_alloc (void)
   DEFSYM (Qbuffers, "buffers");
   DEFSYM (Qstring_bytes, "string-bytes");
   DEFSYM (Qvector_slots, "vector-slots");
+  DEFSYM (Qheap, "heap");
+  DEFSYM (QAutomatic_GC, "Automatic GC");
+
+  DEFSYM (Qgc_cons_percentage, "gc-cons-percentage");
+  DEFSYM (Qgc_cons_threshold, "gc-cons-threshold");
+  DEFSYM (Qchar_table_extra_slots, "char-table-extra-slots");
 
   DEFVAR_INT ("pure-bytes-used", pure_bytes_used,
                 doc: /* Number of bytes of shareable Lisp data allocated so far.  */);
