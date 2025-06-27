@@ -11,6 +11,13 @@ syms_of_emacs (void)
 {
   DEFSYM (Qfile_name_handler_alist, "file-name-handler-alist");
   DEFSYM (Qrisky_local_variable, "risky-local-variable");
+  DEFSYM (Qkill_emacs, "kill-emacs");
+  DEFSYM (Qkill_emacs_hook, "kill-emacs-hook");
+  DEFSYM (Qrun_hook_query_error_with_timeout,
+    "run-hook-query-error-with-timeout");
+  DEFSYM (Qfile_truename, "file-truename");
+  DEFSYM (Qcommand_line_processed, "command-line-processed");
+  DEFSYM (Qsafe_magic, "safe-magic");
 
   DEFVAR_LISP ("command-line-args", Vcommand_line_args,
                  doc: /* Args passed by shell to Emacs, as a list of strings.
