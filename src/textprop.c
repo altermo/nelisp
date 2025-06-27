@@ -310,5 +310,20 @@ Return t if any property value actually changed, nil otherwise.  */)
 void
 syms_of_textprop (void)
 {
+  DEFSYM (Qfont, "font");
+  DEFSYM (Qface, "face");
+  DEFSYM (Qread_only, "read-only");
+  DEFSYM (Qinvisible, "invisible");
+  DEFSYM (Qintangible, "intangible");
+  DEFSYM (Qcategory, "category");
+  DEFSYM (Qlocal_map, "local-map");
+  DEFSYM (Qfront_sticky, "front-sticky");
+  DEFSYM (Qrear_nonsticky, "rear-nonsticky");
+  DEFSYM (Qmouse_face, "mouse-face");
+  DEFSYM (Qminibuffer_prompt, "minibuffer-prompt");
+
+  DEFSYM (Qpoint_left, "point-left");
+  DEFSYM (Qpoint_entered, "point-entered");
+
   defsubr (&Sadd_text_properties);
 }
