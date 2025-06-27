@@ -1421,6 +1421,28 @@ the same empty object instead of its copy.  */)
   wrong_type_argument (Qsequencep, arg);
 }
 
+DEFUN ("copy-alist", Fcopy_alist, Scopy_alist, 1, 1, 0,
+       doc: /* Return a copy of ALIST.
+This is an alist which represents the same mapping from objects to objects,
+but does not share the alist structure with ALIST.
+The objects mapped (cars and cdrs of elements of the alist)
+are shared, however.
+Elements of ALIST that are not conses are also shared.  */)
+(Lisp_Object alist)
+{
+  CHECK_LIST (alist);
+  if (NILP (alist))
+    return alist;
+  alist = Fcopy_sequence (alist);
+  for (Lisp_Object tem = alist; !NILP (tem); tem = XCDR (tem))
+    {
+      Lisp_Object car = XCAR (tem);
+      if (CONSP (car))
+        XSETCAR (tem, Fcons (XCAR (car), XCDR (car)));
+    }
+  return alist;
+}
+
 #define SXHASH_MAX_DEPTH 3
 #define SXHASH_MAX_LEN 7
 static EMACS_UINT sxhash_obj (Lisp_Object, int);
@@ -2220,6 +2242,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sconcat);
   defsubr (&Svconcat);
   defsubr (&Scopy_sequence);
+  defsubr (&Scopy_alist);
   defsubr (&Ssecure_hash_algorithms);
   defsubr (&Smake_hash_table);
   defsubr (&Sgethash);
