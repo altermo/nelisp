@@ -25,6 +25,97 @@ enum xlfd_field
 
 static int font_sort_order[4];
 
+#define check_lface(lface) (void) 0
+
+static Lisp_Object
+resolve_face_name (Lisp_Object face_name, bool signal_p)
+{
+  Lisp_Object orig_face;
+  Lisp_Object tortoise, hare;
+
+  if (STRINGP (face_name))
+    face_name = Fintern (face_name, Qnil);
+
+  if (NILP (face_name) || !SYMBOLP (face_name))
+    return face_name;
+
+  orig_face = face_name;
+  tortoise = hare = face_name;
+
+  while (true)
+    {
+      face_name = hare;
+      hare = Fget (hare, Qface_alias);
+      if (NILP (hare) || !SYMBOLP (hare))
+        break;
+
+      face_name = hare;
+      hare = Fget (hare, Qface_alias);
+      if (NILP (hare) || !SYMBOLP (hare))
+        break;
+
+      tortoise = Fget (tortoise, Qface_alias);
+      if (BASE_EQ (hare, tortoise))
+        {
+          if (signal_p)
+            circular_list (orig_face);
+          return Qdefault;
+        }
+    }
+
+  return face_name;
+}
+
+static Lisp_Object
+lface_from_face_name_no_resolve (struct frame *f, Lisp_Object face_name,
+                                 bool signal_p)
+{
+  Lisp_Object lface;
+
+  if (f)
+    TODO; // lface = Fgethash (face_name, f->face_hash_table, Qnil);
+  else
+    lface = CDR (Fgethash (face_name, Vface_new_frame_defaults, Qnil));
+
+  if (signal_p && NILP (lface))
+    signal_error ("Invalid face", face_name);
+
+  check_lface (lface);
+
+  return lface;
+}
+
+static Lisp_Object
+lface_from_face_name (struct frame *f, Lisp_Object face_name, bool signal_p)
+{
+  face_name = resolve_face_name (face_name, signal_p);
+  return lface_from_face_name_no_resolve (f, face_name, signal_p);
+}
+
+DEFUN ("internal-lisp-face-p", Finternal_lisp_face_p,
+       Sinternal_lisp_face_p, 1, 2, 0,
+       doc: /* Return non-nil if FACE names a face.
+FACE should be a symbol or string.
+If optional second argument FRAME is non-nil, check for the
+existence of a frame-local face with name FACE on that frame.
+Otherwise check for the existence of a global face.  */)
+(Lisp_Object face, Lisp_Object frame)
+{
+  Lisp_Object lface;
+
+  face = resolve_face_name (face, true);
+
+  if (!NILP (frame))
+    {
+      TODO; // CHECK_LIVE_FRAME (frame);
+      // lface = lface_from_face_name (XFRAME (frame), face, false);
+    }
+  else
+    lface = lface_from_face_name (NULL, face, false);
+
+  return lface;
+}
+
 void
 free_all_realized_faces (Lisp_Object frame)
 {
@@ -252,7 +343,13 @@ syms_of_xfaces (void)
   Vface_alternative_font_registry_alist = Qnil;
   staticpro (&Vface_alternative_font_registry_alist);
 
+  defsubr (&Sinternal_lisp_face_p);
   defsubr (&Sinternal_set_font_selection_order);
   defsubr (&Sinternal_set_alternative_font_family_alist);
   defsubr (&Sinternal_set_alternative_font_registry_alist);
+
+  DEFVAR_LISP ("face--new-frame-defaults", Vface_new_frame_defaults,
+    doc: /* Hash table of global face definitions (for internal use only.)  */);
+  Vface_new_frame_defaults
+    = make_hash_table (&hashtest_eq, 33, Weak_None, false);
 }
