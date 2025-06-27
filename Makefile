@@ -15,13 +15,13 @@ all:
 fast: src/globals.h
 	echo $(SOURCES)|sed 's/src\/\([^ ]*\)/\n#include "\1"/g'|$(CC) -xc - $(CFLAGS) -I./src -shared -o nelisp.so
 
-nelisp.so: src/globals.h
+nelisp.so: src/globals.h $(SOURCES)
 	make nelisp
 
 nelisp: src/globals.h
 	$(CC) $(SOURCES) $(CFLAGS) -shared -o nelisp.so
 
-src/globals.h:
+src/globals.h: $(SOURCES)
 	make doc
 
 doc:
