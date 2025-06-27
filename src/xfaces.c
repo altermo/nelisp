@@ -1,6 +1,9 @@
 #include "lisp.h"
 #include "font.h"
 
+Lisp_Object Vface_alternative_font_family_alist;
+Lisp_Object Vface_alternative_font_registry_alist;
+
 enum xlfd_field
 {
   XLFD_FOUNDRY,
@@ -21,6 +24,12 @@ enum xlfd_field
 };
 
 static int font_sort_order[4];
+
+void
+free_all_realized_faces (Lisp_Object frame)
+{
+  TODO_NELISP_LATER;
+}
 
 DEFUN ("internal-set-font-selection-order",
        Finternal_set_font_selection_order,
@@ -73,14 +82,67 @@ Value is ORDER.  */)
   if (memcmp (indices, font_sort_order, sizeof indices) != 0)
     {
       memcpy (font_sort_order, indices, sizeof font_sort_order);
-#if TODO_NELISP_LATER_AND
       free_all_realized_faces (Qnil);
-#endif
     }
 
   font_update_sort_order (font_sort_order);
 
   return Qnil;
+}
+
+DEFUN ("internal-set-alternative-font-family-alist",
+       Finternal_set_alternative_font_family_alist,
+       Sinternal_set_alternative_font_family_alist, 1, 1, 0,
+       doc: /* Define alternative font families to try in face font selection.
+ALIST is an alist of (FAMILY ALTERNATIVE1 ALTERNATIVE2 ...) entries.
+Each ALTERNATIVE is tried in order if no fonts of font family FAMILY can
+be found.  Value is ALIST.  */)
+(Lisp_Object alist)
+{
+  Lisp_Object entry, tail, tail2;
+
+  CHECK_LIST (alist);
+  alist = Fcopy_sequence (alist);
+  for (tail = alist; CONSP (tail); tail = XCDR (tail))
+    {
+      entry = XCAR (tail);
+      CHECK_LIST (entry);
+      entry = Fcopy_sequence (entry);
+      XSETCAR (tail, entry);
+      for (tail2 = entry; CONSP (tail2); tail2 = XCDR (tail2))
+        XSETCAR (tail2, Fintern (XCAR (tail2), Qnil));
+    }
+
+  Vface_alternative_font_family_alist = alist;
+  free_all_realized_faces (Qnil);
+  return alist;
+}
+
+DEFUN ("internal-set-alternative-font-registry-alist",
+       Finternal_set_alternative_font_registry_alist,
+       Sinternal_set_alternative_font_registry_alist, 1, 1, 0,
+       doc: /* Define alternative font registries to try in face font selection.
+ALIST is an alist of (REGISTRY ALTERNATIVE1 ALTERNATIVE2 ...) entries.
+Each ALTERNATIVE is tried in order if no fonts of font registry REGISTRY can
+be found.  Value is ALIST.  */)
+(Lisp_Object alist)
+{
+  Lisp_Object entry, tail, tail2;
+
+  CHECK_LIST (alist);
+  alist = Fcopy_sequence (alist);
+  for (tail = alist; CONSP (tail); tail = XCDR (tail))
+    {
+      entry = XCAR (tail);
+      CHECK_LIST (entry);
+      entry = Fcopy_sequence (entry);
+      XSETCAR (tail, entry);
+      for (tail2 = entry; CONSP (tail2); tail2 = XCDR (tail2))
+        XSETCAR (tail2, Fdowncase (XCAR (tail2)));
+    }
+  Vface_alternative_font_registry_alist = alist;
+  free_all_realized_faces (Qnil);
+  return alist;
 }
 
 void
@@ -185,5 +247,12 @@ syms_of_xfaces (void)
   DEFSYM (Qtty_color_alist, "tty-color-alist");
   DEFSYM (Qtty_defined_color_alist, "tty-defined-color-alist");
 
+  Vface_alternative_font_family_alist = Qnil;
+  staticpro (&Vface_alternative_font_family_alist);
+  Vface_alternative_font_registry_alist = Qnil;
+  staticpro (&Vface_alternative_font_registry_alist);
+
   defsubr (&Sinternal_set_font_selection_order);
+  defsubr (&Sinternal_set_alternative_font_family_alist);
+  defsubr (&Sinternal_set_alternative_font_registry_alist);
 }
