@@ -1,6 +1,19 @@
 #include "lisp.h"
 #include "disptab.h"
 
+DEFUN ("documentation-stringp", Fdocumentation_stringp, Sdocumentation_stringp,
+       1, 1, 0,
+       doc: /* Return non-nil if OBJECT is a well-formed docstring object.
+OBJECT can be either a string or a reference if it's kept externally.  */)
+(Lisp_Object object)
+{
+  return (STRINGP (object) || FIXNUMP (object)
+              || (CONSP (object) && STRINGP (XCAR (object))
+                  && FIXNUMP (XCDR (object)))
+            ? Qt
+            : Qnil);
+}
+
 static bool
 default_to_grave_quoting_style (void)
 {
@@ -67,5 +80,6 @@ compute the correct value for the current terminal in the nil case.  */);
   DEFVAR_BOOL ("internal--text-quoting-flag", text_quoting_flag,
         doc: /* If nil, a nil `text-quoting-style' is treated as `grave'.  */);
 
+  defsubr (&Sdocumentation_stringp);
   defsubr (&Stext_quoting_style);
 }
