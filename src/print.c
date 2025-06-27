@@ -5,6 +5,8 @@
 #include "character.h"
 #include "lua.h"
 
+#include <c-ctype.h>
+
 static ptrdiff_t print_depth;
 
 #define PRINT_CIRCLE 200
@@ -462,7 +464,46 @@ print_obj:
       break;
 
     case Lisp_Symbol:
-      TODO;
+      {
+        Lisp_Object name = SYMBOL_NAME (obj);
+        ptrdiff_t size_byte = SBYTES (name);
+
+        char *p = SSDATA (name);
+        bool signedp = *p == '-' || *p == '+';
+        ptrdiff_t len;
+        bool confusing
+          = ((c_isdigit (p[signedp]) || p[signedp] == '.')
+             && !NILP (string_to_number (p, 10, &len)) && len == size_byte)
+            || *p == '?' || *p == '.';
+
+        if (!NILP (Vprint_gensym)
+            && !SYMBOL_INTERNED_IN_INITIAL_OBARRAY_P (obj))
+          print_c_string ("#:", printcharfun);
+        else if (size_byte == 0)
+          {
+            print_c_string ("##", printcharfun);
+            break;
+          }
+
+        ptrdiff_t i = 0;
+        for (ptrdiff_t i_byte = 0; i_byte < size_byte;)
+          {
+            int c = fetch_string_char_advance (name, &i, &i_byte);
+            maybe_quit ();
+
+            if (escapeflag)
+              {
+                if (c == '\"' || c == '\\' || c == '\'' || c == ';' || c == '#'
+                    || c == '(' || c == ')' || c == ',' || c == '`' || c == '['
+                    || c == ']' || c <= 040 || c == NO_BREAK_SPACE || confusing)
+                  {
+                    printchar ('\\', printcharfun);
+                    confusing = false;
+                  }
+              }
+            printchar (c, printcharfun);
+          }
+      }
       break;
 
     case Lisp_Cons:
@@ -840,6 +881,15 @@ enabled regardless of the value of the variable.  */);
 \(XXXX is the hex representation of the character code.)
 This affects only `prin1'.  */);
   print_escape_multibyte = 0;
+
+  DEFVAR_LISP ("print-gensym", Vprint_gensym,
+        doc: /* Non-nil means print uninterned symbols so they will read as uninterned.
+I.e., the value of (make-symbol \"foobar\") prints as #:foobar.
+When the uninterned symbol appears multiple times within the printed
+expression, and `print-circle' is non-nil, in addition use the #N#
+and #N= constructs as needed, so that multiple references to the same
+symbol are shared once again when the text is read back.  */);
+  Vprint_gensym = Qnil;
 
   DEFVAR_LISP ("print-circle", Vprint_circle,
 	       doc: /* Non-nil means print recursive structures using #N= and #N# syntax.

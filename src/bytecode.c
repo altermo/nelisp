@@ -1203,11 +1203,11 @@ setup_frame:;
           NEXT;
 
         CASE (Bupcase):
-          TODO; // TOP = Fupcase (TOP);
+          TOP = Fupcase (TOP);
           NEXT;
 
         CASE (Bdowncase):
-          TODO; // TOP = Fdowncase (TOP);
+          TOP = Fdowncase (TOP);
           NEXT;
 
         CASE (Bstringeqlsign):
