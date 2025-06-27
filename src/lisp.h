@@ -2332,6 +2332,8 @@ extern void syms_of_xfaces (void);
 
 extern void syms_of_window (void);
 
+extern void syms_of_font (void);
+
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)
 {

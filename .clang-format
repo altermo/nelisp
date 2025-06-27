@@ -14,6 +14,7 @@ ForEachMacros:
   - FOR_EACH_LIVE_BUFFER
   - ITREE_FOREACH
   - FOR_EACH_ALIST_VALUE
+  - FOR_EACH_FRAME
 IncludeCategories:
   - Regex: '^<config\.h>$'
     Priority: -1

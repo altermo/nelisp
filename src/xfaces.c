@@ -1,4 +1,87 @@
 #include "lisp.h"
+#include "font.h"
+
+enum xlfd_field
+{
+  XLFD_FOUNDRY,
+  XLFD_FAMILY,
+  XLFD_WEIGHT,
+  XLFD_SLANT,
+  XLFD_SWIDTH,
+  XLFD_ADSTYLE,
+  XLFD_PIXEL_SIZE,
+  XLFD_POINT_SIZE,
+  XLFD_RESX,
+  XLFD_RESY,
+  XLFD_SPACING,
+  XLFD_AVGWIDTH,
+  XLFD_REGISTRY,
+  XLFD_ENCODING,
+  XLFD_LAST
+};
+
+static int font_sort_order[4];
+
+DEFUN ("internal-set-font-selection-order",
+       Finternal_set_font_selection_order,
+       Sinternal_set_font_selection_order, 1, 1, 0,
+       doc: /* Set font selection order for face font selection to ORDER.
+ORDER must be a list of length 4 containing the symbols `:width',
+`:height', `:weight', and `:slant'.  Face attributes appearing
+first in ORDER are matched first, e.g. if `:height' appears before
+`:weight' in ORDER, font selection first tries to find a font with
+a suitable height, and then tries to match the font weight.
+Value is ORDER.  */)
+(Lisp_Object order)
+{
+  Lisp_Object list;
+  int i;
+  int indices[ARRAYELTS (font_sort_order)];
+
+  CHECK_LIST (order);
+  memset (indices, 0, sizeof indices);
+  i = 0;
+
+  for (list = order; CONSP (list) && i < ARRAYELTS (indices);
+       list = XCDR (list), ++i)
+    {
+      Lisp_Object attr = XCAR (list);
+      int xlfd;
+
+      if (EQ (attr, QCwidth))
+        xlfd = XLFD_SWIDTH;
+      else if (EQ (attr, QCheight))
+        xlfd = XLFD_POINT_SIZE;
+      else if (EQ (attr, QCweight))
+        xlfd = XLFD_WEIGHT;
+      else if (EQ (attr, QCslant))
+        xlfd = XLFD_SLANT;
+      else
+        break;
+
+      if (indices[i] != 0)
+        break;
+      indices[i] = xlfd;
+    }
+
+  if (!NILP (list) || i != ARRAYELTS (indices))
+    signal_error ("Invalid font sort order", order);
+  for (i = 0; i < ARRAYELTS (font_sort_order); ++i)
+    if (indices[i] == 0)
+      signal_error ("Invalid font sort order", order);
+
+  if (memcmp (indices, font_sort_order, sizeof indices) != 0)
+    {
+      memcpy (font_sort_order, indices, sizeof font_sort_order);
+#if TODO_NELISP_LATER_AND
+      free_all_realized_faces (Qnil);
+#endif
+    }
+
+  font_update_sort_order (font_sort_order);
+
+  return Qnil;
+}
 
 void
 syms_of_xfaces (void)
@@ -101,4 +184,6 @@ syms_of_xfaces (void)
 
   DEFSYM (Qtty_color_alist, "tty-color-alist");
   DEFSYM (Qtty_defined_color_alist, "tty-defined-color-alist");
+
+  defsubr (&Sinternal_set_font_selection_order);
 }

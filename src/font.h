@@ -1,0 +1,56 @@
+#ifndef EMACS_FONT_H
+#define EMACS_FONT_H
+
+enum font_property_index
+{
+  FONT_TYPE_INDEX,
+
+  FONT_FOUNDRY_INDEX,
+
+  FONT_FAMILY_INDEX,
+
+  FONT_ADSTYLE_INDEX,
+
+  FONT_REGISTRY_INDEX,
+
+  FONT_WEIGHT_INDEX,
+
+  FONT_SLANT_INDEX,
+
+  FONT_WIDTH_INDEX,
+
+  FONT_SIZE_INDEX,
+
+  FONT_DPI_INDEX,
+
+  FONT_SPACING_INDEX,
+
+  FONT_AVGWIDTH_INDEX,
+
+#if false
+
+    FONT_STYLE_INDEX,
+
+    FONT_METRICS_INDEX,
+#endif
+
+  FONT_EXTRA_INDEX, /* alist		alist */
+
+  FONT_SPEC_MAX,
+
+  FONT_OBJLIST_INDEX = FONT_SPEC_MAX,
+
+  FONT_ENTITY_MAX,
+
+  FONT_NAME_INDEX = FONT_ENTITY_MAX,
+
+  FONT_FULLNAME_INDEX,
+
+  FONT_FILE_INDEX,
+
+  FONT_OBJECT_MAX
+};
+
+extern void font_update_sort_order (int *order);
+
+#endif
