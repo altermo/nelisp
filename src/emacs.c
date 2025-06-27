@@ -42,6 +42,10 @@ Anything else (in Emacs 26, the possibilities are: aix, berkeley-unix,
 hpux, usg-unix-v) indicates some sort of Unix system.  */);
   Vsystem_type = intern_c_string (SYSTEM_TYPE);
 
+  DEFVAR_BOOL ("inhibit-x-resources", inhibit_x_resources,
+        doc: /* If non-nil, X resources, Windows Registry settings, and NS defaults are not used.  */);
+  inhibit_x_resources = 0;
+
   DEFVAR_LISP ("emacs-version", Vemacs_version,
 	       doc: /* Version numbers of this version of Emacs.
 This has the form: MAJOR.MINOR[.MICRO], where MAJOR/MINOR/MICRO are integers.
