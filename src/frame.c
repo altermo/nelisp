@@ -1,5 +1,51 @@
+#include "frame.h"
 #include "lisp.h"
+#include "dispextern.h"
 #include "nvim.h"
+
+struct frame *
+decode_any_frame (register Lisp_Object frame)
+{
+  if (NILP (frame))
+    frame = nvim_get_current_frame ();
+  CHECK_FRAME (frame);
+  return XFRAME (frame);
+}
+
+char unspecified_fg[] = "unspecified-fg", unspecified_bg[] = "unspecified-bg";
+
+Lisp_Object
+tty_color_name (struct frame *f, int idx)
+{
+  if (idx >= 0 && !NILP (Ffboundp (Qtty_color_by_index)))
+    {
+      Lisp_Object frame;
+      Lisp_Object coldesc;
+
+      XSETFRAME (frame, f);
+      coldesc = call2 (Qtty_color_by_index, make_fixnum (idx), frame);
+
+      if (!NILP (coldesc))
+        return XCAR (coldesc);
+    }
+
+  if (idx == FACE_TTY_DEFAULT_FG_COLOR)
+    return build_string (unspecified_fg);
+  if (idx == FACE_TTY_DEFAULT_BG_COLOR)
+    return build_string (unspecified_bg);
+
+  return Qunspecified;
+}
+
+void
+store_in_alist (Lisp_Object *alistptr, Lisp_Object prop, Lisp_Object val)
+{
+  Lisp_Object tem = Fassq (prop, *alistptr);
+  if (NILP (tem))
+    *alistptr = Fcons (Fcons (prop, val), *alistptr);
+  else
+    Fsetcdr (tem, val);
+}
 
 DEFUN ("frame-list", Fframe_list, Sframe_list,
        0, 0, 0,
@@ -9,6 +55,116 @@ The return value does not include any tooltip frame.  */)
 {
   Lisp_Object list = Qnil;
   return nvim_frames_list ();
+}
+
+DEFUN ("frame-parameters", Fframe_parameters, Sframe_parameters, 0, 1, 0,
+       doc: /* Return the parameters-alist of frame FRAME.
+It is a list of elements of the form (PARM . VALUE), where PARM is a symbol.
+The meaningful PARMs depend on the kind of frame.
+If FRAME is omitted or nil, return information on the currently selected frame.  */)
+(Lisp_Object frame)
+{
+  Lisp_Object alist;
+  struct frame *f = decode_any_frame (frame);
+  int height, width;
+
+  if (!FRAME_LIVE_P (f))
+    return Qnil;
+
+  alist = Fcopy_alist (f->param_alist);
+
+  if (!FRAME_WINDOW_P (f))
+    {
+      Lisp_Object elt;
+
+      elt = Fassq (Qforeground_color, alist);
+      if (CONSP (elt) && STRINGP (XCDR (elt)))
+        TODO;
+      else
+        store_in_alist (&alist, Qforeground_color,
+                        tty_color_name (f, FRAME_FOREGROUND_PIXEL (f)));
+      elt = Fassq (Qbackground_color, alist);
+      if (CONSP (elt) && STRINGP (XCDR (elt)))
+        TODO;
+      else
+        store_in_alist (&alist, Qbackground_color,
+                        tty_color_name (f, FRAME_BACKGROUND_PIXEL (f)));
+      store_in_alist (&alist, Qfont,
+                      build_string (FRAME_MSDOS_P (f) ? "ms-dos"
+                                    : FRAME_W32_P (f) ? "w32term"
+                                                      : "tty"));
+    }
+
+  store_in_alist (&alist, Qname, nvim_frame_name (f));
+
+#if TODO_NELISP_LATER_ELSE
+  height = (FRAME_LINES (f));
+  store_in_alist (&alist, Qheight, make_fixnum (height));
+  width = (FRAME_COLS (f));
+  store_in_alist (&alist, Qwidth, make_fixnum (width));
+#endif
+
+  store_in_alist (&alist, Qmodeline, FRAME_WANTS_MODELINE_P (f) ? Qt : Qnil);
+  store_in_alist (&alist, Qunsplittable, FRAME_NO_SPLIT_P (f) ? Qt : Qnil);
+  store_in_alist (&alist, Qbuffer_list, nvim_frame_buffer_list (f));
+  store_in_alist (&alist, Qburied_buffer_list,
+                  nvim_frame_buried_buffer_list (f));
+
+  {
+    Lisp_Object lines;
+
+    XSETFASTINT (lines, FRAME_MENU_BAR_LINES (f));
+    store_in_alist (&alist, Qmenu_bar_lines, lines);
+    XSETFASTINT (lines, FRAME_TAB_BAR_LINES (f));
+    store_in_alist (&alist, Qtab_bar_lines, lines);
+  }
+
+  return alist;
+}
+
+DEFUN ("frame-parameter", Fframe_parameter, Sframe_parameter, 2, 2, 0,
+       doc: /* Return FRAME's value for parameter PARAMETER.
+If FRAME is nil, describe the currently selected frame.  */)
+(Lisp_Object frame, Lisp_Object parameter)
+{
+  struct frame *f = decode_any_frame (frame);
+  Lisp_Object value = Qnil;
+
+  CHECK_SYMBOL (parameter);
+
+  XSETFRAME (frame, f);
+
+  if (FRAME_LIVE_P (f))
+    {
+      if (EQ (parameter, Qname))
+        return nvim_frame_name (f);
+      else if (EQ (parameter, Qbackground_color)
+               || EQ (parameter, Qforeground_color))
+        {
+          value = Fassq (parameter, f->param_alist);
+          if (CONSP (value))
+            {
+              value = XCDR (value);
+
+              if (STRINGP (value) && !FRAME_WINDOW_P (f))
+                {
+                  TODO; // Lisp_Object tem = frame_unspecified_color (f, value);
+
+                  // if (!NILP (tem))
+                  //   value = tem;
+                }
+            }
+          else
+            value = Fcdr (Fassq (parameter, Fframe_parameters (frame)));
+        }
+      else if (EQ (parameter, Qdisplay_type)
+               || EQ (parameter, Qbackground_mode))
+        value = Fcdr (Fassq (parameter, f->param_alist));
+      else
+        value = Fcdr (Fassq (parameter, Fframe_parameters (frame)));
+    }
+
+  return value;
 }
 
 void
@@ -164,4 +320,6 @@ syms_of_frame (void)
   DEFSYM (Qfont_parameter, "font-parameter");
 
   defsubr (&Sframe_list);
+  defsubr (&Sframe_parameters);
+  defsubr (&Sframe_parameter);
 }

@@ -28,6 +28,12 @@ enum lface_attribute_index
   LFACE_VECTOR_SIZE
 };
 
+#define FACE_TTY_DEFAULT_COLOR ((unsigned long) -1)
+
+#define FACE_TTY_DEFAULT_FG_COLOR ((unsigned long) -2)
+
+#define FACE_TTY_DEFAULT_BG_COLOR ((unsigned long) -3)
+
 #define MAX_FACE_ID ((1 << FACE_ID_BITS) - 1)
 
 #endif

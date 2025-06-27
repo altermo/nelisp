@@ -65,5 +65,15 @@ case NVIM_BUFFER_VAR_##field: \
 
 extern Lisp_Object nvim_frames_list (void);
 bool nvim_frame_is_valid (struct frame *);
+extern Lisp_Object nvim_get_current_frame (void);
+extern Lisp_Object nvim_frame_name (struct frame *);
+extern int nvim_frame_lines (struct frame *);
+extern int nvim_frame_cols (struct frame *);
+extern bool nvim_frame_wants_modeline_p (struct frame *);
+extern bool nvim_frame_no_split_p (struct frame *);
+extern Lisp_Object nvim_frame_buffer_list (struct frame *);
+extern Lisp_Object nvim_frame_buried_buffer_list (struct frame *);
+extern int nvim_frame_menu_bar_lines (struct frame *);
+extern int nvim_frame_tab_bar_lines (struct frame *);
 
 #endif

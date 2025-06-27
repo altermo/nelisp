@@ -463,3 +463,136 @@ nvim_frame_is_valid (struct frame *f)
   }
   return ret;
 }
+
+Lisp_Object
+nvim_get_current_frame (void)
+{
+  long id;
+  LUA (10)
+  {
+    push_vim_api (L, "nvim_get_current_tabpage");
+    lua_call (L, 0, 1);
+    eassert (lua_isnumber (L, -1));
+    id = lua_tointeger (L, -1);
+    lua_pop (L, 1);
+  }
+  return nvim_tabpageid_to_frameobj (id);
+}
+
+Lisp_Object
+nvim_frame_name (struct frame *f)
+{
+  TODO_NELISP_LATER;
+  return Qnil;
+}
+
+int
+nvim_frame_lines (struct frame *f)
+{
+  TODO_NELISP_LATER;
+  int height;
+  LUA (5)
+  {
+    push_vim_api (L, "nvim_get_option_value");
+    lua_pushliteral (L, "lines");
+    lua_newtable (L);
+    lua_call (L, 2, 1);
+    eassert (lua_isnumber (L, -1));
+    height = lua_tointeger (L, -1);
+    lua_pop (L, 1);
+  }
+  return height;
+}
+
+int
+nvim_frame_cols (struct frame *f)
+{
+  TODO_NELISP_LATER;
+  int width;
+  LUA (5)
+  {
+    push_vim_api (L, "nvim_get_option_value");
+    lua_pushliteral (L, "columns");
+    lua_newtable (L);
+    lua_call (L, 2, 1);
+    eassert (lua_isnumber (L, -1));
+    width = lua_tointeger (L, -1);
+    lua_pop (L, 1);
+  }
+  return width;
+}
+
+bool
+nvim_frame_wants_modeline_p (struct frame *f)
+{
+  TODO_NELISP_LATER;
+  return false;
+}
+bool
+nvim_frame_no_split_p (struct frame *f)
+{
+  TODO_NELISP_LATER;
+  return false;
+}
+Lisp_Object
+nvim_frame_buried_buffer_list (struct frame *f)
+{
+  TODO_NELISP_LATER;
+  return Qnil;
+}
+int
+nvim_frame_menu_bar_lines (struct frame *f)
+{
+  TODO_NELISP_LATER;
+  return 0;
+}
+int
+nvim_frame_tab_bar_lines (struct frame *f)
+{
+  TODO_NELISP_LATER;
+  return 0;
+}
+
+Lisp_Object
+nvim_frame_buffer_list (struct frame *f)
+{
+  TODO_NELISP_LATER;
+  int tabpageid = f->tabpageid;
+  Lisp_Object buffers;
+  LUA (20)
+  {
+    lua_newtable (L);
+    // tbl
+    push_vim_api (L, "nvim_tabpage_list_wins");
+    lua_pushinteger (L, tabpageid);
+    lua_call (L, 1, 1);
+    eassert (lua_istable (L, -1));
+    // tbl, list
+    lua_pushnil (L);
+    while (lua_next (L, -2) != 0)
+      {
+        eassert (lua_isnumber (L, -1));
+        // tbl, list, *, winid
+        push_vim_api (L, "nvim_win_get_buf");
+        lua_pushvalue (L, -2);
+        lua_call (L, 1, 1);
+        eassert (lua_isnumber (L, -1));
+        // tbl, list, *, winid, bufid
+        lua_rawseti (L, -5, lua_tointeger (L, -1));
+        // tbl, list, *, winid
+        lua_pop (L, 1);
+      }
+    // tbl, list
+    lua_pop (L, 1);
+    // tbl
+    lua_pushnil (L);
+    while (lua_next (L, -2) != 0)
+      {
+        eassert (lua_isnumber (L, -1));
+        buffers = Fcons (nvim_bufid_to_bufobj (lua_tointeger (L, -1)), buffers);
+        lua_pop (L, 1);
+      }
+    lua_pop (L, 1);
+  }
+  return buffers;
+}
