@@ -14,5 +14,7 @@ The return value does not include any tooltip frame.  */)
 void
 syms_of_frame (void)
 {
+  DEFSYM (Qframe_live_p, "frame-live-p");
+
   defsubr (&Sframe_list);
 }

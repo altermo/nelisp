@@ -411,6 +411,9 @@ create_frame (long id)
   struct frame *f;
   f = allocate_frame ();
 
+  f->face_hash_table
+    = make_hash_table (&hashtest_eq, DEFAULT_HASH_SIZE, Weak_None, false);
+
   f->tabpageid = id;
 
   XSETFRAME (frame, f);
@@ -443,4 +446,20 @@ nvim_frames_list (void)
     lua_pop (L, 1);
   }
   return Fnreverse (frames);
+}
+
+bool
+nvim_frame_is_valid (struct frame *f)
+{
+  bool ret;
+  LUA (10)
+  {
+    push_vim_api (L, "nvim_tabpage_is_valid");
+    lua_pushnumber (L, f->tabpageid);
+    lua_call (L, 1, 1);
+    eassert (lua_isboolean (L, -1));
+    ret = lua_toboolean (L, -1);
+    lua_pop (L, 1);
+  }
+  return ret;
 }

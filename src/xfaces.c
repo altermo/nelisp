@@ -1,8 +1,15 @@
 #include "lisp.h"
+#include "dispextern.h"
 #include "font.h"
+#include "frame.h"
 
 Lisp_Object Vface_alternative_font_family_alist;
 Lisp_Object Vface_alternative_font_registry_alist;
+
+static int next_lface_id;
+
+static Lisp_Object *lface_id_to_name;
+static ptrdiff_t lface_id_to_name_size;
 
 enum xlfd_field
 {
@@ -24,6 +31,10 @@ enum xlfd_field
 };
 
 static int font_sort_order[4];
+
+#define LFACEP(LFACE)                                    \
+  (VECTORP (LFACE) && ASIZE (LFACE) == LFACE_VECTOR_SIZE \
+   && EQ (AREF (LFACE, 0), Qface))
 
 #define check_lface(lface) (void) 0
 
@@ -73,7 +84,7 @@ lface_from_face_name_no_resolve (struct frame *f, Lisp_Object face_name,
   Lisp_Object lface;
 
   if (f)
-    TODO; // lface = Fgethash (face_name, f->face_hash_table, Qnil);
+    lface = Fgethash (face_name, f->face_hash_table, Qnil);
   else
     lface = CDR (Fgethash (face_name, Vface_new_frame_defaults, Qnil));
 
@@ -90,6 +101,75 @@ lface_from_face_name (struct frame *f, Lisp_Object face_name, bool signal_p)
 {
   face_name = resolve_face_name (face_name, signal_p);
   return lface_from_face_name_no_resolve (f, face_name, signal_p);
+}
+
+DEFUN ("internal-make-lisp-face", Finternal_make_lisp_face,
+       Sinternal_make_lisp_face, 1, 2, 0,
+       doc: /* Make FACE, a symbol, a Lisp face with all attributes nil.
+If FACE was not known as a face before, create a new one.
+If optional argument FRAME is specified, make a frame-local face
+for that frame.  Otherwise operate on the global face definition.
+Value is a vector of face attributes.  */)
+(Lisp_Object face, Lisp_Object frame)
+{
+  Lisp_Object global_lface, lface;
+  struct frame *f;
+  int i;
+
+  CHECK_SYMBOL (face);
+  global_lface = lface_from_face_name (NULL, face, false);
+
+  if (!NILP (frame))
+    {
+      CHECK_LIVE_FRAME (frame);
+      f = XFRAME (frame);
+      lface = lface_from_face_name (f, face, false);
+    }
+  else
+    f = NULL, lface = Qnil;
+
+  if (NILP (global_lface))
+    {
+      if (next_lface_id == lface_id_to_name_size)
+        lface_id_to_name = xpalloc (lface_id_to_name, &lface_id_to_name_size, 1,
+                                    MAX_FACE_ID, sizeof *lface_id_to_name);
+
+      Lisp_Object face_id = make_fixnum (next_lface_id);
+      lface_id_to_name[next_lface_id] = face;
+      Fput (face, Qface, face_id);
+      ++next_lface_id;
+
+      global_lface = make_vector (LFACE_VECTOR_SIZE, Qunspecified);
+      ASET (global_lface, 0, Qface);
+      Fputhash (face, Fcons (face_id, global_lface), Vface_new_frame_defaults);
+    }
+  else if (f == NULL)
+    for (i = 1; i < LFACE_VECTOR_SIZE; ++i)
+      ASET (global_lface, i, Qunspecified);
+
+  if (f)
+    {
+      if (NILP (lface))
+        {
+          lface = make_vector (LFACE_VECTOR_SIZE, Qunspecified);
+          ASET (lface, 0, Qface);
+          Fputhash (face, lface, f->face_hash_table);
+        }
+      else
+        for (i = 1; i < LFACE_VECTOR_SIZE; ++i)
+          ASET (lface, i, Qunspecified);
+    }
+  else
+    lface = global_lface;
+
+  if (NILP (Fget (face, Qface_no_inherit)))
+    {
+      TODO_NELISP_LATER;
+    }
+
+  eassert (LFACEP (lface));
+  check_lface (lface);
+  return lface;
 }
 
 DEFUN ("internal-lisp-face-p", Finternal_lisp_face_p,
@@ -343,6 +423,7 @@ syms_of_xfaces (void)
   Vface_alternative_font_registry_alist = Qnil;
   staticpro (&Vface_alternative_font_registry_alist);
 
+  defsubr (&Sinternal_make_lisp_face);
   defsubr (&Sinternal_lisp_face_p);
   defsubr (&Sinternal_set_font_selection_order);
   defsubr (&Sinternal_set_alternative_font_family_alist);

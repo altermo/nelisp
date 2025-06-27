@@ -1440,6 +1440,11 @@ CLOSUREP (Lisp_Object a)
   return PSEUDOVECTORP (a, PVEC_CLOSURE);
 }
 INLINE bool
+FRAMEP (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_FRAME);
+}
+INLINE bool
 MARKERP (Lisp_Object x)
 {
   return PSEUDOVECTORP (x, PVEC_MARKER);
