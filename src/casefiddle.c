@@ -280,6 +280,32 @@ casify_object (enum case_action flag, Lisp_Object obj)
     return do_casify_unibyte_string (&ctx, obj);
 }
 
+DEFUN ("upcase", Fupcase, Supcase, 1, 1, 0,
+       doc: /* Convert argument to upper case and return that.
+The argument may be a character or string.  The result has the same
+type.  (See `downcase' for further details about the type.)
+
+The argument object is not altered--the value is a copy.  If argument
+is a character, characters which map to multiple code points when
+cased, e.g. ﬁ, are returned unchanged.
+
+See also `capitalize', `downcase' and `upcase-initials'.  */)
+(Lisp_Object obj) { return casify_object (CASE_UP, obj); }
+
+DEFUN ("downcase", Fdowncase, Sdowncase, 1, 1, 0,
+       doc: /* Convert argument to lower case and return that.
+The argument may be a character or string.  The result has the same type,
+including the multibyteness of the string.
+
+This means that if this function is called with a unibyte string
+argument, and downcasing it would turn it into a multibyte string
+(according to the current locale), the downcasing is done using ASCII
+\"C\" rules instead.  To accurately downcase according to the current
+locale, the string must be converted into multibyte first.
+
+The argument object is not altered--the value is a copy.  */)
+(Lisp_Object obj) { return casify_object (CASE_DOWN, obj); }
+
 DEFUN ("capitalize", Fcapitalize, Scapitalize, 1, 1, 0,
        doc: /* Convert argument to capitalized form and return that.
 This means that each word's first character is converted to either
@@ -292,6 +318,19 @@ The argument object is not altered--the value is a copy.  If argument
 is a character, characters which map to multiple code points when
 cased, e.g. ﬁ, are returned unchanged.  */)
 (Lisp_Object obj) { return casify_object (CASE_CAPITALIZE, obj); }
+
+DEFUN ("upcase-initials", Fupcase_initials, Supcase_initials, 1, 1, 0,
+       doc: /* Convert the initial of each word in the argument to upper case.
+This means that each word's first character is converted to either
+title case or upper case, and the rest are left unchanged.
+
+The argument may be a character or string.  The result has the same
+type.  (See `downcase' for further details about the type.)
+
+The argument object is not altered--the value is a copy.  If argument
+is a character, characters which map to multiple code points when
+cased, e.g. ﬁ, are returned unchanged.  */)
+(Lisp_Object obj) { return casify_object (CASE_CAPITALIZE_UP, obj); }
 
 void
 syms_of_casefiddle (void)
@@ -320,5 +359,8 @@ letter of a symbol's name is ever capitalized.*/);
   DEFSYM (Qcase_symbols_as_words, "case-symbols-as-words");
   Fmake_variable_buffer_local (Qcase_symbols_as_words);
 
+  defsubr (&Supcase);
+  defsubr (&Sdowncase);
   defsubr (&Scapitalize);
+  defsubr (&Supcase_initials);
 }
