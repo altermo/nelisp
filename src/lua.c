@@ -610,6 +610,7 @@ ret () init (lua_State *L)
   syms_of_xfaces ();
   syms_of_window ();
   syms_of_font ();
+  syms_of_frame ();
 
   keys_of_keyboard ();
 

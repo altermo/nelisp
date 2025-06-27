@@ -1,6 +1,7 @@
 #include "nvim.h"
 #include "lisp.h"
 #include "buffer.h"
+#include "frame.h"
 #include "lua.h"
 
 static void
@@ -46,6 +47,101 @@ push_vim_b (lua_State *L, long bufid)
   }
 }
 
+static void
+push_vim_t (lua_State *L, long tabpageid)
+{
+  LUALC (L, 5, 1)
+  {
+    lua_getglobal (L, "vim");
+    lua_getfield (L, -1, "t");
+    lua_remove (L, -2);
+    lua_pushnumber (L, tabpageid);
+    lua_gettable (L, -2);
+    lua_remove (L, -2);
+    eassert (lua_istable (L, -1));
+  }
+}
+
+static void
+push_vim_w (lua_State *L, long winid)
+{
+  LUALC (L, 5, 1)
+  {
+    lua_getglobal (L, "vim");
+    lua_getfield (L, -1, "w");
+    lua_remove (L, -2);
+    lua_pushnumber (L, winid);
+    lua_gettable (L, -2);
+    lua_remove (L, -2);
+    eassert (lua_istable (L, -1));
+  }
+}
+
+enum nvim_kind
+{
+  NVIM_BUFFER,
+  NVIM_WINDOW,
+  NVIM_TABPAGE,
+};
+
+Lisp_Object
+nvim_id_to_obj (long id, enum nvim_kind kind, Lisp_Object (create) (long))
+{
+  Lisp_Object obj;
+  LUA (10)
+  {
+    switch (kind)
+      {
+      case NVIM_BUFFER:
+        push_vim_b (L, id);
+        break;
+      case NVIM_WINDOW:
+        push_vim_w (L, id);
+        break;
+      case NVIM_TABPAGE:
+        push_vim_t (L, id);
+        break;
+      }
+    // vim.b
+    lua_getfield (L, -1, "nelisp_reference");
+    // vim.b, nil/nelisp_reference
+    if (!lua_isnil (L, -1))
+      {
+        eassert (lua_isfunction (L, -1));
+        // vim.b, nelisp_reference
+        lua_getfenv (L, -1);
+        // vim.b, nelisp_reference, fenv
+        lua_rawgeti (L, -1, 1);
+        eassert (lua_isuserdata (L, -1));
+        // vim.b, nelisp_reference, fenv, obj
+        obj = userdata_to_obj (L, -1);
+        lua_pop (L, 4);
+        return obj;
+      }
+    lua_pop (L, 1);
+    // vim.b
+    luaL_dostring (L, "return function() end");
+    // vim.b, nelisp_reference
+    lua_pushvalue (L, -1);
+    // vim.b, nelisp_reference, nelisp_reference
+    lua_setfield (L, -3, "nelisp_reference");
+    // vim.b, nelisp_reference
+    lua_createtable (L, 1, 0);
+    // vim.b, nelisp_reference, fenv
+    obj = create (id);
+    push_obj (L, obj);
+    // vim.b, nelisp_reference, fenv, obj
+    lua_rawseti (L, -2, 1);
+    // vim.b, nelisp_reference, fenv
+    lua_setfenv (L, -2);
+    // vim.b, nelisp_reference
+    lua_pop (L, 2);
+  }
+  return obj;
+}
+
+// --- buffer --
+
 static Lisp_Object
 create_buffer (long bufid)
 {
@@ -73,46 +169,7 @@ create_buffer (long bufid)
 Lisp_Object
 nvim_bufid_to_bufobj (long bufid)
 {
-  Lisp_Object obj;
-  LUA (10)
-  {
-    push_vim_b (L, bufid);
-    // vim.b
-    lua_getfield (L, -1, "nelisp_reference");
-    // vim.b, nil/nelisp_reference
-    if (!lua_isnil (L, -1))
-      {
-        eassert (lua_isfunction (L, -1));
-        // vim.b, nelisp_reference
-        lua_getfenv (L, -1);
-        // vim.b, nelisp_reference, fenv
-        lua_rawgeti (L, -1, 1);
-        eassert (lua_isuserdata (L, -1));
-        // vim.b, nelisp_reference, fenv, obj
-        obj = userdata_to_obj (L, -1);
-        lua_pop (L, 4);
-        return obj;
-      }
-    lua_pop (L, 1);
-    // vim.b
-    luaL_dostring (L, "return function() end");
-    // vim.b, nelisp_reference
-    lua_pushvalue (L, -1);
-    // vim.b, nelisp_reference, nelisp_reference
-    lua_setfield (L, -3, "nelisp_reference");
-    // vim.b, nelisp_reference
-    lua_createtable (L, 1, 0);
-    // vim.b, nelisp_reference, fenv
-    obj = create_buffer (bufid);
-    push_obj (L, obj);
-    // vim.b, nelisp_reference, fenv, obj
-    lua_rawseti (L, -2, 1);
-    // vim.b, nelisp_reference, fenv
-    lua_setfenv (L, -2);
-    // vim.b, nelisp_reference
-    lua_pop (L, 2);
-  }
-  return obj;
+  return nvim_id_to_obj (bufid, NVIM_BUFFER, create_buffer);
 }
 
 Lisp_Object
@@ -359,4 +416,47 @@ nvim_buf_memcpy (unsigned char *dst, ptrdiff_t beg1, ptrdiff_t size)
     memcpy (dst, text, size);
     lua_pop (L, 1);
   }
+}
+
+// --- frame (tabpage) --
+
+Lisp_Object
+create_frame (long id)
+{
+  Lisp_Object frame;
+  struct frame *f;
+  f = allocate_frame ();
+
+  f->tabpageid = id;
+
+  XSETFRAME (frame, f);
+  return frame;
+}
+
+Lisp_Object
+nvim_tabpageid_to_frameobj (long id)
+{
+  return nvim_id_to_obj (id, NVIM_TABPAGE, create_frame);
+}
+
+Lisp_Object
+nvim_frames_list (void)
+{
+  Lisp_Object frames;
+  LUA (10)
+  {
+    push_vim_api (L, "nvim_list_tabpages");
+    lua_call (L, 0, 1);
+    eassert (lua_istable (L, -1));
+    lua_pushnil (L);
+    while (lua_next (L, -2))
+      {
+        eassert (lua_isnumber (L, -1));
+        frames
+          = Fcons (nvim_tabpageid_to_frameobj (lua_tointeger (L, -1)), frames);
+        lua_pop (L, 1);
+      }
+    lua_pop (L, 1);
+  }
+  return Fnreverse (frames);
 }

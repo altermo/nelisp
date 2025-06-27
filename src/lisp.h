@@ -2053,6 +2053,10 @@ build_string (const char *str)
   ((type *) allocate_pseudovector (VECSIZE (type),              \
                                    PSEUDOVECSIZE (type, field), \
                                    PSEUDOVECSIZE (type, field), tag))
+#define ALLOCATE_ZEROED_PSEUDOVECTOR(type, field, tag)          \
+  ((type *) allocate_pseudovector (VECSIZE (type),              \
+                                   PSEUDOVECSIZE (type, field), \
+                                   VECSIZE (type), tag))
 extern Lisp_Object empty_unibyte_string, empty_multibyte_string;
 void free_cons (struct Lisp_Cons *ptr);
 extern struct Lisp_Vector *allocate_nil_vector (ptrdiff_t);
@@ -2102,6 +2106,7 @@ build_unibyte_string (const char *str)
 }
 INTERVAL make_interval (void);
 extern bool survives_gc_p (Lisp_Object);
+extern struct frame *allocate_frame (void);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;
@@ -2335,6 +2340,7 @@ extern void syms_of_window (void);
 extern void syms_of_font (void);
 
 struct frame;
+extern void syms_of_frame (void);
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

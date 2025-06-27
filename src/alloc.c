@@ -3,6 +3,7 @@
 #include "lisp.h"
 #include "buffer.h"
 #include "character.h"
+#include "frame.h"
 #include "intervals.h"
 #include "lua.h"
 #include "pdumper.h"
@@ -1939,6 +1940,12 @@ usage: (make-closure PROTOTYPE &rest CLOSURE-VARS) */)
   memcpy (v->contents, XVECTOR (protofun)->contents, protosize * word_size);
   v->contents[CLOSURE_CONSTANTS] = constvec;
   return make_lisp_ptr (v, Lisp_Vectorlike);
+}
+
+struct frame *
+allocate_frame (void)
+{
+  return ALLOCATE_ZEROED_PSEUDOVECTOR (struct frame, _last_obj, PVEC_FRAME);
 }
 
 /* --- symbol allocation -- */

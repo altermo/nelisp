@@ -3,6 +3,8 @@
 
 #include "lisp.h"
 
+// --- buffer --
+
 #define Xbuffer_vars    \
   X (_local_var_alist)  \
   X (_downcase_table)   \
@@ -42,5 +44,9 @@ extern ptrdiff_t nvim_get_field_zv (struct buffer *b, bool chars);
 extern ptrdiff_t nvim_get_field_begv (struct buffer *b, bool chars);
 
 extern void nvim_buf_memcpy (unsigned char *dst, ptrdiff_t beg, ptrdiff_t size);
+
+// ---- frame (tabpage) --
+
+extern Lisp_Object nvim_frames_list (void);
 
 #endif
