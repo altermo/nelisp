@@ -36,14 +36,30 @@ enum nvim_buffer_var_field
 
 extern Lisp_Object nvim_name_to_bufobj (Lisp_Object);
 extern Lisp_Object nvim_create_buf (Lisp_Object, Lisp_Object);
-extern Lisp_Object nvim_bvar (struct buffer *, enum nvim_buffer_var_field);
 extern void nvim_set_buffer (struct buffer *);
 extern struct buffer *nvim_current_buffer (void);
+extern Lisp_Object buffer_name (struct buffer *);
 
 extern ptrdiff_t nvim_get_field_zv (struct buffer *b, bool chars);
 extern ptrdiff_t nvim_get_field_begv (struct buffer *b, bool chars);
 
 extern void nvim_buf_memcpy (unsigned char *dst, ptrdiff_t beg, ptrdiff_t size);
+
+inline Lisp_Object __attribute__ ((always_inline))
+nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
+{
+  switch (field)
+    {
+    case NVIM_BUFFER_VAR__name:
+      return buffer_name (b);
+#define X(field)              \
+case NVIM_BUFFER_VAR_##field: \
+  return b->field;
+      Xbuffer_vars
+#undef X
+        default : emacs_abort ();
+    }
+}
 
 // ---- frame (tabpage) --
 

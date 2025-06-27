@@ -215,7 +215,7 @@ nvim_create_buf (Lisp_Object name, Lisp_Object inhibit_buffer_hooks)
   return nvim_bufid_to_bufobj (bufid);
 }
 
-static Lisp_Object
+Lisp_Object
 buffer_name (struct buffer *b)
 {
   long bufid = b->bufid;
@@ -242,22 +242,6 @@ buffer_name (struct buffer *b)
     lua_pop (L, 1);
   }
   return obj;
-}
-
-Lisp_Object
-nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
-{
-  switch (field)
-    {
-    case NVIM_BUFFER_VAR__name:
-      return buffer_name (b);
-#define X(field)                \
-  case NVIM_BUFFER_VAR_##field: \
-    return b->field;
-      Xbuffer_vars
-#undef X
-        default : emacs_abort ();
-    }
 }
 
 void
