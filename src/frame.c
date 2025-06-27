@@ -47,6 +47,26 @@ store_in_alist (Lisp_Object *alistptr, Lisp_Object prop, Lisp_Object val)
     Fsetcdr (tem, val);
 }
 
+DEFUN ("framep", Fframep, Sframep, 1, 1, 0,
+       doc: /* Return non-nil if OBJECT is a frame.
+Value is:
+  t for a termcap frame (a character-only terminal),
+ `x' for an Emacs frame that is really an X window,
+ `w32' for an Emacs frame that is a window on MS-Windows display,
+ `ns' for an Emacs frame on a GNUstep or Macintosh Cocoa display,
+ `pc' for a direct-write MS-DOS frame,
+ `pgtk' for an Emacs frame running on pure GTK.
+ `haiku' for an Emacs frame running in Haiku.
+ `android' for an Emacs frame running in Android.
+See also `frame-live-p'.  */)
+(Lisp_Object object)
+{
+  TODO_NELISP_LATER;
+  if (!FRAMEP (object))
+    return Qnil;
+  return Qt;
+}
+
 DEFUN ("frame-list", Fframe_list, Sframe_list,
        0, 0, 0,
        doc: /* Return a list of all live frames.
@@ -319,6 +339,7 @@ syms_of_frame (void)
   DEFSYM (Quse_frame_synchronization, "use-frame-synchronization");
   DEFSYM (Qfont_parameter, "font-parameter");
 
+  defsubr (&Sframep);
   defsubr (&Sframe_list);
   defsubr (&Sframe_parameters);
   defsubr (&Sframe_parameter);
