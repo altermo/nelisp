@@ -52,6 +52,84 @@ init_frame_faces (struct frame *f)
     emacs_abort ();
 }
 
+static unsigned long
+load_color2 (struct frame *f, struct face *face, Lisp_Object name,
+             enum lface_attribute_index target_index, Emacs_Color *color)
+{
+  eassert (STRINGP (name));
+  eassert (target_index == LFACE_FOREGROUND_INDEX
+           || target_index == LFACE_BACKGROUND_INDEX
+           || target_index == LFACE_UNDERLINE_INDEX
+           || target_index == LFACE_OVERLINE_INDEX
+           || target_index == LFACE_STRIKE_THROUGH_INDEX
+           || target_index == LFACE_BOX_INDEX);
+
+#if TODO_NELISP_LATER_AND
+  if (!FRAME_TERMINAL (f)->defined_color_hook (f, SSDATA (name), color, true,
+                                               true))
+    {
+      add_to_log ("Unable to load color \"%s\"", name);
+#endif
+
+      switch (target_index)
+        {
+        case LFACE_FOREGROUND_INDEX:
+          face->foreground_defaulted_p = true;
+          color->pixel = FRAME_FOREGROUND_PIXEL (f);
+          break;
+
+        case LFACE_BACKGROUND_INDEX:
+          face->background_defaulted_p = true;
+          color->pixel = FRAME_BACKGROUND_PIXEL (f);
+          break;
+
+        case LFACE_UNDERLINE_INDEX:
+          face->underline_defaulted_p = true;
+          color->pixel = FRAME_FOREGROUND_PIXEL (f);
+          break;
+
+        case LFACE_OVERLINE_INDEX:
+          face->overline_color_defaulted_p = true;
+          color->pixel = FRAME_FOREGROUND_PIXEL (f);
+          break;
+
+        case LFACE_STRIKE_THROUGH_INDEX:
+          face->strike_through_color_defaulted_p = true;
+          color->pixel = FRAME_FOREGROUND_PIXEL (f);
+          break;
+
+        case LFACE_BOX_INDEX:
+          face->box_color_defaulted_p = true;
+          color->pixel = FRAME_FOREGROUND_PIXEL (f);
+          break;
+
+        default:
+          emacs_abort ();
+        }
+#if TODO_NELISP_LATER_AND
+    }
+#endif
+
+  return color->pixel;
+}
+
+/* Load color with name NAME for use by face FACE on frame F.
+   TARGET_INDEX must be one of LFACE_FOREGROUND_INDEX,
+   LFACE_BACKGROUND_INDEX, LFACE_UNDERLINE_INDEX, LFACE_OVERLINE_INDEX,
+   LFACE_STRIKE_THROUGH_INDEX, or LFACE_BOX_INDEX.  Value is the
+   pixel color.  If color cannot be loaded, display a message, and
+   return the foreground, background or underline color of F, but
+   record that fact in flags of the face so that we don't try to free
+   these colors.  */
+
+unsigned long
+load_color (struct frame *f, struct face *face, Lisp_Object name,
+            enum lface_attribute_index target_index)
+{
+  Emacs_Color color;
+  return load_color2 (f, face, name, target_index, &color);
+}
+
 enum xlfd_field
 {
   XLFD_FOUNDRY,
@@ -1534,7 +1612,7 @@ map_tty_color (struct frame *f, struct face *face, Lisp_Object color,
 
   if (pixel == default_pixel && STRINGP (color))
     {
-      TODO; // pixel = load_color (f, face, color, idx);
+      pixel = load_color (f, face, color, idx);
     }
 
   switch (idx)
