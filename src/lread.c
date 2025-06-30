@@ -1001,6 +1001,7 @@ read_char_escape (Lisp_Object readcharfun, int next_char)
 
 again:;
   int c = next_char;
+  int mod;
 
   switch (c)
     {
@@ -1039,15 +1040,45 @@ again:;
       TODO;
 
     case 'M':
-      TODO;
+      mod = meta_modifier;
+      goto mod_key;
     case 'S':
-      TODO;
+      mod = shift_modifier;
+      goto mod_key;
     case 'H':
-      TODO;
+      mod = hyper_modifier;
+      goto mod_key;
     case 'A':
-      TODO;
+      mod = alt_modifier;
+      goto mod_key;
     case 's':
-      TODO;
+      mod = super_modifier;
+      goto mod_key;
+
+    mod_key:
+      {
+        int c1 = READCHAR;
+        if (c1 != '-')
+          {
+            if (c == 's')
+              {
+                UNREAD (c1);
+                chr = ' ';
+                break;
+              }
+            else
+              error ("Invalid escape char syntax: \\%c not followed by -", c);
+          }
+        modifiers |= mod;
+        c1 = READCHAR;
+        if (c1 == '\\')
+          {
+            next_char = READCHAR;
+            goto again;
+          }
+        chr = c1;
+        break;
+      }
 
     case 'C':
       {
