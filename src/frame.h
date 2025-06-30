@@ -46,4 +46,6 @@ struct frame
 #define CHECK_LIVE_FRAME(x) \
   CHECK_TYPE (FRAMEP (x) && FRAME_LIVE_P (XFRAME (x)), Qframe_live_p, x)
 
+#define selected_frame nvim_get_current_frame ()
+
 #endif

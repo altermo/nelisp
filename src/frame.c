@@ -7,7 +7,7 @@ struct frame *
 decode_any_frame (register Lisp_Object frame)
 {
   if (NILP (frame))
-    frame = nvim_get_current_frame ();
+    frame = selected_frame;
   CHECK_FRAME (frame);
   return XFRAME (frame);
 }
