@@ -2092,6 +2092,7 @@ syms_of_xfaces (void)
   defsubr (&Sinternal_set_font_selection_order);
   defsubr (&Sinternal_set_alternative_font_family_alist);
   defsubr (&Sinternal_set_alternative_font_registry_alist);
+  defsubr (&Sdisplay_supports_face_attributes_p);
 
   DEFVAR_LISP ("face--new-frame-defaults", Vface_new_frame_defaults,
     doc: /* Hash table of global face definitions (for internal use only.)  */);
