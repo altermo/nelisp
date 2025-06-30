@@ -1122,6 +1122,18 @@ prog_ignore (Lisp_Object body)
   Fprogn (body);
 }
 
+DEFUN ("prog1", Fprog1, Sprog1, 1, UNEVALLED, 0,
+       doc: /* Eval FIRST and BODY sequentially; return value from FIRST.
+The value of FIRST is saved during the evaluation of the remaining args,
+whose values are discarded.
+usage: (prog1 FIRST BODY...)  */)
+(Lisp_Object args)
+{
+  Lisp_Object val = eval_sub (XCAR (args));
+  prog_ignore (XCDR (args));
+  return val;
+}
+
 Lisp_Object
 funcall_subr (struct Lisp_Subr *subr, ptrdiff_t numargs, Lisp_Object *args)
 {
@@ -2159,6 +2171,7 @@ alist of active lexical bindings.  */);
   defsubr (&Srun_hooks);
   defsubr (&Srun_hook_with_args);
   defsubr (&Sprogn);
+  defsubr (&Sprog1);
   defsubr (&Sif);
   defsubr (&Swhile);
   defsubr (&Sor);
