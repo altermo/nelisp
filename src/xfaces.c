@@ -3,6 +3,10 @@
 #include "font.h"
 #include "frame.h"
 
+#define UNSPECIFIEDP(ATTR) EQ (ATTR, Qunspecified)
+#define IGNORE_DEFFACE_P(ATTR) EQ (ATTR, QCignore_defface)
+#define RESET_P(ATTR) EQ (ATTR, Qreset)
+
 Lisp_Object Vface_alternative_font_family_alist;
 Lisp_Object Vface_alternative_font_registry_alist;
 
@@ -31,6 +35,27 @@ enum xlfd_field
 };
 
 static int font_sort_order[4];
+
+#define LFACE_FAMILY(LFACE) AREF (LFACE, LFACE_FAMILY_INDEX)
+#define LFACE_FOUNDRY(LFACE) AREF (LFACE, LFACE_FOUNDRY_INDEX)
+#define LFACE_HEIGHT(LFACE) AREF (LFACE, LFACE_HEIGHT_INDEX)
+#define LFACE_WEIGHT(LFACE) AREF (LFACE, LFACE_WEIGHT_INDEX)
+#define LFACE_SLANT(LFACE) AREF (LFACE, LFACE_SLANT_INDEX)
+#define LFACE_UNDERLINE(LFACE) AREF (LFACE, LFACE_UNDERLINE_INDEX)
+#define LFACE_INVERSE(LFACE) AREF (LFACE, LFACE_INVERSE_INDEX)
+#define LFACE_FOREGROUND(LFACE) AREF (LFACE, LFACE_FOREGROUND_INDEX)
+#define LFACE_BACKGROUND(LFACE) AREF (LFACE, LFACE_BACKGROUND_INDEX)
+#define LFACE_STIPPLE(LFACE) AREF (LFACE, LFACE_STIPPLE_INDEX)
+#define LFACE_SWIDTH(LFACE) AREF (LFACE, LFACE_SWIDTH_INDEX)
+#define LFACE_OVERLINE(LFACE) AREF (LFACE, LFACE_OVERLINE_INDEX)
+#define LFACE_STRIKE_THROUGH(LFACE) AREF (LFACE, LFACE_STRIKE_THROUGH_INDEX)
+#define LFACE_BOX(LFACE) AREF (LFACE, LFACE_BOX_INDEX)
+#define LFACE_FONT(LFACE) AREF (LFACE, LFACE_FONT_INDEX)
+#define LFACE_INHERIT(LFACE) AREF (LFACE, LFACE_INHERIT_INDEX)
+#define LFACE_FONTSET(LFACE) AREF (LFACE, LFACE_FONTSET_INDEX)
+#define LFACE_EXTEND(LFACE) AREF (LFACE, LFACE_EXTEND_INDEX)
+#define LFACE_DISTANT_FOREGROUND(LFACE) \
+  AREF (LFACE, LFACE_DISTANT_FOREGROUND_INDEX)
 
 #define LFACEP(LFACE)                                    \
   (VECTORP (LFACE) && ASIZE (LFACE) == LFACE_VECTOR_SIZE \
@@ -101,6 +126,33 @@ lface_from_face_name (struct frame *f, Lisp_Object face_name, bool signal_p)
 {
   face_name = resolve_face_name (face_name, signal_p);
   return lface_from_face_name_no_resolve (f, face_name, signal_p);
+}
+
+static Lisp_Object
+merge_face_heights (Lisp_Object from, Lisp_Object to, Lisp_Object invalid)
+{
+  Lisp_Object result = invalid;
+
+  if (FIXNUMP (from))
+    result = from;
+  else if (FLOATP (from))
+    {
+      if (FIXNUMP (to))
+        result = make_fixnum (XFLOAT_DATA (from) * XFIXNUM (to));
+      else if (FLOATP (to))
+        result = make_float (XFLOAT_DATA (from) * XFLOAT_DATA (to));
+      else if (UNSPECIFIEDP (to))
+        result = from;
+    }
+  else if (FUNCTIONP (from))
+    {
+      result = safe_calln (from, to);
+
+      if (FIXNUMP (to) && !FIXNUMP (result))
+        result = invalid;
+    }
+
+  return result;
 }
 
 DEFUN ("internal-make-lisp-face", Finternal_make_lisp_face,
@@ -194,6 +246,439 @@ Otherwise check for the existence of a global face.  */)
     lface = lface_from_face_name (NULL, face, false);
 
   return lface;
+}
+
+#define HANDLE_INVALID_NIL_VALUE(A, F) \
+  if (NILP (value))                    \
+    {                                  \
+      TODO;                            \
+    }
+
+DEFUN ("internal-set-lisp-face-attribute", Finternal_set_lisp_face_attribute,
+       Sinternal_set_lisp_face_attribute, 3, 4, 0,
+       doc: /* Set attribute ATTR of FACE to VALUE.
+FRAME being a frame means change the face on that frame.
+FRAME nil means change the face of the selected frame.
+FRAME t means change the default for new frames.
+FRAME 0 means change the face on all frames, and change the default
+  for new frames.  */)
+(Lisp_Object face, Lisp_Object attr, Lisp_Object value, Lisp_Object frame)
+{
+  Lisp_Object lface;
+  Lisp_Object old_value = Qnil;
+
+  enum font_property_index prop_index = 0;
+  struct frame *f;
+
+  CHECK_SYMBOL (face);
+  CHECK_SYMBOL (attr);
+
+  face = resolve_face_name (face, true);
+
+  if (FIXNUMP (frame) && XFIXNUM (frame) == 0)
+    {
+      TODO;
+    }
+
+  if (EQ (frame, Qt))
+    {
+      TODO;
+    }
+  else
+    {
+      if (NILP (frame))
+        frame = selected_frame;
+
+      CHECK_LIVE_FRAME (frame);
+      f = XFRAME (frame);
+
+      lface = lface_from_face_name (f, face, false);
+
+      if (NILP (lface))
+        lface = Finternal_make_lisp_face (face, frame);
+    }
+
+  if (EQ (attr, QCfamily))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_STRING (value);
+          if (SCHARS (value) == 0)
+            signal_error ("Invalid face family", value);
+        }
+      old_value = LFACE_FAMILY (lface);
+      ASET (lface, LFACE_FAMILY_INDEX, value);
+      prop_index = FONT_FAMILY_INDEX;
+    }
+  else if (EQ (attr, QCfoundry))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_STRING (value);
+          if (SCHARS (value) == 0)
+            signal_error ("Invalid face foundry", value);
+        }
+      old_value = LFACE_FOUNDRY (lface);
+      ASET (lface, LFACE_FOUNDRY_INDEX, value);
+      prop_index = FONT_FOUNDRY_INDEX;
+    }
+  else if (EQ (attr, QCheight))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          if (EQ (face, Qdefault))
+            {
+              if (!FIXNUMP (value) || XFIXNUM (value) <= 0)
+                signal_error ("Default face height not absolute and positive",
+                              value);
+            }
+          else
+            {
+              Lisp_Object test
+                = merge_face_heights (value, make_fixnum (10), Qnil);
+              if (!FIXNUMP (test) || XFIXNUM (test) <= 0)
+                signal_error ("Face height does not produce a positive integer",
+                              value);
+            }
+        }
+
+      old_value = LFACE_HEIGHT (lface);
+      ASET (lface, LFACE_HEIGHT_INDEX, value);
+      prop_index = FONT_SIZE_INDEX;
+    }
+  else if (EQ (attr, QCweight))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_SYMBOL (value);
+          if (FONT_WEIGHT_NAME_NUMERIC (value) < 0)
+            signal_error ("Invalid face weight", value);
+        }
+      old_value = LFACE_WEIGHT (lface);
+      ASET (lface, LFACE_WEIGHT_INDEX, value);
+      prop_index = FONT_WEIGHT_INDEX;
+    }
+  else if (EQ (attr, QCslant))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_SYMBOL (value);
+          if (FONT_SLANT_NAME_NUMERIC (value) < 0)
+            signal_error ("Invalid face slant", value);
+        }
+      old_value = LFACE_SLANT (lface);
+      ASET (lface, LFACE_SLANT_INDEX, value);
+      prop_index = FONT_SLANT_INDEX;
+    }
+  else if (EQ (attr, QCunderline))
+    {
+      bool valid_p = false;
+
+      if (UNSPECIFIEDP (value) || IGNORE_DEFFACE_P (value) || RESET_P (value))
+        valid_p = true;
+      else if (NILP (value) || EQ (value, Qt))
+        valid_p = true;
+      else if (STRINGP (value) && SCHARS (value) > 0)
+        valid_p = true;
+      else if (CONSP (value))
+        {
+          Lisp_Object key, val, list;
+
+          list = value;
+          valid_p = true;
+
+          while (!NILP (CAR_SAFE (list)))
+            {
+              key = CAR_SAFE (list);
+              list = CDR_SAFE (list);
+              val = CAR_SAFE (list);
+              list = CDR_SAFE (list);
+
+              if (NILP (key) || (NILP (val) && !EQ (key, QCposition)))
+                {
+                  valid_p = false;
+                  break;
+                }
+
+              else if (EQ (key, QCcolor)
+                       && !(EQ (val, Qforeground_color)
+                            || (STRINGP (val) && SCHARS (val) > 0)))
+                {
+                  valid_p = false;
+                  break;
+                }
+
+              else if (EQ (key, QCstyle)
+                       && !(EQ (val, Qline) || EQ (val, Qdouble_line)
+                            || EQ (val, Qwave) || EQ (val, Qdots)
+                            || EQ (val, Qdashes)))
+                {
+                  valid_p = false;
+                  break;
+                }
+            }
+        }
+
+      if (!valid_p)
+        signal_error ("Invalid face underline", value);
+
+      old_value = LFACE_UNDERLINE (lface);
+      ASET (lface, LFACE_UNDERLINE_INDEX, value);
+    }
+  else if (EQ (attr, QCoverline))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        if ((SYMBOLP (value) && !EQ (value, Qt) && !NILP (value))
+            || (STRINGP (value) && SCHARS (value) == 0))
+          signal_error ("Invalid face overline", value);
+
+      old_value = LFACE_OVERLINE (lface);
+      ASET (lface, LFACE_OVERLINE_INDEX, value);
+    }
+  else if (EQ (attr, QCstrike_through))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        if ((SYMBOLP (value) && !EQ (value, Qt) && !NILP (value))
+            || (STRINGP (value) && SCHARS (value) == 0))
+          signal_error ("Invalid face strike-through", value);
+
+      old_value = LFACE_STRIKE_THROUGH (lface);
+      ASET (lface, LFACE_STRIKE_THROUGH_INDEX, value);
+    }
+  else if (EQ (attr, QCbox))
+    {
+      bool valid_p;
+
+      if (EQ (value, Qt))
+        value = make_fixnum (1);
+
+      if (UNSPECIFIEDP (value) || IGNORE_DEFFACE_P (value) || RESET_P (value))
+        valid_p = true;
+      else if (NILP (value))
+        valid_p = true;
+      else if (FIXNUMP (value))
+        valid_p = XFIXNUM (value) != 0;
+      else if (STRINGP (value))
+        valid_p = SCHARS (value) > 0;
+      else if (CONSP (value) && FIXNUMP (XCAR (value))
+               && FIXNUMP (XCDR (value)))
+        valid_p = true;
+      else if (CONSP (value))
+        {
+          Lisp_Object tem;
+
+          tem = value;
+          while (CONSP (tem))
+            {
+              Lisp_Object k, v;
+
+              k = XCAR (tem);
+              tem = XCDR (tem);
+              if (!CONSP (tem))
+                break;
+              v = XCAR (tem);
+
+              if (EQ (k, QCline_width))
+                {
+                  if ((!CONSP (v) || !FIXNUMP (XCAR (v))
+                       || XFIXNUM (XCAR (v)) == 0 || !FIXNUMP (XCDR (v))
+                       || XFIXNUM (XCDR (v)) == 0)
+                      && (!FIXNUMP (v) || XFIXNUM (v) == 0))
+                    break;
+                }
+              else if (EQ (k, QCcolor))
+                {
+                  if (!NILP (v) && (!STRINGP (v) || SCHARS (v) == 0))
+                    break;
+                }
+              else if (EQ (k, QCstyle))
+                {
+                  if (!NILP (v) && !EQ (v, Qpressed_button)
+                      && !EQ (v, Qreleased_button) && !EQ (v, Qflat_button))
+                    break;
+                }
+              else
+                break;
+
+              tem = XCDR (tem);
+            }
+
+          valid_p = NILP (tem);
+        }
+      else
+        valid_p = false;
+
+      if (!valid_p)
+        signal_error ("Invalid face box", value);
+
+      old_value = LFACE_BOX (lface);
+      ASET (lface, LFACE_BOX_INDEX, value);
+    }
+  else if (EQ (attr, QCinverse_video) || EQ (attr, QCreverse_video))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_SYMBOL (value);
+          if (!EQ (value, Qt) && !NILP (value))
+            signal_error ("Invalid inverse-video face attribute value", value);
+        }
+      old_value = LFACE_INVERSE (lface);
+      ASET (lface, LFACE_INVERSE_INDEX, value);
+    }
+  else if (EQ (attr, QCextend))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_SYMBOL (value);
+          if (!EQ (value, Qt) && !NILP (value))
+            signal_error ("Invalid extend face attribute value", value);
+        }
+      old_value = LFACE_EXTEND (lface);
+      ASET (lface, LFACE_EXTEND_INDEX, value);
+    }
+  else if (EQ (attr, QCforeground))
+    {
+      HANDLE_INVALID_NIL_VALUE (QCforeground, face);
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_STRING (value);
+          if (SCHARS (value) == 0)
+            signal_error ("Empty foreground color value", value);
+        }
+      old_value = LFACE_FOREGROUND (lface);
+      ASET (lface, LFACE_FOREGROUND_INDEX, value);
+    }
+  else if (EQ (attr, QCdistant_foreground))
+    {
+      HANDLE_INVALID_NIL_VALUE (QCdistant_foreground, face);
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_STRING (value);
+          if (SCHARS (value) == 0)
+            signal_error ("Empty distant-foreground color value", value);
+        }
+      old_value = LFACE_DISTANT_FOREGROUND (lface);
+      ASET (lface, LFACE_DISTANT_FOREGROUND_INDEX, value);
+    }
+  else if (EQ (attr, QCbackground))
+    {
+      HANDLE_INVALID_NIL_VALUE (QCbackground, face);
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_STRING (value);
+          if (SCHARS (value) == 0)
+            signal_error ("Empty background color value", value);
+        }
+      old_value = LFACE_BACKGROUND (lface);
+      ASET (lface, LFACE_BACKGROUND_INDEX, value);
+    }
+  else if (EQ (attr, QCstipple))
+    {
+    }
+  else if (EQ (attr, QCwidth))
+    {
+      if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+          && !RESET_P (value))
+        {
+          CHECK_SYMBOL (value);
+          if (FONT_WIDTH_NAME_NUMERIC (value) < 0)
+            signal_error ("Invalid face width", value);
+        }
+      old_value = LFACE_SWIDTH (lface);
+      ASET (lface, LFACE_SWIDTH_INDEX, value);
+      prop_index = FONT_WIDTH_INDEX;
+    }
+  else if (EQ (attr, QCfont))
+    {
+    }
+  else if (EQ (attr, QCfontset))
+    {
+    }
+  else if (EQ (attr, QCinherit))
+    {
+      Lisp_Object tail;
+      if (SYMBOLP (value))
+        tail = Qnil;
+      else
+        for (tail = value; CONSP (tail); tail = XCDR (tail))
+          if (!SYMBOLP (XCAR (tail)))
+            break;
+      if (NILP (tail))
+        ASET (lface, LFACE_INHERIT_INDEX, value);
+      else
+        signal_error ("Invalid face inheritance", value);
+    }
+  else if (EQ (attr, QCbold))
+    {
+      old_value = LFACE_WEIGHT (lface);
+      if (RESET_P (value))
+        ASET (lface, LFACE_WEIGHT_INDEX, value);
+      else
+        ASET (lface, LFACE_WEIGHT_INDEX, NILP (value) ? Qnormal : Qbold);
+      prop_index = FONT_WEIGHT_INDEX;
+    }
+  else if (EQ (attr, QCitalic))
+    {
+      attr = QCslant;
+      old_value = LFACE_SLANT (lface);
+      if (RESET_P (value))
+        ASET (lface, LFACE_SLANT_INDEX, value);
+      else
+        ASET (lface, LFACE_SLANT_INDEX, NILP (value) ? Qnormal : Qitalic);
+      prop_index = FONT_SLANT_INDEX;
+    }
+  else
+    signal_error ("Invalid face attribute name", attr);
+
+  if (prop_index)
+    {
+      font_clear_prop (XVECTOR (lface)->contents, prop_index);
+    }
+
+  if (!EQ (frame, Qt) && NILP (Fget (face, Qface_no_inherit))
+      && NILP (Fequal (old_value, value)))
+    {
+      TODO_NELISP_LATER;
+    }
+
+  if (!UNSPECIFIEDP (value) && !IGNORE_DEFFACE_P (value)
+      && NILP (Fequal (old_value, value)))
+    {
+      Lisp_Object param;
+
+      param = Qnil;
+
+      if (EQ (face, Qdefault))
+        {
+          if (EQ (attr, QCforeground))
+            param = Qforeground_color;
+          else if (EQ (attr, QCbackground))
+            param = Qbackground_color;
+        }
+      else if (EQ (face, Qmenu))
+        {
+          TODO_NELISP_LATER;
+        }
+
+      if (!NILP (param))
+        {
+          TODO;
+        }
+    }
+
+  return face;
 }
 
 void
@@ -425,6 +910,7 @@ syms_of_xfaces (void)
 
   defsubr (&Sinternal_make_lisp_face);
   defsubr (&Sinternal_lisp_face_p);
+  defsubr (&Sinternal_set_lisp_face_attribute);
   defsubr (&Sinternal_set_font_selection_order);
   defsubr (&Sinternal_set_alternative_font_family_alist);
   defsubr (&Sinternal_set_alternative_font_registry_alist);

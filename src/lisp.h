@@ -2212,6 +2212,7 @@ extern void prog_ignore (Lisp_Object);
 extern struct handler *push_handler (Lisp_Object tag_ch_val,
                                      enum handlertype handlertype);
 extern Lisp_Object safe_eval (Lisp_Object);
+extern Lisp_Object safe_funcall (ptrdiff_t, Lisp_Object *);
 #define safe_calln(...) \
   CALLMANY (safe_funcall, ((Lisp_Object[]) { __VA_ARGS__ }))
 
@@ -2417,6 +2418,15 @@ extern void defvar_bool (struct Lisp_Boolfwd const *, char const *);
         = { Lisp_Fwd_Bool, &globals.f_##vname }; \
       defvar_bool (&b_fwd, lname);               \
     }                                            \
+  while (false)
+extern void defvar_lisp_nopro (struct Lisp_Objfwd const *, char const *);
+#define DEFVAR_LISP_NOPRO(lname, vname, doc)    \
+  do                                            \
+    {                                           \
+      static struct Lisp_Objfwd const o_fwd     \
+        = { Lisp_Fwd_Obj, &globals.f_##vname }; \
+      defvar_lisp_nopro (&o_fwd, lname);        \
+    }                                           \
   while (false)
 #define DEFSYM(sym, name)
 extern void defsubr (union Aligned_Lisp_Subr *);

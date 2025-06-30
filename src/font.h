@@ -1,6 +1,8 @@
 #ifndef EMACS_FONT_H
 #define EMACS_FONT_H
 
+#include "lisp.h"
+
 enum font_property_index
 {
   FONT_TYPE_INDEX,
@@ -51,6 +53,22 @@ enum font_property_index
   FONT_OBJECT_MAX
 };
 
+#define FONT_WEIGHT_NAME_NUMERIC(name) \
+  (font_style_to_value (FONT_WEIGHT_INDEX, name, false) >> 8)
+#define FONT_SLANT_NAME_NUMERIC(name) \
+  (font_style_to_value (FONT_SLANT_INDEX, name, false) >> 8)
+#define FONT_WIDTH_NAME_NUMERIC(name) \
+  (font_style_to_value (FONT_WIDTH_INDEX, name, false) >> 8)
+
+INLINE bool
+FONTP (Lisp_Object x)
+{
+  return PSEUDOVECTORP (x, PVEC_FONT);
+}
+
+extern int font_style_to_value (enum font_property_index prop, Lisp_Object name,
+                                bool noerror);
+extern void font_clear_prop (Lisp_Object *attrs, enum font_property_index prop);
 extern void font_update_sort_order (int *order);
 
 #endif
