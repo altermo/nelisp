@@ -1737,9 +1737,29 @@ read_obj:;
       });
       goto read_obj;
     case '`':
-      TODO;
+      read_stack_push ((struct read_stack_entry) {
+        .type = RE_special,
+        .u.special.symbol = Qbackquote,
+      });
+      goto read_obj;
     case ',':
-      TODO;
+      {
+        int ch = READCHAR;
+        Lisp_Object sym;
+        if (ch == '@')
+          sym = Qcomma_at;
+        else
+          {
+            if (ch >= 0)
+              UNREAD (ch);
+            sym = Qcomma;
+          }
+        read_stack_push ((struct read_stack_entry) {
+          .type = RE_special,
+          .u.special.symbol = sym,
+        });
+        goto read_obj;
+      }
     case ';':
       {
         int c;
