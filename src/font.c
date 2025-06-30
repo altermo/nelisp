@@ -60,6 +60,28 @@ enum xlfd_field_index
   XLFD_LAST_INDEX
 };
 
+Lisp_Object
+font_style_symbolic (Lisp_Object font, enum font_property_index prop,
+                     bool for_face)
+{
+  Lisp_Object val = AREF (font, prop);
+  Lisp_Object table, elt;
+  int i;
+
+  if (NILP (val))
+    return Qnil;
+  table = AREF (font_style_table, prop - FONT_WEIGHT_INDEX);
+  CHECK_VECTOR (table);
+  i = XFIXNUM (val) & 0xFF;
+  eassert (((i >> 4) & 0xF) < ASIZE (table));
+  elt = AREF (table, ((i >> 4) & 0xF));
+  CHECK_VECTOR (elt);
+  eassert ((i & 0xF) + 1 < ASIZE (elt));
+  elt = (for_face ? AREF (elt, 1) : AREF (elt, (i & 0xF) + 1));
+  CHECK_SYMBOL (elt);
+  return elt;
+}
+
 int
 font_style_to_value (enum font_property_index prop, Lisp_Object val,
                      bool noerror)

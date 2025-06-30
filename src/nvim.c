@@ -1,6 +1,7 @@
 #include "nvim.h"
 #include "lisp.h"
 #include "buffer.h"
+#include "dispextern.h"
 #include "frame.h"
 #include "lua.h"
 
@@ -413,6 +414,11 @@ create_frame (long id)
 
   f->face_hash_table
     = make_hash_table (&hashtest_eq, DEFAULT_HASH_SIZE, Weak_None, false);
+
+  f->face_cache = NULL;
+
+  if (!noninteractive)
+    init_frame_faces (f);
 
   f->tabpageid = id;
 

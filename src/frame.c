@@ -12,8 +12,6 @@ decode_any_frame (register Lisp_Object frame)
   return XFRAME (frame);
 }
 
-char unspecified_fg[] = "unspecified-fg", unspecified_bg[] = "unspecified-bg";
-
 Lisp_Object
 tty_color_name (struct frame *f, int idx)
 {

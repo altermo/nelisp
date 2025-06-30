@@ -2340,6 +2340,7 @@ set_string_intervals (Lisp_Object s, INTERVAL i)
 }
 
 extern void syms_of_xfaces (void);
+extern void init_xfaces (void);
 
 extern void syms_of_window (void);
 
@@ -2347,6 +2348,23 @@ extern void syms_of_font (void);
 
 struct frame;
 extern void syms_of_frame (void);
+
+struct window;
+
+INLINE Lisp_Object *
+xvector_contents_addr (Lisp_Object a, ptrdiff_t i)
+{
+  void *v = XVECTOR (a);
+  char *p = v;
+  void *w = p + header_size + i * word_size;
+  return w;
+}
+
+INLINE Lisp_Object *
+xvector_contents (Lisp_Object a)
+{
+  return xvector_contents_addr (a, 0);
+}
 
 INLINE bool
 NATIVE_COMP_FUNCTIONP (Lisp_Object a)

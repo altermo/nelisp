@@ -53,6 +53,13 @@ enum font_property_index
   FONT_OBJECT_MAX
 };
 
+#define FONT_WEIGHT_FOR_FACE(font) \
+  font_style_symbolic (font, FONT_WEIGHT_INDEX, true)
+#define FONT_SLANT_FOR_FACE(font) \
+  font_style_symbolic (font, FONT_SLANT_INDEX, true)
+#define FONT_WIDTH_FOR_FACE(font) \
+  font_style_symbolic (font, FONT_WIDTH_INDEX, true)
+
 #define FONT_WEIGHT_NAME_NUMERIC(name) \
   (font_style_to_value (FONT_WEIGHT_INDEX, name, false) >> 8)
 #define FONT_SLANT_NAME_NUMERIC(name) \
@@ -66,8 +73,17 @@ FONTP (Lisp_Object x)
   return PSEUDOVECTORP (x, PVEC_FONT);
 }
 
+INLINE bool
+FONT_SPEC_P (Lisp_Object x)
+{
+  return FONTP (x) && PVSIZE (x) == FONT_SPEC_MAX;
+}
+
 extern int font_style_to_value (enum font_property_index prop, Lisp_Object name,
                                 bool noerror);
+extern Lisp_Object font_style_symbolic (Lisp_Object font,
+                                        enum font_property_index prop,
+                                        bool for_face);
 extern void font_clear_prop (Lisp_Object *attrs, enum font_property_index prop);
 extern void font_update_sort_order (int *order);
 

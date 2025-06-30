@@ -622,6 +622,7 @@ ret () init (lua_State *L)
   init_bignum ();
   init_lread ();
   init_charset ();
+  init_xfaces ();
 
   build_details = true;
   noninteractive = false;
