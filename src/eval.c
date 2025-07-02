@@ -377,6 +377,96 @@ internal_catch (Lisp_Object tag, Lisp_Object (*func) (Lisp_Object),
 }
 
 Lisp_Object
+internal_lisp_condition_case (Lisp_Object var, Lisp_Object bodyform,
+                              Lisp_Object handlers)
+{
+  struct handler *oldhandlerlist = handlerlist;
+  ptrdiff_t CACHEABLE clausenb = 0;
+
+  var = maybe_remove_pos_from_symbol (var);
+  CHECK_TYPE (BARE_SYMBOL_P (var), Qsymbolp, var);
+
+  Lisp_Object success_handler = Qnil;
+
+  for (Lisp_Object tail = handlers; CONSP (tail); tail = XCDR (tail))
+    {
+      Lisp_Object tem = XCAR (tail);
+      if (!(NILP (tem)
+            || (CONSP (tem) && (SYMBOLP (XCAR (tem)) || CONSP (XCAR (tem))))))
+        error ("Invalid condition handler: %s",
+               SDATA (Fprin1_to_string (tem, Qt, Qnil)));
+      if (CONSP (tem) && EQ (XCAR (tem), QCsuccess))
+        success_handler = tem;
+      else
+        clausenb++;
+    }
+
+  if (MAX_ALLOCA / word_size < clausenb)
+    memory_full (SIZE_MAX);
+  Lisp_Object volatile *clauses = alloca (clausenb * sizeof *clauses);
+  clauses += clausenb;
+  for (Lisp_Object tail = handlers; CONSP (tail); tail = XCDR (tail))
+    {
+      Lisp_Object tem = XCAR (tail);
+      if (!(CONSP (tem) && EQ (XCAR (tem), QCsuccess)))
+        *--clauses = tem;
+    }
+  for (ptrdiff_t i = 0; i < clausenb; i++)
+    {
+      Lisp_Object clause = clauses[i];
+      Lisp_Object condition = CONSP (clause) ? XCAR (clause) : Qnil;
+      if (!CONSP (condition))
+        condition = list1 (condition);
+      struct handler *c = push_handler (condition, CONDITION_CASE);
+      if (sys_setjmp (c->jmp))
+        {
+          Lisp_Object val = handlerlist->val;
+          Lisp_Object volatile *chosen_clause = clauses;
+          for (struct handler *h = handlerlist->next; h != oldhandlerlist;
+               h = h->next)
+            chosen_clause++;
+          Lisp_Object handler_body = XCDR (*chosen_clause);
+          handlerlist = oldhandlerlist;
+
+          if (NILP (var))
+            return Fprogn (handler_body);
+
+          Lisp_Object handler_var = var;
+          if (!NILP (Vinternal_interpreter_environment))
+            {
+              val = Fcons (Fcons (var, val), Vinternal_interpreter_environment);
+              handler_var = Qinternal_interpreter_environment;
+            }
+
+          specpdl_ref count = SPECPDL_INDEX ();
+          specbind (handler_var, val);
+          return unbind_to (count, Fprogn (handler_body));
+        }
+    }
+
+  Lisp_Object CACHEABLE result = eval_sub (bodyform);
+  handlerlist = oldhandlerlist;
+  if (!NILP (success_handler))
+    {
+      if (NILP (var))
+        return Fprogn (XCDR (success_handler));
+
+      Lisp_Object handler_var = var;
+      if (!NILP (Vinternal_interpreter_environment))
+        {
+          result
+            = Fcons (Fcons (var, result), Vinternal_interpreter_environment);
+          handler_var = Qinternal_interpreter_environment;
+        }
+
+      specpdl_ref count = SPECPDL_INDEX ();
+      specbind (handler_var, result);
+      return unbind_to (count, Fprogn (XCDR (success_handler)));
+    }
+  return result;
+}
+
+Lisp_Object
 internal_condition_case (Lisp_Object (*bfun) (void), Lisp_Object handlers,
                          Lisp_Object (*hfun) (Lisp_Object))
 {
@@ -668,6 +758,47 @@ error (const char *m, ...)
 {
   UNUSED (m);
   TODO;
+}
+
+DEFUN ("condition-case", Fcondition_case, Scondition_case, 2, UNEVALLED, 0,
+       doc: /* Regain control when an error is signaled.
+Executes BODYFORM and returns its value if no error happens.
+Each element of HANDLERS looks like (CONDITION-NAME BODY...)
+or (:success BODY...), where the BODY is made of Lisp expressions.
+
+A handler is applicable to an error if CONDITION-NAME is one of the
+error's condition names.  Handlers may also apply when non-error
+symbols are signaled (e.g., `quit').  A CONDITION-NAME of t applies to
+any symbol, including non-error symbols.  If multiple handlers are
+applicable, only the first one runs.
+
+The car of a handler may be a list of condition names instead of a
+single condition name; then it handles all of them.  If the special
+condition name `debug' is present in this list, it allows another
+condition in the list to run the debugger if `debug-on-error' and the
+other usual mechanisms say it should (otherwise, `condition-case'
+suppresses the debugger).
+
+When a handler handles an error, control returns to the `condition-case'
+and it executes the handler's BODY...
+with VAR bound to (ERROR-SYMBOL . SIGNAL-DATA) from the error.
+\(If VAR is nil, the handler can't access that information.)
+Then the value of the last BODY form is returned from the `condition-case'
+expression.
+
+The special handler (:success BODY...) is invoked if BODYFORM terminated
+without signaling an error.  BODY is then evaluated with VAR bound to
+the value returned by BODYFORM.
+
+See also the function `signal' for more info.
+usage: (condition-case VAR BODYFORM &rest HANDLERS)  */)
+(Lisp_Object args)
+{
+  Lisp_Object var = XCAR (args);
+  Lisp_Object bodyform = XCAR (XCDR (args));
+  Lisp_Object handlers = XCDR (XCDR (args));
+
+  return internal_lisp_condition_case (var, bodyform, handlers);
 }
 
 Lisp_Object
@@ -2151,6 +2282,8 @@ alist of active lexical bindings.  */);
   Vrun_hooks = intern_c_string ("run-hooks");
   staticpro (&Vrun_hooks);
 
+  defsubr (&Scondition_case);
+  DEFSYM (QCsuccess, ":success");
   defsubr (&Ssignal);
   defsubr (&Sautoload);
   defsubr (&Sfunctionp);
