@@ -2351,6 +2351,8 @@ extern void syms_of_frame (void);
 
 struct window;
 
+extern void syms_of_minibuf (void);
+
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)
 {

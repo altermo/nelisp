@@ -611,6 +611,7 @@ ret () init (lua_State *L)
   syms_of_window ();
   syms_of_font ();
   syms_of_frame ();
+  syms_of_minibuf ();
 
   keys_of_keyboard ();
 
