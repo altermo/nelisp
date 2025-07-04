@@ -1868,7 +1868,7 @@ struct buffer *
 allocate_buffer (void)
 {
   struct buffer *b
-    = ALLOCATE_PSEUDOVECTOR (struct buffer, _last_obj, PVEC_BUFFER);
+    = ALLOCATE_PSEUDOVECTOR (struct buffer, last_obj_, PVEC_BUFFER);
   BUFFER_PVEC_INIT (b);
   return b;
 }

@@ -5,7 +5,7 @@
 #include "buffer.h"
 
 // #define Vstandard_syntax_table BVAR (&buffer_defaults, syntax_table)
-#define Vstandard_syntax_table buffer_defaults._syntax_table
+#define Vstandard_syntax_table buffer_defaults.syntax_table_
 
 enum syntaxcode
 {

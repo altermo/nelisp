@@ -6,12 +6,12 @@
 // --- buffer --
 
 #define Xbuffer_vars    \
-  X (_local_var_alist)  \
-  X (_downcase_table)   \
-  X (_upcase_table)     \
-  X (_case_canon_table) \
-  X (_case_eqv_table)   \
-  X (_syntax_table)
+  X (local_var_alist_)  \
+  X (downcase_table_)   \
+  X (upcase_table_)     \
+  X (case_canon_table_) \
+  X (case_eqv_table_)   \
+  X (syntax_table_)
 
 struct buffer
 {
@@ -21,14 +21,14 @@ struct buffer
   Xbuffer_vars
 #undef X
 
-    Lisp_Object _last_obj;
+    Lisp_Object last_obj_;
 
   long bufid;
 };
 
 enum nvim_buffer_var_field
 {
-  NVIM_BUFFER_VAR__name,
+  NVIM_BUFFER_VAR_name_,
 #define X(field) NVIM_BUFFER_VAR_##field,
   Xbuffer_vars
 #undef X
@@ -50,7 +50,7 @@ nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
 {
   switch (field)
     {
-    case NVIM_BUFFER_VAR__name:
+    case NVIM_BUFFER_VAR_name_:
       return buffer_name (b);
 #define X(field)              \
 case NVIM_BUFFER_VAR_##field: \

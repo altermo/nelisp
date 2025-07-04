@@ -38,7 +38,7 @@ decode_buffer (Lisp_Object b)
   return NILP (b) ? current_buffer : (CHECK_BUFFER (b), XBUFFER (b));
 }
 
-#define BVAR(buf, field) nvim_bvar (buf, NVIM_BUFFER_VAR__##field)
+#define BVAR(buf, field) nvim_bvar (buf, NVIM_BUFFER_VAR_##field##_)
 
 INLINE bool
 BUFFER_LIVE_P (struct buffer *b)
@@ -48,7 +48,7 @@ BUFFER_LIVE_P (struct buffer *b)
 
 enum
 {
-  BUFFER_LISP_SIZE = PSEUDOVECSIZE (struct buffer, _last_obj),
+  BUFFER_LISP_SIZE = PSEUDOVECSIZE (struct buffer, last_obj_),
 };
 
 enum
@@ -68,7 +68,7 @@ extern EMACS_INT fix_position (Lisp_Object);
 INLINE void
 bset_local_var_alist (struct buffer *b, Lisp_Object val)
 {
-  b->_local_var_alist = val;
+  b->local_var_alist_ = val;
 }
 
 INLINE void

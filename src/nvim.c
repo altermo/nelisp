@@ -150,17 +150,17 @@ create_buffer (long bufid)
   register struct buffer *b;
   b = allocate_buffer ();
 
-  b->_local_var_alist = Qnil;
-  b->_last_obj = Qnil;
-  b->_downcase_table = Vascii_downcase_table;
-  b->_upcase_table = XCHAR_TABLE (Vascii_downcase_table)->extras[0];
-  b->_case_canon_table = XCHAR_TABLE (Vascii_downcase_table)->extras[1];
-  b->_case_eqv_table = XCHAR_TABLE (Vascii_downcase_table)->extras[2];
+  b->local_var_alist_ = Qnil;
+  b->last_obj_ = Qnil;
+  b->downcase_table_ = Vascii_downcase_table;
+  b->upcase_table_ = XCHAR_TABLE (Vascii_downcase_table)->extras[0];
+  b->case_canon_table_ = XCHAR_TABLE (Vascii_downcase_table)->extras[1];
+  b->case_eqv_table_ = XCHAR_TABLE (Vascii_downcase_table)->extras[2];
 
   b->bufid = bufid;
 
 #if TODO_NELISP_LATER_ELSE
-  b->_syntax_table = BVAR (&buffer_defaults, syntax_table);
+  b->syntax_table_ = BVAR (&buffer_defaults, syntax_table);
 #endif
 
   XSETBUFFER (buffer, b);
