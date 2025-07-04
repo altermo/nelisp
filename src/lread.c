@@ -572,6 +572,27 @@ Return t if the file exists and loads successfully.  */)
   return Qt;
 }
 
+DEFUN ("locate-file-internal", Flocate_file_internal, Slocate_file_internal, 2, 4, 0,
+       doc: /* Search for FILENAME through PATH.
+Returns the file's name in absolute form, or nil if not found.
+If SUFFIXES is non-nil, it should be a list of suffixes to append to
+file name when searching.
+If non-nil, PREDICATE is used instead of `file-readable-p'.
+PREDICATE can also be an integer to pass to the faccessat(2) function,
+in which case file-name-handlers are ignored.
+This function will normally skip directories, so if you want it to find
+directories, make sure the PREDICATE function returns `dir-ok' for them.  */)
+(Lisp_Object filename, Lisp_Object path, Lisp_Object suffixes,
+ Lisp_Object predicate)
+{
+  Lisp_Object file;
+  int fd
+    = openp (path, filename, suffixes, &file, predicate, false, true, NULL);
+  if (NILP (predicate) && fd >= 0)
+    emacs_close (fd);
+  return file;
+}
+
 static Lisp_Object read_internal_start (Lisp_Object, Lisp_Object, Lisp_Object,
                                         bool);
 DEFUN ("read", Fread, Sread, 0, 1, 0,
@@ -2531,6 +2552,7 @@ For internal use only.  */);
 
   defsubr (&Sget_load_suffixes);
   defsubr (&Sload);
+  defsubr (&Slocate_file_internal);
   defsubr (&Sread);
   defsubr (&Sintern);
   defsubr (&Sunintern);
