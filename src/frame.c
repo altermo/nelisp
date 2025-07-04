@@ -371,6 +371,10 @@ syms_of_frame (void)
   DEFSYM (Quse_frame_synchronization, "use-frame-synchronization");
   DEFSYM (Qfont_parameter, "font-parameter");
 
+  DEFVAR_LISP ("frame-internal-parameters", frame_internal_parameters,
+        doc: /* Frame parameters specific to every frame.  */);
+  frame_internal_parameters = list3 (Qname, Qparent_id, Qwindow_id);
+
   defsubr (&Sframep);
   defsubr (&Swindow_system);
   defsubr (&Sframe_list);
