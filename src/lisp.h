@@ -2360,6 +2360,9 @@ struct window;
 
 extern void syms_of_minibuf (void);
 
+extern void syms_of_macros (void);
+extern void init_macros (void);
+
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)
 {

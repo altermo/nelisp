@@ -612,6 +612,7 @@ ret () init (lua_State *L)
   syms_of_font ();
   syms_of_frame ();
   syms_of_minibuf ();
+  syms_of_macros ();
 
   keys_of_keyboard ();
 
@@ -624,6 +625,7 @@ ret () init (lua_State *L)
   init_lread ();
   init_charset ();
   init_xfaces ();
+  init_macros ();
 
   build_details = true;
   noninteractive = false;
