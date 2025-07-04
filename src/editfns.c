@@ -55,11 +55,9 @@ make_buffer_string_both (ptrdiff_t start, ptrdiff_t start_byte, ptrdiff_t end,
     // end1 = -1;
   }
 
-#if TODO_NELISP_LATER_AND
   if (!NILP (BVAR (current_buffer, enable_multibyte_characters)))
     result = make_uninit_multibyte_string (end - start, end_byte - start_byte);
   else
-#endif
     result = make_uninit_string (end - start);
 
   size = end0 - beg0;

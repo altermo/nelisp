@@ -184,12 +184,8 @@ do_casify_natnum (struct casing_context *ctx, Lisp_Object obj)
   int flags = ch & flagbits;
   ch = ch & ~flagbits;
 
-#if TODO_NELISP_LATER_AND
   bool multibyte
     = (ch >= 256 || !NILP (BVAR (current_buffer, enable_multibyte_characters)));
-#else
-  bool multibyte = false;
-#endif
   if (!multibyte)
     ch = make_char_multibyte (ch);
   int cased = case_single_character (ctx, ch);

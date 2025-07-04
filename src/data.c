@@ -128,7 +128,8 @@ do_symval_forwarding (lispfwd valcontents)
       return *XOBJFWD (valcontents)->objvar;
 
     case Lisp_Fwd_Buffer_Obj:
-      TODO;
+      return per_buffer_value (current_buffer,
+                               XBUFFER_OBJFWD (valcontents)->offset);
 
     case Lisp_Fwd_Kboard_Obj:
       TODO;

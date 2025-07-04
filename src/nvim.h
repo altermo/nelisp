@@ -11,7 +11,8 @@
   X (upcase_table_)     \
   X (case_canon_table_) \
   X (case_eqv_table_)   \
-  X (syntax_table_)
+  X (syntax_table_)     \
+  X (enable_multibyte_characters_)
 
 struct buffer
 {

@@ -156,6 +156,7 @@ create_buffer (long bufid)
   b->upcase_table_ = XCHAR_TABLE (Vascii_downcase_table)->extras[0];
   b->case_canon_table_ = XCHAR_TABLE (Vascii_downcase_table)->extras[1];
   b->case_eqv_table_ = XCHAR_TABLE (Vascii_downcase_table)->extras[2];
+  b->enable_multibyte_characters_ = Qt;
 
   b->bufid = bufid;
 

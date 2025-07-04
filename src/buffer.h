@@ -39,6 +39,7 @@ decode_buffer (Lisp_Object b)
 }
 
 #define BVAR(buf, field) nvim_bvar (buf, NVIM_BUFFER_VAR_##field##_)
+#define BVAR_(buf, field) ((buf)->field##_)
 
 INLINE bool
 BUFFER_LIVE_P (struct buffer *b)
@@ -64,6 +65,12 @@ BUFFER_PVEC_INIT (struct buffer *b)
 
 extern EMACS_INT fix_position (Lisp_Object);
 #define CHECK_FIXNUM_COERCE_MARKER(x) ((x) = make_fixnum (fix_position (x)))
+
+INLINE Lisp_Object
+per_buffer_value (struct buffer *b, int offset)
+{
+  return *(Lisp_Object *) (offset + (char *) b);
+}
 
 INLINE void
 bset_local_var_alist (struct buffer *b, Lisp_Object val)

@@ -108,6 +108,32 @@ BUFFER defaults to the current buffer.
 Return nil if BUFFER has been killed.  */)
 (register Lisp_Object buffer) { return BVAR (decode_buffer (buffer), name); }
 
+#define DEFVAR_PER_BUFFER(lname, vname, predicate, doc)     \
+  do                                                        \
+    {                                                       \
+      static struct Lisp_Buffer_Objfwd bo_fwd;              \
+      defvar_per_buffer (&bo_fwd, lname, vname, predicate); \
+    }                                                       \
+  while (0)
+
+static void
+defvar_per_buffer (struct Lisp_Buffer_Objfwd *bo_fwd, const char *namestring,
+                   Lisp_Object *address, Lisp_Object predicate)
+{
+  struct Lisp_Symbol *sym;
+  int offset;
+
+  sym = XSYMBOL (intern (namestring));
+  offset = (char *) address - (char *) current_buffer;
+
+  bo_fwd->type = Lisp_Fwd_Buffer_Obj;
+  bo_fwd->offset = offset;
+  bo_fwd->predicate = predicate;
+  sym->u.s.declared_special = true;
+  sym->u.s.redirect = SYMBOL_FORWARDED;
+  SET_SYMBOL_FWD (sym, bo_fwd);
+}
+
 void
 init_buffer (void)
 {
@@ -123,6 +149,20 @@ syms_of_buffer (void)
   Vcase_fold_search = Qt;
   DEFSYM (Qcase_fold_search, "case-fold-search");
   Fmake_variable_buffer_local (Qcase_fold_search);
+
+  DEFVAR_PER_BUFFER ("enable-multibyte-characters",
+        &BVAR_ (current_buffer, enable_multibyte_characters),
+        Qnil,
+        doc: /* Non-nil means the buffer contents are regarded as multi-byte characters.
+Otherwise they are regarded as unibyte.  This affects the display,
+file I/O and the behavior of various editing commands.
+
+This variable is buffer-local but you cannot set it directly;
+use the function `set-buffer-multibyte' to change a buffer's representation.
+To prevent any attempts to set it or make it buffer-local, Emacs will
+signal an error in those cases.
+See also Info node `(elisp)Text Representations'.  */);
+  make_symbol_constant (intern_c_string ("enable-multibyte-characters"));
 
   defsubr (&Sget_buffer);
   defsubr (&Sget_buffer_create);

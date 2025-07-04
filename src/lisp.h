@@ -1329,6 +1329,12 @@ BUFFER_OBJFWDP (lispfwd a)
 {
   return XFWDTYPE (a) == Lisp_Fwd_Buffer_Obj;
 }
+INLINE struct Lisp_Buffer_Objfwd const *
+XBUFFER_OBJFWD (lispfwd a)
+{
+  eassert (BUFFER_OBJFWDP (a));
+  return a.fwdptr;
+}
 INLINE bool
 KBOARD_OBJFWDP (lispfwd a)
 {
@@ -2401,6 +2407,13 @@ struct Lisp_Objfwd
 {
   enum Lisp_Fwd_Type type;
   Lisp_Object *objvar;
+};
+
+struct Lisp_Buffer_Objfwd
+{
+  enum Lisp_Fwd_Type type;
+  int offset;
+  Lisp_Object predicate;
 };
 
 extern void defvar_lisp (struct Lisp_Objfwd const *, char const *);
