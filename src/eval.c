@@ -2204,6 +2204,101 @@ usage: (quote ARG)  */)
   return XCAR (args);
 }
 
+bool
+backtrace_p (union specbinding *pdl)
+{
+  return specpdl ? pdl >= specpdl : false;
+}
+
+union specbinding *
+backtrace_top (void)
+{
+  if (!specpdl)
+    return NULL;
+
+  union specbinding *pdl = specpdl_ptr - 1;
+  while (backtrace_p (pdl) && pdl->kind != SPECPDL_BACKTRACE)
+    pdl--;
+  return pdl;
+}
+
+union specbinding *
+backtrace_next (union specbinding *pdl)
+{
+  pdl--;
+  while (backtrace_p (pdl) && pdl->kind != SPECPDL_BACKTRACE)
+    pdl--;
+  return pdl;
+}
+
+static Lisp_Object
+backtrace_frame_apply (Lisp_Object function, union specbinding *pdl)
+{
+  if (!backtrace_p (pdl))
+    return Qnil;
+
+  Lisp_Object flags = Qnil;
+  if (backtrace_debug_on_exit (pdl))
+    flags = list2 (QCdebug_on_exit, Qt);
+
+  if (backtrace_nargs (pdl) == UNEVALLED)
+    return call4 (function, Qnil, backtrace_function (pdl),
+                  *backtrace_args (pdl), flags);
+  else
+    {
+      Lisp_Object tem = Flist (backtrace_nargs (pdl), backtrace_args (pdl));
+      return call4 (function, Qt, backtrace_function (pdl), tem, flags);
+    }
+}
+
+static union specbinding *
+get_backtrace_starting_at (Lisp_Object base)
+{
+  union specbinding *pdl = backtrace_top ();
+
+  if (!NILP (base))
+    { /* Skip up to `base'.  */
+      int offset = 0;
+      if (CONSP (base) && FIXNUMP (XCAR (base)))
+        {
+          offset = XFIXNUM (XCAR (base));
+          base = XCDR (base);
+        }
+      base = Findirect_function (base, Qt);
+      while (backtrace_p (pdl)
+             && !EQ (base, Findirect_function (backtrace_function (pdl), Qt)))
+        pdl = backtrace_next (pdl);
+      while (backtrace_p (pdl) && offset-- > 0)
+        pdl = backtrace_next (pdl);
+    }
+
+  return pdl;
+}
+
+static union specbinding *
+get_backtrace_frame (Lisp_Object nframes, Lisp_Object base)
+{
+  register EMACS_INT i;
+
+  CHECK_FIXNAT (nframes);
+  union specbinding *pdl = get_backtrace_starting_at (base);
+
+  /* Find the frame requested.  */
+  for (i = XFIXNAT (nframes); i > 0 && backtrace_p (pdl); i--)
+    pdl = backtrace_next (pdl);
+
+  return pdl;
+}
+
+DEFUN ("backtrace-frame--internal", Fbacktrace_frame_internal,
+       Sbacktrace_frame_internal, 3, 3, NULL,
+       doc: /* Call FUNCTION on stack frame NFRAMES away from BASE.
+Return the result of FUNCTION, or nil if no matching frame could be found. */)
+(Lisp_Object function, Lisp_Object nframes, Lisp_Object base)
+{
+  return backtrace_frame_apply (function, get_backtrace_frame (nframes, base));
+}
+
 static void
 init_eval_once_for_pdumper (void)
 {
@@ -2310,4 +2405,6 @@ alist of active lexical bindings.  */);
   defsubr (&Sor);
   defsubr (&Sand);
   defsubr (&Squote);
+  DEFSYM (QCdebug_on_exit, ":debug-on-exit");
+  defsubr (&Sbacktrace_frame_internal);
 }
