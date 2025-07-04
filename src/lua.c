@@ -630,6 +630,8 @@ ret () init (lua_State *L)
   build_details = true;
   noninteractive = false;
 
+  noninteractive1 = noninteractive;
+
   bool err = false;
   if (mtx_init (&main_mutex, mtx_plain) != thrd_success)
     err = true;

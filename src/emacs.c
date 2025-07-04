@@ -54,4 +54,7 @@ and is not especially meaningful.  Prior to Emacs 26.1, an extra final
 component .BUILD is present.  This is now stored separately in
 `emacs-build-number'.  */);
   Vemacs_version = build_string (emacs_version);
+
+  DEFVAR_BOOL ("noninteractive", noninteractive1,
+               doc: /* Non-nil means Emacs is running without interactive terminal.  */);
 }
