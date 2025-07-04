@@ -258,6 +258,23 @@ intern_c_string_1 (const char *str, ptrdiff_t len)
   return tem;
 }
 
+DEFUN ("get-load-suffixes", Fget_load_suffixes, Sget_load_suffixes, 0, 0, 0,
+       doc: /* Return the suffixes that `load' should try if a suffix is \
+required.
+This uses the variables `load-suffixes' and `load-file-rep-suffixes'.  */)
+(void)
+{
+  Lisp_Object lst = Qnil, suffixes = Vload_suffixes;
+  FOR_EACH_TAIL (suffixes)
+    {
+      Lisp_Object exts = Vload_file_rep_suffixes;
+      Lisp_Object suffix = XCAR (suffixes);
+      FOR_EACH_TAIL (exts)
+        lst = Fcons (concat2 (suffix, XCAR (exts)), lst);
+    }
+  return Fnreverse (lst);
+}
+
 bool
 suffix_p (Lisp_Object string, const char *suffix)
 {
@@ -2456,6 +2473,30 @@ Use `directory-file-name' when adding items to this path.  However, Lisp
 programs that process this list should tolerate directories both with
 and without trailing slashes.  */);
 
+  DEFVAR_LISP ("load-suffixes", Vload_suffixes,
+        doc: /* List of suffixes for Emacs Lisp files and dynamic modules.
+This list includes suffixes for both compiled and source Emacs Lisp files.
+This list should not include the empty string.
+`load' and related functions try to append these suffixes, in order,
+to the specified file name if a suffix is allowed or required.  */);
+  Vload_suffixes
+    = list2 (build_pure_c_string (".elc"), build_pure_c_string (".el"));
+
+  DEFVAR_LISP ("load-file-rep-suffixes", Vload_file_rep_suffixes,
+        doc: /* List of suffixes that indicate representations of \
+the same file.
+This list should normally start with the empty string.
+
+Enabling Auto Compression mode appends the suffixes in
+`jka-compr-load-suffixes' to this list and disabling Auto Compression
+mode removes them again.  `load' and related functions use this list to
+determine whether they should look for compressed versions of a file
+and, if so, which suffixes they should try to append to the file name
+in order to do so.  However, if you want to customize which suffixes
+the loading functions recognize as compression suffixes, you should
+customize `jka-compr-load-suffixes' rather than the present variable.  */);
+  Vload_file_rep_suffixes = list1 (empty_unibyte_string);
+
   DEFVAR_LISP ("load-file-name", Vload_file_name,
         doc: /* Full name of file being loaded by `load'.
 
@@ -2488,6 +2529,7 @@ For internal use only.  */);
   staticpro (&read_objects_completed);
   read_objects_completed = Qnil;
 
+  defsubr (&Sget_load_suffixes);
   defsubr (&Sload);
   defsubr (&Sread);
   defsubr (&Sintern);

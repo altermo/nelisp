@@ -1178,6 +1178,12 @@ concat_to_string (ptrdiff_t nargs, Lisp_Object *args)
 }
 
 Lisp_Object
+concat2 (Lisp_Object s1, Lisp_Object s2)
+{
+  return concat_to_string (2, ((Lisp_Object[]) { s1, s2 }));
+}
+
+Lisp_Object
 concat_to_list (ptrdiff_t nargs, Lisp_Object *args, Lisp_Object last_tail)
 {
   Lisp_Object result = Qnil;
