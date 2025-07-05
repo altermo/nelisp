@@ -810,6 +810,81 @@ efficient.  */)
   return make_fixnum (val);
 }
 
+DEFUN ("string-search", Fstring_search, Sstring_search, 2, 3, 0,
+       doc: /* Search for the string NEEDLE in the string HAYSTACK.
+The return value is the position of the first occurrence of NEEDLE in
+HAYSTACK, or nil if no match was found.
+
+The optional START-POS argument says where to start searching in
+HAYSTACK and defaults to zero (start at the beginning).
+It must be between zero and the length of HAYSTACK, inclusive.
+
+Case is always significant and text properties are ignored. */)
+(register Lisp_Object needle, Lisp_Object haystack, Lisp_Object start_pos)
+{
+  ptrdiff_t start_byte = 0, haybytes;
+  char *res, *haystart;
+  EMACS_INT start = 0;
+
+  CHECK_STRING (needle);
+  CHECK_STRING (haystack);
+
+  if (!NILP (start_pos))
+    {
+      CHECK_FIXNUM (start_pos);
+      start = XFIXNUM (start_pos);
+      if (start < 0 || start > SCHARS (haystack))
+        xsignal1 (Qargs_out_of_range, start_pos);
+      start_byte = string_char_to_byte (haystack, start);
+    }
+
+  if (SCHARS (needle) > SCHARS (haystack) - start)
+    return Qnil;
+
+  haystart = SSDATA (haystack) + start_byte;
+  haybytes = SBYTES (haystack) - start_byte;
+
+  if (STRING_MULTIBYTE (haystack)
+        ? (STRING_MULTIBYTE (needle) || SCHARS (haystack) == SBYTES (haystack)
+           || string_ascii_p (needle))
+        : (!STRING_MULTIBYTE (needle) || SCHARS (needle) == SBYTES (needle)))
+    {
+      if (STRING_MULTIBYTE (haystack) && STRING_MULTIBYTE (needle)
+          && SCHARS (haystack) == SBYTES (haystack)
+          && SCHARS (needle) != SBYTES (needle))
+        return Qnil;
+      else
+        res = memmem (haystart, haybytes, SSDATA (needle), SBYTES (needle));
+    }
+  else if (STRING_MULTIBYTE (haystack))
+    {
+      TODO; // Lisp_Object multi_needle = string_to_multibyte (needle);
+      // res = memmem (haystart, haybytes, SSDATA (multi_needle),
+      //               SBYTES (multi_needle));
+    }
+  else
+    {
+      ptrdiff_t nbytes = SBYTES (needle);
+      for (ptrdiff_t i = 0; i < nbytes; i++)
+        {
+          int c = SREF (needle, i);
+          if (CHAR_BYTE8_HEAD_P (c))
+            i++; /* Skip raw byte.  */
+          else if (!ASCII_CHAR_P (c))
+            return Qnil;
+        }
+      TODO; // Lisp_Object uni_needle = Fstring_to_unibyte (needle);
+      // res
+      //   = memmem (haystart, haybytes, SSDATA (uni_needle), SBYTES
+      //   (uni_needle));
+    }
+
+  if (!res)
+    return Qnil;
+
+  return make_int (string_byte_to_char (haystack, res - SSDATA (haystack)));
+}
+
 DEFUN ("string-equal", Fstring_equal, Sstring_equal, 2, 2, 0,
        doc: /* Return t if two strings have identical contents.
 Case is significant, but text properties are ignored.
@@ -2241,6 +2316,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Snreverse);
   defsubr (&Sreverse);
   defsubr (&Slength);
+  defsubr (&Sstring_search);
   defsubr (&Sstring_equal);
   defsubr (&Sstring_to_multibyte);
   defsubr (&Ssubstring);

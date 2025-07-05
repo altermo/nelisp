@@ -2271,6 +2271,7 @@ extern bool file_accessible_directory_p (Lisp_Object);
 
 extern void syms_of_coding (void);
 extern void init_coding_once (void);
+extern bool string_ascii_p (Lisp_Object);
 
 extern void syms_of_buffer (void);
 extern void init_buffer (void);

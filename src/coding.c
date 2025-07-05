@@ -1073,6 +1073,16 @@ DEFUN ("set-safe-terminal-coding-system-internal",
   return Qnil;
 }
 
+bool
+string_ascii_p (Lisp_Object string)
+{
+  ptrdiff_t nbytes = SBYTES (string);
+  for (ptrdiff_t i = 0; i < nbytes; i++)
+    if (SREF (string, i) > 127)
+      return false;
+  return true;
+}
+
 void
 init_coding_once (void)
 {
