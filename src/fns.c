@@ -684,6 +684,134 @@ usage: (nconc &rest LISTS)  */)
 
   return val;
 }
+DEFUN ("delete", Fdelete, Sdelete, 2, 2, 0,
+       doc: /* Delete members of SEQ which are `equal' to ELT, and return the result.
+SEQ must be a sequence (i.e. a list, a vector, or a string).
+The return value is a sequence of the same type.
+
+If SEQ is a list, this behaves like `delq', except that it compares
+with `equal' instead of `eq'.  In particular, it may remove elements
+by altering the list structure.
+
+If SEQ is not a list, deletion is never performed destructively;
+instead this function creates and returns a new vector or string.
+
+Write `(setq foo (delete element foo))' to be sure of correctly
+changing the value of a sequence `foo'.  See also `remove', which
+does not modify the argument.  */)
+(Lisp_Object elt, Lisp_Object seq)
+{
+  if (NILP (seq))
+    ;
+  else if (CONSP (seq))
+    {
+      Lisp_Object prev = Qnil, tail = seq;
+
+      FOR_EACH_TAIL (tail)
+        {
+          if (!NILP (Fequal (elt, XCAR (tail))))
+            {
+              if (NILP (prev))
+                seq = XCDR (tail);
+              else
+                Fsetcdr (prev, XCDR (tail));
+            }
+          else
+            prev = tail;
+        }
+      CHECK_LIST_END (tail, seq);
+    }
+  else if (VECTORP (seq))
+    {
+      ptrdiff_t n = 0;
+      ptrdiff_t size = ASIZE (seq);
+      USE_SAFE_ALLOCA;
+      Lisp_Object *kept = SAFE_ALLOCA (size * sizeof *kept);
+
+      for (ptrdiff_t i = 0; i < size; i++)
+        {
+          kept[n] = AREF (seq, i);
+          n += NILP (Fequal (AREF (seq, i), elt));
+        }
+
+      if (n != size)
+        seq = Fvector (n, kept);
+
+      SAFE_FREE ();
+    }
+  else if (STRINGP (seq))
+    {
+      if (!CHARACTERP (elt))
+        return seq;
+
+      ptrdiff_t i, ibyte, nchars, nbytes, cbytes;
+      int c;
+
+      for (i = nchars = nbytes = ibyte = 0; i < SCHARS (seq);
+           ++i, ibyte += cbytes)
+        {
+          if (STRING_MULTIBYTE (seq))
+            {
+              c = STRING_CHAR (SDATA (seq) + ibyte);
+              cbytes = CHAR_BYTES (c);
+            }
+          else
+            {
+              c = SREF (seq, i);
+              cbytes = 1;
+            }
+
+          if (c != XFIXNUM (elt))
+            {
+              ++nchars;
+              nbytes += cbytes;
+            }
+        }
+
+      if (nchars != SCHARS (seq))
+        {
+          Lisp_Object tem;
+
+          tem = make_uninit_multibyte_string (nchars, nbytes);
+          if (!STRING_MULTIBYTE (seq))
+            STRING_SET_UNIBYTE (tem);
+
+          for (i = nchars = nbytes = ibyte = 0; i < SCHARS (seq);
+               ++i, ibyte += cbytes)
+            {
+              if (STRING_MULTIBYTE (seq))
+                {
+                  c = STRING_CHAR (SDATA (seq) + ibyte);
+                  cbytes = CHAR_BYTES (c);
+                }
+              else
+                {
+                  c = SREF (seq, i);
+                  cbytes = 1;
+                }
+
+              if (c != XFIXNUM (elt))
+                {
+                  unsigned char *from = SDATA (seq) + ibyte;
+                  unsigned char *to = SDATA (tem) + nbytes;
+                  ptrdiff_t n;
+
+                  ++nchars;
+                  nbytes += cbytes;
+
+                  for (n = cbytes; n--;)
+                    *to++ = *from++;
+                }
+            }
+
+          seq = tem;
+        }
+    }
+  else
+    wrong_type_argument (Qsequencep, seq);
+
+  return seq;
+}
 DEFUN ("nreverse", Fnreverse, Snreverse, 1, 1, 0,
        doc: /* Reverse order of items in a list, vector or string SEQ.
 If SEQ is a list, it should be nil-terminated.
@@ -2340,6 +2468,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Smapcar);
   defsubr (&Smapc);
   defsubr (&Snconc);
+  defsubr (&Sdelete);
   defsubr (&Snreverse);
   defsubr (&Sreverse);
   defsubr (&Slength);
