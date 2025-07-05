@@ -2204,6 +2204,24 @@ usage: (quote ARG)  */)
   return XCAR (args);
 }
 
+DEFUN ("run-hook-with-args-until-success", Frun_hook_with_args_until_success,
+       Srun_hook_with_args_until_success, 1, MANY, 0,
+       doc: /* Run HOOK with the specified arguments ARGS.
+HOOK should be a symbol, a hook variable.  The value of HOOK
+may be nil, a function, or a list of functions.  Call each
+function in order with arguments ARGS, stopping at the first
+one that returns non-nil, and return that value.  Otherwise (if
+all functions return nil, or if there are no functions to call),
+return nil.
+
+Do not use `make-local-variable' to make a hook variable buffer-local.
+Instead, use `add-hook' and specify t for the LOCAL argument.
+usage: (run-hook-with-args-until-success HOOK &rest ARGS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  return run_hook_with_args (nargs, args, Ffuncall);
+}
+
 bool
 backtrace_p (union specbinding *pdl)
 {
@@ -2405,6 +2423,7 @@ alist of active lexical bindings.  */);
   defsubr (&Sor);
   defsubr (&Sand);
   defsubr (&Squote);
+  defsubr (&Srun_hook_with_args_until_success);
   DEFSYM (QCdebug_on_exit, ":debug-on-exit");
   defsubr (&Sbacktrace_frame_internal);
 }
