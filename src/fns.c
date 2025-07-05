@@ -2165,6 +2165,19 @@ VALUE.  In any case, return VALUE.  */)
 DEFUN ("hash-table-p", Fhash_table_p, Shash_table_p, 1, 1, 0,
        doc: /* Return t if OBJ is a Lisp hash table object.  */)
 (Lisp_Object obj) { return HASH_TABLE_P (obj) ? Qt : Qnil; }
+DEFUN ("maphash", Fmaphash, Smaphash, 2, 2, 0,
+       doc: /* Call FUNCTION for all entries in hash table TABLE.
+FUNCTION is called with two arguments, KEY and VALUE.
+It should not alter TABLE in any way other than using `puthash' to
+set a new value for KEY, or `remhash' to remove KEY.
+`maphash' always returns nil.  */)
+(Lisp_Object function, Lisp_Object table)
+{
+  struct Lisp_Hash_Table *h = check_hash_table (table);
+  DOHASH_SAFE (h, i)
+  call2 (function, HASH_KEY (h, i), HASH_VALUE (h, i));
+  return Qnil;
+}
 DEFUN ("featurep", Ffeaturep, Sfeaturep, 1, 2, 0,
        doc: /* Return t if FEATURE is present in this Emacs.
 
@@ -2344,6 +2357,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sgethash);
   defsubr (&Sputhash);
   defsubr (&Shash_table_p);
+  defsubr (&Smaphash);
   defsubr (&Sfeaturep);
   defsubr (&Sprovide);
   defsubr (&Srequire);

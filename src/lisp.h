@@ -1252,6 +1252,11 @@ hash_from_key (struct Lisp_Hash_Table *h, Lisp_Object key)
 {
   return h->test->hashfn (key, h);
 }
+#define DOHASH_SAFE(h, i)                             \
+  for (ptrdiff_t i = 0; i < HASH_TABLE_SIZE (h); i++) \
+    if (hash_unused_entry_key_p (HASH_KEY (h, i)))    \
+      ;                                               \
+    else
 INLINE Lisp_Object
 make_lisp_hash_table (struct Lisp_Hash_Table *h)
 {
