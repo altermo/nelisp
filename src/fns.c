@@ -346,6 +346,19 @@ TESTFN is called with 2 arguments: a car of an alist element and KEY.  */)
   return Qnil;
 }
 
+DEFUN ("rassq", Frassq, Srassq, 2, 2, 0,
+       doc: /* Return non-nil if KEY is `eq' to the cdr of an element of ALIST.
+The value is actually the first element of ALIST whose cdr is KEY.  */)
+(Lisp_Object key, Lisp_Object alist)
+{
+  Lisp_Object tail = alist;
+  FOR_EACH_TAIL (tail)
+    if (CONSP (XCAR (tail)) && EQ (XCDR (XCAR (tail)), key))
+      return XCAR (tail);
+  CHECK_LIST_END (tail, alist);
+  return Qnil;
+}
+
 enum
 {
   WORDS_PER_DOUBLE = (sizeof (double) / sizeof (EMACS_UINT)
@@ -2302,6 +2315,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Smemq);
   defsubr (&Sassq);
   defsubr (&Sassoc);
+  defsubr (&Srassq);
   defsubr (&Splist_put);
   defsubr (&Sput);
   defsubr (&Smember);
