@@ -1758,7 +1758,18 @@ read_obj:;
           case '$':
             TODO;
           case ':':
-            TODO;
+            c = READCHAR;
+            if (c <= 32 || c == NO_BREAK_SPACE || c == '"' || c == '\''
+                || c == ';' || c == '#' || c == '(' || c == ')' || c == '['
+                || c == ']' || c == '`' || c == ',')
+              {
+                UNREAD (c);
+                obj = Fmake_symbol (empty_unibyte_string);
+                break;
+              }
+            uninterned_symbol = true;
+            skip_shorthand = false;
+            goto read_symbol;
           case '_':
             TODO;
           default:
@@ -1888,109 +1899,117 @@ read_obj:;
       uninterned_symbol = false;
       skip_shorthand = false;
 
-      char *p = read_buffer;
-      char *end = read_buffer + read_buffer_size;
-      bool quoted = false;
-      do
-        {
-          if (end - p < MAX_MULTIBYTE_LENGTH + 1)
-            {
-              ptrdiff_t offset = p - read_buffer;
-              read_buffer = grow_read_buffer (read_buffer, offset, &heapbuf,
-                                              &read_buffer_size, count);
-              p = read_buffer + offset;
-              end = read_buffer + read_buffer_size;
-            }
+    read_symbol:
+      {
+        char *p = read_buffer;
+        char *end = read_buffer + read_buffer_size;
+        bool quoted = false;
+        do
+          {
+            if (end - p < MAX_MULTIBYTE_LENGTH + 1)
+              {
+                ptrdiff_t offset = p - read_buffer;
+                read_buffer = grow_read_buffer (read_buffer, offset, &heapbuf,
+                                                &read_buffer_size, count);
+                p = read_buffer + offset;
+                end = read_buffer + read_buffer_size;
+              }
 
-          if (c == '\\')
-            {
-              c = READCHAR;
-              if (c < 0)
-                end_of_file_error ();
-              quoted = true;
-            }
+            if (c == '\\')
+              {
+                c = READCHAR;
+                if (c < 0)
+                  end_of_file_error ();
+                quoted = true;
+              }
 
-          if (multibyte)
-            p += CHAR_STRING (c, (unsigned char *) p);
-          else
-            *p++ = c;
-          c = READCHAR;
-        }
-      while (
-        c > 32 && c != NO_BREAK_SPACE
-        && (c >= 128
-            || !(c == '"' || c == '\'' || c == ';' || c == '#' || c == '('
-                 || c == ')' || c == '[' || c == ']' || c == '`' || c == ',')));
+            if (multibyte)
+              p += CHAR_STRING (c, (unsigned char *) p);
+            else
+              *p++ = c;
+            c = READCHAR;
+          }
+        while (c > 32 && c != NO_BREAK_SPACE
+               && (c >= 128
+                   || !(c == '"' || c == '\'' || c == ';' || c == '#'
+                        || c == '(' || c == ')' || c == '[' || c == ']'
+                        || c == '`' || c == ',')));
 
-      *p = 0;
-      ptrdiff_t nbytes = p - read_buffer;
-      UNREAD (c);
+        *p = 0;
+        ptrdiff_t nbytes = p - read_buffer;
+        UNREAD (c);
 
-      char c0 = read_buffer[0];
-      if (((c0 >= '0' && c0 <= '9') || c0 == '.' || c0 == '-' || c0 == '+')
-          && !quoted && !uninterned_symbol && !skip_shorthand)
-        {
-          ptrdiff_t len;
-          Lisp_Object result = string_to_number (read_buffer, 10, &len);
-          if (!NILP (result) && len == nbytes)
-            {
-              obj = result;
-              break;
-            }
-        }
+        char c0 = read_buffer[0];
+        if (((c0 >= '0' && c0 <= '9') || c0 == '.' || c0 == '-' || c0 == '+')
+            && !quoted && !uninterned_symbol && !skip_shorthand)
+          {
+            ptrdiff_t len;
+            Lisp_Object result = string_to_number (read_buffer, 10, &len);
+            if (!NILP (result) && len == nbytes)
+              {
+                obj = result;
+                break;
+              }
+          }
 
 #if TODO_NELISP_LATER_AND
-      ptrdiff_t nchars
-        = (multibyte
-             ? multibyte_chars_in_text ((unsigned char *) read_buffer, nbytes)
-             : nbytes);
+        ptrdiff_t nchars
+          = (multibyte
+               ? multibyte_chars_in_text ((unsigned char *) read_buffer, nbytes)
+               : nbytes);
 #else
-      ptrdiff_t nchars = nbytes;
+        ptrdiff_t nchars = nbytes;
 #endif
-      Lisp_Object result;
-      if (uninterned_symbol)
-        {
-          TODO;
-        }
-      else
-        {
-          Lisp_Object obarray = check_obarray (Vobarray);
+        Lisp_Object result;
+        if (uninterned_symbol)
+          {
+            Lisp_Object name
+              = (!NILP (Vpurify_flag)
+                   ? make_pure_string (read_buffer, nchars, nbytes, multibyte)
+                   : make_specified_string (read_buffer, nchars, nbytes,
+                                            multibyte));
+            result = Fmake_symbol (name);
+          }
+        else
+          {
+            Lisp_Object obarray = check_obarray (Vobarray);
 
-          char *longhand = NULL;
-          Lisp_Object found;
+            char *longhand = NULL;
+            Lisp_Object found;
 #if TODO_NELISP_LATER_AND
-          ptrdiff_t longhand_chars = 0;
-          ptrdiff_t longhand_bytes = 0;
+            ptrdiff_t longhand_chars = 0;
+            ptrdiff_t longhand_bytes = 0;
 
-          if (skip_shorthand || symbol_char_span (read_buffer) >= nbytes)
+            if (skip_shorthand || symbol_char_span (read_buffer) >= nbytes)
+              found = oblookup (obarray, read_buffer, nchars, nbytes);
+            else
+              found = oblookup_considering_shorthand (obarray, read_buffer,
+                                                      nchars, nbytes, &longhand,
+                                                      &longhand_chars,
+                                                      &longhand_bytes);
+#else
             found = oblookup (obarray, read_buffer, nchars, nbytes);
-          else
-            found = oblookup_considering_shorthand (obarray, read_buffer,
-                                                    nchars, nbytes, &longhand,
-                                                    &longhand_chars,
-                                                    &longhand_bytes);
-#else
-          found = oblookup (obarray, read_buffer, nchars, nbytes);
 #endif
 
-          if (BARE_SYMBOL_P (found))
-            result = found;
-          else if (longhand)
-            {
-              TODO;
-            }
-          else
-            {
-              Lisp_Object name = make_specified_string (read_buffer, nchars,
-                                                        nbytes, multibyte);
-              result = intern_driver (name, obarray, found);
-            }
-        }
-      if (locate_syms && !NILP (result))
-        TODO;
+            if (BARE_SYMBOL_P (found))
+              result = found;
+            else if (longhand)
+              {
+                TODO;
+              }
+            else
+              {
+                Lisp_Object name = make_specified_string (read_buffer, nchars,
+                                                          nbytes, multibyte);
+                result = intern_driver (name, obarray, found);
+              }
+          }
+        if (locate_syms && !NILP (result))
+          TODO;
 
-      obj = result;
-      break;
+        obj = result;
+        break;
+      }
     }
 
   while (rdstack.sp > base_sp)
