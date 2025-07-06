@@ -1883,6 +1883,14 @@ usage: (defvar SYMBOL &optional INITVALUE DOCSTRING)  */)
   return sym;
 }
 
+DEFUN ("defvar-1", Fdefvar_1, Sdefvar_1, 2, 3, 0,
+       doc: /* Like `defvar' but as a function.
+More specifically behaves like (defvar SYM 'INITVALUE DOCSTRING).  */)
+(Lisp_Object sym, Lisp_Object initvalue, Lisp_Object docstring)
+{
+  return defvar (sym, initvalue, docstring, false);
+}
+
 DEFUN ("defconst", Fdefconst, Sdefconst, 2, UNEVALLED, 0,
        doc: /* Define SYMBOL as a constant variable.
 This declares that neither programs nor users should ever change the
@@ -2412,6 +2420,7 @@ alist of active lexical bindings.  */);
   defsubr (&Sset_default_toplevel_value);
   defsubr (&Sinternal__define_uninitialized_variable);
   defsubr (&Sdefvar);
+  defsubr (&Sdefvar_1);
   defsubr (&Sdefconst);
   defsubr (&Sdefconst_1);
   defsubr (&Sdefvaralias);
