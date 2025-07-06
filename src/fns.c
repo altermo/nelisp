@@ -1400,6 +1400,12 @@ concat2 (Lisp_Object s1, Lisp_Object s2)
 }
 
 Lisp_Object
+concat3 (Lisp_Object s1, Lisp_Object s2, Lisp_Object s3)
+{
+  return concat_to_string (3, ((Lisp_Object[]) { s1, s2, s3 }));
+}
+
+Lisp_Object
 concat_to_list (ptrdiff_t nargs, Lisp_Object *args, Lisp_Object last_tail)
 {
   Lisp_Object result = Qnil;

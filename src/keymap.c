@@ -1,6 +1,7 @@
 #include "keymap.h"
 #include "lisp.h"
 #include "character.h"
+#include "commands.h"
 #include "keyboard.h"
 #include "puresize.h"
 #include "termhooks.h"
@@ -852,6 +853,268 @@ DEFUN ("current-global-map", Fcurrent_global_map, Scurrent_global_map, 0, 0, 0,
        doc: /* Return the current global keymap.  */)
 (void) { return current_global_map; }
 
+DEFUN ("key-description", Fkey_description, Skey_description, 1, 2, 0,
+       doc: /* Return a pretty description of key-sequence KEYS.
+Optional arg PREFIX is the sequence of keys leading up to KEYS.
+For example, [?\\C-x ?l] is converted into the string \"C-x l\".
+
+For an approximate inverse of this, see `kbd'.  */)
+(Lisp_Object keys, Lisp_Object prefix)
+{
+  ptrdiff_t len = 0;
+  Lisp_Object *args;
+  EMACS_INT nkeys = XFIXNUM (Flength (keys));
+  EMACS_INT nprefix = XFIXNUM (Flength (prefix));
+  Lisp_Object sep = build_string (" ");
+  bool add_meta = false;
+  USE_SAFE_ALLOCA;
+
+  ptrdiff_t size4;
+  if (ckd_mul (&size4, nkeys + nprefix, 4))
+    memory_full (SIZE_MAX);
+  SAFE_ALLOCA_LISP (args, size4);
+
+  Lisp_Object lists[2] = { prefix, keys };
+  ptrdiff_t listlens[2] = { nprefix, nkeys };
+  for (int li = 0; li < ARRAYELTS (lists); li++)
+    {
+      Lisp_Object list = lists[li];
+      ptrdiff_t listlen = listlens[li], i_byte = 0;
+
+      if (!(NILP (list) || STRINGP (list) || VECTORP (list) || CONSP (list)))
+        wrong_type_argument (Qarrayp, list);
+
+      for (ptrdiff_t i = 0; i < listlen;)
+        {
+          Lisp_Object key;
+          if (STRINGP (list))
+            {
+              int c = fetch_string_char_advance (list, &i, &i_byte);
+              if (!STRING_MULTIBYTE (list) && (c & 0200))
+                c ^= 0200 | meta_modifier;
+              key = make_fixnum (c);
+            }
+          else if (VECTORP (list))
+            {
+              key = AREF (list, i);
+              i++;
+            }
+          else
+            {
+              key = XCAR (list);
+              list = XCDR (list);
+              i++;
+            }
+
+          if (add_meta)
+            {
+              if (!FIXNUMP (key) || EQ (key, meta_prefix_char)
+                  || (XFIXNUM (key) & meta_modifier))
+                {
+                  args[len++]
+                    = Fsingle_key_description (meta_prefix_char, Qnil);
+                  args[len++] = sep;
+                  if (EQ (key, meta_prefix_char))
+                    continue;
+                }
+              else
+                key = make_fixnum (XFIXNUM (key) | meta_modifier);
+              add_meta = false;
+            }
+          else if (EQ (key, meta_prefix_char))
+            {
+              add_meta = true;
+              continue;
+            }
+          args[len++] = Fsingle_key_description (key, Qnil);
+          args[len++] = sep;
+        }
+    }
+
+  Lisp_Object result;
+  if (add_meta)
+    {
+      args[len] = Fsingle_key_description (meta_prefix_char, Qnil);
+      result = Fconcat (len + 1, args);
+    }
+  else if (len == 0)
+    result = empty_unibyte_string;
+  else
+    result = Fconcat (len - 1, args);
+  SAFE_FREE ();
+  return result;
+}
+
+char *
+push_key_description (EMACS_INT ch, char *p)
+{
+  int c, c2;
+  bool tab_as_ci;
+
+  c = ch & (meta_modifier | ~-meta_modifier);
+  c2 = c
+       & ~(alt_modifier | ctrl_modifier | hyper_modifier | meta_modifier
+           | shift_modifier | super_modifier);
+
+  if (!CHARACTERP (make_fixnum (c2)))
+    {
+      p += sprintf (p, "[%d]", c);
+      return p;
+    }
+
+  tab_as_ci = (c2 == '\t' && (c & meta_modifier));
+
+  if (c & alt_modifier)
+    {
+      *p++ = 'A';
+      *p++ = '-';
+      c -= alt_modifier;
+    }
+  if ((c & ctrl_modifier) != 0
+      || (c2 < ' ' && c2 != 27 && c2 != '\t' && c2 != Ctl ('M')) || tab_as_ci)
+    {
+      *p++ = 'C';
+      *p++ = '-';
+      c &= ~ctrl_modifier;
+    }
+  if (c & hyper_modifier)
+    {
+      *p++ = 'H';
+      *p++ = '-';
+      c -= hyper_modifier;
+    }
+  if (c & meta_modifier)
+    {
+      *p++ = 'M';
+      *p++ = '-';
+      c -= meta_modifier;
+    }
+  if (c & shift_modifier)
+    {
+      *p++ = 'S';
+      *p++ = '-';
+      c -= shift_modifier;
+    }
+  if (c & super_modifier)
+    {
+      *p++ = 's';
+      *p++ = '-';
+      c -= super_modifier;
+    }
+  if (c < 040)
+    {
+      if (c == 033)
+        {
+          *p++ = 'E';
+          *p++ = 'S';
+          *p++ = 'C';
+        }
+      else if (tab_as_ci)
+        {
+          *p++ = 'i';
+        }
+      else if (c == '\t')
+        {
+          *p++ = 'T';
+          *p++ = 'A';
+          *p++ = 'B';
+        }
+      else if (c == Ctl ('M'))
+        {
+          *p++ = 'R';
+          *p++ = 'E';
+          *p++ = 'T';
+        }
+      else
+        {
+          if (c > 0 && c <= Ctl ('Z'))
+            *p++ = c + 0140;
+          else
+            *p++ = c + 0100;
+        }
+    }
+  else if (c == 0177)
+    {
+      *p++ = 'D';
+      *p++ = 'E';
+      *p++ = 'L';
+    }
+  else if (c == ' ')
+    {
+      *p++ = 'S';
+      *p++ = 'P';
+      *p++ = 'C';
+    }
+  else if (c < 128)
+    *p++ = c;
+  else
+    {
+      p += CHAR_STRING (c, (unsigned char *) p);
+    }
+
+  return p;
+}
+
+DEFUN ("single-key-description", Fsingle_key_description,
+       Ssingle_key_description, 1, 2, 0,
+       doc: /* Return a pretty description of a character event KEY.
+Control characters turn into C-whatever, etc.
+Optional argument NO-ANGLES non-nil means don't put angle brackets
+around function keys and event symbols.
+
+See `text-char-description' for describing character codes.  */)
+(Lisp_Object key, Lisp_Object no_angles)
+{
+  USE_SAFE_ALLOCA;
+
+  if (CONSP (key) && lucid_event_type_list_p (key))
+    key = Fevent_convert_list (key);
+
+  if (CONSP (key) && FIXNUMP (XCAR (key)) && FIXNUMP (XCDR (key)))
+    {
+      AUTO_STRING (dot_dot, "..");
+      return concat3 (Fsingle_key_description (XCAR (key), no_angles), dot_dot,
+                      Fsingle_key_description (XCDR (key), no_angles));
+    }
+
+  key = EVENT_HEAD (key);
+
+  if (FIXNUMP (key))
+    {
+      char tem[KEY_DESCRIPTION_SIZE];
+      char *p = push_key_description (XFIXNUM (key), tem);
+      *p = 0;
+      return make_specified_string (tem, -1, p - tem, 1);
+    }
+  else if (SYMBOLP (key))
+    {
+      if (NILP (no_angles))
+        {
+          Lisp_Object namestr = SYMBOL_NAME (key);
+          const char *sym = SSDATA (namestr);
+          ptrdiff_t len = SBYTES (namestr);
+          int i = 0;
+          while (i < len - 3 && sym[i + 1] == '-' && strchr ("CMSsHA", sym[i]))
+            i += 2;
+          char *buffer = SAFE_ALLOCA (len + 3);
+          memcpy (buffer, sym, i);
+          buffer[i] = '<';
+          memcpy (buffer + i + 1, sym + i, len - i);
+          buffer[len + 1] = '>';
+          buffer[len + 2] = '\0';
+          Lisp_Object result = build_string (buffer);
+          SAFE_FREE ();
+          return result;
+        }
+      else
+        return Fsymbol_name (key);
+    }
+  else if (STRINGP (key))
+    return Fcopy_sequence (key);
+  else
+    error ("KEY must be an integer, cons, symbol, or string");
+}
+
 void
 syms_of_keymap (void)
 {
@@ -904,4 +1167,6 @@ in the list takes precedence.  */);
   defsubr (&Slookup_key);
   defsubr (&Suse_global_map);
   defsubr (&Scurrent_global_map);
+  defsubr (&Skey_description);
+  defsubr (&Ssingle_key_description);
 }

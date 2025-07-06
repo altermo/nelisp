@@ -2215,6 +2215,7 @@ extern Lisp_Object plist_put (Lisp_Object, Lisp_Object, Lisp_Object);
 extern void mark_fns (void);
 extern bool sweep_weak_table (struct Lisp_Hash_Table *, bool);
 extern Lisp_Object concat2 (Lisp_Object, Lisp_Object);
+extern Lisp_Object concat3 (Lisp_Object, Lisp_Object, Lisp_Object);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)
