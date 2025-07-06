@@ -1942,6 +1942,45 @@ usage: (make-closure PROTOTYPE &rest CLOSURE-VARS) */)
   return make_lisp_ptr (v, Lisp_Vectorlike);
 }
 
+static struct Lisp_Vector *
+allocate_record (EMACS_INT count)
+{
+  if (count > PSEUDOVECTOR_SIZE_MASK)
+    error ("Attempt to allocate a record of %" pI "d slots; max is %d", count,
+           PSEUDOVECTOR_SIZE_MASK);
+  struct Lisp_Vector *p = allocate_vectorlike (count, false);
+  p->header.size = count;
+  XSETPVECTYPE (p, PVEC_RECORD);
+  return p;
+}
+DEFUN ("make-record", Fmake_record, Smake_record, 3, 3, 0,
+       doc: /* Create a new record.
+TYPE is its type as returned by `type-of'; it should be either a
+symbol or a type descriptor.  SLOTS is the number of non-type slots,
+each initialized to INIT.  */)
+(Lisp_Object type, Lisp_Object slots, Lisp_Object init)
+{
+  CHECK_FIXNAT (slots);
+  EMACS_INT size = XFIXNAT (slots) + 1;
+  struct Lisp_Vector *p = allocate_record (size);
+  p->contents[0] = type;
+  for (ptrdiff_t i = 1; i < size; i++)
+    p->contents[i] = init;
+  return make_lisp_ptr (p, Lisp_Vectorlike);
+}
+DEFUN ("record", Frecord, Srecord, 1, MANY, 0,
+       doc: /* Create a new record.
+TYPE is its type as returned by `type-of'; it should be either a
+symbol or a type descriptor.  SLOTS is used to initialize the record
+slots with shallow copies of the arguments.
+usage: (record TYPE &rest SLOTS) */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  struct Lisp_Vector *p = allocate_record (nargs);
+  memcpy (p->contents, args, nargs * sizeof *args);
+  return make_lisp_ptr (p, Lisp_Vectorlike);
+}
+
 struct frame *
 allocate_frame (void)
 {
@@ -3781,6 +3820,8 @@ N should be nonnegative.  */);
   defsubr (&Smake_vector);
   defsubr (&Svector);
   defsubr (&Smake_closure);
+  defsubr (&Smake_record);
+  defsubr (&Srecord);
   defsubr (&Smake_symbol);
   defsubr (&Sgarbage_collect);
 }
