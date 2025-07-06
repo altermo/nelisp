@@ -2145,6 +2145,7 @@ syms_of_data (void)
   DEFSYM (Qintegerp, "integerp");
   DEFSYM (Qarrayp, "arrayp");
   DEFSYM (Qnumber_or_marker_p, "number-or-marker-p");
+  DEFSYM (Qnumberp, "numberp");
   DEFSYM (Qbufferp, "bufferp");
   DEFSYM (Qsymbol_with_pos_p, "symbol-with-pos-p");
   DEFSYM (Qfixnump, "fixnump");

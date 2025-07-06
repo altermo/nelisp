@@ -1561,6 +1561,11 @@ CHECK_FIXNAT (Lisp_Object x)
 }
 
 INLINE void
+CHECK_NUMBER (Lisp_Object x)
+{
+  CHECK_TYPE (NUMBERP (x), Qnumberp, x);
+}
+INLINE void
 CHECK_INTEGER (Lisp_Object x)
 {
   CHECK_TYPE (INTEGERP (x), Qintegerp, x);
@@ -2381,6 +2386,8 @@ extern void init_macros (void);
 extern void syms_of_comp (void);
 
 extern void syms_of_sqlite (void);
+
+extern void syms_of_floatfns (void);
 
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)

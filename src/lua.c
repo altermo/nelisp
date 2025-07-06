@@ -615,6 +615,7 @@ ret () init (lua_State *L)
   syms_of_macros ();
   syms_of_comp ();
   syms_of_sqlite ();
+  syms_of_floatfns ();
 
   keys_of_keyboard ();
 
