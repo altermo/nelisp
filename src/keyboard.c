@@ -1,4 +1,5 @@
 #include "lisp.h"
+#include "commands.h"
 #include "keymap.h"
 #include "lua.h"
 #include "termhooks.h"
@@ -681,6 +682,12 @@ definition will take precedence.  */);
 void
 keys_of_keyboard (void)
 {
+  DEFVAR_LISP ("help-char", Vhelp_char,
+        doc: /* Character to recognize as meaning Help.
+When it is read, do `(eval help-form)', and display result if it's a string.
+If the value of `help-form' is nil, this char can be read normally.  */);
+  XSETINT (Vhelp_char, Ctl ('H'));
+
   initial_define_lispy_key (Vspecial_event_map, "delete-frame",
                             "handle-delete-frame");
   initial_define_lispy_key (Vspecial_event_map, "ns-put-working-text",
