@@ -4,6 +4,7 @@
 #include "bignum.h"
 #include "buffer.h"
 #include "character.h"
+#include "font.h"
 
 AVOID
 wrong_type_argument (Lisp_Object predicate, Lisp_Object value)
@@ -1164,6 +1165,21 @@ DEFUN ("condition-variable-p", Fcondition_variable_p, Scondition_variable_p,
   return Qnil;
 }
 
+DEFUN ("type-of", Ftype_of, Stype_of, 1, 1, 0,
+       doc: /* Return a symbol representing the type of OBJECT.
+The symbol returned names the object's basic type;
+for example, (type-of 1) returns `integer'.
+Contrary to `cl-type-of', the returned type is not always the most
+precise type possible, because instead this function tries to preserve
+compatibility with the return value of previous Emacs versions.  */)
+(Lisp_Object object)
+{
+  return SYMBOLP (object)    ? Qsymbol
+         : INTEGERP (object) ? Qinteger
+         : SUBRP (object)    ? Qsubr
+                             : Fcl_type_of (object);
+}
+
 DEFUN ("null", Fnull, Snull, 1, 1, 0,
        doc: /* Return t if OBJECT is nil, and return nil otherwise.  */
        attributes: const)
@@ -1172,6 +1188,129 @@ DEFUN ("null", Fnull, Snull, 1, 1, 0,
   if (NILP (object))
     return Qt;
   return Qnil;
+}
+
+DEFUN ("cl-type-of", Fcl_type_of, Scl_type_of, 1, 1, 0,
+       doc: /* Return a symbol representing the type of OBJECT.
+The returned symbol names the most specific possible type of the object.
+for example, (cl-type-of nil) returns `null'.
+The specific type returned may change depending on Emacs versions,
+so we recommend you use `cl-typep', `cl-typecase', or other predicates
+rather than compare the return value of this function against
+a fixed set of types.  */)
+(Lisp_Object object)
+{
+  switch (XTYPE (object))
+    {
+    case_Lisp_Int:
+      return Qfixnum;
+
+    case Lisp_Symbol:
+      return NILP (object) ? Qnull : EQ (object, Qt) ? Qboolean : Qsymbol;
+
+    case Lisp_String:
+      return Qstring;
+
+    case Lisp_Cons:
+      return Qcons;
+
+    case Lisp_Vectorlike:
+      switch (PSEUDOVECTOR_TYPE (XVECTOR (object)))
+        {
+        case PVEC_NORMAL_VECTOR:
+          return Qvector;
+        case PVEC_BIGNUM:
+          return Qbignum;
+        case PVEC_MARKER:
+          return Qmarker;
+        case PVEC_SYMBOL_WITH_POS:
+          return Qsymbol_with_pos;
+        case PVEC_OVERLAY:
+          return Qoverlay;
+        case PVEC_FINALIZER:
+          return Qfinalizer;
+        case PVEC_USER_PTR:
+          return Quser_ptr;
+        case PVEC_WINDOW_CONFIGURATION:
+          return Qwindow_configuration;
+        case PVEC_PROCESS:
+          return Qprocess;
+        case PVEC_WINDOW:
+          return Qwindow;
+        case PVEC_SUBR:
+          return XSUBR (object)->max_args == UNEVALLED ? Qspecial_form
+                 : NATIVE_COMP_FUNCTIONP (object)      ? Qnative_comp_function
+                                                       : Qprimitive_function;
+        case PVEC_CLOSURE:
+          return CONSP (AREF (object, CLOSURE_CODE)) ? Qinterpreted_function
+                                                     : Qbyte_code_function;
+        case PVEC_BUFFER:
+          return Qbuffer;
+        case PVEC_CHAR_TABLE:
+          return Qchar_table;
+        case PVEC_BOOL_VECTOR:
+          return Qbool_vector;
+        case PVEC_FRAME:
+          return Qframe;
+        case PVEC_HASH_TABLE:
+          return Qhash_table;
+        case PVEC_OBARRAY:
+          return Qobarray;
+        case PVEC_FONT:
+          if (FONT_SPEC_P (object))
+            return Qfont_spec;
+          if (FONT_ENTITY_P (object))
+            return Qfont_entity;
+          if (FONT_OBJECT_P (object))
+            return Qfont_object;
+          else
+            emacs_abort ();
+        case PVEC_THREAD:
+          return Qthread;
+        case PVEC_MUTEX:
+          return Qmutex;
+        case PVEC_CONDVAR:
+          return Qcondition_variable;
+        case PVEC_TERMINAL:
+          return Qterminal;
+        case PVEC_RECORD:
+          {
+            Lisp_Object t = AREF (object, 0);
+            if (RECORDP (t) && 1 < PVSIZE (t))
+              return AREF (t, 1);
+            else
+              return t;
+          }
+        case PVEC_MODULE_FUNCTION:
+          return Qmodule_function;
+        case PVEC_NATIVE_COMP_UNIT:
+          return Qnative_comp_unit;
+        case PVEC_XWIDGET:
+          return Qxwidget;
+        case PVEC_XWIDGET_VIEW:
+          return Qxwidget_view;
+        case PVEC_TS_PARSER:
+          return Qtreesit_parser;
+        case PVEC_TS_NODE:
+          return Qtreesit_node;
+        case PVEC_TS_COMPILED_QUERY:
+          return Qtreesit_compiled_query;
+        case PVEC_SQLITE:
+          return Qsqlite;
+        case PVEC_SUB_CHAR_TABLE:
+          return Qsub_char_table;
+        case PVEC_MISC_PTR:
+        case PVEC_OTHER:
+        case PVEC_FREE:;
+        }
+      emacs_abort ();
+
+    case Lisp_Float:
+      return Qfloat;
+
+    default:
+      emacs_abort ();
+    }
 }
 
 DEFUN ("eq", Feq, Seq, 2, 2, 0,
@@ -2075,6 +2214,49 @@ syms_of_data (void)
   PUT_ERROR (Qexcessive_lisp_nesting, recursion_tail,
              "Lisp nesting exceeds `max-lisp-eval-depth'");
 
+  DEFSYM (Qboolean, "boolean");
+  DEFSYM (Qinteger, "integer");
+  DEFSYM (Qbignum, "bignum");
+  DEFSYM (Qsymbol, "symbol");
+  DEFSYM (Qstring, "string");
+  DEFSYM (Qcons, "cons");
+  DEFSYM (Qmarker, "marker");
+  DEFSYM (Qsymbol_with_pos, "symbol-with-pos");
+  DEFSYM (Qoverlay, "overlay");
+  DEFSYM (Qfinalizer, "finalizer");
+  DEFSYM (Qmodule_function, "module-function");
+  DEFSYM (Qnative_comp_unit, "native-comp-unit");
+  DEFSYM (Quser_ptr, "user-ptr");
+  DEFSYM (Qfloat, "float");
+  DEFSYM (Qwindow_configuration, "window-configuration");
+  DEFSYM (Qprocess, "process");
+  DEFSYM (Qwindow, "window");
+  DEFSYM (Qsubr, "subr");
+  DEFSYM (Qspecial_form, "special-form");
+  DEFSYM (Qprimitive_function, "primitive-function");
+  DEFSYM (Qnative_comp_function, "native-comp-function");
+  DEFSYM (Qbyte_code_function, "byte-code-function");
+  DEFSYM (Qinterpreted_function, "interpreted-function");
+  DEFSYM (Qbuffer, "buffer");
+  DEFSYM (Qframe, "frame");
+  DEFSYM (Qvector, "vector");
+  DEFSYM (Qchar_table, "char-table");
+  DEFSYM (Qsub_char_table, "sub-char-table");
+  DEFSYM (Qthread, "thread");
+  DEFSYM (Qmutex, "mutex");
+  DEFSYM (Qcondition_variable, "condition-variable");
+  DEFSYM (Qbool_vector, "bool-vector");
+  DEFSYM (Qfont_spec, "font-spec");
+  DEFSYM (Qfont_entity, "font-entity");
+  DEFSYM (Qfont_object, "font-object");
+  DEFSYM (Qterminal, "terminal");
+  DEFSYM (Qxwidget, "xwidget");
+  DEFSYM (Qxwidget_view, "xwidget-view");
+  DEFSYM (Qtreesit_parser, "treesit-parser");
+  DEFSYM (Qtreesit_node, "treesit-node");
+  DEFSYM (Qtreesit_compiled_query, "treesit-compiled-query");
+  DEFSYM (Qobarray, "obarray");
+
   defsubr (&Ssymbol_value);
   defsubr (&Sbare_symbol);
   defsubr (&Sdefault_boundp);
@@ -2135,6 +2317,8 @@ syms_of_data (void)
   defsubr (&Sindirect_function);
   defsubr (&Saref);
   defsubr (&Saset);
+  defsubr (&Stype_of);
+  defsubr (&Scl_type_of);
   defsubr (&Seq);
   defsubr (&Seqlsign);
   defsubr (&Slss);

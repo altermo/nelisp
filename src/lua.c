@@ -613,6 +613,8 @@ ret () init (lua_State *L)
   syms_of_frame ();
   syms_of_minibuf ();
   syms_of_macros ();
+  syms_of_comp ();
+  syms_of_sqlite ();
 
   keys_of_keyboard ();
 

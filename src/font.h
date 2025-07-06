@@ -79,6 +79,18 @@ FONT_SPEC_P (Lisp_Object x)
   return FONTP (x) && PVSIZE (x) == FONT_SPEC_MAX;
 }
 
+INLINE bool
+FONT_ENTITY_P (Lisp_Object x)
+{
+  return FONTP (x) && PVSIZE (x) == FONT_ENTITY_MAX;
+}
+
+INLINE bool
+FONT_OBJECT_P (Lisp_Object x)
+{
+  return FONTP (x) && PVSIZE (x) == FONT_OBJECT_MAX;
+}
+
 extern int font_style_to_value (enum font_property_index prop, Lisp_Object name,
                                 bool noerror);
 extern Lisp_Object font_style_symbolic (Lisp_Object font,
