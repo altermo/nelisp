@@ -1447,6 +1447,15 @@ enum char_bits
   CHARACTERBITS = 22
 };
 
+struct Lisp_Marker
+{
+  union vectorlike_header header;
+
+  int _dummy;
+
+  // TODO: make it a wrapper around an extmark
+} GCALIGNED_STRUCT;
+
 INLINE bool
 CLOSUREP (Lisp_Object a)
 {

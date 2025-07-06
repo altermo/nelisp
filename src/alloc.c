@@ -19,6 +19,7 @@ EMACS_INT consing_until_gc = 0;
 
 union emacs_align_type
 {
+  // // TODO
   // struct frame frame;
   // struct Lisp_Bignum Lisp_Bignum;
   struct Lisp_Bool_Vector Lisp_Bool_Vector;
@@ -2067,6 +2068,18 @@ Its value is void, and its function definition and property list are nil.  */)
   return val;
 }
 
+DEFUN ("make-marker", Fmake_marker, Smake_marker, 0, 0, 0,
+       doc: /* Return a newly allocated marker which does not point at any place.  */)
+(void)
+{
+  TODO_NELISP_LATER;
+
+  struct Lisp_Marker *p
+    = ALLOCATE_PLAIN_PSEUDOVECTOR (struct Lisp_Marker, PVEC_MARKER);
+
+  return make_lisp_ptr (p, Lisp_Vectorlike);
+}
+
 /* --- mark bit -- */
 static bool
 vector_marked_p (const struct Lisp_Vector *v)
@@ -3822,6 +3835,7 @@ N should be nonnegative.  */);
   defsubr (&Smake_closure);
   defsubr (&Smake_record);
   defsubr (&Srecord);
+  defsubr (&Smake_marker);
   defsubr (&Smake_symbol);
   defsubr (&Sgarbage_collect);
 }
