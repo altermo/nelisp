@@ -82,6 +82,18 @@ make_bignum_bits (size_t bits)
   mpz_swap (b->value, mpz[0]);
   return make_lisp_ptr (b, Lisp_Vectorlike);
 }
+static Lisp_Object
+make_bignum (void)
+{
+  return make_bignum_bits (mpz_sizeinbase (mpz[0], 2));
+}
+Lisp_Object
+make_bigint (intmax_t n)
+{
+  eassert (FIXNUM_OVERFLOW_P (n));
+  mpz_set_intmax (mpz[0], n);
+  return make_bignum ();
+}
 
 Lisp_Object
 make_integer_mpz (void)

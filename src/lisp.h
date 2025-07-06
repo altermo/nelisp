@@ -535,10 +535,12 @@ dead_object (void)
 #define XSETBUFFER(a, b) XSETPSEUDOVECTOR (a, b, PVEC_BUFFER)
 #define XSETCHAR_TABLE(a, b) XSETPSEUDOVECTOR (a, b, PVEC_CHAR_TABLE)
 
+extern Lisp_Object make_bigint (intmax_t);
+
 INLINE Lisp_Object
 make_int (intmax_t n)
 {
-  return FIXNUM_OVERFLOW_P (n) ? (TODO, NULL) : make_fixnum (n);
+  return FIXNUM_OVERFLOW_P (n) ? make_bigint (n) : make_fixnum (n);
 }
 
 INLINE void *
