@@ -50,6 +50,12 @@ SET_RAW_SYNTAX_ENTRY (Lisp_Object table, int c, Lisp_Object val)
   CHAR_TABLE_SET (table, c, val);
 }
 
+DEFUN ("standard-syntax-table", Fstandard_syntax_table,
+   Sstandard_syntax_table, 0, 0, 0,
+       doc: /* Return the standard syntax table.
+This is the one used for new buffers.  */)
+(void) { return Vstandard_syntax_table; }
+
 void
 init_syntax_once (void)
 {
@@ -130,4 +136,6 @@ void
 syms_of_syntax (void)
 {
   staticpro (&Vsyntax_code_object);
+
+  defsubr (&Sstandard_syntax_table);
 }
