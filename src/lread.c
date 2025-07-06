@@ -172,6 +172,26 @@ make_obarray (unsigned bits)
   return make_lisp_obarray (o);
 }
 
+DEFUN ("obarray-make", Fobarray_make, Sobarray_make, 0, 1, 0,
+       doc: /* Return a new obarray of size SIZE.
+The obarray will grow to accommodate any number of symbols; the size, if
+given, is only a hint for the expected number.  */)
+(Lisp_Object size)
+{
+  int bits;
+  if (NILP (size))
+    bits = obarray_default_bits;
+  else
+    {
+      CHECK_FIXNAT (size);
+      EMACS_UINT n = XFIXNUM (size);
+      bits = elogb (n) + 1;
+      if (bits > obarray_max_bits)
+        xsignal (Qargs_out_of_range, size);
+    }
+  return make_obarray (bits);
+}
+
 static void
 define_symbol (Lisp_Object sym, char const *str)
 {
@@ -2560,6 +2580,7 @@ For internal use only.  */);
   staticpro (&read_objects_completed);
   read_objects_completed = Qnil;
 
+  defsubr (&Sobarray_make);
   defsubr (&Sget_load_suffixes);
   defsubr (&Sload);
   defsubr (&Slocate_file_internal);
