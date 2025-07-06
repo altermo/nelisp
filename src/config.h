@@ -13,7 +13,7 @@
 #if defined __linux__
 # define SYSTEM_TYPE "gnu/linux"
 #else
-# error "TODO: Unknown system type"
+# error "TODO: Unsupported operating system"
 #endif
 
 #define _GL_INLINE_HEADER_BEGIN

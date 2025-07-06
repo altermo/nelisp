@@ -20,9 +20,15 @@ static const int chartab_bits[4]
 typedef Lisp_Object (*uniprop_decoder_t) (Lisp_Object, Lisp_Object);
 typedef Lisp_Object (*uniprop_encoder_t) (Lisp_Object, Lisp_Object);
 
+static Lisp_Object uniprop_table_uncompress (Lisp_Object, int);
+static uniprop_decoder_t uniprop_get_decoder (Lisp_Object);
+
 #define UNIPROP_TABLE_P(TABLE)                                  \
   (EQ (XCHAR_TABLE (TABLE)->purpose, Qchar_code_property_table) \
    && CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (TABLE)) == 5)
+
+#define UNIPROP_GET_DECODER(TABLE) \
+  (UNIPROP_TABLE_P (TABLE) ? uniprop_get_decoder (TABLE) : NULL)
 
 #define UNIPROP_COMPRESSED_FORM_P(OBJ) \
   (STRINGP (OBJ) && SCHARS (OBJ) > 0   \
@@ -103,8 +109,58 @@ char_table_ascii (Lisp_Object table)
     return sub;
   val = XSUB_CHAR_TABLE (sub)->contents[0];
   if (UNIPROP_TABLE_P (table) && UNIPROP_COMPRESSED_FORM_P (val))
-    TODO; // val = uniprop_table_uncompress (sub, 0);
+    val = uniprop_table_uncompress (sub, 0);
   return val;
+}
+
+static Lisp_Object
+uniprop_table_uncompress (Lisp_Object table, int idx)
+{
+  Lisp_Object val = XSUB_CHAR_TABLE (table)->contents[idx];
+  int min_char = XSUB_CHAR_TABLE (table)->min_char + chartab_chars[2] * idx;
+  Lisp_Object sub = make_sub_char_table (3, min_char, Qnil);
+  const unsigned char *p, *pend;
+
+  set_sub_char_table_contents (table, idx, sub);
+  p = SDATA (val), pend = p + SBYTES (val);
+  if (*p == 1)
+    {
+      /* SIMPLE TABLE */
+      p++;
+      idx = string_char_advance (&p);
+      while (p < pend && idx < chartab_chars[2])
+        {
+          int v = string_char_advance (&p);
+          set_sub_char_table_contents (sub, idx++,
+                                       v > 0 ? make_fixnum (v) : Qnil);
+        }
+    }
+  else if (*p == 2)
+    {
+      /* RUN-LENGTH TABLE */
+      p++;
+      for (idx = 0; p < pend;)
+        {
+          int v = string_char_advance (&p);
+          int count = 1;
+
+          if (p < pend)
+            {
+              int len;
+              count = string_char_and_length (p, &len);
+              if (count < 128)
+                count = 1;
+              else
+                {
+                  count -= 128;
+                  p += len;
+                }
+            }
+          while (count-- > 0)
+            set_sub_char_table_contents (sub, idx++, make_fixnum (v));
+        }
+    }
+  return sub;
 }
 
 static Lisp_Object
@@ -161,7 +217,7 @@ sub_char_table_ref (Lisp_Object table, int c, bool is_uniprop)
 
   val = tbl->contents[idx];
   if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (val))
-    TODO; // val = uniprop_table_uncompress (table, idx);
+    val = uniprop_table_uncompress (table, idx);
   if (SUB_CHAR_TABLE_P (val))
     val = sub_char_table_ref (val, c, is_uniprop);
   return val;
@@ -210,7 +266,7 @@ sub_char_table_set (Lisp_Object table, int c, Lisp_Object val, bool is_uniprop)
       if (!SUB_CHAR_TABLE_P (sub))
         {
           if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (sub))
-            TODO; // sub = uniprop_table_uncompress (table, i);
+            sub = uniprop_table_uncompress (table, i);
           else
             {
               sub = make_sub_char_table (depth + 1,
@@ -272,7 +328,7 @@ sub_char_table_set_range (Lisp_Object table, int from, int to, Lisp_Object val,
           if (!SUB_CHAR_TABLE_P (sub))
             {
               if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (sub))
-                TODO; // sub = uniprop_table_uncompress (table, i);
+                sub = uniprop_table_uncompress (table, i);
               else
                 {
                   sub = make_sub_char_table (depth + 1, c, sub);
@@ -394,11 +450,7 @@ map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
   int from = XFIXNUM (XCAR (range)), to = XFIXNUM (XCDR (range));
   int i, c;
   bool is_uniprop = UNIPROP_TABLE_P (top);
-#if TODO_NELISP_LATER_AND
   uniprop_decoder_t decoder = UNIPROP_GET_DECODER (top);
-#else
-  uniprop_decoder_t decoder = NULL;
-#endif
 
   if (SUB_CHAR_TABLE_P (table))
     {
@@ -432,7 +484,7 @@ map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
       int nextc = c + chars_in_block;
 
       if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (this))
-        TODO; // this = uniprop_table_uncompress (table, i);
+        this = uniprop_table_uncompress (table, i);
       if (SUB_CHAR_TABLE_P (this))
         {
           if (to >= nextc)
@@ -513,11 +565,7 @@ map_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
                 Lisp_Object function, Lisp_Object table, Lisp_Object arg)
 {
   Lisp_Object range, val, parent;
-#if TODO_NELISP_LATER_AND
   uniprop_decoder_t decoder = UNIPROP_GET_DECODER (table);
-#else
-  uniprop_decoder_t decoder = NULL;
-#endif
 
   range = Fcons (make_fixnum (0), make_fixnum (MAX_CHAR));
   parent = XCHAR_TABLE (table)->parent;
@@ -591,6 +639,19 @@ static uniprop_decoder_t __attribute__ ((unused)) uniprop_decoder[]
   = { uniprop_decode_value_run_length };
 
 static const int uniprop_decoder_count = ARRAYELTS (uniprop_decoder);
+
+static uniprop_decoder_t
+uniprop_get_decoder (Lisp_Object table)
+{
+  EMACS_INT i;
+
+  if (!FIXNUMP (XCHAR_TABLE (table)->extras[1]))
+    return NULL;
+  i = XFIXNUM (XCHAR_TABLE (table)->extras[1]);
+  if (i < 0 || i >= uniprop_decoder_count)
+    return NULL;
+  return uniprop_decoder[i];
+}
 
 Lisp_Object
 uniprop_table (Lisp_Object prop)
