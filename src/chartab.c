@@ -439,6 +439,43 @@ DEFUN ("set-char-table-extra-slot", Fset_char_table_extra_slot,
   return value;
 }
 
+DEFUN ("char-table-parent", Fchar_table_parent, Schar_table_parent,
+       1, 1, 0,
+       doc: /* Return the parent char-table of CHAR-TABLE.
+The value is either nil or another char-table.
+If CHAR-TABLE holds nil for a given character,
+then the actual applicable value is inherited from the parent char-table
+\(or from its parents, if necessary).  */)
+(Lisp_Object char_table)
+{
+  CHECK_CHAR_TABLE (char_table);
+
+  return XCHAR_TABLE (char_table)->parent;
+}
+DEFUN ("set-char-table-parent", Fset_char_table_parent, Sset_char_table_parent,
+       2, 2, 0,
+       doc: /* Set the parent char-table of CHAR-TABLE to PARENT.
+Return PARENT.  PARENT must be either nil or another char-table.  */)
+(Lisp_Object char_table, Lisp_Object parent)
+{
+  Lisp_Object temp;
+
+  CHECK_CHAR_TABLE (char_table);
+
+  if (!NILP (parent))
+    {
+      CHECK_CHAR_TABLE (parent);
+
+      for (temp = parent; !NILP (temp); temp = XCHAR_TABLE (temp)->parent)
+        if (EQ (temp, char_table))
+          error ("Attempt to make a chartable be its own parent");
+    }
+
+  set_char_table_parent (char_table, parent);
+
+  return parent;
+}
+
 static Lisp_Object
 map_sub_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
                     Lisp_Object function, Lisp_Object table, Lisp_Object arg,
@@ -690,6 +727,8 @@ syms_of_chartab (void)
   defsubr (&Sset_char_table_range);
   defsubr (&Schar_table_extra_slot);
   defsubr (&Sset_char_table_extra_slot);
+  defsubr (&Schar_table_parent);
+  defsubr (&Sset_char_table_parent);
 
   DEFVAR_LISP ("char-code-property-alist", Vchar_code_property_alist,
 	       doc: /* Alist of character property name vs char-table containing property values.
