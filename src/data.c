@@ -2342,6 +2342,18 @@ syms_of_data (void)
   defsubr (&Sadd1);
   defsubr (&Ssub1);
 
+  DEFVAR_LISP ("most-positive-fixnum", Vmost_positive_fixnum,
+        doc: /* The greatest integer that is represented efficiently.
+This variable cannot be set; trying to do so will signal an error.  */);
+  Vmost_positive_fixnum = make_fixnum (MOST_POSITIVE_FIXNUM);
+  make_symbol_constant (intern_c_string ("most-positive-fixnum"));
+
+  DEFVAR_LISP ("most-negative-fixnum", Vmost_negative_fixnum,
+        doc: /* The least integer that is represented efficiently.
+This variable cannot be set; trying to do so will signal an error.  */);
+  Vmost_negative_fixnum = make_fixnum (MOST_NEGATIVE_FIXNUM);
+  make_symbol_constant (intern_c_string ("most-negative-fixnum"));
+
   DEFSYM (Qsymbols_with_pos_enabled, "symbols-with-pos-enabled");
   DEFVAR_BOOL ("symbols-with-pos-enabled", symbols_with_pos_enabled,
                doc: /* If non-nil, a symbol with position ordinarily behaves as its bare symbol.
