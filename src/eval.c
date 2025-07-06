@@ -1814,7 +1814,12 @@ defvar (Lisp_Object sym, Lisp_Object initvalue, Lisp_Object docstring,
     Fset_default (sym, eval ? eval_sub (initvalue) : initvalue);
   else
     {
-      TODO;
+      union specbinding *binding = default_toplevel_binding (sym);
+      if (binding && BASE_EQ (specpdl_old_value (binding), Qunbound))
+        {
+          set_specpdl_old_value (binding,
+                                 eval ? eval_sub (initvalue) : initvalue);
+        }
     }
   return sym;
 }
