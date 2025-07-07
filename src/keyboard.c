@@ -677,17 +677,17 @@ definition will take precedence.  */);
   DEFVAR_LISP ("special-event-map", Vspecial_event_map,
         doc: /* Keymap defining bindings for special events to execute at low level.  */);
   Vspecial_event_map = list1 (Qkeymap);
-}
 
-void
-keys_of_keyboard (void)
-{
   DEFVAR_LISP ("help-char", Vhelp_char,
         doc: /* Character to recognize as meaning Help.
 When it is read, do `(eval help-form)', and display result if it's a string.
 If the value of `help-form' is nil, this char can be read normally.  */);
   XSETINT (Vhelp_char, Ctl ('H'));
+}
 
+void
+keys_of_keyboard (void)
+{
   initial_define_lispy_key (Vspecial_event_map, "delete-frame",
                             "handle-delete-frame");
   initial_define_lispy_key (Vspecial_event_map, "ns-put-working-text",
