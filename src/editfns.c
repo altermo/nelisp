@@ -937,6 +937,10 @@ usage: (format-message STRING &rest OBJECTS)  */)
   return styled_format (nargs, args, true);
 }
 
+DEFUN ("current-message", Fcurrent_message, Scurrent_message, 0, 0, 0,
+       doc: /* Return the string currently displayed in the echo area, or nil if none.  */)
+(void) { return current_message (); }
+
 DEFUN ("propertize", Fpropertize, Spropertize, 1, MANY, 0,
        doc: /* Return a copy of STRING with text properties added.
 First argument is the string to copy.
@@ -1008,6 +1012,7 @@ it to be non-nil.  */);
   defsubr (&Smessage);
   defsubr (&Sformat);
   defsubr (&Sformat_message);
+  defsubr (&Scurrent_message);
   defsubr (&Spropertize);
   defsubr (&Schar_to_string);
 }

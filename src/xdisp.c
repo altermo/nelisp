@@ -1,5 +1,24 @@
 #include "lisp.h"
+#include "buffer.h"
 #include "lua.h"
+
+Lisp_Object echo_area_buffer[2];
+
+Lisp_Object
+current_message (void)
+{
+  TODO_NELISP_LATER;
+  Lisp_Object msg;
+
+  if (!BUFFERP (echo_area_buffer[0]))
+    msg = Qnil;
+  else
+    {
+      TODO;
+    }
+
+  return msg;
+}
 
 void
 message3 (Lisp_Object m)
@@ -30,6 +49,10 @@ syms_of_xdisp (void)
   DEFSYM (Qeval, "eval");
 
   DEFSYM (Qinhibit_redisplay, "inhibit-redisplay");
+
+  echo_area_buffer[0] = echo_area_buffer[1] = Qnil;
+  staticpro (&echo_area_buffer[0]);
+  staticpro (&echo_area_buffer[1]);
 
   DEFVAR_INT ("max-redisplay-ticks", max_redisplay_ticks,
     doc: /* Maximum number of redisplay ticks before aborting redisplay of a window.

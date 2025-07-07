@@ -2347,6 +2347,7 @@ extern void syms_of_search (void);
 extern void syms_of_xdisp (void);
 extern void message1 (const char *);
 extern void message3 (Lisp_Object);
+extern Lisp_Object current_message (void);
 
 extern void syms_of_print (void);
 #define FLOAT_TO_STRING_BUFSIZE 350
