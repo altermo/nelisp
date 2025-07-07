@@ -610,6 +610,72 @@ mapcar1 (EMACS_INT leni, Lisp_Object *vals, Lisp_Object fn, Lisp_Object seq)
   return leni;
 }
 
+DEFUN ("mapconcat", Fmapconcat, Smapconcat, 2, 3, 0,
+       doc: /* Apply FUNCTION to each element of SEQUENCE, and concat the results as strings.
+In between each pair of results, stick in SEPARATOR.  Thus, " " as
+  SEPARATOR results in spaces between the values returned by FUNCTION.
+
+SEQUENCE may be a list, a vector, a bool-vector, or a string.
+
+Optional argument SEPARATOR must be a string, a vector, or a list of
+characters; nil stands for the empty string.
+
+FUNCTION must be a function of one argument, and must return a value
+  that is a sequence of characters: either a string, or a vector or
+  list of numbers that are valid character codepoints; nil is treated
+  as an empty string.  */)
+(Lisp_Object function, Lisp_Object sequence, Lisp_Object separator)
+{
+  USE_SAFE_ALLOCA;
+  EMACS_INT leni = XFIXNAT (Flength (sequence));
+  if (CHAR_TABLE_P (sequence))
+    wrong_type_argument (Qlistp, sequence);
+  EMACS_INT args_alloc = 2 * leni - 1;
+  if (args_alloc < 0)
+    return empty_unibyte_string;
+  Lisp_Object *args;
+  SAFE_ALLOCA_LISP (args, args_alloc);
+  if (EQ (function, Qidentity))
+    {
+      if (CONSP (sequence))
+        {
+          Lisp_Object src = sequence;
+          Lisp_Object *dst = args;
+          do
+            {
+              *dst++ = XCAR (src);
+              src = XCDR (src);
+            }
+          while (!NILP (src));
+          goto concat;
+        }
+      else if (VECTORP (sequence))
+        {
+          memcpy (args, XVECTOR (sequence)->contents, leni * sizeof *args);
+          goto concat;
+        }
+    }
+  ptrdiff_t nmapped = mapcar1 (leni, args, function, sequence);
+  eassert (nmapped == leni);
+
+concat:;
+  ptrdiff_t nargs = args_alloc;
+  if (NILP (separator) || (STRINGP (separator) && SCHARS (separator) == 0))
+    nargs = leni;
+  else
+    {
+      for (ptrdiff_t i = leni - 1; i > 0; i--)
+        args[i + i] = args[i];
+
+      for (ptrdiff_t i = 1; i < nargs; i += 2)
+        args[i] = separator;
+    }
+
+  Lisp_Object ret = Fconcat (nargs, args);
+  SAFE_FREE ();
+  return ret;
+}
+
 DEFUN ("mapcar", Fmapcar, Smapcar, 2, 2, 0,
        doc: /* Apply FUNCTION to each element of SEQUENCE, and make a list of the results.
 The result is a list just as long as SEQUENCE.
@@ -2471,6 +2537,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Snth);
   defsubr (&Sproper_list_p);
   defsubr (&Sdelq);
+  defsubr (&Smapconcat);
   defsubr (&Smapcar);
   defsubr (&Smapc);
   defsubr (&Snconc);
