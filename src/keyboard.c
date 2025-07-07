@@ -683,6 +683,28 @@ definition will take precedence.  */);
 When it is read, do `(eval help-form)', and display result if it's a string.
 If the value of `help-form' is nil, this char can be read normally.  */);
   XSETINT (Vhelp_char, Ctl ('H'));
+
+  DEFVAR_LISP ("command-error-function", Vcommand_error_function,
+        doc: /* Function to output error messages.
+Called with three arguments:
+- the error data, a list of the form (SIGNALED-CONDITION . SIGNAL-DATA)
+  such as what `condition-case' would bind its variable to,
+- the context (a string which normally goes at the start of the message),
+- the Lisp function within which the error was signaled.
+
+For instance, to make error messages stand out more in the echo area,
+you could say something like:
+
+    (setq command-error-function
+          (lambda (data _ _)
+            (message "%s" (propertize (error-message-string data)
+                                      \\='face \\='error))))
+
+Also see `set-message-function' (which controls how non-error messages
+are displayed).  */);
+  Vcommand_error_function = Qcommand_error_default_function;
+
+  DEFSYM (Qcommand_error_default_function, "command-error-default-function");
 }
 
 void
