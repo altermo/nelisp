@@ -108,6 +108,18 @@ BUFFER defaults to the current buffer.
 Return nil if BUFFER has been killed.  */)
 (register Lisp_Object buffer) { return BVAR (decode_buffer (buffer), name); }
 
+DEFUN ("force-mode-line-update", Fforce_mode_line_update,
+       Sforce_mode_line_update, 0, 1, 0,
+       doc: /* Force redisplay of the current buffer's mode line and header line.
+With optional non-nil ALL, force redisplay of all mode lines, tab lines and
+header lines.  This function also forces recomputation of the
+menu bar menus and the frame title.  */)
+(Lisp_Object all)
+{
+  TODO_NELISP_LATER;
+  return all;
+}
+
 #define DEFVAR_PER_BUFFER(lname, vname, predicate, doc)     \
   do                                                        \
     {                                                       \
@@ -169,4 +181,5 @@ See also Info node `(elisp)Text Representations'.  */);
   defsubr (&Scurrent_buffer);
   defsubr (&Sset_buffer);
   defsubr (&Sbuffer_name);
+  defsubr (&Sforce_mode_line_update);
 }
