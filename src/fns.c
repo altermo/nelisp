@@ -2416,11 +2416,9 @@ particular subfeatures supported in this version of FEATURE.  */)
     Fput (feature, Qsubfeatures, subfeatures);
   LOADHIST_ATTACH (Fcons (Qprovide, feature));
 
-#if TODO_NELISP_LATER_AND
   tem = Fassq (feature, Vafter_load_alist);
   if (CONSP (tem))
     Fmapc (Qfuncall, XCDR (tem));
-#endif
 
   return feature;
 }
@@ -2518,6 +2516,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   Fmake_var_non_special (Qfeatures);
 #endif
   DEFSYM (Qsubfeatures, "subfeatures");
+  DEFSYM (Qfuncall, "funcall");
   DEFSYM (Qplistp, "plistp");
 
   require_nesting_list = Qnil;

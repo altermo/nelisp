@@ -2567,6 +2567,21 @@ the loading functions recognize as compression suffixes, you should
 customize `jka-compr-load-suffixes' rather than the present variable.  */);
   Vload_file_rep_suffixes = list1 (empty_unibyte_string);
 
+  DEFVAR_LISP ("after-load-alist", Vafter_load_alist,
+        doc: /* An alist of functions to be evalled when particular files are loaded.
+Each element looks like (REGEXP-OR-FEATURE FUNCS...).
+
+REGEXP-OR-FEATURE is either a regular expression to match file names, or
+a symbol (a feature name).
+
+When `load' is run and the file-name argument matches an element's
+REGEXP-OR-FEATURE, or when `provide' is run and provides the symbol
+REGEXP-OR-FEATURE, the FUNCS in the element are called.
+
+An error in FUNCS does not undo the load, but does prevent calling
+the rest of the FUNCS.  */);
+  Vafter_load_alist = Qnil;
+
   DEFVAR_LISP ("load-file-name", Vload_file_name,
         doc: /* Full name of file being loaded by `load'.
 
