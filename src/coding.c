@@ -1021,6 +1021,34 @@ Any alias or subsidiary coding system is not a base coding system.  */)
   return CODING_ATTR_BASE_NAME (attrs);
 }
 
+DEFUN ("coding-system-eol-type", Fcoding_system_eol_type,
+       Scoding_system_eol_type, 1, 1, 0,
+       doc: /* Return eol-type of CODING-SYSTEM.
+An eol-type is an integer 0, 1, 2, or a vector of coding systems.
+
+Integer values 0, 1, and 2 indicate a format of end-of-line; LF, CRLF,
+and CR respectively.
+
+A vector value indicates that a format of end-of-line should be
+detected automatically.  Nth element of the vector is the subsidiary
+coding system whose eol-type is N.  */)
+(Lisp_Object coding_system)
+{
+  Lisp_Object spec, eol_type;
+  int n;
+
+  if (NILP (coding_system))
+    coding_system = Qno_conversion;
+  if (!CODING_SYSTEM_P (coding_system))
+    return Qnil;
+  spec = CODING_SYSTEM_SPEC (coding_system);
+  eol_type = AREF (spec, 2);
+  if (VECTORP (eol_type))
+    return Fcopy_sequence (eol_type);
+  n = EQ (eol_type, Qunix) ? 0 : EQ (eol_type, Qdos) ? 1 : 2;
+  return make_fixnum (n);
+}
+
 DEFUN ("set-coding-system-priority", Fset_coding_system_priority,
        Sset_coding_system_priority, 0, MANY, 0,
        doc: /* Assign higher priority to the coding systems given as arguments.
@@ -1212,6 +1240,7 @@ syms_of_coding (void)
   defsubr (&Scoding_system_put);
   defsubr (&Sdefine_coding_system_alias);
   defsubr (&Scoding_system_base);
+  defsubr (&Scoding_system_eol_type);
   defsubr (&Sset_coding_system_priority);
   defsubr (&Sset_safe_terminal_coding_system_internal);
 

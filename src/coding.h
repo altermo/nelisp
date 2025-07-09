@@ -134,6 +134,11 @@ enum coding_attr_index
 #define CODING_SYSTEM_ID(coding_system_symbol) \
   hash_lookup (XHASH_TABLE (Vcoding_system_hash_table), coding_system_symbol)
 
+#define CODING_SYSTEM_P(coding_system_symbol)   \
+  (CODING_SYSTEM_ID (coding_system_symbol) >= 0 \
+   || (!NILP (coding_system_symbol)             \
+       && !NILP (Fcoding_system_p (coding_system_symbol))))
+
 #define CHECK_CODING_SYSTEM(x)                                         \
   do                                                                   \
     {                                                                  \
