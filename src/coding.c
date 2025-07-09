@@ -1006,6 +1006,21 @@ DEFUN ("define-coding-system-alias", Fdefine_coding_system_alias,
   return Qnil;
 }
 
+DEFUN ("coding-system-base", Fcoding_system_base, Scoding_system_base,
+       1, 1, 0,
+       doc: /* Return the base of CODING-SYSTEM.
+Any alias or subsidiary coding system is not a base coding system.  */)
+(Lisp_Object coding_system)
+{
+  Lisp_Object spec, attrs;
+
+  if (NILP (coding_system))
+    return (Qno_conversion);
+  CHECK_CODING_SYSTEM_GET_SPEC (coding_system, spec);
+  attrs = AREF (spec, 0);
+  return CODING_ATTR_BASE_NAME (attrs);
+}
+
 DEFUN ("set-coding-system-priority", Fset_coding_system_priority,
        Sset_coding_system_priority, 0, MANY, 0,
        doc: /* Assign higher priority to the coding systems given as arguments.
@@ -1196,6 +1211,7 @@ syms_of_coding (void)
   defsubr (&Sdefine_coding_system_internal);
   defsubr (&Scoding_system_put);
   defsubr (&Sdefine_coding_system_alias);
+  defsubr (&Scoding_system_base);
   defsubr (&Sset_coding_system_priority);
   defsubr (&Sset_safe_terminal_coding_system_internal);
 
