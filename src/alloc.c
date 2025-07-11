@@ -3126,7 +3126,8 @@ process_mark_stack (ptrdiff_t base_sp)
                 break;
 
               case PVEC_BOOL_VECTOR:
-                TODO;
+                eassert (!pdumper_object_p (ptr));
+                set_vector_marked (ptr);
                 break;
 
               case PVEC_OVERLAY:

@@ -574,6 +574,7 @@ ret () init (lua_State *L)
   init_charset_once ();
   init_syntax_once ();
   init_coding_once ();
+  init_category_once ();
 
   Vload_path = list1 (make_unibyte_string (lisp_dir, len_lisp_dir));
   Vdata_directory = make_unibyte_string (data_dir, len_data_dir);

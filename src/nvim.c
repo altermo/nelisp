@@ -162,6 +162,7 @@ create_buffer (long bufid)
 
 #if TODO_NELISP_LATER_ELSE
   b->syntax_table_ = BVAR (&buffer_defaults, syntax_table);
+  b->category_table_ = BVAR (&buffer_defaults, category_table);
 #endif
 
   XSETBUFFER (buffer, b);
