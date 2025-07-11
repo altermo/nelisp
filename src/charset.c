@@ -23,6 +23,7 @@ int charset_ksc5601;
 int charset_unibyte;
 
 Lisp_Object Vcharset_ordered_list;
+Lisp_Object Vcharset_non_preferred_head;
 
 Lisp_Object Viso_2022_charset_list;
 EMACS_UINT charset_ordered_list_tick;
@@ -430,6 +431,59 @@ load_charset (struct charset *charset, int control_flag)
     load_charset_map_from_file (charset, map, control_flag);
   else
     TODO; // load_charset_map_from_vector (charset, map, control_flag);
+}
+
+DEFUN ("set-charset-priority", Fset_charset_priority, Sset_charset_priority,
+       1, MANY, 0,
+       doc: /* Assign higher priority to the charsets given as arguments.
+usage: (set-charset-priority &rest charsets)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  Lisp_Object new_head, old_list;
+  Lisp_Object list_2022, list_emacs_mule;
+  ptrdiff_t i;
+  int id;
+
+  old_list = Fcopy_sequence (Vcharset_ordered_list);
+  new_head = Qnil;
+  for (i = 0; i < nargs; i++)
+    {
+      CHECK_CHARSET_GET_ID (args[i], id);
+      if (!NILP (Fmemq (make_fixnum (id), old_list)))
+        {
+          old_list = Fdelq (make_fixnum (id), old_list);
+          new_head = Fcons (make_fixnum (id), new_head);
+        }
+    }
+  Vcharset_non_preferred_head = old_list;
+  Vcharset_ordered_list = nconc2 (Fnreverse (new_head), old_list);
+
+  charset_ordered_list_tick++;
+
+  charset_unibyte = -1;
+  for (old_list = Vcharset_ordered_list, list_2022 = list_emacs_mule = Qnil;
+       CONSP (old_list); old_list = XCDR (old_list))
+    {
+      if (!NILP (Fmemq (XCAR (old_list), Viso_2022_charset_list)))
+        list_2022 = Fcons (XCAR (old_list), list_2022);
+      if (!NILP (Fmemq (XCAR (old_list), Vemacs_mule_charset_list)))
+        list_emacs_mule = Fcons (XCAR (old_list), list_emacs_mule);
+      if (charset_unibyte < 0)
+        {
+          struct charset *charset = CHARSET_FROM_ID (XFIXNUM (XCAR (old_list)));
+
+          if (CHARSET_DIMENSION (charset) == 1
+              && CHARSET_ASCII_COMPATIBLE_P (charset)
+              && CHARSET_MAX_CHAR (charset) >= 0x80)
+            charset_unibyte = CHARSET_ID (charset);
+        }
+    }
+  Viso_2022_charset_list = Fnreverse (list_2022);
+  Vemacs_mule_charset_list = Fnreverse (list_emacs_mule);
+  if (charset_unibyte < 0)
+    charset_unibyte = charset_iso_8859_1;
+
+  return Qnil;
 }
 
 DEFUN ("charsetp", Fcharsetp, Scharsetp, 1, 1, 0,
@@ -1117,6 +1171,7 @@ syms_of_charset (void)
   charset_table_size = ARRAYELTS (charset_table_init);
   charset_table_used = 0;
 
+  defsubr (&Sset_charset_priority);
   defsubr (&Scharsetp);
   defsubr (&Sdefine_charset_internal);
   defsubr (&Sdefine_charset_alias);
