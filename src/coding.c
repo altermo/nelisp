@@ -1286,6 +1286,13 @@ See info node `Coding Systems' and info node `Text and Binary' concerning
 such conversion.  */);
   inhibit_eol_conversion = 0;
 
+  DEFVAR_LISP ("default-process-coding-system",
+        Vdefault_process_coding_system,
+        doc: /* Cons of coding systems used for process I/O by default.
+The car part is used for decoding a process output,
+the cdr part is used for encoding a text to be sent to a process.  */);
+  Vdefault_process_coding_system = Qnil;
+
   DEFVAR_LISP ("latin-extra-code-table", Vlatin_extra_code_table,
         doc: /*
 Table of extra Latin codes in the range 128..159 (inclusive).
