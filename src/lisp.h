@@ -2400,6 +2400,8 @@ extern void syms_of_sqlite (void);
 
 extern void syms_of_floatfns (void);
 
+extern void syms_of_category (void);
+
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)
 {
