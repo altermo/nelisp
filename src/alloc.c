@@ -3258,9 +3258,26 @@ mark_objects (Lisp_Object *objs, ptrdiff_t n)
   process_mark_stack (sp);
 }
 
+static void
+mark_vectorlike_root (struct Lisp_Vector *ptr)
+{
+  ptrdiff_t size = ptr->header.size;
+  ptrdiff_t i;
+
+  if (size & PSEUDOVECTOR_FLAG)
+    size &= PSEUDOVECTOR_SIZE_MASK;
+  for (i = 0; i < size; i++)
+    mark_object (ptr->contents[i]);
+}
+void
+mark_buffer_roots (struct buffer *buffer)
+{
+  mark_vectorlike_root ((struct Lisp_Vector *) buffer);
+}
 void
 mark_roots (void)
 {
+  mark_buffer_roots (&buffer_defaults);
   for (unsigned long i = 0; i < ARRAYELTS (lispsym); i++)
     mark_object (builtin_lisp_symbol (i));
   for (int i = 0; i < staticidx; i++)
