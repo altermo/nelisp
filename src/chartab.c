@@ -250,6 +250,117 @@ char_table_ref (Lisp_Object table, int c)
   return val;
 }
 
+static Lisp_Object sub_char_table_ref_and_range (Lisp_Object table, int c,
+                                                 int *from, int *to,
+                                                 Lisp_Object defalt,
+                                                 bool is_uniprop);
+
+static inline Lisp_Object
+char_table_ref_simple (Lisp_Object table, int idx, int c, int *from, int *to,
+                       Lisp_Object defalt, bool is_uniprop, bool is_subtable)
+{
+  Lisp_Object val = is_subtable ? XSUB_CHAR_TABLE (table)->contents[idx]
+                                : XCHAR_TABLE (table)->contents[idx];
+  if (is_uniprop && UNIPROP_COMPRESSED_FORM_P (val))
+    val = uniprop_table_uncompress (table, idx);
+  if (SUB_CHAR_TABLE_P (val))
+    val = sub_char_table_ref_and_range (val, c, from, to, defalt, is_uniprop);
+  else if (NILP (val))
+    val = defalt;
+  return val;
+}
+
+static Lisp_Object
+sub_char_table_ref_and_range (Lisp_Object table, int c, int *from, int *to,
+                              Lisp_Object defalt, bool is_uniprop)
+{
+  struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
+  int depth = tbl->depth, min_char = tbl->min_char;
+  int chartab_idx = CHARTAB_IDX (c, depth, min_char), idx;
+  Lisp_Object val = char_table_ref_simple (table, chartab_idx, c, from, to,
+                                           defalt, is_uniprop, true);
+
+  idx = chartab_idx;
+  while (idx > 0 && *from < min_char + idx * chartab_chars[depth])
+    {
+      c = min_char + idx * chartab_chars[depth] - 1;
+      idx--;
+      Lisp_Object this_val = char_table_ref_simple (table, idx, c, from, to,
+                                                    defalt, is_uniprop, true);
+
+      if (!EQ (this_val, val))
+        {
+          *from = c + 1;
+          break;
+        }
+    }
+  while (
+    ((c = (chartab_idx + 1) * chartab_chars[depth]) < chartab_chars[depth - 1])
+    && (c += min_char) <= *to)
+    {
+      chartab_idx++;
+      Lisp_Object this_val
+        = char_table_ref_simple (table, chartab_idx, c, from, to, defalt,
+                                 is_uniprop, true);
+
+      if (!EQ (this_val, val))
+        {
+          *to = c - 1;
+          break;
+        }
+    }
+
+  return val;
+}
+
+Lisp_Object
+char_table_ref_and_range (Lisp_Object table, int c, int *from, int *to)
+{
+  struct Lisp_Char_Table *tbl = XCHAR_TABLE (table);
+  int chartab_idx = CHARTAB_IDX (c, 0, 0);
+  bool is_uniprop = UNIPROP_TABLE_P (table);
+
+  if (*from < 0)
+    *from = 0;
+  if (*to < 0)
+    *to = MAX_CHAR;
+
+  Lisp_Object val = char_table_ref_simple (table, chartab_idx, c, from, to,
+                                           tbl->defalt, is_uniprop, false);
+
+  int idx = chartab_idx;
+  while (*from < idx * chartab_chars[0])
+    {
+      c = idx * chartab_chars[0] - 1;
+      idx--;
+      Lisp_Object this_val
+        = char_table_ref_simple (table, idx, c, from, to, tbl->defalt,
+                                 is_uniprop, false);
+
+      if (!EQ (this_val, val))
+        {
+          *from = c + 1;
+          break;
+        }
+    }
+  while (*to >= (chartab_idx + 1) * chartab_chars[0])
+    {
+      chartab_idx++;
+      c = chartab_idx * chartab_chars[0];
+      Lisp_Object this_val
+        = char_table_ref_simple (table, chartab_idx, c, from, to, tbl->defalt,
+                                 is_uniprop, false);
+
+      if (!EQ (this_val, val))
+        {
+          *to = c - 1;
+          break;
+        }
+    }
+
+  return val;
+}
+
 static void
 sub_char_table_set (Lisp_Object table, int c, Lisp_Object val, bool is_uniprop)
 {

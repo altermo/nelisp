@@ -2326,6 +2326,7 @@ extern void map_char_table (void (*) (Lisp_Object, Lisp_Object, Lisp_Object),
 extern Lisp_Object copy_char_table (Lisp_Object table);
 extern void char_table_set_range (Lisp_Object table, int from, int to,
                                   Lisp_Object val);
+extern Lisp_Object char_table_ref_and_range (Lisp_Object, int, int *, int *);
 
 extern void syms_of_keymap (void);
 #define KEYMAPP(m) (!NILP (get_keymap (m, false, false)))
