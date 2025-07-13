@@ -1,6 +1,9 @@
 #ifndef EMACS_LISP_H
 #define EMACS_LISP_H
 
+#include <stdbool.h>
+#include "config.h"
+
 #include <alloca.h>
 #include <float.h>
 #include <ieee754.h>
@@ -9,7 +12,6 @@
 #include <setjmp.h>
 #include <stdalign.h>
 #include <stdbit.h>
-#include <stdbool.h>
 #include <stdckdint.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -23,8 +25,6 @@
 
 #include <luajit-2.1/lauxlib.h>
 #include <luajit-2.1/lua.h>
-
-#include "config.h"
 
 static inline _Noreturn void TODO_ (const char *file, int line);
 
