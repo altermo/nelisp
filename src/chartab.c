@@ -1,5 +1,6 @@
 #include "lisp.h"
 #include "character.h"
+#include "charset.h"
 
 const int chartab_size[4]
   = { (1 << CHARTAB_SIZE_BITS_0), (1 << CHARTAB_SIZE_BITS_1),
@@ -111,6 +112,110 @@ char_table_ascii (Lisp_Object table)
   if (UNIPROP_TABLE_P (table) && UNIPROP_COMPRESSED_FORM_P (val))
     val = uniprop_table_uncompress (sub, 0);
   return val;
+}
+
+static void
+map_sub_char_table_for_charset (void (*c_function) (Lisp_Object, Lisp_Object),
+                                Lisp_Object function, Lisp_Object table,
+                                Lisp_Object arg, Lisp_Object range,
+                                struct charset *charset, unsigned from,
+                                unsigned to)
+{
+  struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
+  int i, c = tbl->min_char, depth = tbl->depth;
+
+  if (depth < 3)
+    for (i = 0; i < chartab_size[depth]; i++, c += chartab_chars[depth])
+      {
+        Lisp_Object this;
+
+        this = tbl->contents[i];
+        if (SUB_CHAR_TABLE_P (this))
+          map_sub_char_table_for_charset (c_function, function, this, arg,
+                                          range, charset, from, to);
+        else
+          {
+            if (!NILP (XCAR (range)))
+              {
+                XSETCDR (range, make_fixnum (c - 1));
+                if (c_function)
+                  (*c_function) (arg, range);
+                else
+                  call2 (function, range, arg);
+              }
+            XSETCAR (range, Qnil);
+          }
+      }
+  else
+    for (i = 0; i < chartab_size[depth]; i++, c++)
+      {
+        Lisp_Object this;
+        unsigned code;
+
+        this = tbl->contents[i];
+        if (NILP (this)
+            || (charset
+                && (code = ENCODE_CHAR (charset, c),
+                    (code < from || code > to))))
+          {
+            if (!NILP (XCAR (range)))
+              {
+                XSETCDR (range, make_fixnum (c - 1));
+                if (c_function)
+                  (*c_function) (arg, range);
+                else
+                  call2 (function, range, arg);
+                XSETCAR (range, Qnil);
+              }
+          }
+        else
+          {
+            if (NILP (XCAR (range)))
+              XSETCAR (range, make_fixnum (c));
+          }
+      }
+}
+
+void
+map_char_table_for_charset (void (*c_function) (Lisp_Object, Lisp_Object),
+                            Lisp_Object function, Lisp_Object table,
+                            Lisp_Object arg, struct charset *charset,
+                            unsigned from, unsigned to)
+{
+  Lisp_Object range;
+  int c, i;
+
+  range = Fcons (Qnil, Qnil);
+
+  for (i = 0, c = 0; i < chartab_size[0]; i++, c += chartab_chars[0])
+    {
+      Lisp_Object this;
+
+      this = XCHAR_TABLE (table)->contents[i];
+      if (SUB_CHAR_TABLE_P (this))
+        map_sub_char_table_for_charset (c_function, function, this, arg, range,
+                                        charset, from, to);
+      else
+        {
+          if (!NILP (XCAR (range)))
+            {
+              XSETCDR (range, make_fixnum (c - 1));
+              if (c_function)
+                (*c_function) (arg, range);
+              else
+                call2 (function, range, arg);
+            }
+          XSETCAR (range, Qnil);
+        }
+    }
+  if (!NILP (XCAR (range)))
+    {
+      XSETCDR (range, make_fixnum (c - 1));
+      if (c_function)
+        (*c_function) (arg, range);
+      else
+        call2 (function, range, arg);
+    }
 }
 
 static Lisp_Object

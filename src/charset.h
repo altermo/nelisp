@@ -179,6 +179,10 @@ set_charset_attr (struct charset *charset, enum charset_attr_index idx,
 #define CHARSET_SYMBOL_ID(symbol) \
   CHARSET_ATTR_ID (CHARSET_SYMBOL_ATTRIBUTES (symbol))
 
+#define CHARSET_FAST_MAP_REF(c, fast_map)                        \
+  ((c) < 0x10000 ? fast_map[(c) >> 10] & (1 << (((c) >> 7) & 7)) \
+                 : fast_map[((c) >> 15) + 62] & (1 << (((c) >> 12) & 7)))
+
 #define CHARSET_FAST_MAP_SET(c, fast_map)                       \
   do                                                            \
     {                                                           \
@@ -233,10 +237,40 @@ set_charset_attr (struct charset *charset, enum charset_attr_index idx,
           : decode_char (charset, code))                                      \
      : decode_char (charset, code))
 
+extern Lisp_Object charset_work;
+
+#define ENCODE_CHAR(charset, c)                                             \
+  (verify_expr (sizeof (c) <= sizeof (int),                                 \
+                (ASCII_CHAR_P (c) && (charset)->ascii_compatible_p          \
+                   ? (unsigned) (c)                                         \
+                 : ((charset)->unified_p                                    \
+                    || (charset)->method == CHARSET_METHOD_SUBSET           \
+                    || (charset)->method == CHARSET_METHOD_SUPERSET)        \
+                   ? encode_char (charset, c)                               \
+                 : (c) < (charset)->min_char || (c) > (charset)->max_char   \
+                   ? (charset)->invalid_code                                \
+                 : (charset)->method == CHARSET_METHOD_OFFSET               \
+                   ? ((charset)->code_linear_p                              \
+                        ? (unsigned) ((c) - (charset)->code_offset)         \
+                            + (charset)->min_code                           \
+                        : encode_char (charset, c))                         \
+                 : (charset)->method == CHARSET_METHOD_MAP                  \
+                   ? (((charset)->compact_codes_p                           \
+                       && CHAR_TABLE_P (CHARSET_ENCODER (charset)))         \
+                        ? (charset_work                                     \
+                           = CHAR_TABLE_REF (CHARSET_ENCODER (charset), c), \
+                           (NILP (charset_work)                             \
+                              ? (charset)->invalid_code                     \
+                              : (unsigned) XFIXNAT (charset_work)))         \
+                        : encode_char (charset, c))                         \
+                   : encode_char (charset, c))))
+
 #define ISO_MAX_DIMENSION 3
 #define ISO_MAX_CHARS 2
 #define ISO_MAX_FINAL 0x80
 extern int iso_charset_table[ISO_MAX_DIMENSION][ISO_MAX_CHARS][ISO_MAX_FINAL];
+
+extern unsigned encode_char (struct charset *, int);
 
 #define ISO_CHARSET_TABLE(dimension, chars_96, final) \
   iso_charset_table[(dimension) - 1][chars_96][final]

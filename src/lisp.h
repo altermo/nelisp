@@ -2315,6 +2315,7 @@ extern Lisp_Object exec_byte_code (Lisp_Object, ptrdiff_t, ptrdiff_t,
 
 extern void syms_of_doc (void);
 
+struct charset;
 extern void syms_of_charset (void);
 extern Lisp_Object char_table_ref (Lisp_Object, int);
 extern void init_charset_once (void);
@@ -2328,6 +2329,10 @@ extern Lisp_Object copy_char_table (Lisp_Object table);
 extern void char_table_set_range (Lisp_Object table, int from, int to,
                                   Lisp_Object val);
 extern Lisp_Object char_table_ref_and_range (Lisp_Object, int, int *, int *);
+extern void map_char_table_for_charset (void (*c_function) (Lisp_Object,
+                                                            Lisp_Object),
+                                        Lisp_Object, Lisp_Object, Lisp_Object,
+                                        struct charset *, unsigned, unsigned);
 
 extern void syms_of_keymap (void);
 #define KEYMAPP(m) (!NILP (get_keymap (m, false, false)))

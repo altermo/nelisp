@@ -490,6 +490,188 @@ DEFUN ("charsetp", Fcharsetp, Scharsetp, 1, 1, 0,
        doc: /* Return non-nil if and only if OBJECT is a charset.*/)
 (Lisp_Object object) { return (CHARSETP (object) ? Qt : Qnil); }
 
+static void
+map_charset_for_dump (void (*c_function) (Lisp_Object, Lisp_Object),
+                      Lisp_Object function, Lisp_Object arg, unsigned int from,
+                      unsigned int to)
+{
+  int from_idx = CODE_POINT_TO_INDEX (temp_charset_work->current, from);
+  int to_idx = CODE_POINT_TO_INDEX (temp_charset_work->current, to);
+  Lisp_Object range = Fcons (Qnil, Qnil);
+  int c, stop;
+
+  c = temp_charset_work->min_char;
+  stop = (temp_charset_work->max_char < 0x20000 ? temp_charset_work->max_char
+                                                : 0xFFFF);
+
+  while (1)
+    {
+      int idx = GET_TEMP_CHARSET_WORK_ENCODER (c);
+
+      if (idx >= from_idx && idx <= to_idx)
+        {
+          if (NILP (XCAR (range)))
+            XSETCAR (range, make_fixnum (c));
+        }
+      else if (!NILP (XCAR (range)))
+        {
+          XSETCDR (range, make_fixnum (c - 1));
+          if (c_function)
+            (*c_function) (arg, range);
+          else
+            call2 (function, range, arg);
+          XSETCAR (range, Qnil);
+        }
+      if (c == stop)
+        {
+          if (c == temp_charset_work->max_char)
+            {
+              if (!NILP (XCAR (range)))
+                {
+                  XSETCDR (range, make_fixnum (c));
+                  if (c_function)
+                    (*c_function) (arg, range);
+                  else
+                    call2 (function, range, arg);
+                }
+              break;
+            }
+          c = 0x1FFFF;
+          stop = temp_charset_work->max_char;
+        }
+      c++;
+    }
+}
+
+void
+map_charset_chars (void (*c_function) (Lisp_Object, Lisp_Object),
+                   Lisp_Object function, Lisp_Object arg,
+                   struct charset *charset, unsigned from, unsigned to)
+{
+  Lisp_Object range;
+  bool partial
+    = (from > CHARSET_MIN_CODE (charset) || to < CHARSET_MAX_CODE (charset));
+
+  if (CHARSET_METHOD (charset) == CHARSET_METHOD_OFFSET)
+    {
+      int from_idx = CODE_POINT_TO_INDEX (charset, from);
+      int to_idx = CODE_POINT_TO_INDEX (charset, to);
+      int from_c = from_idx + CHARSET_CODE_OFFSET (charset);
+      int to_c = to_idx + CHARSET_CODE_OFFSET (charset);
+
+      if (CHARSET_UNIFIED_P (charset))
+        {
+          if (!CHAR_TABLE_P (CHARSET_DEUNIFIER (charset)))
+            load_charset (charset, 2);
+          if (CHAR_TABLE_P (CHARSET_DEUNIFIER (charset)))
+            map_char_table_for_charset (c_function, function,
+                                        CHARSET_DEUNIFIER (charset), arg,
+                                        partial ? charset : NULL, from, to);
+          else
+            map_charset_for_dump (c_function, function, arg, from, to);
+        }
+
+      range = Fcons (make_fixnum (from_c), make_fixnum (to_c));
+      if (NILP (function))
+        (*c_function) (arg, range);
+      else
+        call2 (function, range, arg);
+    }
+  else if (CHARSET_METHOD (charset) == CHARSET_METHOD_MAP)
+    {
+      if (!CHAR_TABLE_P (CHARSET_ENCODER (charset)))
+        load_charset (charset, 2);
+      if (CHAR_TABLE_P (CHARSET_ENCODER (charset)))
+        map_char_table_for_charset (c_function, function,
+                                    CHARSET_ENCODER (charset), arg,
+                                    partial ? charset : NULL, from, to);
+      else
+        map_charset_for_dump (c_function, function, arg, from, to);
+    }
+  else if (CHARSET_METHOD (charset) == CHARSET_METHOD_SUBSET)
+    {
+      Lisp_Object subset_info;
+      int offset;
+
+      subset_info = CHARSET_SUBSET (charset);
+      charset = CHARSET_FROM_ID (XFIXNAT (AREF (subset_info, 0)));
+      offset = XFIXNUM (AREF (subset_info, 3));
+      from -= offset;
+      if (from < XFIXNAT (AREF (subset_info, 1)))
+        from = XFIXNAT (AREF (subset_info, 1));
+      to -= offset;
+      if (to > XFIXNAT (AREF (subset_info, 2)))
+        to = XFIXNAT (AREF (subset_info, 2));
+      map_charset_chars (c_function, function, arg, charset, from, to);
+    }
+  else
+    {
+      Lisp_Object parents;
+
+      for (parents = CHARSET_SUPERSET (charset); CONSP (parents);
+           parents = XCDR (parents))
+        {
+          int offset;
+          unsigned this_from, this_to;
+
+          charset = CHARSET_FROM_ID (XFIXNAT (XCAR (XCAR (parents))));
+          offset = XFIXNUM (XCDR (XCAR (parents)));
+          this_from = from > offset ? from - offset : 0;
+          this_to = to > offset ? to - offset : 0;
+          if (this_from < CHARSET_MIN_CODE (charset))
+            this_from = CHARSET_MIN_CODE (charset);
+          if (this_to > CHARSET_MAX_CODE (charset))
+            this_to = CHARSET_MAX_CODE (charset);
+          map_charset_chars (c_function, function, arg, charset, this_from,
+                             this_to);
+        }
+    }
+}
+
+DEFUN ("map-charset-chars", Fmap_charset_chars, Smap_charset_chars, 2, 5, 0,
+       doc: /* Call FUNCTION for all characters in CHARSET.
+Optional 3rd argument ARG is an additional argument to be passed
+to FUNCTION, see below.
+Optional 4th and 5th arguments FROM-CODE and TO-CODE specify the
+range of code points (in CHARSET) of target characters on which to
+map the FUNCTION.  Note that these are not character codes, but code
+points of CHARSET; for the difference see `decode-char' and
+`list-charset-chars'.  If FROM-CODE is nil or imitted, it stands for
+the first code point of CHARSET; if TO-CODE is nil or omitted, it
+stands for the last code point of CHARSET.
+
+FUNCTION will be called with two arguments: RANGE and ARG.
+RANGE is a cons (FROM .  TO), where FROM and TO specify a range of
+characters that belong to CHARSET on which FUNCTION should do its
+job.  FROM and TO are Emacs character codes, unlike FROM-CODE and
+TO-CODE, which are CHARSET code points.  */)
+(Lisp_Object function, Lisp_Object charset, Lisp_Object arg,
+ Lisp_Object from_code, Lisp_Object to_code)
+{
+  struct charset *cs;
+  unsigned from, to;
+
+  CHECK_CHARSET_GET_CHARSET (charset, cs);
+  if (NILP (from_code))
+    from = CHARSET_MIN_CODE (cs);
+  else
+    {
+      from = XFIXNUM (from_code);
+      if (from < CHARSET_MIN_CODE (cs))
+        from = CHARSET_MIN_CODE (cs);
+    }
+  if (NILP (to_code))
+    to = CHARSET_MAX_CODE (cs);
+  else
+    {
+      to = XFIXNUM (to_code);
+      if (to > CHARSET_MAX_CODE (cs))
+        to = CHARSET_MAX_CODE (cs);
+    }
+  map_charset_chars (NULL, function, arg, cs, from, to);
+  return Qnil;
+}
+
 DEFUN ("define-charset-internal", Fdefine_charset_internal,
        Sdefine_charset_internal, charset_arg_max, MANY, 0,
        doc: /* For internal use only.
@@ -1032,6 +1214,114 @@ decode_char (struct charset *charset, unsigned int code)
   return c;
 }
 
+Lisp_Object charset_work;
+
+unsigned
+encode_char (struct charset *charset, int c)
+{
+  unsigned code;
+  enum charset_method method = CHARSET_METHOD (charset);
+
+  if (CHARSET_UNIFIED_P (charset))
+    {
+      Lisp_Object deunifier;
+      int code_index = -1;
+
+      deunifier = CHARSET_DEUNIFIER (charset);
+      if (!CHAR_TABLE_P (deunifier))
+        {
+          load_charset (charset, 2);
+          deunifier = CHARSET_DEUNIFIER (charset);
+        }
+      if (CHAR_TABLE_P (deunifier))
+        {
+          Lisp_Object deunified = CHAR_TABLE_REF (deunifier, c);
+
+          if (FIXNUMP (deunified))
+            code_index = XFIXNUM (deunified);
+        }
+      else
+        {
+          code_index = GET_TEMP_CHARSET_WORK_ENCODER (c);
+        }
+      if (code_index >= 0)
+        c = CHARSET_CODE_OFFSET (charset) + code_index;
+    }
+
+  if (method == CHARSET_METHOD_SUBSET)
+    {
+      Lisp_Object subset_info;
+      struct charset *this_charset;
+
+      subset_info = CHARSET_SUBSET (charset);
+      this_charset = CHARSET_FROM_ID (XFIXNAT (AREF (subset_info, 0)));
+      code = ENCODE_CHAR (this_charset, c);
+      if (code == CHARSET_INVALID_CODE (this_charset)
+          || code < XFIXNAT (AREF (subset_info, 1))
+          || code > XFIXNAT (AREF (subset_info, 2)))
+        return CHARSET_INVALID_CODE (charset);
+      code += XFIXNUM (AREF (subset_info, 3));
+      return code;
+    }
+
+  if (method == CHARSET_METHOD_SUPERSET)
+    {
+      Lisp_Object parents;
+
+      parents = CHARSET_SUPERSET (charset);
+      for (; CONSP (parents); parents = XCDR (parents))
+        {
+          int id = XFIXNUM (XCAR (XCAR (parents)));
+          int code_offset = XFIXNUM (XCDR (XCAR (parents)));
+          struct charset *this_charset = CHARSET_FROM_ID (id);
+
+          code = ENCODE_CHAR (this_charset, c);
+          if (code != CHARSET_INVALID_CODE (this_charset))
+            return code + code_offset;
+        }
+      return CHARSET_INVALID_CODE (charset);
+    }
+
+  if (!CHARSET_FAST_MAP_REF (c, charset->fast_map)
+      || c < CHARSET_MIN_CHAR (charset) || c > CHARSET_MAX_CHAR (charset))
+    return CHARSET_INVALID_CODE (charset);
+
+  if (method == CHARSET_METHOD_MAP)
+    {
+      Lisp_Object encoder;
+      Lisp_Object val;
+
+      encoder = CHARSET_ENCODER (charset);
+      if (!CHAR_TABLE_P (CHARSET_ENCODER (charset)))
+        {
+          load_charset (charset, 2);
+          encoder = CHARSET_ENCODER (charset);
+        }
+      if (CHAR_TABLE_P (encoder))
+        {
+          val = CHAR_TABLE_REF (encoder, c);
+          if (NILP (val))
+            return CHARSET_INVALID_CODE (charset);
+          code = XFIXNUM (val);
+          if (!CHARSET_COMPACT_CODES_P (charset))
+            code = INDEX_TO_CODE_POINT (charset, code);
+        }
+      else
+        {
+          code = GET_TEMP_CHARSET_WORK_ENCODER (c);
+          code = INDEX_TO_CODE_POINT (charset, code);
+        }
+    }
+  else
+    {
+      unsigned code_index = c - CHARSET_CODE_OFFSET (charset);
+
+      code = INDEX_TO_CODE_POINT (charset, code_index);
+    }
+
+  return code;
+}
+
 DEFUN ("unify-charset", Funify_charset, Sunify_charset, 1, 3, 0,
        doc: /* Unify characters of CHARSET with Unicode.
 This means reading the relevant file and installing the table defined
@@ -1173,6 +1463,7 @@ syms_of_charset (void)
 
   defsubr (&Sset_charset_priority);
   defsubr (&Scharsetp);
+  defsubr (&Smap_charset_chars);
   defsubr (&Sdefine_charset_internal);
   defsubr (&Sdefine_charset_alias);
   defsubr (&Scharset_plist);
