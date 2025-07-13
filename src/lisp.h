@@ -2146,6 +2146,7 @@ build_unibyte_string (const char *str)
 INTERVAL make_interval (void);
 extern bool survives_gc_p (Lisp_Object);
 extern struct frame *allocate_frame (void);
+extern Lisp_Object make_uninit_bool_vector (EMACS_INT);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;

@@ -436,6 +436,15 @@ tail_recurse:
         if (ASIZE (o2) != size)
           return false;
 
+        if (BIGNUMP (o1))
+          return mpz_cmp (*xbignum_val (o1), *xbignum_val (o2)) == 0;
+        if (BOOL_VECTOR_P (o1))
+          {
+            EMACS_INT size = bool_vector_size (o1);
+            return (size == bool_vector_size (o2)
+                    && !memcmp (bool_vector_data (o1), bool_vector_data (o2),
+                                bool_vector_bytes (size)));
+          }
         TODO;
         return true;
       }
@@ -1710,7 +1719,13 @@ the same empty object instead of its copy.  */)
     return copy_char_table (arg);
 
   if (BOOL_VECTOR_P (arg))
-    TODO;
+    {
+      EMACS_INT nbits = bool_vector_size (arg);
+      ptrdiff_t nbytes = bool_vector_bytes (nbits);
+      Lisp_Object val = make_uninit_bool_vector (nbits);
+      memcpy (bool_vector_data (val), bool_vector_data (arg), nbytes);
+      return val;
+    }
 
   wrong_type_argument (Qsequencep, arg);
 }
@@ -1771,6 +1786,19 @@ sxhash_list (Lisp_Object list, int depth)
   return hash;
 }
 static EMACS_UINT
+sxhash_bool_vector (Lisp_Object vec)
+{
+  EMACS_INT size = bool_vector_size (vec);
+  EMACS_UINT hash = size;
+  int i, n;
+
+  n = min (SXHASH_MAX_LEN, bool_vector_words (size));
+  for (i = 0; i < n; ++i)
+    hash = sxhash_combine (hash, bool_vector_data (vec)[i]);
+
+  return hash;
+}
+static EMACS_UINT
 sxhash_bignum (Lisp_Object bignum)
 {
   mpz_t const *n = xbignum_val (bignum);
@@ -1809,7 +1837,7 @@ sxhash_obj (Lisp_Object obj, int depth)
         else if (pvec_type == PVEC_MARKER)
           TODO;
         else if (pvec_type == PVEC_BOOL_VECTOR)
-          TODO; // return sxhash_bool_vector (obj);
+          return sxhash_bool_vector (obj);
         else if (pvec_type == PVEC_OVERLAY)
           TODO;
         else
