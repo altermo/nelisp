@@ -934,6 +934,21 @@ uniprop_table (Lisp_Object prop)
   return table;
 }
 
+DEFUN ("unicode-property-table-internal", Funicode_property_table_internal,
+       Sunicode_property_table_internal, 1, 1, 0,
+       doc: /* Return a char-table for Unicode character property PROP.
+Use `get-unicode-property-internal' and
+`put-unicode-property-internal' instead of `aref' and `aset' to get
+and put an element value.  */)
+(Lisp_Object prop)
+{
+  Lisp_Object table = uniprop_table (prop);
+
+  if (CHAR_TABLE_P (table))
+    return table;
+  return Fcdr (Fassq (prop, Vchar_code_property_alist));
+}
+
 void
 syms_of_chartab (void)
 {
@@ -945,6 +960,7 @@ syms_of_chartab (void)
   defsubr (&Sset_char_table_extra_slot);
   defsubr (&Schar_table_parent);
   defsubr (&Sset_char_table_parent);
+  defsubr (&Sunicode_property_table_internal);
 
   DEFVAR_LISP ("char-code-property-alist", Vchar_code_property_alist,
 	       doc: /* Alist of character property name vs char-table containing property values.
