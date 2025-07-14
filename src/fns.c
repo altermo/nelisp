@@ -1316,6 +1316,100 @@ If string STR1 is greater, the value is a positive number N;
   return Qt;
 }
 
+#if TODO_NELISP_LATER_ELSE
+# define HAVE_FAST_UNALIGNED_ACCESS 0
+#endif
+
+static int
+string_cmp (Lisp_Object string1, Lisp_Object string2)
+{
+  ptrdiff_t n = min (SCHARS (string1), SCHARS (string2));
+
+  if ((!STRING_MULTIBYTE (string1) || SCHARS (string1) == SBYTES (string1))
+      && (!STRING_MULTIBYTE (string2) || SCHARS (string2) == SBYTES (string2)))
+    {
+      int d = memcmp (SSDATA (string1), SSDATA (string2), n);
+      if (d)
+        return d;
+      return n < SCHARS (string2) ? -1 : n < SCHARS (string1);
+    }
+  else if (STRING_MULTIBYTE (string1) && STRING_MULTIBYTE (string2))
+    {
+      ptrdiff_t nb1 = SBYTES (string1);
+      ptrdiff_t nb2 = SBYTES (string2);
+      ptrdiff_t nb = min (nb1, nb2);
+      ptrdiff_t b = 0;
+
+      if (HAVE_FAST_UNALIGNED_ACCESS)
+        {
+          TODO; // int ws = sizeof (size_t);
+          // const char *w1 = SSDATA (string1);
+          // const char *w2 = SSDATA (string2);
+          // while (b < nb - ws + 1
+          //        && load_unaligned_size_t (w1 + b)
+          //             == load_unaligned_size_t (w2 + b))
+          //   b += ws;
+        }
+
+      while (b < nb && SREF (string1, b) == SREF (string2, b))
+        b++;
+
+      if (b >= nb)
+        return b < nb2 ? -1 : b < nb1;
+
+      while ((SREF (string1, b) & 0xc0) == 0x80)
+        b--;
+
+      ptrdiff_t i1 = 0, i2 = 0;
+      ptrdiff_t i1_byte = b, i2_byte = b;
+      int c1 = fetch_string_char_advance_no_check (string1, &i1, &i1_byte);
+      int c2 = fetch_string_char_advance_no_check (string2, &i2, &i2_byte);
+      return c1 < c2 ? -1 : c1 > c2;
+    }
+  else if (STRING_MULTIBYTE (string1))
+    {
+      ptrdiff_t i1 = 0, i1_byte = 0, i2 = 0;
+      while (i1 < n)
+        {
+          int c1 = fetch_string_char_advance_no_check (string1, &i1, &i1_byte);
+          int c2 = SREF (string2, i2++);
+          if (c1 != c2)
+            return c1 < c2 ? -1 : 1;
+        }
+      return i1 < SCHARS (string2) ? -1 : i1 < SCHARS (string1);
+    }
+  else
+    {
+      ptrdiff_t i1 = 0, i2 = 0, i2_byte = 0;
+      while (i1 < n)
+        {
+          int c1 = SREF (string1, i1++);
+          int c2 = fetch_string_char_advance_no_check (string2, &i2, &i2_byte);
+          if (c1 != c2)
+            return c1 < c2 ? -1 : 1;
+        }
+      return i1 < SCHARS (string2) ? -1 : i1 < SCHARS (string1);
+    }
+}
+
+DEFUN ("string-lessp", Fstring_lessp, Sstring_lessp, 2, 2, 0,
+       doc: /* Return non-nil if STRING1 is less than STRING2 in lexicographic order.
+Case is significant.
+Symbols are also allowed; their print names are used instead.  */)
+(Lisp_Object string1, Lisp_Object string2)
+{
+  if (SYMBOLP (string1))
+    string1 = SYMBOL_NAME (string1);
+  else
+    CHECK_STRING (string1);
+  if (SYMBOLP (string2))
+    string2 = SYMBOL_NAME (string2);
+  else
+    CHECK_STRING (string2);
+
+  return string_cmp (string1, string2) < 0 ? Qt : Qnil;
+}
+
 ptrdiff_t
 string_byte_to_char (Lisp_Object string, ptrdiff_t byte_index)
 {
@@ -2811,6 +2905,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sstring_search);
   defsubr (&Sstring_equal);
   defsubr (&Scompare_strings);
+  defsubr (&Sstring_lessp);
   defsubr (&Sstring_to_multibyte);
   defsubr (&Ssubstring);
   defsubr (&Sappend);
