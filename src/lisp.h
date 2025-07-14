@@ -2434,6 +2434,8 @@ extern void syms_of_category (void);
 extern void init_category_once (void);
 extern Lisp_Object char_category_set (int);
 
+extern void syms_of_composite (void);
+
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)
 {
