@@ -592,6 +592,37 @@ char_table_set_range (Lisp_Object table, int from, int to, Lisp_Object val)
     }
 }
 
+DEFUN ("char-table-range", Fchar_table_range, Schar_table_range,
+       2, 2, 0,
+       doc: /* Return the value in CHAR-TABLE for a range of characters RANGE.
+RANGE should be nil (for the default value),
+a cons of character codes (for characters in the range), or a character code.
+If RANGE is a cons (FROM . TO), the function returns the value for FROM.  */)
+(Lisp_Object char_table, Lisp_Object range)
+{
+  Lisp_Object val;
+  CHECK_CHAR_TABLE (char_table);
+
+  if (NILP (range))
+    val = XCHAR_TABLE (char_table)->defalt;
+  else if (CHARACTERP (range))
+    val = CHAR_TABLE_REF (char_table, XFIXNAT (range));
+  else if (CONSP (range))
+    {
+      int from, to;
+
+      CHECK_CHARACTER_CAR (range);
+      CHECK_CHARACTER_CDR (range);
+      from = XFIXNAT (XCAR (range));
+      to = XFIXNAT (XCDR (range));
+      val = char_table_ref_and_range (char_table, from, &from, &to);
+      /* Not yet implemented. */
+    }
+  else
+    error ("Invalid RANGE argument to `char-table-range'");
+  return val;
+}
+
 DEFUN ("set-char-table-range", Fset_char_table_range, Sset_char_table_range,
        3, 3, 0,
        doc: /* Set the value in CHAR-TABLE for a range of characters RANGE to VALUE.
@@ -1013,6 +1044,7 @@ syms_of_chartab (void)
   DEFSYM (Qchar_code_property_table, "char-code-property-table");
 
   defsubr (&Smake_char_table);
+  defsubr (&Schar_table_range);
   defsubr (&Sset_char_table_range);
   defsubr (&Soptimize_char_table);
   defsubr (&Schar_table_extra_slot);
