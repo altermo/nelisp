@@ -478,6 +478,7 @@ void
 syms_of_character (void)
 {
   DEFSYM (Qcharacterp, "characterp");
+  DEFSYM (Qauto_fill_chars, "auto-fill-chars");
 
   staticpro (&Vchar_unify_table);
   Vchar_unify_table = Qnil;
@@ -485,6 +486,14 @@ syms_of_character (void)
   defsubr (&Scharacterp);
   defsubr (&Sstring);
   defsubr (&Sunibyte_string);
+
+  DEFVAR_LISP ("auto-fill-chars", Vauto_fill_chars,
+        doc: /*
+A char-table for characters which invoke auto-filling.
+Such characters have value t in this table.  */);
+  Vauto_fill_chars = Fmake_char_table (Qauto_fill_chars, Qnil);
+  CHAR_TABLE_SET (Vauto_fill_chars, ' ', Qt);
+  CHAR_TABLE_SET (Vauto_fill_chars, '\n', Qt);
 
   DEFVAR_LISP ("char-width-table", Vchar_width_table,
         doc: /*
