@@ -12,6 +12,12 @@ DEFUN ("category-table-p", Fcategory_table_p, Scategory_table_p, 1, 1, 0,
   return Qnil;
 }
 
+DEFUN ("standard-category-table", Fstandard_category_table,
+   Sstandard_category_table, 0, 0, 0,
+       doc: /* Return the standard category table.
+This is the one used for new buffers.  */)
+(void) { return Vstandard_category_table; }
+
 static Lisp_Object
 check_category_table (Lisp_Object table)
 {
@@ -150,6 +156,7 @@ syms_of_category (void)
   DEFSYM (Qcategory_table_p, "category-table-p");
 
   defsubr (&Scategory_table_p);
+  defsubr (&Sstandard_category_table);
   defsubr (&Sdefine_category);
   defsubr (&Smodify_category_entry);
 }
