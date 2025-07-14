@@ -60,6 +60,16 @@ compile_pattern_1 (struct regexp_cache *cp, Lisp_Object pattern,
   cp->regexp = Fcopy_sequence (pattern);
 }
 
+void
+clear_regexp_cache (void)
+{
+  int i;
+
+  for (i = 0; i < REGEXP_CACHE_SIZE; ++i)
+    if (!searchbufs[i].busy && !BASE_EQ (searchbufs[i].syntax_table, Qt))
+      searchbufs[i].regexp = Qnil;
+}
+
 static struct regexp_cache *
 compile_pattern (Lisp_Object pattern, struct re_registers *regp,
                  Lisp_Object translate, bool posix, bool multibyte)

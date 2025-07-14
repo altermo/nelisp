@@ -2350,6 +2350,7 @@ extern Lisp_Object uniprop_table (Lisp_Object);
 extern intmax_t check_integer_range (Lisp_Object, intmax_t, intmax_t);
 
 extern void syms_of_search (void);
+extern void clear_regexp_cache (void);
 
 extern void syms_of_xdisp (void);
 extern void message1 (const char *);
