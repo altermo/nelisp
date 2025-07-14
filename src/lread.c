@@ -533,7 +533,12 @@ Return t if the file exists and loads successfully.  */)
       found = Qnil;
 
       if (!NILP (must_suffix))
-        TODO;
+        {
+          if (suffix_p (file, ".el") || suffix_p (file, ".elc"))
+            must_suffix = Qnil;
+          else if (!NILP (Ffile_name_directory (file)))
+            must_suffix = Qnil;
+        }
 
       if (!NILP (nosuffix))
         suffixes = Qnil;
@@ -594,6 +599,17 @@ Return t if the file exists and loads successfully.  */)
 
   unbind_to (count, Qnil);
   return Qt;
+}
+
+Lisp_Object
+save_match_data_load (Lisp_Object file, Lisp_Object noerror,
+                      Lisp_Object nomessage, Lisp_Object nosuffix,
+                      Lisp_Object must_suffix)
+{
+  specpdl_ref count = SPECPDL_INDEX ();
+  record_unwind_save_match_data ();
+  Lisp_Object result = Fload (file, noerror, nomessage, nosuffix, must_suffix);
+  return unbind_to (count, result);
 }
 
 DEFUN ("locate-file-internal", Flocate_file_internal, Slocate_file_internal, 2, 4, 0,

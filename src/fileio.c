@@ -143,7 +143,46 @@ the root directory.  */)
   multibyte = STRING_MULTIBYTE (name);
   bool defdir_multibyte = STRING_MULTIBYTE (default_directory);
   if (multibyte != defdir_multibyte)
-    TODO;
+    {
+      if (multibyte)
+        {
+          bool name_ascii_p = SCHARS (name) == SBYTES (name);
+          unsigned char *p = SDATA (default_directory);
+
+          if (!name_ascii_p)
+            while (*p && ASCII_CHAR_P (*p))
+              p++;
+          if (name_ascii_p || *p != '\0')
+            {
+              name = make_unibyte_string (SSDATA (name), SBYTES (name));
+              multibyte = 0;
+            }
+          else
+            {
+              default_directory
+                = make_multibyte_string (SSDATA (default_directory),
+                                         SCHARS (default_directory),
+                                         SCHARS (default_directory));
+            }
+        }
+      else
+        {
+          unsigned char *p = SDATA (name);
+
+          while (*p && ASCII_CHAR_P (*p))
+            p++;
+          if (*p == '\0')
+            {
+              name = make_multibyte_string (SSDATA (name), SCHARS (name),
+                                            SCHARS (name));
+              multibyte = 1;
+            }
+          else
+            default_directory
+              = make_unibyte_string (SSDATA (default_directory),
+                                     SBYTES (default_directory));
+        }
+    }
   SAFE_ALLOCA_STRING (nm, name);
   nmlim = nm + SBYTES (name);
 

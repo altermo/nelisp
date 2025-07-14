@@ -2527,6 +2527,12 @@ particular subfeatures supported in this version of FEATURE.  */)
 
 static Lisp_Object require_nesting_list;
 
+static void
+require_unwind (Lisp_Object old_value)
+{
+  require_nesting_list = old_value;
+}
+
 DEFUN ("require", Frequire, Srequire, 1, 3, 0,
        doc: /* If FEATURE is not already loaded, load it from FILENAME.
 If FEATURE is not a member of the list `features', then the feature was
@@ -2572,9 +2578,43 @@ FILENAME are suppressed.  */)
 
   if (NILP (tem))
     {
-      TODO;
-      UNUSED (filename);
-      UNUSED (noerror);
+      specpdl_ref count = SPECPDL_INDEX ();
+      int nesting = 0;
+
+      if (will_dump_p () && !will_bootstrap_p ())
+        {
+          TODO;
+        }
+
+      tem = require_nesting_list;
+      while (!NILP (tem))
+        {
+          if (!NILP (Fequal (feature, XCAR (tem))))
+            nesting++;
+          tem = XCDR (tem);
+        }
+      if (nesting > 3)
+        error ("Recursive `require' for feature `%s'",
+               SDATA (SYMBOL_NAME (feature)));
+
+      record_unwind_protect (require_unwind, require_nesting_list);
+      require_nesting_list = Fcons (feature, require_nesting_list);
+
+      tem = load_with_autoload_queue (NILP (filename) ? Fsymbol_name (feature)
+                                                      : filename,
+                                      noerror, Qt, Qnil,
+                                      (NILP (filename) ? Qt : Qnil));
+
+      if (NILP (tem))
+        return unbind_to (count, Qnil);
+
+      tem = Fmemq (feature, Vfeatures);
+      if (NILP (tem))
+        {
+          TODO;
+        }
+
+      feature = unbind_to (count, feature);
     }
 
   return feature;

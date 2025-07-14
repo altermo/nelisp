@@ -471,6 +471,18 @@ If optional arg RESEAT is non-nil, make markers on LIST point nowhere.  */)
 }
 
 static void
+unwind_set_match_data (Lisp_Object list)
+{
+  Fset_match_data (list, Qt);
+}
+
+void
+record_unwind_save_match_data (void)
+{
+  record_unwind_protect (unwind_set_match_data, Fmatch_data (Qnil, Qnil, Qnil));
+}
+
+static void
 syms_of_search_for_pdumper (void)
 {
   for (int i = 0; i < REGEXP_CACHE_SIZE; ++i)

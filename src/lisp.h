@@ -2043,6 +2043,20 @@ enum Set_Internal_Bind
   SET_INTERNAL_THREAD_SWITCH,
 };
 
+INLINE bool
+will_dump_p (void)
+{
+  TODO_NELISP_LATER;
+  return false;
+}
+
+INLINE bool
+will_bootstrap_p (void)
+{
+  TODO_NELISP_LATER;
+  return false;
+}
+
 extern Lisp_Object make_float (double);
 extern void syms_of_alloc (void);
 extern Lisp_Object make_unibyte_string (const char *, ptrdiff_t);
@@ -2188,6 +2202,8 @@ intern (const char *str)
 {
   return intern_1 (str, strlen (str));
 }
+extern Lisp_Object save_match_data_load (Lisp_Object, Lisp_Object, Lisp_Object,
+                                         Lisp_Object, Lisp_Object);
 
 extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
 extern void syms_of_fns (void);
@@ -2252,6 +2268,11 @@ extern Lisp_Object safe_eval (Lisp_Object);
 extern Lisp_Object safe_funcall (ptrdiff_t, Lisp_Object *);
 #define safe_calln(...) \
   CALLMANY (safe_funcall, ((Lisp_Object[]) { __VA_ARGS__ }))
+extern Lisp_Object load_with_autoload_queue (Lisp_Object file,
+                                             Lisp_Object noerror,
+                                             Lisp_Object nomessage,
+                                             Lisp_Object nosuffix,
+                                             Lisp_Object must_suffix);
 
 enum Arith_Comparison
 {
@@ -2351,6 +2372,7 @@ extern intmax_t check_integer_range (Lisp_Object, intmax_t, intmax_t);
 
 extern void syms_of_search (void);
 extern void clear_regexp_cache (void);
+extern void record_unwind_save_match_data (void);
 
 extern void syms_of_xdisp (void);
 extern void message1 (const char *);

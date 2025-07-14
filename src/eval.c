@@ -5,6 +5,7 @@
 #define CACHEABLE
 #define clobbered_eassert(E) eassert (sizeof (E) != 0)
 
+Lisp_Object Vautoload_queue;
 Lisp_Object Vrun_hooks;
 
 static Lisp_Object funcall_lambda (Lisp_Object, ptrdiff_t, Lisp_Object *);
@@ -844,6 +845,39 @@ this does nothing and returns nil.  */)
   return Fdefalias (function,
                     list5 (Qautoload, file, docstring, interactive, type),
                     Qnil);
+}
+
+static void
+un_autoload (Lisp_Object oldqueue)
+{
+  Lisp_Object queue = Vautoload_queue;
+  Vautoload_queue = oldqueue;
+  while (CONSP (queue))
+    {
+      Lisp_Object first = XCAR (queue);
+      if (CONSP (first) && BASE_EQ (XCAR (first), make_fixnum (0)))
+        Vfeatures = XCDR (first);
+      else
+        TODO; // Ffset (first, Fcar (Fcdr (Fget (first, Qfunction_history))));
+      queue = XCDR (queue);
+    }
+}
+
+Lisp_Object
+load_with_autoload_queue (Lisp_Object file, Lisp_Object noerror,
+                          Lisp_Object nomessage, Lisp_Object nosuffix,
+                          Lisp_Object must_suffix)
+{
+  specpdl_ref count = SPECPDL_INDEX ();
+
+  record_unwind_protect (un_autoload, Vautoload_queue);
+  Vautoload_queue = Qt;
+  Lisp_Object tem
+    = save_match_data_load (file, noerror, nomessage, nosuffix, must_suffix);
+
+  Vautoload_queue = Qt;
+  unbind_to (count, Qnil);
+  return tem;
 }
 
 Lisp_Object
@@ -2407,6 +2441,9 @@ alist of active lexical bindings.  */);
 
   Vrun_hooks = intern_c_string ("run-hooks");
   staticpro (&Vrun_hooks);
+
+  staticpro (&Vautoload_queue);
+  Vautoload_queue = Qnil;
 
   defsubr (&Scondition_case);
   DEFSYM (QCsuccess, ":success");
