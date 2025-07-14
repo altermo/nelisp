@@ -32,7 +32,7 @@ format:
 
 check:
 	find src/ -name '*.c' -o -name '*.h' -not -name 'globals.h'|\
-		xargs clang-check
+		xargs -n5 -P$$(nproc) -t clang-check
 
 analyze:
 	find src/ -name '*.c' -o -name '*.h' -not -name 'globals.h'|\
