@@ -510,4 +510,12 @@ A char-table for characters whose width (columns) can be 1 or 2.
 The actual width depends on the language-environment and on the
 value of `cjk-ambiguous-chars-are-wide'.  */);
   Vambiguous_width_chars = Fmake_char_table (Qnil, Qnil);
+
+  DEFVAR_LISP ("char-script-table", Vchar_script_table,
+        doc: /* Char table of script symbols.
+It has one extra slot whose value is a list of script symbols.  */);
+
+  DEFSYM (Qchar_script_table, "char-script-table");
+  Fput (Qchar_script_table, Qchar_table_extra_slots, make_fixnum (1));
+  Vchar_script_table = Fmake_char_table (Qchar_script_table, Qnil);
 }
