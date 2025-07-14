@@ -626,6 +626,64 @@ or a character code.  Return VALUE.  */)
   return value;
 }
 
+static Lisp_Object
+optimize_sub_char_table (Lisp_Object table, Lisp_Object test)
+{
+  struct Lisp_Sub_Char_Table *tbl = XSUB_CHAR_TABLE (table);
+  int i, depth = tbl->depth;
+  Lisp_Object elt, this;
+  bool optimizable;
+
+  elt = XSUB_CHAR_TABLE (table)->contents[0];
+  if (SUB_CHAR_TABLE_P (elt))
+    {
+      elt = optimize_sub_char_table (elt, test);
+      set_sub_char_table_contents (table, 0, elt);
+    }
+  optimizable = SUB_CHAR_TABLE_P (elt) ? 0 : 1;
+  for (i = 1; i < chartab_size[depth]; i++)
+    {
+      this = XSUB_CHAR_TABLE (table)->contents[i];
+      if (SUB_CHAR_TABLE_P (this))
+        {
+          this = optimize_sub_char_table (this, test);
+          set_sub_char_table_contents (table, i, this);
+        }
+      if (optimizable
+          && (NILP (test)      ? NILP (Fequal (this, elt))
+              : EQ (test, Qeq) ? !EQ (this, elt)
+                               : NILP (call2 (test, this, elt))))
+        optimizable = 0;
+    }
+
+  return (optimizable ? elt : table);
+}
+
+DEFUN ("optimize-char-table", Foptimize_char_table, Soptimize_char_table,
+       1, 2, 0,
+       doc: /* Optimize CHAR-TABLE.
+TEST is the comparison function used to decide whether two entries are
+equivalent and can be merged.  It defaults to `equal'.  */)
+(Lisp_Object char_table, Lisp_Object test)
+{
+  Lisp_Object elt;
+  int i;
+
+  CHECK_CHAR_TABLE (char_table);
+
+  for (i = 0; i < chartab_size[0]; i++)
+    {
+      elt = XCHAR_TABLE (char_table)->contents[i];
+      if (SUB_CHAR_TABLE_P (elt))
+        set_char_table_contents (char_table, i,
+                                 optimize_sub_char_table (elt, test));
+    }
+  /* Reset the `ascii' cache, in case it got optimized away.  */
+  set_char_table_ascii (char_table, char_table_ascii (char_table));
+
+  return Qnil;
+}
+
 DEFUN ("char-table-extra-slot", Fchar_table_extra_slot, Schar_table_extra_slot,
        2, 2, 0,
        doc: /* Return the value of CHAR-TABLE's extra-slot number N.  */)
@@ -956,6 +1014,7 @@ syms_of_chartab (void)
 
   defsubr (&Smake_char_table);
   defsubr (&Sset_char_table_range);
+  defsubr (&Soptimize_char_table);
   defsubr (&Schar_table_extra_slot);
   defsubr (&Sset_char_table_extra_slot);
   defsubr (&Schar_table_parent);
