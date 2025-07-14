@@ -137,6 +137,126 @@ string_char_to_byte (Lisp_Object string, ptrdiff_t char_index)
   return i_byte;
 }
 
+static Lisp_Object
+sort_list (Lisp_Object list, Lisp_Object predicate, Lisp_Object keyfunc,
+           bool reverse, bool inplace)
+{
+  ptrdiff_t length = list_length (list);
+  if (length < 2)
+    return inplace ? list : list1 (XCAR (list));
+  else
+    {
+      Lisp_Object *result;
+      USE_SAFE_ALLOCA;
+      SAFE_ALLOCA_LISP (result, length);
+      Lisp_Object tail = list;
+      for (ptrdiff_t i = 0; i < length; i++)
+        {
+          result[i] = Fcar (tail);
+          tail = XCDR (tail);
+        }
+      tim_sort (predicate, keyfunc, result, length, reverse);
+
+      if (inplace)
+        {
+          ptrdiff_t i = 0;
+          tail = list;
+          while (CONSP (tail))
+            {
+              XSETCAR (tail, result[i]);
+              tail = XCDR (tail);
+              i++;
+            }
+        }
+      else
+        {
+          list = Qnil;
+          for (ptrdiff_t i = length - 1; i >= 0; i--)
+            list = Fcons (result[i], list);
+        }
+      SAFE_FREE ();
+      return list;
+    }
+}
+
+/* Stably sort VECTOR in-place ordered by PREDICATE and KEYFUNC,
+   optionally reversed.  */
+static Lisp_Object
+sort_vector (Lisp_Object vector, Lisp_Object predicate, Lisp_Object keyfunc,
+             bool reverse)
+{
+  ptrdiff_t length = ASIZE (vector);
+  if (length >= 2)
+    tim_sort (predicate, keyfunc, XVECTOR (vector)->contents, length, reverse);
+  return vector;
+}
+
+DEFUN ("sort", Fsort, Ssort, 1, MANY, 0,
+       doc: /* Sort SEQ, stably, and return the sorted sequence.
+SEQ should be a list or vector.
+Optional arguments are specified as keyword/argument pairs.  The following
+arguments are defined:
+
+:key FUNC -- FUNC is a function that takes a single element from SEQ and
+  returns the key value to be used in comparison.  If absent or nil,
+  `identity' is used.
+
+:lessp FUNC -- FUNC is a function that takes two arguments and returns
+  non-nil if the first element should come before the second.
+  If absent or nil, `value<' is used.
+
+:reverse BOOL -- if BOOL is non-nil, the sorting order implied by FUNC is
+  reversed.  This does not affect stability: equal elements still retain
+  their order in the input sequence.
+
+:in-place BOOL -- if BOOL is non-nil, SEQ is sorted in-place and returned.
+  Otherwise, a sorted copy of SEQ is returned and SEQ remains unmodified;
+  this is the default.
+
+For compatibility, the calling convention (sort SEQ LESSP) can also be used;
+in this case, sorting is always done in-place.
+
+usage: (sort SEQ &key KEY LESSP REVERSE IN-PLACE)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  Lisp_Object seq = args[0];
+  Lisp_Object key = Qnil;
+  Lisp_Object lessp = Qnil;
+  bool inplace = false;
+  bool reverse = false;
+  if (nargs == 2)
+    {
+      lessp = args[1];
+      inplace = true;
+    }
+  else if ((nargs & 1) == 0)
+    error ("Invalid argument list");
+  else
+    for (ptrdiff_t i = 1; i < nargs - 1; i += 2)
+      {
+        if (EQ (args[i], QCkey))
+          key = args[i + 1];
+        else if (EQ (args[i], QClessp))
+          lessp = args[i + 1];
+        else if (EQ (args[i], QCin_place))
+          inplace = !NILP (args[i + 1]);
+        else if (EQ (args[i], QCreverse))
+          reverse = !NILP (args[i + 1]);
+        else
+          signal_error ("Invalid keyword argument", args[i]);
+      }
+
+  if (CONSP (seq))
+    return sort_list (seq, lessp, key, reverse, inplace);
+  else if (NILP (seq))
+    return seq;
+  else if (VECTORP (seq))
+    return sort_vector (inplace ? seq : Fcopy_sequence (seq), lessp, key,
+                        reverse);
+  else
+    wrong_type_argument (Qlist_or_vector_p, seq);
+}
+
 Lisp_Object
 plist_get (Lisp_Object plist, Lisp_Object prop)
 {
@@ -2660,10 +2780,12 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   DEFSYM (Qsubfeatures, "subfeatures");
   DEFSYM (Qfuncall, "funcall");
   DEFSYM (Qplistp, "plistp");
+  DEFSYM (Qlist_or_vector_p, "list-or-vector-p");
 
   require_nesting_list = Qnil;
   staticpro (&require_nesting_list);
 
+  defsubr (&Ssort);
   defsubr (&Splist_get);
   defsubr (&Sget);
   defsubr (&Smemq);
@@ -2705,4 +2827,10 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sfeaturep);
   defsubr (&Sprovide);
   defsubr (&Srequire);
+
+  DEFSYM (QCkey, ":key");
+  DEFSYM (QClessp, ":lessp");
+  DEFSYM (QCin_place, ":in-place");
+  DEFSYM (QCreverse, ":reverse");
+  DEFSYM (Qvaluelt, "value<");
 }

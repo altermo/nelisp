@@ -54,6 +54,9 @@ extern bool unrecoverable_error;
 # define INTMAX_WIDTH 64
 # define UINTMAX_WIDTH 64
 #endif
+#ifndef PTRDIFF_WIDTH
+# define PTRDIFF_WIDTH __WORDSIZE
+#endif
 
 //! IMPORTANT: just to get things started, a lot of things will be presumed
 //! (like 64-bit ptrs) or not optimized
@@ -1863,6 +1866,8 @@ extern void record_unwind_protect_intmax (void (*) (intmax_t), intmax_t);
 extern void record_unwind_protect_int (void (*function) (int), int arg);
 extern void record_unwind_protect_void (void (*function) (void));
 extern void record_unwind_protect_nothing (void);
+extern void record_unwind_protect_ptr_mark (void (*function) (void *),
+                                            void *arg, void (*mark) (void *));
 extern void clear_unwind_protect (specpdl_ref count);
 specpdl_ref record_in_backtrace (Lisp_Object function, Lisp_Object *args,
                                  ptrdiff_t nargs);
@@ -2435,6 +2440,9 @@ extern void init_category_once (void);
 extern Lisp_Object char_category_set (int);
 
 extern void syms_of_composite (void);
+
+extern void tim_sort (Lisp_Object, Lisp_Object, Lisp_Object *, const ptrdiff_t,
+                      bool);
 
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)
