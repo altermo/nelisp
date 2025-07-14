@@ -1122,6 +1122,80 @@ See also `string-equal-ignore-case'.  */)
   return Qt;
 }
 
+DEFUN ("compare-strings", Fcompare_strings, Scompare_strings, 6, 7, 0,
+       doc: /* Compare the contents of two strings, converting to multibyte if needed.
+The arguments START1, END1, START2, and END2, if non-nil, are
+positions specifying which parts of STR1 or STR2 to compare.  In
+string STR1, compare the part between START1 (inclusive) and END1
+\(exclusive).  If START1 is nil, it defaults to 0, the beginning of
+the string; if END1 is nil, it defaults to the length of the string.
+Likewise, in string STR2, compare the part between START2 and END2.
+Like in `substring', negative values are counted from the end.
+
+The strings are compared by the numeric values of their characters.
+For instance, STR1 is "less than" STR2 if its first differing
+character has a smaller numeric value.  If IGNORE-CASE is non-nil,
+characters are converted to upper-case before comparing them.  Unibyte
+strings are converted to multibyte for comparison.
+
+The value is t if the strings (or specified portions) match.
+If string STR1 is less, the value is a negative number N;
+  - 1 - N is the number of characters that match at the beginning.
+If string STR1 is greater, the value is a positive number N;
+  N - 1 is the number of characters that match at the beginning.  */)
+(Lisp_Object str1, Lisp_Object start1, Lisp_Object end1, Lisp_Object str2,
+ Lisp_Object start2, Lisp_Object end2, Lisp_Object ignore_case)
+{
+  ptrdiff_t from1, to1, from2, to2, i1, i1_byte, i2, i2_byte;
+
+  CHECK_STRING (str1);
+  CHECK_STRING (str2);
+
+  if (FIXNUMP (end1) && SCHARS (str1) < XFIXNUM (end1))
+    end1 = make_fixnum (SCHARS (str1));
+  if (FIXNUMP (end2) && SCHARS (str2) < XFIXNUM (end2))
+    end2 = make_fixnum (SCHARS (str2));
+
+  validate_subarray (str1, start1, end1, SCHARS (str1), &from1, &to1);
+  validate_subarray (str2, start2, end2, SCHARS (str2), &from2, &to2);
+
+  i1 = from1;
+  i2 = from2;
+
+  i1_byte = string_char_to_byte (str1, i1);
+  i2_byte = string_char_to_byte (str2, i2);
+
+  while (i1 < to1 && i2 < to2)
+    {
+      int c1 = fetch_string_char_as_multibyte_advance (str1, &i1, &i1_byte);
+      int c2 = fetch_string_char_as_multibyte_advance (str2, &i2, &i2_byte);
+
+      if (c1 == c2)
+        continue;
+
+      if (!NILP (ignore_case))
+        {
+          c1 = XFIXNUM (Fupcase (make_fixnum (c1)));
+          c2 = XFIXNUM (Fupcase (make_fixnum (c2)));
+        }
+
+      if (c1 == c2)
+        continue;
+
+      if (c1 < c2)
+        return make_fixnum (-i1 + from1);
+      else
+        return make_fixnum (i1 - from1);
+    }
+
+  if (i1 < to1)
+    return make_fixnum (i1 - from1 + 1);
+  if (i2 < to2)
+    return make_fixnum (-i1 + from1 - 1);
+
+  return Qt;
+}
+
 ptrdiff_t
 string_byte_to_char (Lisp_Object string, ptrdiff_t byte_index)
 {
@@ -2574,6 +2648,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Slength);
   defsubr (&Sstring_search);
   defsubr (&Sstring_equal);
+  defsubr (&Scompare_strings);
   defsubr (&Sstring_to_multibyte);
   defsubr (&Ssubstring);
   defsubr (&Sappend);

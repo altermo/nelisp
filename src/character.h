@@ -282,7 +282,28 @@ fetch_string_char_advance (Lisp_Object string, ptrdiff_t *charidx,
   *byteidx = b;
   return output;
 }
-
+INLINE int
+fetch_string_char_as_multibyte_advance (Lisp_Object string, ptrdiff_t *charidx,
+                                        ptrdiff_t *byteidx)
+{
+  int output;
+  ptrdiff_t b = *byteidx;
+  unsigned char *chp = SDATA (string) + b;
+  if (STRING_MULTIBYTE (string))
+    {
+      int chlen;
+      output = string_char_and_length (chp, &chlen);
+      b += chlen;
+    }
+  else
+    {
+      output = make_char_multibyte (*chp);
+      b++;
+    }
+  (*charidx)++;
+  *byteidx = b;
+  return output;
+}
 INLINE int
 fetch_string_char_advance_no_check (Lisp_Object string, ptrdiff_t *charidx,
                                     ptrdiff_t *byteidx)
