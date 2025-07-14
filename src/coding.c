@@ -3,6 +3,9 @@
 #include "character.h"
 #include "charset.h"
 
+static Lisp_Object Vsjis_coding_system;
+static Lisp_Object Vbig5_coding_system;
+
 #define CODING_ISO_INITIAL(coding, reg)                                   \
   XFIXNUM (                                                               \
     AREF (AREF (CODING_ID_ATTRS ((coding)->id), coding_attr_iso_initial), \
@@ -769,7 +772,7 @@ usage: (define-coding-system-internal ...)  */)
         }
 
       category = coding_category_sjis;
-      TODO; // Vsjis_coding_system = name;
+      Vsjis_coding_system = name;
     }
   else if (EQ (coding_type, Qbig5))
     {
@@ -792,7 +795,7 @@ usage: (define-coding-system-internal ...)  */)
                SDATA (SYMBOL_NAME (CHARSET_NAME (charset))));
 
       category = coding_category_big5;
-      TODO; // Vbig5_coding_system = name;
+      Vbig5_coding_system = name;
     }
   else if (EQ (coding_type, Qraw_text))
     {
@@ -1143,6 +1146,12 @@ syms_of_coding (void)
 {
   staticpro (&Vcoding_system_hash_table);
   Vcoding_system_hash_table = CALLN (Fmake_hash_table, QCtest, Qeq);
+
+  staticpro (&Vsjis_coding_system);
+  Vsjis_coding_system = Qnil;
+
+  staticpro (&Vbig5_coding_system);
+  Vbig5_coding_system = Qnil;
 
   DEFSYM (Qfilenamep, "filenamep");
 

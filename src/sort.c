@@ -481,7 +481,7 @@ merge_init (merge_state *ms, const ptrdiff_t list_size,
   ms->pred_fun = NILP (predicate) ? order_pred_valuelt : order_pred_lisp;
   ms->predicate = predicate;
   ms->reloc = (struct reloc) { NULL, NULL, NULL, 0 };
-  TODO; // ms->count = make_invalid_specpdl_ref ();
+  ms->count = make_invalid_specpdl_ref ();
   if (allocated_keys != NULL)
     merge_register_cleanup (ms);
 }

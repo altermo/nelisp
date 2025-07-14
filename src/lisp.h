@@ -1814,6 +1814,11 @@ specpdl_ref_to_ptr (specpdl_ref ref)
   return (union specbinding *) ((char *) specpdl + unwrap_specpdl_ref (ref));
 }
 INLINE specpdl_ref
+make_invalid_specpdl_ref (void)
+{
+  return wrap_specpdl_ref (-1);
+}
+INLINE specpdl_ref
 SPECPDL_INDEX (void)
 {
   return wrap_specpdl_ref ((char *) specpdl_ptr - (char *) specpdl);
