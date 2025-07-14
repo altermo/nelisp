@@ -430,6 +430,43 @@ usage: (characterp OBJECT)  */
   return (CHARACTERP (object) ? Qt : Qnil);
 }
 
+DEFUN ("string", Fstring, Sstring, 0, MANY, 0,
+       doc: /*
+Concatenate all the argument characters and make the result a string.
+usage: (string &rest CHARACTERS)  */)
+(ptrdiff_t n, Lisp_Object *args)
+{
+  ptrdiff_t nbytes = 0;
+  for (ptrdiff_t i = 0; i < n; i++)
+    {
+      CHECK_CHARACTER (args[i]);
+      nbytes += CHAR_BYTES (XFIXNUM (args[i]));
+    }
+  if (nbytes == n)
+    return Funibyte_string (n, args);
+  Lisp_Object str = make_uninit_multibyte_string (n, nbytes);
+  unsigned char *p = SDATA (str);
+  for (ptrdiff_t i = 0; i < n; i++)
+    {
+      eassume (CHARACTERP (args[i]));
+      int c = XFIXNUM (args[i]);
+      p += CHAR_STRING (c, p);
+    }
+  return str;
+}
+
+DEFUN ("unibyte-string", Funibyte_string, Sunibyte_string, 0, MANY, 0,
+       doc: /* Concatenate all the argument bytes and make the result a unibyte string.
+usage: (unibyte-string &rest BYTES)  */)
+(ptrdiff_t n, Lisp_Object *args)
+{
+  Lisp_Object str = make_uninit_string (n);
+  unsigned char *p = SDATA (str);
+  for (ptrdiff_t i = 0; i < n; i++)
+    *p++ = check_integer_range (args[i], 0, 255);
+  return str;
+}
+
 signed char const hexdigit[UCHAR_MAX + 1]
   = { ['0'] = 1 + 0,  ['1'] = 1 + 1,  ['2'] = 1 + 2,  ['3'] = 1 + 3,
       ['4'] = 1 + 4,  ['5'] = 1 + 5,  ['6'] = 1 + 6,  ['7'] = 1 + 7,
@@ -446,6 +483,8 @@ syms_of_character (void)
   Vchar_unify_table = Qnil;
 
   defsubr (&Scharacterp);
+  defsubr (&Sstring);
+  defsubr (&Sunibyte_string);
 
   DEFVAR_LISP ("char-width-table", Vchar_width_table,
         doc: /*
