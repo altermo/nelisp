@@ -446,4 +446,12 @@ syms_of_character (void)
   Vchar_unify_table = Qnil;
 
   defsubr (&Scharacterp);
+
+  DEFVAR_LISP ("char-width-table", Vchar_width_table,
+        doc: /*
+A char-table for width (columns) of each character.  */);
+  Vchar_width_table = Fmake_char_table (Qnil, make_fixnum (1));
+  char_table_set_range (Vchar_width_table, 0x80, 0x9F, make_fixnum (4));
+  char_table_set_range (Vchar_width_table, MAX_5_BYTE_CHAR + 1, MAX_CHAR,
+                        make_fixnum (4));
 }

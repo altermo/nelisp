@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 
+#include "category.h"
 #include "character.h"
 #include "syntax.h"
 
@@ -3214,11 +3215,8 @@ analyze_first_fastmap (const re_char *p, void *arg)
       p++;
       k = *p++;
       for (j = (1 << BYTEWIDTH); j >= 0; j--)
-        {
-          TODO;
-          UNUSED (k);
-        } // if ((CHAR_HAS_CATEGORY (j, k)) ^ not)
-          //   data->fastmap[j] = 1;
+        if ((CHAR_HAS_CATEGORY (j, k)) ^ not)
+          data->fastmap[j] = 1;
 
       /* Any leading code can possibly start a character which
          has or doesn't has the_malloc_fn specified category.  */

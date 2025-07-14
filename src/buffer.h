@@ -85,10 +85,17 @@ buffer_memcpy (unsigned char *dst, ptrdiff_t beg, ptrdiff_t size)
 }
 
 INLINE int
+sanitize_char_width (EMACS_INT width)
+{
+  return 0 <= width && width <= 1000 ? width : 1000;
+}
+
+INLINE int
 CHARACTER_WIDTH (int c)
 {
   return (0x20 <= c && c < 0x7f  ? 1
-          : 0x7f < c             ? (TODO, 0)
+          : 0x7f < c             ? (sanitize_char_width (
+                         XFIXNUM (CHAR_TABLE_REF (Vchar_width_table, c))))
           : c == '\t'            ? (TODO, 0)
           : c == '\n'            ? 0
           : !NILP ((TODO, Qnil)) ? 2

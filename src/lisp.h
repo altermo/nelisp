@@ -2410,6 +2410,7 @@ extern void syms_of_floatfns (void);
 
 extern void syms_of_category (void);
 extern void init_category_once (void);
+extern Lisp_Object char_category_set (int);
 
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)

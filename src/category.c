@@ -66,6 +66,12 @@ set_category_set (Lisp_Object category_set, EMACS_INT category, bool val)
   bool_vector_set (category_set, category, val);
 }
 
+Lisp_Object
+char_category_set (int c)
+{
+  return CHAR_TABLE_REF (BVAR (current_buffer, category_table), c);
+}
+
 DEFUN ("modify-category-entry", Fmodify_category_entry,
        Smodify_category_entry, 2, 4, 0,
        doc: /* Modify the category set of CHARACTER by adding CATEGORY to it.

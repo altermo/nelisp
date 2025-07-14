@@ -343,7 +343,7 @@ retry:
                       multibyte = true;
                       goto retry;
                     }
-                  TODO; // spec->argument = arg = Fchar_to_string (arg);
+                  spec->argument = arg = Fchar_to_string (arg);
                 }
 
               if (!EQ (arg, args[n]))
