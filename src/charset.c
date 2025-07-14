@@ -1376,6 +1376,45 @@ Optional third argument DEUNIFY, if non-nil, means to de-unify CHARSET.  */)
   return Qnil;
 }
 
+DEFUN ("decode-char", Fdecode_char, Sdecode_char, 2, 2, 0,
+       doc: /* Decode the pair of CHARSET and CODE-POINT into a character.
+Return nil if CODE-POINT is not valid in CHARSET.
+
+CODE-POINT may be a cons (HIGHER-16-BIT-VALUE . LOWER-16-BIT-VALUE),
+although this usage is obsolescent.  */)
+(Lisp_Object charset, Lisp_Object code_point)
+{
+  int c, id;
+  unsigned code;
+  struct charset *charsetp;
+
+  CHECK_CHARSET_GET_ID (charset, id);
+  code = cons_to_unsigned (code_point, UINT_MAX);
+  charsetp = CHARSET_FROM_ID (id);
+  c = DECODE_CHAR (charsetp, code);
+  return (c >= 0 ? make_fixnum (c) : Qnil);
+}
+
+DEFUN ("encode-char", Fencode_char, Sencode_char, 2, 2, 0,
+       doc: /* Encode the character CH into a code-point of CHARSET.
+Return the encoded code-point as an integer,
+or nil if CHARSET doesn't support CH.  */)
+(Lisp_Object ch, Lisp_Object charset)
+{
+  int c, id;
+  unsigned code;
+  struct charset *charsetp;
+
+  CHECK_CHARSET_GET_ID (charset, id);
+  CHECK_CHARACTER (ch);
+  c = XFIXNAT (ch);
+  charsetp = CHARSET_FROM_ID (id);
+  code = ENCODE_CHAR (charsetp, c);
+  if (code == CHARSET_INVALID_CODE (charsetp))
+    return Qnil;
+  return INT_TO_INTEGER (code);
+}
+
 void
 mark_charset (void)
 {
@@ -1469,6 +1508,8 @@ syms_of_charset (void)
   defsubr (&Scharset_plist);
   defsubr (&Sset_charset_plist);
   defsubr (&Sunify_charset);
+  defsubr (&Sdecode_char);
+  defsubr (&Sencode_char);
 
   DEFVAR_LISP ("charset-map-path", Vcharset_map_path,
         doc: /* List of directories to search for charset map files.  */);
