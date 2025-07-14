@@ -37,6 +37,45 @@ file_name_as_directory (char *dst, const char *src, ptrdiff_t srclen,
   return srclen;
 }
 
+Lisp_Object
+file_name_directory (Lisp_Object filename)
+{
+  char *beg = SSDATA (filename);
+  char const *p = beg + SBYTES (filename);
+
+  while (p != beg && !IS_DIRECTORY_SEP (p[-1]))
+    p--;
+
+  if (p == beg)
+    return Qnil;
+  return make_specified_string (beg, -1, p - beg, STRING_MULTIBYTE (filename));
+}
+
+DEFUN ("file-name-directory", Ffile_name_directory, Sfile_name_directory,
+       1, 1, 0,
+       doc: /* Return the directory component in file name FILENAME.
+Return nil if FILENAME does not include a directory.
+Otherwise return a directory name.
+Given a Unix syntax file name, returns a string ending in slash.  */)
+(Lisp_Object filename)
+{
+  Lisp_Object handler;
+
+  CHECK_STRING (filename);
+
+#if TODO_NELISP_LATER_AND
+  handler = Ffind_file_name_handler (filename, Qfile_name_directory);
+  if (!NILP (handler))
+    {
+      Lisp_Object handled_name
+        = call2 (handler, Qfile_name_directory, filename);
+      return STRINGP (handled_name) ? handled_name : Qnil;
+    }
+#endif
+
+  return file_name_directory (filename);
+}
+
 DEFUN ("expand-file-name", Fexpand_file_name, Sexpand_file_name, 1, 2, 0,
        doc: /* Convert filename NAME to absolute, and canonicalize it.
 Second arg DEFAULT-DIRECTORY is directory to start with if NAME is relative
@@ -291,6 +330,7 @@ See `file-symlink-p' to distinguish symlinks.  */)
 void
 syms_of_fileio (void)
 {
+  defsubr (&Sfile_name_directory);
   defsubr (&Sexpand_file_name);
   defsubr (&Sfile_directory_p);
 
