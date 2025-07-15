@@ -470,6 +470,23 @@ If optional arg RESEAT is non-nil, make markers on LIST point nowhere.  */)
   return Qnil;
 }
 
+DEFUN ("match-data--translate", Fmatch_data__translate, Smatch_data__translate,
+       1, 1, 0,
+       doc: /* Add N to all positions in the match data.  Internal.  */)
+(Lisp_Object n)
+{
+  CHECK_FIXNUM (n);
+  EMACS_INT delta = XFIXNUM (n);
+  if (!NILP (last_thing_searched))
+    for (ptrdiff_t i = 0; i < search_regs.num_regs; i++)
+      if (search_regs.start[i] >= 0)
+        {
+          search_regs.start[i] = max (0, search_regs.start[i] + delta);
+          search_regs.end[i] = max (0, search_regs.end[i] + delta);
+        }
+  return Qnil;
+}
+
 static void
 unwind_set_match_data (Lisp_Object list)
 {
@@ -543,5 +560,6 @@ is to bind it with `let' around a small expression.  */);
   defsubr (&Smatch_end);
   defsubr (&Smatch_data);
   defsubr (&Sset_match_data);
+  defsubr (&Smatch_data__translate);
   syms_of_search_for_pdumper ();
 }
