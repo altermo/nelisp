@@ -1,8 +1,27 @@
 #include "lisp.h"
 
+static Lisp_Object gstring_hash_table;
+
+DEFUN ("clear-composition-cache", Fclear_composition_cache,
+       Sclear_composition_cache, 0, 0, 0,
+       doc: /* Internal use only.
+Clear composition cache.  */)
+(void)
+{
+  gstring_hash_table
+    = CALLN (Fmake_hash_table, QCtest, Qequal, QCsize, make_fixnum (311));
+
+  return Fclear_face_cache (Qt);
+}
+
 void
 syms_of_composite (void)
 {
+  Lisp_Object args[] = { QCtest, Qequal, QCsize, make_fixnum (311) };
+
+  gstring_hash_table = CALLMANY (Fmake_hash_table, args);
+  staticpro (&gstring_hash_table);
+
   DEFVAR_LISP ("composition-function-table", Vcomposition_function_table,
         doc: /* Char-table of functions for automatic character composition.
 For each character that has to be composed automatically with
@@ -37,4 +56,6 @@ GSTRING, or modify GSTRING itself and return it.
 
 See also the documentation of `auto-composition-mode'.  */);
   Vcomposition_function_table = Fmake_char_table (Qnil, Qnil);
+
+  defsubr (&Sclear_composition_cache);
 }
