@@ -2243,6 +2243,8 @@ extern void mark_fns (void);
 extern bool sweep_weak_table (struct Lisp_Hash_Table *, bool);
 extern Lisp_Object concat2 (Lisp_Object, Lisp_Object);
 extern Lisp_Object concat3 (Lisp_Object, Lisp_Object, Lisp_Object);
+extern Lisp_Object substring_both (Lisp_Object, ptrdiff_t, ptrdiff_t, ptrdiff_t,
+                                   ptrdiff_t);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)

@@ -1,5 +1,6 @@
 #include "lisp.h"
 #include "buffer.h"
+#include "character.h"
 #include "charset.h"
 #include "regex-emacs.h"
 
@@ -232,6 +233,193 @@ match_limit (Lisp_Object num, bool beginningp)
     return Qnil;
   return (
     make_fixnum ((beginningp) ? search_regs.start[n] : search_regs.end[n]));
+}
+
+DEFUN ("replace-match", Freplace_match, Sreplace_match, 1, 5, 0,
+       doc: /* Replace text matched by last search with NEWTEXT.
+Leave point at the end of the replacement text.
+
+If optional second arg FIXEDCASE is non-nil, do not alter the case of
+the replacement text.  Otherwise, maybe capitalize the whole text, or
+maybe just word initials, based on the replaced text.  If the replaced
+text has only capital letters and has at least one multiletter word,
+convert NEWTEXT to all caps.  Otherwise if all words are capitalized
+in the replaced text, capitalize each word in NEWTEXT.  Note that
+what exactly is a word is determined by the syntax tables in effect
+in the current buffer, and the variable `case-symbols-as-words'.
+
+If optional third arg LITERAL is non-nil, insert NEWTEXT literally.
+Otherwise treat `\\' as special:
+  `\\&' in NEWTEXT means substitute original matched text.
+  `\\N' means substitute what matched the Nth `\\(...\\)'.
+       If Nth parens didn't match, substitute nothing.
+  `\\\\' means insert one `\\'.
+  `\\?' is treated literally
+       (for compatibility with `query-replace-regexp').
+  Any other character following `\\' signals an error.
+Case conversion does not apply to these substitutions.
+
+If optional fourth argument STRING is non-nil, it should be a string
+to act on; this should be the string on which the previous match was
+done via `string-match'.  In this case, `replace-match' creates and
+returns a new string, made by copying STRING and replacing the part of
+STRING that was matched (the original STRING itself is not altered).
+
+The optional fifth argument SUBEXP specifies a subexpression;
+it says to replace just that subexpression with NEWTEXT,
+rather than replacing the entire matched text.
+This is, in a vague sense, the inverse of using `\\N' in NEWTEXT;
+`\\N' copies subexp N into NEWTEXT, but using N as SUBEXP puts
+NEWTEXT in place of subexp N.
+This is useful only after a regular expression search or match,
+since only regular expressions have distinguished subexpressions.  */)
+(Lisp_Object newtext, Lisp_Object fixedcase, Lisp_Object literal,
+ Lisp_Object string, Lisp_Object subexp)
+{
+  enum
+  {
+    nochange,
+    all_caps,
+    cap_initial
+  } case_action;
+  ptrdiff_t pos, pos_byte;
+  bool some_multiletter_word;
+  bool some_lowercase;
+  bool some_uppercase;
+  bool some_nonuppercase_initial;
+  int c, prevc;
+  ptrdiff_t sub;
+  ptrdiff_t opoint, newpoint;
+  UNUSED (newpoint);
+
+  CHECK_STRING (newtext);
+
+  if (!NILP (string))
+    CHECK_STRING (string);
+
+  if (NILP (literal) && !memchr (SSDATA (newtext), '\\', SBYTES (newtext)))
+    literal = Qt;
+
+  case_action = nochange;
+
+  ptrdiff_t num_regs = search_regs.num_regs;
+  if (num_regs <= 0)
+    error ("`replace-match' called before any match found");
+
+  sub = !NILP (subexp) ? check_integer_range (subexp, 0, num_regs - 1) : 0;
+  ptrdiff_t sub_start = search_regs.start[sub];
+  ptrdiff_t sub_end = search_regs.end[sub];
+  eassert (sub_start <= sub_end);
+
+  if (!(NILP (string) ? BEGV <= sub_start && sub_end <= ZV
+                      : 0 <= sub_start && sub_end <= SCHARS (string)))
+    {
+      if (sub_start < 0)
+        xsignal2 (Qerror,
+                  build_string ("replace-match subexpression does not exist"),
+                  subexp);
+      args_out_of_range (make_fixnum (sub_start), make_fixnum (sub_end));
+    }
+
+  if (NILP (fixedcase))
+    TODO;
+
+  if (!NILP (string))
+    {
+      Lisp_Object before, after;
+
+      before = Fsubstring (string, make_fixnum (0), make_fixnum (sub_start));
+      after = Fsubstring (string, make_fixnum (sub_end), Qnil);
+
+      if (NILP (literal))
+        {
+          ptrdiff_t lastpos = 0;
+          ptrdiff_t lastpos_byte = 0;
+          UNUSED (lastpos_byte);
+
+          Lisp_Object accum;
+          Lisp_Object middle;
+          ptrdiff_t length = SBYTES (newtext);
+
+          accum = Qnil;
+
+          for (pos_byte = 0, pos = 0; pos_byte < length;)
+            {
+              ptrdiff_t substart = -1;
+              ptrdiff_t subend = 0;
+              bool delbackslash = 0;
+
+              c = fetch_string_char_advance (newtext, &pos, &pos_byte);
+
+              if (c == '\\')
+                {
+                  c = fetch_string_char_advance (newtext, &pos, &pos_byte);
+
+                  if (c == '&')
+                    {
+                      substart = sub_start;
+                      subend = sub_end;
+                    }
+                  else if (c >= '1' && c <= '9')
+                    {
+                      if (c - '0' < num_regs && search_regs.start[c - '0'] >= 0)
+                        {
+                          substart = search_regs.start[c - '0'];
+                          subend = search_regs.end[c - '0'];
+                        }
+                      else
+                        {
+                          substart = 0;
+                          subend = 0;
+                        }
+                    }
+                  else if (c == '\\')
+                    delbackslash = 1;
+                  else if (c != '?')
+                    error ("Invalid use of `\\' in replacement text");
+                }
+              if (substart >= 0)
+                {
+                  if (pos - 2 != lastpos)
+                    middle = substring_both (newtext, lastpos, lastpos_byte,
+                                             pos - 2, pos_byte - 2);
+                  else
+                    middle = Qnil;
+                  accum = concat3 (accum, middle,
+                                   Fsubstring (string, make_fixnum (substart),
+                                               make_fixnum (subend)));
+                  lastpos = pos;
+                  lastpos_byte = pos_byte;
+                }
+              else if (delbackslash)
+                {
+                  middle = substring_both (newtext, lastpos, lastpos_byte,
+                                           pos - 1, pos_byte - 1);
+
+                  accum = concat2 (accum, middle);
+                  lastpos = pos;
+                  lastpos_byte = pos_byte;
+                }
+            }
+
+          if (pos != lastpos)
+            middle
+              = substring_both (newtext, lastpos, lastpos_byte, pos, pos_byte);
+          else
+            middle = Qnil;
+
+          newtext = concat2 (accum, middle);
+        }
+
+      if (case_action == all_caps)
+        newtext = Fupcase (newtext);
+      else if (case_action == cap_initial)
+        newtext = Fupcase_initials (newtext);
+
+      return concat3 (before, newtext, after);
+    }
+
+  TODO;
 }
 
 DEFUN ("match-beginning", Fmatch_beginning, Smatch_beginning, 1, 1, 0,
@@ -556,6 +744,7 @@ is to bind it with `let' around a small expression.  */);
   Vinhibit_changing_match_data = Qnil;
 
   defsubr (&Sstring_match);
+  defsubr (&Sreplace_match);
   defsubr (&Smatch_beginning);
   defsubr (&Smatch_end);
   defsubr (&Smatch_data);

@@ -1583,6 +1583,30 @@ With one argument, just copy STRING (with properties, if any).  */)
   return res;
 }
 
+Lisp_Object
+substring_both (Lisp_Object string, ptrdiff_t from, ptrdiff_t from_byte,
+                ptrdiff_t to, ptrdiff_t to_byte)
+{
+  Lisp_Object res;
+  ptrdiff_t size = CHECK_VECTOR_OR_STRING (string);
+
+  if (!(0 <= from && from <= to && to <= size))
+    args_out_of_range_3 (string, make_fixnum (from), make_fixnum (to));
+
+  if (STRINGP (string))
+    {
+      res = make_specified_string (SSDATA (string) + from_byte, to - from,
+                                   to_byte - from_byte,
+                                   STRING_MULTIBYTE (string));
+      TODO; // copy_text_properties (make_fixnum (from), make_fixnum (to),
+            //  string, make_fixnum (0), res, Qnil);
+    }
+  else
+    res = Fvector (to - from, aref_addr (string, from));
+
+  return res;
+}
+
 struct textprop_rec
 {
   ptrdiff_t argnum;
