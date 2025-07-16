@@ -744,6 +744,17 @@ DEFUN ("set-char-table-extra-slot", Fset_char_table_extra_slot,
   return value;
 }
 
+DEFUN ("char-table-subtype", Fchar_table_subtype, Schar_table_subtype,
+       1, 1, 0,
+       doc: /*
+Return the subtype of char-table CHAR-TABLE.  The value is a symbol.  */)
+(Lisp_Object char_table)
+{
+  CHECK_CHAR_TABLE (char_table);
+
+  return XCHAR_TABLE (char_table)->purpose;
+}
+
 DEFUN ("char-table-parent", Fchar_table_parent, Schar_table_parent,
        1, 1, 0,
        doc: /* Return the parent char-table of CHAR-TABLE.
@@ -1064,6 +1075,7 @@ syms_of_chartab (void)
   defsubr (&Soptimize_char_table);
   defsubr (&Schar_table_extra_slot);
   defsubr (&Sset_char_table_extra_slot);
+  defsubr (&Schar_table_subtype);
   defsubr (&Schar_table_parent);
   defsubr (&Sset_char_table_parent);
   defsubr (&Smap_char_table);
