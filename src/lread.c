@@ -1,12 +1,15 @@
 #include <math.h>
 #include <stdlib.h>
 #include "lisp.h"
+#include "blockinput.h"
 #include "character.h"
 #include "coding.h"
 #include "termhooks.h"
 
 #include <errno.h>
 #include <fcntl.h>
+
+#define file_seek fseek
 
 static Lisp_Object read_objects_map;
 static Lisp_Object read_objects_completed;
@@ -921,6 +924,29 @@ read_multibyte:
     }
   return STRING_CHAR (buf);
 }
+#define FROM_FILE_P(readcharfun)    \
+  (EQ (readcharfun, Qget_file_char) \
+   || EQ (readcharfun, Qget_emacs_mule_file_char))
+static void
+skip_dyn_bytes (Lisp_Object readcharfun, ptrdiff_t n)
+{
+  if (FROM_FILE_P (readcharfun))
+    {
+      block_input (); /* FIXME: Not sure if it's needed.  */
+      file_seek (infile->stream, n - infile->lookahead, SEEK_CUR);
+      unblock_input ();
+      infile->lookahead = 0;
+    }
+  else
+    {
+      int c;
+      do
+        {
+          c = READCHAR;
+        }
+      while (c >= 0 && c != '\037');
+    }
+}
 void
 unreadchar (Lisp_Object readcharfun, int c)
 {
@@ -1689,6 +1715,39 @@ hash_table_from_plist (Lisp_Object plist)
 
   return ht;
 }
+static bool
+skip_lazy_string (Lisp_Object readcharfun)
+{
+  ptrdiff_t nskip = 0;
+  ptrdiff_t digits = 0;
+  for (;;)
+    {
+      int c = READCHAR;
+      if (c < '0' || c > '9')
+        {
+          if (nskip > 0)
+            nskip--;
+          else
+            UNREAD (c);
+          break;
+        }
+      if (ckd_mul (&nskip, nskip, 10) || ckd_add (&nskip, nskip, c - '0'))
+        invalid_syntax ("#@", readcharfun);
+      digits++;
+      if (digits == 2 && nskip == 0)
+        {
+          TODO; // skip_dyn_eof (readcharfun);
+          return false;
+        }
+    }
+
+  if (load_force_doc_strings && FROM_FILE_P (readcharfun))
+    TODO;
+  else
+    skip_dyn_bytes (readcharfun, nskip);
+
+  return true;
+}
 Lisp_Object
 read0 (Lisp_Object readcharfun, bool locate_syms)
 {
@@ -1834,9 +1893,13 @@ read_obj:;
             obj = read_integer (readcharfun, 2);
             break;
           case '@':
-            TODO;
+            if (skip_lazy_string (readcharfun))
+              goto read_obj;
+            obj = Qnil; /* #@00 skips to EOB/EOF and yields nil.  */
+            break;
           case '$':
-            TODO;
+            obj = Vload_file_name;
+            break;
           case ':':
             c = READCHAR;
             if (c <= 32 || c == NO_BREAK_SPACE || c == '"' || c == '\''
@@ -2599,6 +2662,8 @@ to find all the symbols in an obarray, use `mapatoms'.  */);
 
   DEFSYM (Qget_file_char, "get-file-char");
 
+  DEFSYM (Qget_emacs_mule_file_char, "get-emacs-mule-file-char");
+
   DEFSYM (Qbackquote, "`");
   DEFSYM (Qcomma, ",");
   DEFSYM (Qcomma_at, ",@");
@@ -2688,6 +2753,11 @@ For internal use only.  */);
   DEFVAR_LISP ("current-load-list", Vcurrent_load_list,
         doc: /* Used for internal purposes by `load'.  */);
   Vcurrent_load_list = Qnil;
+
+  DEFVAR_BOOL ("load-force-doc-strings", load_force_doc_strings,
+        doc: /* Non-nil means `load' should force-load all dynamic doc strings.
+This is useful when the file being loaded is a temporary copy.  */);
+  load_force_doc_strings = 0;
 
   staticpro (&read_objects_map);
   read_objects_map = Qnil;

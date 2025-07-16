@@ -34,4 +34,10 @@ CHAR_HAS_CATEGORY (int ch, int category)
   ASET (Fchar_table_extra_slot (table, make_fixnum (0)), ((category) - ' '), \
         value)
 
+#define WORD_BOUNDARY_P(c1, c2)                          \
+  (!(SINGLE_BYTE_CHAR_P (c1) && SINGLE_BYTE_CHAR_P (c2)) \
+   && word_boundary_p (c1, c2))
+
+extern bool word_boundary_p (int, int);
+
 #endif

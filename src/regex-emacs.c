@@ -3478,9 +3478,7 @@ re_search_2 (struct re_pattern_buffer *bufp, const char *str1, ptrdiff_t size1,
   /* See whether the pattern is anchored.  */
   anchored_start = (bufp->buffer[0] == begline);
 
-#if TODO_NELISP_LATER_AND
   RE_SETUP_SYNTAX_TABLE_FOR_OBJECT (re_match_object, startpos);
-#endif
 
   /* Loop through the string, looking for a place to start matching.  */
   for (;;)
@@ -4049,9 +4047,7 @@ re_match_2 (struct re_pattern_buffer *bufp, char const *string1,
 {
   ptrdiff_t result;
 
-#if TODO_NELISP_LATER_AND
   RE_SETUP_SYNTAX_TABLE_FOR_OBJECT (re_match_object, pos);
-#endif
 
   result = re_match_2_internal (bufp, (re_char *) string1, size1,
                                 (re_char *) string2, size2, pos, regs, stop);
@@ -4986,7 +4982,36 @@ re_match_2_internal (struct re_pattern_buffer *bufp, re_char *string1,
             goto fail;
           else
             {
-              TODO;
+              /* C1 is the character before D, S1 is the syntax of C1, C2
+                 is the character at D, and S2 is the syntax of C2.  */
+              int c1, c2;
+              int s1, s2;
+              int dummy;
+              ptrdiff_t offset = POINTER_TO_OFFSET (d);
+              ptrdiff_t charpos = RE_SYNTAX_TABLE_BYTE_TO_CHAR (offset);
+              UPDATE_SYNTAX_TABLE (charpos);
+              PREFETCH ();
+              GET_CHAR_AFTER (c2, d, dummy);
+              nchars++;
+              s2 = SYNTAX (c2);
+
+              /* Case 2: S2 is not Sword. */
+              if (s2 != Sword)
+                goto fail;
+
+              /* Case 3: D is not at the beginning of string ... */
+              if (!AT_STRINGS_BEG (d))
+                {
+                  GET_CHAR_BEFORE_2 (c1, d, string1, end1, string2, end2);
+                  nchars++;
+                  UPDATE_SYNTAX_TABLE_BACKWARD (charpos - 1);
+                  s1 = SYNTAX (c1);
+
+                  /* ... and S1 is Sword, and WORD_BOUNDARY_P (C1, C2)
+                     returns 0.  */
+                  if ((s1 == Sword) && !WORD_BOUNDARY_P (c1, c2))
+                    goto fail;
+                }
             }
           break;
 
@@ -5000,7 +5025,36 @@ re_match_2_internal (struct re_pattern_buffer *bufp, re_char *string1,
             goto fail;
           else
             {
-              TODO;
+              /* C1 is the character before D, S1 is the syntax of C1, C2
+                 is the character at D, and S2 is the syntax of C2.  */
+              int c1, c2;
+              int s1, s2;
+              int dummy;
+              ptrdiff_t offset = POINTER_TO_OFFSET (d);
+              ptrdiff_t charpos = RE_SYNTAX_TABLE_BYTE_TO_CHAR (offset) - 1;
+              UPDATE_SYNTAX_TABLE (charpos);
+              GET_CHAR_BEFORE_2 (c1, d, string1, end1, string2, end2);
+              nchars++;
+              s1 = SYNTAX (c1);
+
+              /* Case 2: S1 is not Sword.  */
+              if (s1 != Sword)
+                goto fail;
+
+              /* Case 3: D is not at the end of string ... */
+              if (!AT_STRINGS_END (d))
+                {
+                  PREFETCH_NOLIMIT ();
+                  GET_CHAR_AFTER (c2, d, dummy);
+                  nchars++;
+                  UPDATE_SYNTAX_TABLE_FORWARD (charpos + 1);
+                  s2 = SYNTAX (c2);
+
+                  /* ... and S2 is Sword, and WORD_BOUNDARY_P (C1, C2)
+                     returns 0.  */
+                  if ((s2 == Sword) && !WORD_BOUNDARY_P (c1, c2))
+                    goto fail;
+                }
             }
           break;
 
@@ -5014,7 +5068,34 @@ re_match_2_internal (struct re_pattern_buffer *bufp, re_char *string1,
             goto fail;
           else
             {
-              TODO;
+              /* C1 is the character before D, S1 is the syntax of C1, C2
+                 is the character at D, and S2 is the syntax of C2.  */
+              int c1, c2;
+              int s1, s2;
+              ptrdiff_t offset = POINTER_TO_OFFSET (d);
+              ptrdiff_t charpos = RE_SYNTAX_TABLE_BYTE_TO_CHAR (offset);
+              UPDATE_SYNTAX_TABLE (charpos);
+              PREFETCH ();
+              c2 = RE_STRING_CHAR (d, target_multibyte);
+              nchars++;
+              s2 = SYNTAX (c2);
+
+              /* Case 2: S2 is neither Sword nor Ssymbol. */
+              if (s2 != Sword && s2 != Ssymbol)
+                goto fail;
+
+              /* Case 3: D is not at the beginning of string ... */
+              if (!AT_STRINGS_BEG (d))
+                {
+                  GET_CHAR_BEFORE_2 (c1, d, string1, end1, string2, end2);
+                  nchars++;
+                  UPDATE_SYNTAX_TABLE_BACKWARD (charpos - 1);
+                  s1 = SYNTAX (c1);
+
+                  /* ... and S1 is Sword or Ssymbol.  */
+                  if (s1 == Sword || s1 == Ssymbol)
+                    goto fail;
+                }
             }
           break;
 
@@ -5028,7 +5109,34 @@ re_match_2_internal (struct re_pattern_buffer *bufp, re_char *string1,
             goto fail;
           else
             {
-              TODO;
+              /* C1 is the character before D, S1 is the syntax of C1, C2
+                 is the character at D, and S2 is the syntax of C2.  */
+              int c1, c2;
+              int s1, s2;
+              ptrdiff_t offset = POINTER_TO_OFFSET (d);
+              ptrdiff_t charpos = RE_SYNTAX_TABLE_BYTE_TO_CHAR (offset) - 1;
+              UPDATE_SYNTAX_TABLE (charpos);
+              GET_CHAR_BEFORE_2 (c1, d, string1, end1, string2, end2);
+              nchars++;
+              s1 = SYNTAX (c1);
+
+              /* Case 2: S1 is neither Ssymbol nor Sword.  */
+              if (s1 != Sword && s1 != Ssymbol)
+                goto fail;
+
+              /* Case 3: D is not at the end of string ... */
+              if (!AT_STRINGS_END (d))
+                {
+                  PREFETCH_NOLIMIT ();
+                  c2 = RE_STRING_CHAR (d, target_multibyte);
+                  nchars++;
+                  UPDATE_SYNTAX_TABLE_FORWARD (charpos + 1);
+                  s2 = SYNTAX (c2);
+
+                  /* ... and S2 is Sword or Ssymbol.  */
+                  if (s2 == Sword || s2 == Ssymbol)
+                    goto fail;
+                }
             }
           break;
 
@@ -5041,16 +5149,17 @@ re_match_2_internal (struct re_pattern_buffer *bufp, re_char *string1,
                          mcnt);
             PREFETCH ();
             {
-              TODO;
+              ptrdiff_t offset = POINTER_TO_OFFSET (d);
+              ptrdiff_t pos1 = RE_SYNTAX_TABLE_BYTE_TO_CHAR (offset);
+              UPDATE_SYNTAX_TABLE (pos1);
             }
             {
               int len;
               int c;
 
               GET_CHAR_AFTER (c, d, len);
-              TODO;
-              UNUSED (not); // if ((SYNTAX (c) != (enum syntaxcode) mcnt) ^ not)
-              //   goto fail;
+              if ((SYNTAX (c) != (enum syntaxcode) mcnt) ^ not)
+                goto fail;
               d += len;
               nchars++;
             }

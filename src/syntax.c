@@ -15,6 +15,33 @@ syntax_prefix_flag_p (int c)
   return SYNTAX_FLAGS_PREFIX (SYNTAX_WITH_FLAGS (c));
 }
 
+void
+RE_SETUP_SYNTAX_TABLE_FOR_OBJECT (Lisp_Object object, ptrdiff_t frombyte)
+{
+  SETUP_BUFFER_SYNTAX_TABLE ();
+  gl_state.object = object;
+  if (BUFFERP (gl_state.object))
+    {
+      TODO;
+    }
+  else if (NILP (gl_state.object))
+    {
+      TODO;
+    }
+  else if (EQ (gl_state.object, Qt))
+    {
+      gl_state.b_property = 0;
+      gl_state.e_property = PTRDIFF_MAX;
+    }
+  else
+    {
+      gl_state.b_property = 0;
+      gl_state.e_property = 1 + SCHARS (gl_state.object);
+    }
+  if (parse_sexp_lookup_properties)
+    TODO;
+}
+
 struct gl_state_s gl_state;
 
 unsigned char const syntax_spec_code[0400] = {
@@ -295,6 +322,17 @@ syms_of_syntax (void)
   DEFSYM (Qsyntax_table_p, "syntax-table-p");
 
   staticpro (&Vsyntax_code_object);
+
+  staticpro (&gl_state.object);
+  staticpro (&gl_state.global_code);
+  staticpro (&gl_state.current_syntax_table);
+  staticpro (&gl_state.old_prop);
+
+  DEFVAR_BOOL ("parse-sexp-lookup-properties", parse_sexp_lookup_properties,
+        doc: /* Non-nil means `forward-sexp', etc., obey `syntax-table' property.
+Otherwise, that text property is simply ignored.
+See the info node `(elisp)Syntax Properties' for a description of the
+`syntax-table' property.  */);
 
   defsubr (&Sstandard_syntax_table);
   defsubr (&Sstring_to_syntax);
