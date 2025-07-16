@@ -964,6 +964,21 @@ map_char_table (void (*c_function) (Lisp_Object, Lisp_Object, Lisp_Object),
     }
 }
 
+DEFUN ("map-char-table", Fmap_char_table, Smap_char_table,
+  2, 2, 0,
+       doc: /* Call FUNCTION for each character in CHAR-TABLE that has non-nil value.
+FUNCTION is called with two arguments, KEY and VALUE.
+KEY is a character code or a cons of character codes specifying a
+range of characters that have the same value.
+VALUE is what (char-table-range CHAR-TABLE KEY) returns.  */)
+(Lisp_Object function, Lisp_Object char_table)
+{
+  CHECK_CHAR_TABLE (char_table);
+
+  map_char_table (NULL, function, char_table, char_table);
+  return Qnil;
+}
+
 static Lisp_Object
 uniprop_decode_value_run_length (Lisp_Object table, Lisp_Object value)
 {
@@ -1051,6 +1066,7 @@ syms_of_chartab (void)
   defsubr (&Sset_char_table_extra_slot);
   defsubr (&Schar_table_parent);
   defsubr (&Sset_char_table_parent);
+  defsubr (&Smap_char_table);
   defsubr (&Sunicode_property_table_internal);
 
   DEFVAR_LISP ("char-code-property-alist", Vchar_code_property_alist,
