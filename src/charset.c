@@ -1523,6 +1523,12 @@ syms_of_charset (void)
 	       doc: /* List of all charsets ever defined.  */);
   Vcharset_list = Qnil;
 
+  DEFVAR_LISP ("current-iso639-language", Vcurrent_iso639_language,
+        doc: /* ISO639 language mnemonic symbol for the current language environment.
+If the current language environment is for multiple languages (e.g. "Latin-1"),
+the value may be a list of mnemonics.  */);
+  Vcurrent_iso639_language = Qnil;
+
   charset_ascii = define_charset_internal (Qascii, 1, "\x00\x7F\0\0\0\0\0", 0,
                                            127, 'B', -1, 0, 1, 0, 0);
 
