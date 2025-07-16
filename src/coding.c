@@ -1188,6 +1188,8 @@ syms_of_coding (void)
 
   DEFSYM (Qcoding_system_p, "coding-system-p");
 
+  DEFSYM (Qtranslation_table_id, "translation-table-id");
+
   DEFSYM (Qcoding_system_error, "coding-system-error");
   Fput (Qcoding_system_error, Qerror_conditions,
         pure_list (Qcoding_system_error, Qerror));

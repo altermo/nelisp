@@ -1554,6 +1554,11 @@ RANGED_FIXNUMP (intmax_t lo, Lisp_Object x, intmax_t hi)
 {
   return FIXNUMP (x) && lo <= XFIXNUM (x) && XFIXNUM (x) <= hi;
 }
+#define TYPE_RANGED_FIXNUMP(type, x)                           \
+  (FIXNUMP (x)                                                 \
+   && (TYPE_SIGNED (type) ? TYPE_MINIMUM (type) <= XFIXNUM (x) \
+                          : 0 <= XFIXNUM (x))                  \
+   && XFIXNUM (x) <= TYPE_MAXIMUM (type))
 
 INLINE bool
 AUTOLOADP (Lisp_Object x)
@@ -2245,6 +2250,7 @@ extern Lisp_Object concat2 (Lisp_Object, Lisp_Object);
 extern Lisp_Object concat3 (Lisp_Object, Lisp_Object, Lisp_Object);
 extern Lisp_Object substring_both (Lisp_Object, ptrdiff_t, ptrdiff_t, ptrdiff_t,
                                    ptrdiff_t);
+extern Lisp_Object larger_vector (Lisp_Object, ptrdiff_t, ptrdiff_t);
 
 INLINE AVOID
 xsignal (Lisp_Object error_symbol, Lisp_Object data)

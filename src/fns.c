@@ -2226,6 +2226,30 @@ get_key_arg (Lisp_Object key, ptrdiff_t nargs, Lisp_Object *args, char *used)
   return 0;
 }
 
+Lisp_Object
+larger_vector (Lisp_Object vec, ptrdiff_t incr_min, ptrdiff_t nitems_max)
+{
+  struct Lisp_Vector *v;
+  ptrdiff_t incr, incr_max, old_size, new_size;
+  ptrdiff_t C_language_max = min (PTRDIFF_MAX, SIZE_MAX) / sizeof *v->contents;
+  ptrdiff_t n_max
+    = (0 <= nitems_max && nitems_max < C_language_max ? nitems_max
+                                                      : C_language_max);
+  eassert (VECTORP (vec));
+  eassert (0 < incr_min && -1 <= nitems_max);
+  old_size = ASIZE (vec);
+  incr_max = n_max - old_size;
+  incr = max (incr_min, min (old_size >> 1, incr_max));
+  if (incr_max < incr)
+    memory_full (SIZE_MAX);
+  new_size = old_size + incr;
+  v = allocate_vector (new_size);
+  memcpy (v->contents, XVECTOR (vec)->contents, old_size * sizeof *v->contents);
+  memclear (v->contents + old_size, (new_size - old_size) * word_size);
+  XSETVECTOR (vec, v);
+  return vec;
+}
+
 static ptrdiff_t
 HASH_NEXT (struct Lisp_Hash_Table *h, ptrdiff_t idx)
 {
