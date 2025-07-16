@@ -16,7 +16,7 @@ enum syntaxcode
   Sopen,
   Sclose,
   Squote_,
-  Sstring,
+  Sstring_,
   Smath,
   Sescape,
   Scharquote,

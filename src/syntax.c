@@ -50,7 +50,7 @@ unsigned char const syntax_spec_code[0400] = {
   0377,     0377, 0377,          0377,           0377,     0377,
   0377,     0377, 0377,          0377,           0377,     0377,
   0377,     0377, 0377,          0377,           0377,     0377,
-  0377,     0377, Swhitespace,   Scomment_fence, Sstring,  0377,
+  0377,     0377, Swhitespace,   Scomment_fence, Sstring_, 0377,
   Smath,    0377, 0377,          Squote_,        Sopen,    Sclose,
   0377,     0377, 0377,          Swhitespace,    Spunct,   Scharquote,
   0377,     0377, 0377,          0377,           0377,     0377,
@@ -294,7 +294,7 @@ init_syntax_once (void)
   SET_RAW_SYNTAX_ENTRY (Vstandard_syntax_table, '}',
                         Fcons (make_fixnum (Sclose), make_fixnum ('{')));
   SET_RAW_SYNTAX_ENTRY (Vstandard_syntax_table, '"',
-                        Fcons (make_fixnum (Sstring), Qnil));
+                        Fcons (make_fixnum (Sstring_), Qnil));
   SET_RAW_SYNTAX_ENTRY (Vstandard_syntax_table, '\\',
                         Fcons (make_fixnum (Sescape), Qnil));
 
