@@ -13,7 +13,12 @@ all:
 	[ Makefile -nt compile_commands.json ] && intercept-build make nelisp || make nelisp.so
 
 fast: src/globals.h
+ifeq ($(CC),gcc)
+	@echo "IMPORTANT: gcc is slow, switching to clang"
+	echo $(SOURCES)|sed 's/src\/\([^ ]*\)/\n#include "\1"/g'|clang -xc - $(CFLAGS) -I./src -shared -o nelisp.so
+else
 	echo $(SOURCES)|sed 's/src\/\([^ ]*\)/\n#include "\1"/g'|$(CC) -xc - $(CFLAGS) -I./src -shared -o nelisp.so
+endif
 
 nelisp.so: src/globals.h $(SOURCES)
 	make nelisp
