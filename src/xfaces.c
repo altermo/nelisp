@@ -1573,6 +1573,19 @@ be found.  Value is ALIST.  */)
   return alist;
 }
 
+DEFUN ("clear-face-cache", Fclear_face_cache, Sclear_face_cache, 0, 1, 0,
+       doc: /* Clear face caches on all frames.
+Optional THOROUGHLY non-nil means try to free unused fonts, too.  */)
+(Lisp_Object thoroughly)
+{
+#if TODO_NELISP_LATER_AND
+  clear_face_cache (!NILP (thoroughly));
+  face_change = true;
+  windows_or_buffers_changed = 53;
+#endif
+  return Qnil;
+}
+
 static struct face *
 make_realized_face (Lisp_Object *attr)
 {
@@ -2170,6 +2183,7 @@ syms_of_xfaces (void)
   defsubr (&Sinternal_set_font_selection_order);
   defsubr (&Sinternal_set_alternative_font_family_alist);
   defsubr (&Sinternal_set_alternative_font_registry_alist);
+  defsubr (&Sclear_face_cache);
   defsubr (&Sdisplay_supports_face_attributes_p);
 
   DEFVAR_LISP ("face--new-frame-defaults", Vface_new_frame_defaults,
