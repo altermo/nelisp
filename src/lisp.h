@@ -389,6 +389,11 @@ XSYMBOL_WITH_POS_SYM (Lisp_Object a)
   return sym;
 }
 INLINE Lisp_Object
+XSYMBOL_WITH_POS_POS (Lisp_Object a)
+{
+  return XSYMBOL_WITH_POS (a)->pos;
+}
+INLINE Lisp_Object
 maybe_remove_pos_from_symbol (Lisp_Object x)
 {
   return (symbols_with_pos_enabled && SYMBOL_WITH_POS_P (x)

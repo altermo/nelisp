@@ -553,11 +553,20 @@ tail_recurse:
     case Lisp_Vectorlike:
       {
         ptrdiff_t size = ASIZE (o1);
+
         if (ASIZE (o2) != size)
           return false;
 
         if (BIGNUMP (o1))
           return mpz_cmp (*xbignum_val (o1), *xbignum_val (o2)) == 0;
+        if (OVERLAYP (o1))
+          {
+            TODO;
+          }
+        if (MARKERP (o1))
+          {
+            TODO;
+          }
         if (BOOL_VECTOR_P (o1))
           {
             EMACS_INT size = bool_vector_size (o1);
@@ -565,7 +574,35 @@ tail_recurse:
                     && !memcmp (bool_vector_data (o1), bool_vector_data (o2),
                                 bool_vector_bytes (size)));
           }
-        TODO;
+
+#ifdef HAVE_TREE_SITTER
+        if (TS_NODEP (o1))
+          return treesit_node_eq (o1, o2);
+#endif
+        if (SYMBOL_WITH_POS_P (o1))
+          {
+            eassert (!symbols_with_pos_enabled);
+            return (
+              BASE_EQ (XSYMBOL_WITH_POS_SYM (o1), XSYMBOL_WITH_POS_SYM (o2))
+              && BASE_EQ (XSYMBOL_WITH_POS_POS (o1),
+                          XSYMBOL_WITH_POS_POS (o2)));
+          }
+
+        if (size & PSEUDOVECTOR_FLAG)
+          {
+            if (((size & PVEC_TYPE_MASK) >> PSEUDOVECTOR_AREA_BITS)
+                < PVEC_CLOSURE)
+              return false;
+            size &= PSEUDOVECTOR_SIZE_MASK;
+          }
+        for (ptrdiff_t i = 0; i < size; i++)
+          {
+            Lisp_Object v1, v2;
+            v1 = AREF (o1, i);
+            v2 = AREF (o2, i);
+            if (!internal_equal (v1, v2, equal_kind, depth + 1, ht))
+              return false;
+          }
         return true;
       }
       break;
@@ -2098,6 +2135,21 @@ sxhash_list (Lisp_Object list, int depth)
   return hash;
 }
 static EMACS_UINT
+sxhash_vector (Lisp_Object vec, int depth)
+{
+  EMACS_UINT hash = ASIZE (vec);
+  int i, n;
+
+  n = min (SXHASH_MAX_LEN, hash & PSEUDOVECTOR_FLAG ? PVSIZE (vec) : hash);
+  for (i = 0; i < n; ++i)
+    {
+      EMACS_UINT hash2 = sxhash_obj (AREF (vec, i), depth + 1);
+      hash = sxhash_combine (hash, hash2);
+    }
+
+  return hash;
+}
+static EMACS_UINT
 sxhash_bool_vector (Lisp_Object vec)
 {
   EMACS_INT size = bool_vector_size (vec);
@@ -2143,7 +2195,7 @@ sxhash_obj (Lisp_Object obj, int depth)
       {
         enum pvec_type pvec_type = PSEUDOVECTOR_TYPE (XVECTOR (obj));
         if (!(PVEC_NORMAL_VECTOR < pvec_type && pvec_type < PVEC_CLOSURE))
-          TODO;
+          return (SUB_CHAR_TABLE_P (obj) ? 42 : sxhash_vector (obj, depth));
         else if (pvec_type == PVEC_BIGNUM)
           return sxhash_bignum (obj);
         else if (pvec_type == PVEC_MARKER)
