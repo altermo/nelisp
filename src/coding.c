@@ -1188,6 +1188,8 @@ syms_of_coding (void)
 
   DEFSYM (Qcoding_system_p, "coding-system-p");
 
+  DEFSYM (Qtranslation_table, "translation-table");
+  Fput (Qtranslation_table, Qchar_table_extra_slots, make_fixnum (2));
   DEFSYM (Qtranslation_table_id, "translation-table-id");
 
   DEFSYM (Qcoding_system_error, "coding-system-error");
