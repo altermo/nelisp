@@ -352,7 +352,11 @@ push_handler_nosignal (Lisp_Object tag_ch_val, enum handlertype handlertype)
   c->f_lisp_eval_depth = lisp_eval_depth;
   c->pdlcount = SPECPDL_INDEX ();
   TODO_NELISP_LATER;
-  // c->act_rec = get_act_rec (current_thread);
+#if TODO_NELISP_LATER_AND
+  c->act_rec = get_act_rec (current_thread);
+#else
+  c->act_rec = bc_.fp;
+#endif
   // c->poll_suppress_count = poll_suppress_count;
   // c->interrupt_input_blocked = interrupt_input_blocked;
   handlerlist = c;
@@ -547,7 +551,11 @@ unwind_to_catch (struct handler *catch, enum nonlocal_exit type,
   eassert (handlerlist == catch);
 
   lisp_eval_depth = catch->f_lisp_eval_depth;
-  // set_act_rec (current_thread, catch->act_rec);
+#if TODO_NELISP_LATER_AND
+  set_act_rec (current_thread, catch->act_rec);
+#else
+  bc_.fp = catch->act_rec;
+#endif
 
   sys_longjmp (catch->jmp, 1);
 }
