@@ -1411,6 +1411,67 @@ digit_to_number (int character, int base)
 
   return digit < base ? digit : -1;
 }
+static void
+invalid_radix_integer (EMACS_INT radix, Lisp_Object readcharfun)
+{
+  char buf[64];
+  int n = snprintf (buf, sizeof buf, "integer, radix %" pI "d", radix);
+  eassert (n < sizeof buf);
+  invalid_syntax (buf, readcharfun);
+}
+static Lisp_Object
+read_integer (Lisp_Object readcharfun, int radix)
+{
+  char stackbuf[20];
+  char *read_buffer = stackbuf;
+  ptrdiff_t read_buffer_size = sizeof stackbuf;
+  char *p = read_buffer;
+  char *heapbuf = NULL;
+  int valid = -1; /* 1 if valid, 0 if not, -1 if incomplete.  */
+  specpdl_ref count = SPECPDL_INDEX ();
+
+  int c = READCHAR;
+  if (c == '-' || c == '+')
+    {
+      *p++ = c;
+      c = READCHAR;
+    }
+
+  if (c == '0')
+    {
+      *p++ = c;
+      valid = 1;
+
+      do
+        c = READCHAR;
+      while (c == '0');
+    }
+
+  for (int digit; (digit = digit_to_number (c, radix)) >= -1;)
+    {
+      if (digit == -1)
+        valid = 0;
+      if (valid < 0)
+        valid = 1;
+      if (p + 1 == read_buffer + read_buffer_size)
+        {
+          ptrdiff_t offset = p - read_buffer;
+          read_buffer = grow_read_buffer (read_buffer, offset, &heapbuf,
+                                          &read_buffer_size, count);
+          p = read_buffer + offset;
+        }
+      *p++ = c;
+      c = READCHAR;
+    }
+
+  UNREAD (c);
+
+  if (valid != 1)
+    invalid_radix_integer (radix, readcharfun);
+
+  *p = '\0';
+  return unbind_to (count, string_to_number (read_buffer, radix, NULL));
+}
 Lisp_Object
 string_to_number (char const *string, int base, ptrdiff_t *plen)
 {
@@ -1762,13 +1823,16 @@ read_obj:;
             TODO;
           case 'x':
           case 'X':
-            TODO;
+            obj = read_integer (readcharfun, 16);
+            break;
           case 'o':
           case 'O':
-            TODO;
+            obj = read_integer (readcharfun, 8);
+            break;
           case 'b':
           case 'B':
-            TODO;
+            obj = read_integer (readcharfun, 2);
+            break;
           case '@':
             TODO;
           case '$':
