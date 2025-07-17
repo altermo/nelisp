@@ -2261,6 +2261,7 @@ syms_of_data (void)
   DEFSYM (Qcyclic_variable_indirection, "cyclic-variable-indirection");
   DEFSYM (Qexcessive_lisp_nesting, "excessive-lisp-nesting");
   DEFSYM (Qrecursion_error, "recursion-error");
+  DEFSYM (Qno_catch, "no-catch");
 
   Lisp_Object error_tail = Fcons (Qerror, Qnil);
 
@@ -2303,6 +2304,7 @@ syms_of_data (void)
 
   PUT_ERROR (Qexcessive_lisp_nesting, recursion_tail,
              "Lisp nesting exceeds `max-lisp-eval-depth'");
+  PUT_ERROR (Qno_catch, error_tail, "No catch for tag");
 
   DEFSYM (Qboolean, "boolean");
   DEFSYM (Qinteger, "integer");

@@ -736,6 +736,25 @@ See also the function `condition-case'.  */
   eassume (false);
 }
 
+DEFUN ("throw", Fthrow, Sthrow, 2, 2, 0,
+       doc: /* Throw to the catch for TAG and return VALUE from it.
+Both TAG and VALUE are evalled.  */
+       attributes: noreturn)
+(register Lisp_Object tag, Lisp_Object value)
+{
+  struct handler *c;
+
+  if (!NILP (tag))
+    for (c = handlerlist; c; c = c->next)
+      {
+        if (c->type == CATCHER_ALL)
+          unwind_to_catch (c, NONLOCAL_EXIT_THROW, Fcons (tag, value));
+        if (c->type == CATCHER && EQ (c->tag_or_ch, tag))
+          unwind_to_catch (c, NONLOCAL_EXIT_THROW, value);
+      }
+  xsignal2 (Qno_catch, tag, value);
+}
+
 void
 xsignal0 (Lisp_Object error_symbol)
 {
@@ -2476,6 +2495,7 @@ alist of active lexical bindings.  */);
   defsubr (&Scondition_case);
   DEFSYM (QCsuccess, ":success");
   defsubr (&Ssignal);
+  defsubr (&Sthrow);
   defsubr (&Sautoload);
   defsubr (&Sfunctionp);
   defsubr (&Sfuncall);
