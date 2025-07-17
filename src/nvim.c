@@ -247,6 +247,28 @@ nvim_buffer_name (struct buffer *b)
   return obj;
 }
 
+Lisp_Object
+nvim_buffer_list (void)
+{
+  Lisp_Object buffers = Qnil;
+  LUA (20)
+  {
+    push_vim_api (L, "nvim_list_bufs");
+    lua_call (L, 0, 1);
+    eassert (lua_istable (L, -1));
+    // TODO: maye don't include unloaded buffers
+    lua_pushnil (L);
+    while (lua_next (L, -2) != 0)
+      {
+        eassert (lua_isnumber (L, -1));
+        buffers = Fcons (nvim_bufid_to_bufobj (lua_tointeger (L, -1)), buffers);
+        lua_pop (L, 1);
+      }
+    lua_pop (L, 1);
+  }
+  return buffers;
+}
+
 void
 nvim_set_buffer (struct buffer *b)
 {

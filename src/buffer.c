@@ -1,5 +1,6 @@
 #include "buffer.h"
 #include "lisp.h"
+#include "frame.h"
 #include "nvim.h"
 
 struct buffer buffer_defaults;
@@ -21,6 +22,43 @@ nsberror (Lisp_Object spec)
   if (STRINGP (spec))
     error ("No buffer named %s", SDATA (spec));
   error ("Invalid buffer argument");
+}
+
+DEFUN ("buffer-list", Fbuffer_list, Sbuffer_list, 0, 1, 0,
+       doc: /* Return a list of all live buffers.
+If the optional arg FRAME is a frame, return the buffer list in the
+proper order for that frame: the buffers shown in FRAME come first,
+followed by the rest of the buffers.  */)
+(Lisp_Object frame)
+{
+  Lisp_Object general;
+  general = nvim_buffer_list ();
+
+  if (FRAMEP (frame))
+    {
+      Lisp_Object framelist, prevlist, tail;
+
+      framelist = Fcopy_sequence (nvim_frame_buffer_list (XFRAME (frame)));
+      prevlist = Fnreverse (
+        Fcopy_sequence (nvim_frame_buried_buffer_list (XFRAME (frame))));
+
+      tail = framelist;
+      while (CONSP (tail))
+        {
+          general = Fdelq (XCAR (tail), general);
+          tail = XCDR (tail);
+        }
+      tail = prevlist;
+      while (CONSP (tail))
+        {
+          general = Fdelq (XCAR (tail), general);
+          tail = XCDR (tail);
+        }
+
+      return CALLN (Fnconc, framelist, general, prevlist);
+    }
+  else
+    return general;
 }
 
 DEFUN ("get-buffer", Fget_buffer, Sget_buffer, 1, 1, 0,
@@ -176,6 +214,7 @@ signal an error in those cases.
 See also Info node `(elisp)Text Representations'.  */);
   make_symbol_constant (intern_c_string ("enable-multibyte-characters"));
 
+  defsubr (&Sbuffer_list);
   defsubr (&Sget_buffer);
   defsubr (&Sget_buffer_create);
   defsubr (&Scurrent_buffer);
