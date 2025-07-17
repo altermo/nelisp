@@ -165,6 +165,57 @@ menu bar menus and the frame title.  */)
   return all;
 }
 
+DEFUN ("make-overlay", Fmake_overlay, Smake_overlay, 2, 5, 0,
+       doc: /* Create a new overlay with range BEG to END in BUFFER and return it.
+If omitted, BUFFER defaults to the current buffer.
+BEG and END may be integers or markers.
+The fourth arg FRONT-ADVANCE, if non-nil, makes the marker
+for the front of the overlay advance when text is inserted there
+\(which means the text *is not* included in the overlay).
+The fifth arg REAR-ADVANCE, if non-nil, makes the marker
+for the rear of the overlay advance when text is inserted there
+\(which means the text *is* included in the overlay).  */)
+(Lisp_Object beg, Lisp_Object end, Lisp_Object buffer,
+ Lisp_Object front_advance, Lisp_Object rear_advance)
+{
+  Lisp_Object ov;
+  struct buffer *b;
+
+  if (NILP (buffer))
+    XSETBUFFER (buffer, current_buffer);
+  else
+    CHECK_BUFFER (buffer);
+
+  b = XBUFFER (buffer);
+  if (!BUFFER_LIVE_P (b))
+    error ("Attempt to create overlay in a dead buffer");
+
+  if (MARKERP (beg) && !(TODO, false))
+    signal_error ("Marker points into wrong buffer", beg);
+  if (MARKERP (end) && !(TODO, false))
+    signal_error ("Marker points into wrong buffer", end);
+
+  CHECK_FIXNUM_COERCE_MARKER (beg);
+  CHECK_FIXNUM_COERCE_MARKER (end);
+
+  if (XFIXNUM (beg) > XFIXNUM (end))
+    {
+      Lisp_Object temp;
+      temp = beg;
+      beg = end;
+      end = temp;
+    }
+
+  ptrdiff_t obeg = clip_to_bounds (BUF_BEG (b), XFIXNUM (beg), BUF_Z (b));
+  ptrdiff_t oend = clip_to_bounds (obeg, XFIXNUM (end), BUF_Z (b));
+  ov = build_overlay (!NILP (front_advance), !NILP (rear_advance), Qnil);
+#if TODO_NELISP_LATER_AND
+  add_buffer_overlay (b, XOVERLAY (ov), obeg, oend);
+#endif
+
+  return ov;
+}
+
 #define DEFVAR_PER_BUFFER(lname, vname, predicate, doc)     \
   do                                                        \
     {                                                       \
@@ -228,4 +279,6 @@ See also Info node `(elisp)Text Representations'.  */);
   defsubr (&Sset_buffer);
   defsubr (&Sbuffer_name);
   defsubr (&Sforce_mode_line_update);
+
+  defsubr (&Smake_overlay);
 }

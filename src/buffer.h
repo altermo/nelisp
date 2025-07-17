@@ -8,6 +8,14 @@
 
 extern struct buffer buffer_defaults;
 
+enum
+{
+  BEG = 1,
+  BEG_BYTE = BEG
+};
+
+#define BUF_Z(buf) ZV // TODO: is this correct? (we presume there's no gap)
+
 #define ZV (nvim_get_field_zv (current_buffer, true))
 #define ZV_BYTE (nvim_get_field_zv (current_buffer, false))
 #define BEGV (nvim_get_field_begv (current_buffer, true))
@@ -85,6 +93,12 @@ INLINE void
 bset_local_var_alist (struct buffer *b, Lisp_Object val)
 {
   b->local_var_alist_ = val;
+}
+
+INLINE ptrdiff_t
+BUF_BEG (struct buffer *buf)
+{
+  return BEG;
 }
 
 INLINE void

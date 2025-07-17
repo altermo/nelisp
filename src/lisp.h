@@ -500,6 +500,11 @@ EQ (Lisp_Object x, Lisp_Object y)
                      ? XSYMBOL_WITH_POS_SYM (y)
                      : y));
 }
+INLINE intmax_t
+clip_to_bounds (intmax_t lower, intmax_t num, intmax_t upper)
+{
+  return num < lower ? lower : num <= upper ? num : upper;
+}
 INLINE Lisp_Object
 make_lisp_ptr (void *ptr, enum Lisp_Type type)
 {
@@ -1464,6 +1469,15 @@ struct Lisp_Marker
   // TODO: make it a wrapper around an extmark
 } GCALIGNED_STRUCT;
 
+struct Lisp_Overlay
+{
+  union vectorlike_header header;
+
+  Lisp_Object plist; // NOTE: This is the last object
+
+  // TODO: make it a wrapper around an extmark
+} GCALIGNED_STRUCT;
+
 INLINE bool
 CLOSUREP (Lisp_Object a)
 {
@@ -2181,6 +2195,8 @@ INTERVAL make_interval (void);
 extern bool survives_gc_p (Lisp_Object);
 extern struct frame *allocate_frame (void);
 extern Lisp_Object make_uninit_bool_vector (EMACS_INT);
+Lisp_Object build_overlay (bool front_advance, bool rear_advance,
+                           Lisp_Object plist);
 
 extern ptrdiff_t read_from_string_index;
 extern ptrdiff_t read_from_string_index_byte;

@@ -2068,6 +2068,19 @@ Its value is void, and its function definition and property list are nil.  */)
   return val;
 }
 
+Lisp_Object
+build_overlay (bool front_advance, bool rear_advance, Lisp_Object plist)
+{
+  TODO_NELISP_LATER;
+
+  struct Lisp_Overlay *p
+    = ALLOCATE_PSEUDOVECTOR (struct Lisp_Overlay, plist, PVEC_OVERLAY);
+
+  p->plist = plist;
+
+  return make_lisp_ptr (p, Lisp_Vectorlike);
+}
+
 DEFUN ("make-marker", Fmake_marker, Smake_marker, 0, 0, 0,
        doc: /* Return a newly allocated marker which does not point at any place.  */)
 (void)
