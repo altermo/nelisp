@@ -12,6 +12,9 @@ extern struct buffer buffer_defaults;
 #define ZV_BYTE (nvim_get_field_zv (current_buffer, false))
 #define BEGV (nvim_get_field_begv (current_buffer, true))
 #define BEGV_BYTE (nvim_get_field_begv (current_buffer, false))
+#define PT (nvim_get_field_pt (current_buffer))
+
+extern void set_buffer_if_live (Lisp_Object);
 
 INLINE bool
 BUFFERP (Lisp_Object a)
@@ -36,6 +39,12 @@ INLINE struct buffer *
 decode_buffer (Lisp_Object b)
 {
   return NILP (b) ? current_buffer : (CHECK_BUFFER (b), XBUFFER (b));
+}
+
+INLINE void
+record_unwind_current_buffer (void)
+{
+  record_unwind_protect (set_buffer_if_live, Fcurrent_buffer ());
 }
 
 #define BVAR(buf, field) nvim_bvar (buf, NVIM_BUFFER_VAR_##field##_)

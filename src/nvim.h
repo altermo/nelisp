@@ -45,6 +45,7 @@ extern Lisp_Object nvim_buffer_list (void);
 
 extern ptrdiff_t nvim_get_field_zv (struct buffer *b, bool chars);
 extern ptrdiff_t nvim_get_field_begv (struct buffer *b, bool chars);
+extern ptrdiff_t nvim_get_field_pt (struct buffer *b);
 
 extern void nvim_buf_memcpy (unsigned char *dst, ptrdiff_t beg, ptrdiff_t size);
 

@@ -1,4 +1,5 @@
 #include "lisp.h"
+#include "buffer.h"
 
 #define BYTE_CODE_SAFE (TODO_NELISP_LATER, true)
 
@@ -605,7 +606,7 @@ setup_frame:;
 
         CASE (Bsave_current_buffer_OBSOLETE):
         CASE (Bsave_current_buffer):
-          TODO; // record_unwind_current_buffer ();
+          record_unwind_current_buffer ();
           NEXT;
 
         CASE (Bsave_window_excursion):
@@ -1055,7 +1056,7 @@ setup_frame:;
           }
 
         CASE (Bpoint):
-          TODO; // PUSH (make_fixed_natnum (PT));
+          PUSH (make_fixed_natnum (PT));
           NEXT;
 
         CASE (Bgoto_char):
@@ -1073,11 +1074,11 @@ setup_frame:;
           NEXT;
 
         CASE (Bpoint_max):
-          TODO; // PUSH (make_fixed_natnum (ZV));
+          PUSH (make_fixed_natnum (ZV));
           NEXT;
 
         CASE (Bpoint_min):
-          TODO; // PUSH (make_fixed_natnum (BEGV));
+          PUSH (make_fixed_natnum (BEGV));
           NEXT;
 
         CASE (Bchar_after):

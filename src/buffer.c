@@ -140,6 +140,13 @@ The return value is the buffer made current.  */)
   return buffer;
 }
 
+void
+set_buffer_if_live (Lisp_Object buffer)
+{
+  if (BUFFER_LIVE_P (XBUFFER (buffer)))
+    set_buffer_internal (XBUFFER (buffer));
+}
+
 DEFUN ("buffer-name", Fbuffer_name, Sbuffer_name, 0, 1, 0,
        doc: /* Return the name of BUFFER, as a string.
 BUFFER defaults to the current buffer.

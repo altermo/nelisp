@@ -328,6 +328,28 @@ nvim_get_field_begv (struct buffer *b, bool chars)
   return 1;
 }
 
+ptrdiff_t
+nvim_get_field_pt (struct buffer *b)
+{
+  eassert (BUFFER_LIVE_P (b));
+  long bufid = b->bufid;
+  ptrdiff_t pt;
+  LUA (10)
+  {
+    push_vim_api (L, "nvim_buf_call");
+    lua_pushnumber (L, bufid);
+    push_vim_fn (L, "wordcount");
+    lua_call (L, 2, 1);
+    lua_getfield (L, -1, "cursor_chars");
+    eassert (lua_isnumber (L, -1));
+    pt = lua_tointeger (L, -1);
+    if (pt == 0)
+      pt = 1;
+    lua_pop (L, 2);
+  }
+  return pt;
+}
+
 struct pos
 {
   ptrdiff_t row;
