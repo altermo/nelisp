@@ -49,6 +49,11 @@ decode_buffer (Lisp_Object b)
   return NILP (b) ? current_buffer : (CHECK_BUFFER (b), XBUFFER (b));
 }
 
+#define FOR_EACH_LIVE_BUFFER(list_var, buf_var)                   \
+  for ((list_var) = (nvim_buffer_list ());                        \
+       (CONSP (list_var) && ((buf_var) = XCAR (list_var), true)); \
+       (list_var) = XCDR (list_var))
+
 INLINE void
 record_unwind_current_buffer (void)
 {

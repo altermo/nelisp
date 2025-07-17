@@ -503,7 +503,7 @@ nvim_tabpageid_to_frameobj (long id)
 Lisp_Object
 nvim_frame_list (void)
 {
-  Lisp_Object frames;
+  Lisp_Object frames = Qnil;
   LUA (10)
   {
     push_vim_api (L, "nvim_list_tabpages");

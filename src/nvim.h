@@ -31,6 +31,7 @@ struct buffer
 enum nvim_buffer_var_field
 {
   NVIM_BUFFER_VAR_name_,
+  NVIM_BUFFER_VAR_read_only_,
 #define X(field) NVIM_BUFFER_VAR_##field,
   Xbuffer_vars
 #undef X
@@ -58,6 +59,8 @@ nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
     {
     case NVIM_BUFFER_VAR_name_:
       return nvim_buffer_name (b);
+    case NVIM_BUFFER_VAR_read_only_:
+      return nvim_buffer_option_is_true (b, "modifiable") ? Qnil : Qt;
 #define X(field)              \
 case NVIM_BUFFER_VAR_##field: \
   return b->field;

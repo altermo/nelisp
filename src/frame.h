@@ -55,6 +55,11 @@ struct frame
 #define CHECK_LIVE_FRAME(x) \
   CHECK_TYPE (FRAMEP (x) && FRAME_LIVE_P (XFRAME (x)), Qframe_live_p, x)
 
+#define FOR_EACH_FRAME(list_var, frame_var)                       \
+  for ((list_var) = nvim_frame_list ();                           \
+       (CONSP (list_var) && (frame_var = XCAR (list_var), true)); \
+       list_var = XCDR (list_var))
+
 INLINE struct face *
 FACE_FROM_ID_OR_NULL (struct frame *f, int id)
 {
@@ -71,5 +76,7 @@ FACE_FROM_ID (struct frame *f, int id)
 }
 
 #define selected_frame nvim_get_current_frame ()
+
+#define frame_name nvim_frame_name
 
 #endif
