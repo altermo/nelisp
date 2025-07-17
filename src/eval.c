@@ -1991,6 +1991,16 @@ More specifically, behaves like (defconst SYM 'INITVALUE DOCSTRING).  */)
   return sym;
 }
 
+DEFUN ("internal-make-var-non-special", Fmake_var_non_special,
+       Smake_var_non_special, 1, 1, 0,
+       doc: /* Internal function.  */)
+(Lisp_Object symbol)
+{
+  CHECK_SYMBOL (symbol);
+  XSYMBOL (symbol)->u.s.declared_special = false;
+  return Qnil;
+}
+
 DEFUN ("make-interpreted-closure", Fmake_interpreted_closure,
        Smake_interpreted_closure, 3, 5, 0,
        doc: /* Make an interpreted closure.
@@ -2479,6 +2489,7 @@ alist of active lexical bindings.  */);
   defsubr (&Sdefconst);
   defsubr (&Sdefconst_1);
   defsubr (&Sdefvaralias);
+  defsubr (&Smake_var_non_special);
   defsubr (&Smake_interpreted_closure);
   defsubr (&Sfunction);
   defsubr (&Seval);
