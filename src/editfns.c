@@ -970,6 +970,36 @@ usage: (propertize STRING &rest PROPERTIES)  */)
   return string;
 }
 
+DEFUN ("char-equal", Fchar_equal, Schar_equal, 2, 2, 0,
+       doc: /* Return t if two characters match, optionally ignoring case.
+Both arguments must be characters (i.e. integers).
+Case is ignored if `case-fold-search' is non-nil in the current buffer.  */)
+(register Lisp_Object c1, Lisp_Object c2)
+{
+  int i1, i2;
+
+  CHECK_CHARACTER (c1);
+  CHECK_CHARACTER (c2);
+
+  if (XFIXNUM (c1) == XFIXNUM (c2))
+    return Qt;
+  if (NILP (Vcase_fold_search))
+    return Qnil;
+
+  i1 = XFIXNAT (c1);
+  i2 = XFIXNAT (c2);
+
+  if (NILP (BVAR (current_buffer, enable_multibyte_characters)))
+    {
+      if (SINGLE_BYTE_CHAR_P (i1))
+        i1 = UNIBYTE_TO_CHAR (i1);
+      if (SINGLE_BYTE_CHAR_P (i2))
+        i2 = UNIBYTE_TO_CHAR (i2);
+    }
+
+  return (downcase (i1) == downcase (i2) ? Qt : Qnil);
+}
+
 DEFUN ("char-to-string", Fchar_to_string, Schar_to_string, 1, 1, 0,
        doc: /* Convert arg CHAR to a string containing that character.
 usage: (char-to-string CHAR)  */)
@@ -1014,5 +1044,6 @@ it to be non-nil.  */);
   defsubr (&Sformat_message);
   defsubr (&Scurrent_message);
   defsubr (&Spropertize);
+  defsubr (&Schar_equal);
   defsubr (&Schar_to_string);
 }
