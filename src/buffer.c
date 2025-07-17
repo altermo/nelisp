@@ -222,6 +222,20 @@ for the rear of the overlay advance when text is inserted there
   return ov;
 }
 
+DEFUN ("delete-overlay", Fdelete_overlay, Sdelete_overlay, 1, 1, 0,
+       doc: /* Delete the overlay OVERLAY from its buffer.  */)
+(Lisp_Object overlay)
+{
+  struct buffer *b;
+  specpdl_ref count = SPECPDL_INDEX ();
+
+  CHECK_OVERLAY (overlay);
+
+  TODO_NELISP_LATER;
+
+  return unbind_to (count, Qnil);
+}
+
 DEFUN ("overlay-put", Foverlay_put, Soverlay_put, 3, 3, 0,
        doc: /* Set one property of overlay OVERLAY: give property PROP value VALUE.
 VALUE will be returned.*/)
@@ -331,5 +345,6 @@ See also Info node `(elisp)Text Representations'.  */);
   defsubr (&Sforce_mode_line_update);
 
   defsubr (&Smake_overlay);
+  defsubr (&Sdelete_overlay);
   defsubr (&Soverlay_put);
 }
