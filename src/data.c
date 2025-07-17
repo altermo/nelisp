@@ -211,7 +211,11 @@ start:
       return SYMBOL_VAL (sym);
     case SYMBOL_LOCALIZED:
       {
-        TODO;
+        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (sym);
+        if (blv->fwd.fwdptr && EQ (blv->valcell, blv->defcell))
+          return do_symval_forwarding (blv->fwd);
+        else
+          return XCDR (blv->defcell);
       }
     case SYMBOL_FORWARDED:
       {
