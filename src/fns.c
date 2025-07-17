@@ -1,6 +1,8 @@
 #include "lisp.h"
 #include "bignum.h"
 #include "character.h"
+#include "composite.h"
+#include "intervals.h"
 #include "puresize.h"
 
 enum equal_kind
@@ -1809,7 +1811,15 @@ concat_to_string (ptrdiff_t nargs, Lisp_Object *args)
       ptrdiff_t last_to_end = -1;
       for (ptrdiff_t i = 0; i < num_textprops; i++)
         {
-          TODO;
+          Lisp_Object arg = args[textprops[i].argnum];
+          Lisp_Object props
+            = text_property_list (arg, make_fixnum (0),
+                                  make_fixnum (SCHARS (arg)), Qnil);
+          if (last_to_end == textprops[i].to)
+            make_composition_value_copy (props);
+          add_text_properties_from_list (result, props,
+                                         make_fixnum (textprops[i].to));
+          last_to_end = textprops[i].to + SCHARS (arg);
         }
     }
 

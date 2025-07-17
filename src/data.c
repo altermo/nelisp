@@ -146,10 +146,12 @@ find_symbol_value (Lisp_Object symbol)
   CHECK_SYMBOL (symbol);
   sym = XSYMBOL (symbol);
 
+start:
   switch (sym->u.s.redirect)
     {
     case SYMBOL_VARALIAS:
-      TODO;
+      sym = SYMBOL_ALIAS (sym);
+      goto start;
     case SYMBOL_PLAINVAL:
       return SYMBOL_VAL (sym);
     case SYMBOL_LOCALIZED:
@@ -205,7 +207,7 @@ start:
   switch (sym->u.s.redirect)
     {
     case SYMBOL_VARALIAS:
-      TODO;
+      sym = SYMBOL_ALIAS (sym);
       goto start;
     case SYMBOL_PLAINVAL:
       return SYMBOL_VAL (sym);
@@ -291,7 +293,7 @@ start:
   switch (sym->u.s.redirect)
     {
     case SYMBOL_VARALIAS:
-      TODO;
+      sym = SYMBOL_ALIAS (sym);
       goto start;
     case SYMBOL_PLAINVAL:
       set_internal (symbol, value, Qnil, bindflag);
@@ -538,7 +540,7 @@ store_symval_forwarding (lispfwd valcontents, Lisp_Object newval,
         intmax_t i;
         CHECK_INTEGER (newval);
         if (!integer_to_intmax (newval, &i))
-          TODO;
+          xsignal1 (Qoverflow_error, newval);
         *XFIXNUMFWD (valcontents)->intvar = i;
       }
       break;
@@ -579,7 +581,10 @@ set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
   switch (sym->u.s.trapped_write)
     {
     case SYMBOL_NOWRITE:
-      TODO;
+      if (NILP (Fkeywordp (symbol)) || !EQ (newval, Fsymbol_value (symbol)))
+        xsignal1 (Qsetting_constant, symbol);
+      else
+        return;
     case SYMBOL_TRAPPED_WRITE:
       TODO;
     case SYMBOL_UNTRAPPED_WRITE:
@@ -588,10 +593,12 @@ set_internal (Lisp_Object symbol, Lisp_Object newval, Lisp_Object where,
       emacs_abort ();
     }
 
+start:
   switch (sym->u.s.redirect)
     {
     case SYMBOL_VARALIAS:
-      TODO;
+      sym = SYMBOL_ALIAS (sym);
+      goto start;
     case SYMBOL_PLAINVAL:
       SET_SYMBOL_VAL (sym, newval);
       return;
@@ -777,7 +784,15 @@ start:
       goto start;
     case SYMBOL_LOCALIZED:
       {
-        TODO;
+        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (sym);
+        if (blv->fwd.fwdptr)
+          return Qt;
+        else
+          {
+            swap_in_symval_forwarding (sym, blv);
+            valcontents = blv_value (blv);
+          }
+        break;
       }
     case SYMBOL_FORWARDED:
       return Qt;
@@ -1363,7 +1378,9 @@ or a byte-code object.  IDX starts at 0.  */)
     }
   else if (BOOL_VECTOR_P (array))
     {
-      TODO;
+      if (idxval < 0 || idxval >= bool_vector_size (array))
+        args_out_of_range (array, idx);
+      return bool_vector_ref (array, idxval);
     }
   else if (CHAR_TABLE_P (array))
     {
@@ -1408,7 +1425,9 @@ bool-vector.  IDX starts at 0.  */)
     }
   else if (BOOL_VECTOR_P (array))
     {
-      TODO;
+      if (idxval < 0 || idxval >= bool_vector_size (array))
+        args_out_of_range (array, idx);
+      bool_vector_set (array, idxval, !NILP (newelt));
     }
   else if (CHAR_TABLE_P (array))
     {

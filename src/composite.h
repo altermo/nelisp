@@ -1,6 +1,8 @@
 #ifndef EMACS_COMPOSITE_H
 #define EMACS_COMPOSITE_H
 
+#include "lisp.h"
+
 enum composition_method
 {
   COMPOSITION_RELATIVE,
@@ -15,5 +17,7 @@ enum composition_method
 };
 
 #define MAX_COMPOSITION_COMPONENTS 16
+
+extern void make_composition_value_copy (Lisp_Object);
 
 #endif

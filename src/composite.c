@@ -2,6 +2,24 @@
 
 static Lisp_Object gstring_hash_table;
 
+void
+make_composition_value_copy (Lisp_Object list)
+{
+  Lisp_Object plist, val;
+
+  for (; CONSP (list); list = XCDR (list))
+    {
+      plist = XCAR (XCDR (XCDR (XCAR (list))));
+      while (CONSP (plist) && CONSP (XCDR (plist)))
+        {
+          if (EQ (XCAR (plist), Qcomposition)
+              && (val = XCAR (XCDR (plist)), CONSP (val)))
+            XSETCAR (XCDR (plist), Fcons (XCAR (val), XCDR (val)));
+          plist = XCDR (XCDR (plist));
+        }
+    }
+}
+
 DEFUN ("clear-composition-cache", Fclear_composition_cache,
        Sclear_composition_cache, 0, 0, 0,
        doc: /* Internal use only.
@@ -17,6 +35,8 @@ Clear composition cache.  */)
 void
 syms_of_composite (void)
 {
+  DEFSYM (Qcomposition, "composition");
+
   Lisp_Object args[] = { QCtest, Qequal, QCsize, make_fixnum (311) };
 
   gstring_hash_table = CALLMANY (Fmake_hash_table, args);

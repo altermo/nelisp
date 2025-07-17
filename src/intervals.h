@@ -112,5 +112,8 @@ extern INTERVAL balance_intervals (INTERVAL tree);
 extern void traverse_intervals_noorder (INTERVAL tree,
                                         void (*function) (INTERVAL, void *),
                                         void *arg);
+Lisp_Object text_property_list (Lisp_Object, Lisp_Object, Lisp_Object,
+                                Lisp_Object);
+void add_text_properties_from_list (Lisp_Object, Lisp_Object, Lisp_Object);
 
 #endif

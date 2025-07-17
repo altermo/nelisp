@@ -307,6 +307,73 @@ Return t if any property value actually changed, nil otherwise.  */)
                                 TEXT_PROPERTY_REPLACE, true);
 }
 
+Lisp_Object
+text_property_list (Lisp_Object object, Lisp_Object start, Lisp_Object end,
+                    Lisp_Object prop)
+{
+  struct interval *i;
+  Lisp_Object result;
+
+  result = Qnil;
+
+  i = validate_interval_range (object, &start, &end, soft);
+  if (i)
+    {
+      ptrdiff_t s = XFIXNUM (start);
+      ptrdiff_t e = XFIXNUM (end);
+
+      while (s < e)
+        {
+          ptrdiff_t interval_end, len;
+          Lisp_Object plist;
+
+          interval_end = i->position + LENGTH (i);
+          if (interval_end > e)
+            interval_end = e;
+          len = interval_end - s;
+
+          plist = i->plist;
+
+          if (!NILP (prop))
+            for (; CONSP (plist); plist = Fcdr (XCDR (plist)))
+              if (EQ (XCAR (plist), prop))
+                {
+                  plist = list2 (prop, Fcar (XCDR (plist)));
+                  break;
+                }
+
+          if (!NILP (plist))
+            result
+              = Fcons (list3 (make_fixnum (s), make_fixnum (s + len), plist),
+                       result);
+
+          i = next_interval (i);
+          if (!i)
+            break;
+          s = i->position;
+        }
+    }
+
+  return result;
+}
+
+void
+add_text_properties_from_list (Lisp_Object object, Lisp_Object list,
+                               Lisp_Object delta)
+{
+  for (; CONSP (list); list = XCDR (list))
+    {
+      Lisp_Object item, start, end, plist;
+
+      item = XCAR (list);
+      start = make_fixnum (XFIXNUM (XCAR (item)) + XFIXNUM (delta));
+      end = make_fixnum (XFIXNUM (XCAR (XCDR (item))) + XFIXNUM (delta));
+      plist = XCAR (XCDR (XCDR (item)));
+
+      Fadd_text_properties (start, end, plist, object);
+    }
+}
+
 void
 syms_of_textprop (void)
 {
