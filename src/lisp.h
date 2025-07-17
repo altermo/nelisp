@@ -1498,6 +1498,12 @@ OVERLAYP (Lisp_Object x)
 {
   return PSEUDOVECTORP (x, PVEC_OVERLAY);
 }
+INLINE struct Lisp_Overlay *
+XOVERLAY (Lisp_Object a)
+{
+  eassert (OVERLAYP (a));
+  return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Overlay);
+}
 INLINE bool
 BIGNUMP (Lisp_Object x)
 {
@@ -1632,6 +1638,11 @@ blv_found (struct Lisp_Buffer_Local_Value *blv)
 {
   eassert (blv->found == !BASE_EQ (blv->defcell, blv->valcell));
   return blv->found;
+}
+INLINE void
+set_overlay_plist (Lisp_Object overlay, Lisp_Object plist)
+{
+  XOVERLAY (overlay)->plist = plist;
 }
 INLINE INTERVAL
 string_intervals (Lisp_Object s)

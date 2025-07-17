@@ -5,6 +5,12 @@
 
 struct buffer buffer_defaults;
 
+static void
+CHECK_OVERLAY (Lisp_Object x)
+{
+  CHECK_TYPE (OVERLAYP (x), Qoverlayp, x);
+}
+
 EMACS_INT
 fix_position (Lisp_Object pos)
 {
@@ -216,6 +222,48 @@ for the rear of the overlay advance when text is inserted there
   return ov;
 }
 
+DEFUN ("overlay-put", Foverlay_put, Soverlay_put, 3, 3, 0,
+       doc: /* Set one property of overlay OVERLAY: give property PROP value VALUE.
+VALUE will be returned.*/)
+(Lisp_Object overlay, Lisp_Object prop, Lisp_Object value)
+{
+  Lisp_Object tail;
+  struct buffer *b;
+  bool changed;
+  UNUSED (changed);
+
+  CHECK_OVERLAY (overlay);
+
+#if TODO_NELISP_LATER_AND
+  b = OVERLAY_BUFFER (overlay);
+#endif
+
+  for (tail = XOVERLAY (overlay)->plist; CONSP (tail) && CONSP (XCDR (tail));
+       tail = XCDR (XCDR (tail)))
+    if (EQ (XCAR (tail), prop))
+      {
+        changed = !EQ (XCAR (XCDR (tail)), value);
+        XSETCAR (XCDR (tail), value);
+        goto found;
+      }
+  changed = !NILP (value);
+  set_overlay_plist (overlay,
+                     Fcons (prop, Fcons (value, XOVERLAY (overlay)->plist)));
+found:
+#if TODO_NELISP_LATER_AND
+  if (b)
+    {
+      if (changed)
+        modify_overlay (b, OVERLAY_START (overlay), OVERLAY_END (overlay));
+      if (EQ (prop, Qevaporate) && !NILP (value)
+          && (OVERLAY_START (overlay) == OVERLAY_END (overlay)))
+        Fdelete_overlay (overlay);
+    }
+#endif
+
+  return value;
+}
+
 #define DEFVAR_PER_BUFFER(lname, vname, predicate, doc)     \
   do                                                        \
     {                                                       \
@@ -252,6 +300,8 @@ init_buffer (void)
 void
 syms_of_buffer (void)
 {
+  DEFSYM (Qoverlayp, "overlayp");
+
   DEFVAR_LISP ("case-fold-search", Vcase_fold_search,
 	       doc: /* Non-nil if searches and matches should ignore case.  */);
   Vcase_fold_search = Qt;
@@ -281,4 +331,5 @@ See also Info node `(elisp)Text Representations'.  */);
   defsubr (&Sforce_mode_line_update);
 
   defsubr (&Smake_overlay);
+  defsubr (&Soverlay_put);
 }
