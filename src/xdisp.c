@@ -86,6 +86,13 @@ depending on your patience and the speed of your system.  */);
 
   DEFSYM (Qempty_box, "empty-box");
 
+  DEFVAR_LISP ("pre-redisplay-function", Vpre_redisplay_function,
+        doc: /* Function run just before redisplay.
+It is called with one argument, which is the set of windows that are to
+be redisplayed.  This set can be nil (meaning, only the selected window),
+or t (meaning all windows).  */);
+  Vpre_redisplay_function = intern ("ignore");
+
   DEFSYM (Qglyphless_char_display, "glyphless-char-display");
   Fput (Qglyphless_char_display, Qchar_table_extra_slots, make_fixnum (1));
 
