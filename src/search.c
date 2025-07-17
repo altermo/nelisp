@@ -29,6 +29,40 @@ matcher_overflow (void)
   error ("Stack overflow in regexp matcher");
 }
 
+DEFUN ("regexp-quote", Fregexp_quote, Sregexp_quote, 1, 1, 0,
+       doc: /* Return a regexp string which matches exactly STRING and nothing else.  */)
+(Lisp_Object string)
+{
+  char *in, *out, *end;
+  char *temp;
+  ptrdiff_t backslashes_added = 0;
+
+  CHECK_STRING (string);
+
+  USE_SAFE_ALLOCA;
+  SAFE_NALLOCA (temp, 2, SBYTES (string));
+
+  in = SSDATA (string);
+  end = in + SBYTES (string);
+  out = temp;
+
+  for (; in != end; in++)
+    {
+      if (*in == '[' || *in == '*' || *in == '.' || *in == '\\' || *in == '?'
+          || *in == '+' || *in == '^' || *in == '$')
+        *out++ = '\\', backslashes_added++;
+      *out++ = *in;
+    }
+
+  Lisp_Object result
+    = (backslashes_added > 0
+         ? make_specified_string (temp, SCHARS (string) + backslashes_added,
+                                  out - temp, STRING_MULTIBYTE (string))
+         : string);
+  SAFE_FREE ();
+  return result;
+}
+
 static void
 compile_pattern_1 (struct regexp_cache *cp, Lisp_Object pattern,
                    Lisp_Object translate, bool posix)
@@ -743,6 +777,7 @@ do not set the match data.  The proper way to use this variable
 is to bind it with `let' around a small expression.  */);
   Vinhibit_changing_match_data = Qnil;
 
+  defsubr (&Sregexp_quote);
   defsubr (&Sstring_match);
   defsubr (&Sreplace_match);
   defsubr (&Smatch_beginning);
