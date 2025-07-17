@@ -566,7 +566,7 @@ nvim_frame_buffer_list (struct frame *f)
 {
   TODO_NELISP_LATER;
   int tabpageid = f->tabpageid;
-  Lisp_Object buffers;
+  Lisp_Object buffers = Qnil;
   LUA (20)
   {
     lua_newtable (L);
