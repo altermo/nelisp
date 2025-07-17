@@ -449,6 +449,28 @@ nvim_buf_memcpy (unsigned char *dst, ptrdiff_t beg1, ptrdiff_t size)
   }
 }
 
+bool
+nvim_buffer_option_is_true (struct buffer *b, const char opt[])
+{
+  bool optval;
+  eassert (BUFFER_LIVE_P (b));
+  LUA (10)
+  {
+    lua_getglobal (L, "vim");
+    lua_getfield (L, -1, "bo");
+    lua_remove (L, -2);
+    lua_pushnumber (L, b->bufid);
+    lua_gettable (L, -2);
+    lua_remove (L, -2);
+    eassert (lua_istable (L, -1));
+    lua_getfield (L, -1, opt);
+    eassert (lua_isboolean (L, -1));
+    optval = lua_toboolean (L, -1);
+    lua_pop (L, 2);
+  }
+  return optval;
+}
+
 // --- frame (tabpage) --
 
 Lisp_Object

@@ -159,6 +159,30 @@ BUFFER defaults to the current buffer.
 Return nil if BUFFER has been killed.  */)
 (register Lisp_Object buffer) { return BVAR (decode_buffer (buffer), name); }
 
+DEFUN ("buffer-modified-p", Fbuffer_modified_p, Sbuffer_modified_p,
+       0, 1, 0,
+       doc: /* Return non-nil if BUFFER was modified since its file was last read or saved.
+No argument or nil as argument means use current buffer as BUFFER.
+
+If BUFFER was autosaved since it was last modified, this function
+returns the symbol `autosaved'.  */)
+(Lisp_Object buffer)
+{
+  struct buffer *buf = decode_buffer (buffer);
+  TODO_NELISP_LATER;
+  if (nvim_buffer_option_is_true (buf, "modified"))
+    {
+#if TODO_NELISP_LATER_AND
+      if (BUF_AUTOSAVE_MODIFF (buf) == BUF_MODIFF (buf))
+        return Qautosaved;
+      else
+#endif
+        return Qt;
+    }
+  else
+    return Qnil;
+}
+
 DEFUN ("force-mode-line-update", Fforce_mode_line_update,
        Sforce_mode_line_update, 0, 1, 0,
        doc: /* Force redisplay of the current buffer's mode line and header line.
@@ -343,6 +367,7 @@ See also Info node `(elisp)Text Representations'.  */);
   defsubr (&Sset_buffer);
   defsubr (&Sbuffer_name);
   defsubr (&Sforce_mode_line_update);
+  defsubr (&Sbuffer_modified_p);
 
   defsubr (&Smake_overlay);
   defsubr (&Sdelete_overlay);
