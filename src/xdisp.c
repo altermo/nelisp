@@ -54,6 +54,20 @@ syms_of_xdisp (void)
   staticpro (&echo_area_buffer[0]);
   staticpro (&echo_area_buffer[1]);
 
+  DEFVAR_LISP ("overlay-arrow-position", Voverlay_arrow_position,
+    doc: /* Marker for where to display an arrow on top of the buffer text.
+This must be the beginning of a line in order to work.
+See also `overlay-arrow-string'.  */);
+  Voverlay_arrow_position = Qnil;
+
+  DEFVAR_LISP ("overlay-arrow-variable-list", Voverlay_arrow_variable_list,
+    doc: /* List of variables (symbols) which hold markers for overlay arrows.
+The symbols on this list are examined during redisplay to determine
+where to display overlay arrows.
+See also `overlay-arrow-string'.  */);
+  Voverlay_arrow_variable_list
+    = list1 (intern_c_string ("overlay-arrow-position"));
+
   DEFVAR_INT ("max-redisplay-ticks", max_redisplay_ticks,
     doc: /* Maximum number of redisplay ticks before aborting redisplay of a window.
 
