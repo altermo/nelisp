@@ -167,6 +167,24 @@ start:
       emacs_abort ();
     }
 }
+DEFUN ("indirect-variable", Findirect_variable, Sindirect_variable, 1, 1, 0,
+       doc: /* Return the variable at the end of OBJECT's variable chain.
+If OBJECT is a symbol, follow its variable indirections (if any), and
+return the variable at the end of the chain of aliases.  See Info node
+`(elisp)Variable Aliases'.
+
+If OBJECT is not a symbol, just return it.  */)
+(Lisp_Object object)
+{
+  if (SYMBOLP (object))
+    {
+      struct Lisp_Symbol *sym = XSYMBOL (object);
+      while (sym->u.s.redirect == SYMBOL_VARALIAS)
+        sym = SYMBOL_ALIAS (sym);
+      XSETSYMBOL (object, sym);
+    }
+  return object;
+}
 DEFUN ("symbol-value", Fsymbol_value, Ssymbol_value, 1, 1, 0,
        doc: /* Return SYMBOL's value.  Error if that is void.
 Note that if `lexical-binding' is in effect, this returns the
@@ -2281,6 +2299,7 @@ syms_of_data (void)
   DEFSYM (Qtreesit_compiled_query, "treesit-compiled-query");
   DEFSYM (Qobarray, "obarray");
 
+  defsubr (&Sindirect_variable);
   defsubr (&Ssymbol_value);
   defsubr (&Sbare_symbol);
   defsubr (&Sdefault_boundp);
