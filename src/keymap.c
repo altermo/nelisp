@@ -13,6 +13,8 @@ static Lisp_Object exclude_keys;
 static Lisp_Object where_is_cache;
 static Lisp_Object where_is_cache_keymaps;
 
+static Lisp_Object unicode_case_table;
+
 Lisp_Object
 get_keymap (Lisp_Object object, bool error_if_not_keymap, bool autoload)
 {
@@ -836,7 +838,102 @@ recognize the default bindings, just as `read-key-sequence' does.  */)
   if (!VECTORP (key) || !(ASIZE (key) > 0) || !EQ (AREF (key, 0), Qmenu_bar))
     return found;
 
-  TODO;
+  if (NILP (unicode_case_table))
+    {
+      unicode_case_table = uniprop_table (Qlowercase);
+
+      if (NILP (unicode_case_table))
+        return found;
+      staticpro (&unicode_case_table);
+    }
+
+  ptrdiff_t key_len = ASIZE (key);
+  Lisp_Object new_key = make_vector (key_len, Qnil);
+
+  Lisp_Object tables[2] = { unicode_case_table, Fcurrent_case_table () };
+  for (int tbl_num = 0; tbl_num < 2; tbl_num++)
+    {
+      for (int i = 0; i < key_len; i++)
+        {
+          Lisp_Object item = AREF (key, i);
+          if (!SYMBOLP (item))
+            ASET (new_key, i, item);
+          else
+            {
+              Lisp_Object key_item = Fsymbol_name (item);
+              Lisp_Object new_item;
+              if (!STRING_MULTIBYTE (key_item))
+                new_item = Fdowncase (key_item);
+              else
+                {
+                  USE_SAFE_ALLOCA;
+                  ptrdiff_t size = SCHARS (key_item), n;
+                  if (ckd_mul (&n, size, MAX_MULTIBYTE_LENGTH))
+                    n = PTRDIFF_MAX;
+                  unsigned char *dst = SAFE_ALLOCA (n);
+                  unsigned char *p = dst;
+                  ptrdiff_t j_char = 0, j_byte = 0;
+
+                  while (j_char < size)
+                    {
+                      int ch = fetch_string_char_advance (key_item, &j_char,
+                                                          &j_byte);
+                      Lisp_Object ch_conv
+                        = CHAR_TABLE_REF (tables[tbl_num], ch);
+                      if (!NILP (ch_conv))
+                        CHAR_STRING (XFIXNUM (ch_conv), p);
+                      else
+                        CHAR_STRING (ch, p);
+                      p = dst + j_byte;
+                    }
+                  new_item
+                    = make_multibyte_string ((char *) dst, SCHARS (key_item),
+                                             SBYTES (key_item));
+                  SAFE_FREE ();
+                }
+              ASET (new_key, i, Fintern (new_item, Qnil));
+            }
+        }
+
+      found = lookup_key_1 (keymap, new_key, accept_default);
+      if (!NILP (found) && !NUMBERP (found))
+        break;
+
+      for (int i = 0; i < key_len; i++)
+        {
+          if (!SYMBOLP (AREF (new_key, i)))
+            continue;
+
+          Lisp_Object lc_key = Fsymbol_name (AREF (new_key, i));
+
+          if (!strstr (SSDATA (lc_key), " "))
+            continue;
+
+          USE_SAFE_ALLOCA;
+          ptrdiff_t size = SCHARS (lc_key), n;
+          if (ckd_mul (&n, size, MAX_MULTIBYTE_LENGTH))
+            n = PTRDIFF_MAX;
+          unsigned char *dst = SAFE_ALLOCA (n);
+
+          memcpy (dst, SSDATA (lc_key), SBYTES (lc_key));
+          for (int i = 0; i < SBYTES (lc_key); ++i)
+            {
+              if (dst[i] == ' ')
+                dst[i] = '-';
+            }
+          Lisp_Object new_it
+            = make_multibyte_string ((char *) dst, SCHARS (lc_key),
+                                     SBYTES (lc_key));
+          ASET (new_key, i, Fintern (new_it, Qnil));
+          SAFE_FREE ();
+        }
+
+      found = lookup_key_1 (keymap, new_key, accept_default);
+      if (!NILP (found) && !NUMBERP (found))
+        break;
+    }
+
+  return found;
 }
 
 DEFUN ("use-global-map", Fuse_global_map, Suse_global_map, 1, 1, 0,
