@@ -674,6 +674,12 @@ here.  If a mapping is defined in both the current
 definition will take precedence.  */);
   Vfunction_key_map = Fmake_sparse_keymap (Qnil);
 
+  DEFVAR_LISP ("key-translation-map", Vkey_translation_map,
+               doc: /* Keymap of key translations that can override keymaps.
+This keymap works like `input-decode-map', but comes after `function-key-map'.
+Another difference is that it is global rather than terminal-local.  */);
+  Vkey_translation_map = Fmake_sparse_keymap (Qnil);
+
   DEFVAR_LISP ("special-event-map", Vspecial_event_map,
         doc: /* Keymap defining bindings for special events to execute at low level.  */);
   Vspecial_event_map = list1 (Qkeymap);
