@@ -697,12 +697,58 @@ start:
     }
   return;
 }
+static void
+set_symbol_trapped_write (Lisp_Object symbol, enum symbol_trapped_write trap)
+{
+  struct Lisp_Symbol *sym = XSYMBOL (symbol);
+  if (sym->u.s.trapped_write == SYMBOL_NOWRITE)
+    xsignal1 (Qtrapping_constant, symbol);
+  sym->u.s.trapped_write = trap;
+}
+
 DEFUN ("set", Fset, Sset, 2, 2, 0,
        doc: /* Set SYMBOL's value to NEWVAL, and return NEWVAL.  */)
 (register Lisp_Object symbol, Lisp_Object newval)
 {
   set_internal (symbol, newval, Qnil, SET_INTERNAL_SET);
   return newval;
+}
+
+static void
+harmonize_variable_watchers (Lisp_Object alias, Lisp_Object base_variable)
+{
+  if (!EQ (base_variable, alias)
+      && EQ (base_variable, Findirect_variable (alias)))
+    set_symbol_trapped_write (alias,
+                              XSYMBOL (base_variable)->u.s.trapped_write);
+}
+
+DEFUN ("add-variable-watcher", Fadd_variable_watcher, Sadd_variable_watcher,
+       2, 2, 0,
+       doc: /* Cause WATCH-FUNCTION to be called when SYMBOL is about to be set.
+
+It will be called with 4 arguments: (SYMBOL NEWVAL OPERATION WHERE).
+SYMBOL is the variable being changed.
+NEWVAL is the value it will be changed to.  (The variable still has
+the old value when WATCH-FUNCTION is called.)
+OPERATION is a symbol representing the kind of change, one of: `set',
+`let', `unlet', `makunbound', and `defvaralias'.
+WHERE is a buffer if the buffer-local value of the variable is being
+changed, nil otherwise.
+
+All writes to aliases of SYMBOL will call WATCH-FUNCTION too.  */)
+(Lisp_Object symbol, Lisp_Object watch_function)
+{
+  symbol = Findirect_variable (symbol);
+  CHECK_SYMBOL (symbol);
+  set_symbol_trapped_write (symbol, SYMBOL_TRAPPED_WRITE);
+  map_obarray (Vobarray, harmonize_variable_watchers, symbol);
+
+  Lisp_Object watchers = Fget (symbol, Qwatchers);
+  Lisp_Object member = Fmember (watch_function, watchers);
+  if (NILP (member))
+    Fput (symbol, Qwatchers, Fcons (watch_function, watchers));
+  return Qnil;
 }
 
 DEFUN ("fset", Ffset, Sfset, 2, 2, 0,
@@ -2178,6 +2224,8 @@ syms_of_data (void)
   DEFSYM (Qaref, "aref");
   DEFSYM (Qaset, "aset");
 
+  DEFSYM (Qtrapping_constant, "trapping-constant");
+
   DEFSYM (Qsymbolp, "symbolp");
   DEFSYM (Qconsp, "consp");
   DEFSYM (Qlistp, "listp");
@@ -2402,4 +2450,7 @@ This variable cannot be set; trying to do so will signal an error.  */);
                doc: /* If non-nil, a symbol with position ordinarily behaves as its bare symbol.
 Bind this to non-nil in applications such as the byte compiler.  */);
   symbols_with_pos_enabled = false;
+
+  DEFSYM (Qwatchers, "watchers");
+  defsubr (&Sadd_variable_watcher);
 }

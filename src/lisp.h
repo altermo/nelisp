@@ -1171,6 +1171,11 @@ XOBARRAY (Lisp_Object a)
   eassert (OBARRAYP (a));
   return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Obarray);
 }
+INLINE void
+CHECK_OBARRAY (Lisp_Object x)
+{
+  CHECK_TYPE (OBARRAYP (x), Qobarrayp, x);
+}
 INLINE Lisp_Object
 make_lisp_obarray (struct Lisp_Obarray *o)
 {
@@ -1182,6 +1187,53 @@ obarray_size (const struct Lisp_Obarray *o)
 {
   return (ptrdiff_t) 1 << o->size_bits;
 }
+
+typedef struct
+{
+  struct Lisp_Obarray *o;
+  ptrdiff_t idx;
+  struct Lisp_Symbol *symbol;
+} obarray_iter_t;
+
+INLINE obarray_iter_t
+make_obarray_iter (struct Lisp_Obarray *oa)
+{
+  return (obarray_iter_t) { .o = oa, .idx = -1, .symbol = NULL };
+}
+
+INLINE bool
+obarray_iter_at_end (obarray_iter_t *it)
+{
+  if (it->symbol)
+    return false;
+  ptrdiff_t size = obarray_size (it->o);
+  while (++it->idx < size)
+    {
+      Lisp_Object obj = it->o->buckets[it->idx];
+      if (!BASE_EQ (obj, make_fixnum (0)))
+        {
+          it->symbol = XBARE_SYMBOL (obj);
+          return false;
+        }
+    }
+  return true;
+}
+
+INLINE void
+obarray_iter_step (obarray_iter_t *it)
+{
+  it->symbol = it->symbol->u.s.next;
+}
+
+INLINE Lisp_Object
+obarray_iter_symbol (obarray_iter_t *it)
+{
+  return make_lisp_symbol (it->symbol);
+}
+
+#define DOOBARRAY(oa, it)                                                      \
+  for (obarray_iter_t it = make_obarray_iter (oa); !obarray_iter_at_end (&it); \
+       obarray_iter_step (&it))
 
 struct Lisp_Hash_Table;
 typedef unsigned int hash_hash_t;
@@ -2251,6 +2303,8 @@ intern (const char *str)
 }
 extern Lisp_Object save_match_data_load (Lisp_Object, Lisp_Object, Lisp_Object,
                                          Lisp_Object, Lisp_Object);
+extern void map_obarray (Lisp_Object, void (*) (Lisp_Object, Lisp_Object),
+                         Lisp_Object);
 
 extern ptrdiff_t string_char_to_byte (Lisp_Object, ptrdiff_t);
 extern void syms_of_fns (void);

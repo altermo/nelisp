@@ -195,6 +195,15 @@ given, is only a hint for the expected number.  */)
   return make_obarray (bits);
 }
 
+void
+map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object),
+             Lisp_Object arg)
+{
+  CHECK_OBARRAY (obarray);
+  DOOBARRAY (XOBARRAY (obarray), it)
+  (*fn) (obarray_iter_symbol (&it), arg);
+}
+
 static void
 define_symbol (Lisp_Object sym, char const *str)
 {
@@ -2655,6 +2664,7 @@ to find all the symbols in an obarray, use `mapatoms'.  */);
   DEFSYM (Qweakness, "weakness");
 
   DEFSYM (Qobarray_cache, "obarray-cache");
+  DEFSYM (Qobarrayp, "obarrayp");
 
   DEFSYM (Qfunction, "function");
 
