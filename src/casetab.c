@@ -1,4 +1,5 @@
 #include "lisp.h"
+#include "buffer.h"
 
 Lisp_Object Vascii_downcase_table;
 static Lisp_Object Vascii_upcase_table;
@@ -193,6 +194,10 @@ init_casetab_once (void)
   set_case_table (down, 1);
 }
 
+DEFUN ("current-case-table", Fcurrent_case_table, Scurrent_case_table, 0, 0, 0,
+       doc: /* Return the case table of the current buffer.  */)
+(void) { return BVAR (current_buffer, downcase_table); }
+
 void
 syms_of_casetab (void)
 {
@@ -205,4 +210,5 @@ syms_of_casetab (void)
 
   defsubr (&Scase_table_p);
   defsubr (&Sstandard_case_table);
+  defsubr (&Scurrent_case_table);
 }
