@@ -40,7 +40,7 @@ extern Lisp_Object nvim_name_to_bufobj (Lisp_Object);
 extern Lisp_Object nvim_create_buf (Lisp_Object, Lisp_Object);
 extern void nvim_set_buffer (struct buffer *);
 extern struct buffer *nvim_current_buffer (void);
-extern Lisp_Object buffer_name (struct buffer *);
+extern Lisp_Object nvim_buffer_name (struct buffer *);
 
 extern ptrdiff_t nvim_get_field_zv (struct buffer *b, bool chars);
 extern ptrdiff_t nvim_get_field_begv (struct buffer *b, bool chars);
@@ -53,7 +53,7 @@ nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
   switch (field)
     {
     case NVIM_BUFFER_VAR_name_:
-      return buffer_name (b);
+      return nvim_buffer_name (b);
 #define X(field)              \
 case NVIM_BUFFER_VAR_##field: \
   return b->field;

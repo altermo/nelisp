@@ -219,7 +219,7 @@ nvim_create_buf (Lisp_Object name, Lisp_Object inhibit_buffer_hooks)
 }
 
 Lisp_Object
-buffer_name (struct buffer *b)
+nvim_buffer_name (struct buffer *b)
 {
   long bufid = b->bufid;
   Lisp_Object obj = Qnil;
