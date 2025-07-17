@@ -366,12 +366,23 @@ See `file-symlink-p' to distinguish symlinks.  */)
   return file_directory_p (ENCODE_FILE (absname)) ? Qt : Qnil;
 }
 
+DEFUN ("car-less-than-car", Fcar_less_than_car, Scar_less_than_car, 2, 2, 0,
+       doc: /* Return t if (car A) is numerically less than (car B).  */)
+(Lisp_Object a, Lisp_Object b)
+{
+  Lisp_Object ca = Fcar (a), cb = Fcar (b);
+  if (FIXNUMP (ca) && FIXNUMP (cb))
+    return XFIXNUM (ca) < XFIXNUM (cb) ? Qt : Qnil;
+  return arithcompare (ca, cb, ARITH_LESS);
+}
+
 void
 syms_of_fileio (void)
 {
   defsubr (&Sfile_name_directory);
   defsubr (&Sexpand_file_name);
   defsubr (&Sfile_directory_p);
+  defsubr (&Scar_less_than_car);
 
   DEFVAR_LISP ("file-name-handler-alist", Vfile_name_handler_alist,
         doc: /* Alist of elements (REGEXP . HANDLER) for file names handled specially.
