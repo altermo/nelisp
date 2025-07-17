@@ -479,7 +479,7 @@ nvim_tabpageid_to_frameobj (long id)
 }
 
 Lisp_Object
-nvim_frames_list (void)
+nvim_frame_list (void)
 {
   Lisp_Object frames;
   LUA (10)

@@ -67,7 +67,7 @@ case NVIM_BUFFER_VAR_##field: \
 
 // ---- frame (tabpage) --
 
-extern Lisp_Object nvim_frames_list (void);
+extern Lisp_Object nvim_frame_list (void);
 bool nvim_frame_is_valid (struct frame *);
 extern Lisp_Object nvim_get_current_frame (void);
 extern Lisp_Object nvim_frame_name (struct frame *);

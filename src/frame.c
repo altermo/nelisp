@@ -106,7 +106,7 @@ The return value does not include any tooltip frame.  */)
 (void)
 {
   Lisp_Object list = Qnil;
-  return nvim_frames_list ();
+  return nvim_frame_list ();
 }
 
 DEFUN ("frame-parameters", Fframe_parameters, Sframe_parameters, 0, 1, 0,
