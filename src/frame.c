@@ -4,6 +4,14 @@
 #include "nvim.h"
 
 struct frame *
+decode_live_frame (register Lisp_Object frame)
+{
+  if (NILP (frame))
+    frame = selected_frame;
+  CHECK_LIVE_FRAME (frame);
+  return XFRAME (frame);
+}
+struct frame *
 decode_any_frame (register Lisp_Object frame)
 {
   if (NILP (frame))

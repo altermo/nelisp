@@ -2,6 +2,7 @@
 #define EMACS_TERMHOOKS_H
 
 #include "lisp.h"
+#include "nvim.h"
 
 enum
 {
@@ -18,5 +19,14 @@ enum
   ctrl_modifier = CHAR_CTL,
   meta_modifier = CHAR_META
 };
+
+struct terminal
+{
+  union vectorlike_header header;
+
+  Lisp_Object _last_obj;
+} GCALIGNED_STRUCT;
+
+#define FRAME_TERMINAL(f) nvim_frame_terminal (f)
 
 #endif

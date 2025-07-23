@@ -544,6 +544,7 @@ dead_object (void)
    eassert ((size & (PSEUDOVECTOR_FLAG | PVEC_TYPE_MASK)) \
             == (PSEUDOVECTOR_FLAG | (code << PSEUDOVECTOR_AREA_BITS))))
 
+#define XSETTERMINAL(a, b) XSETPSEUDOVECTOR (a, b, PVEC_TERMINAL)
 #define XSETSUBR(a, b) XSETPSEUDOVECTOR (a, b, PVEC_SUBR)
 #define XSETBUFFER(a, b) XSETPSEUDOVECTOR (a, b, PVEC_BUFFER)
 #define XSETCHAR_TABLE(a, b) XSETPSEUDOVECTOR (a, b, PVEC_CHAR_TABLE)
@@ -2539,6 +2540,8 @@ extern void init_category_once (void);
 extern Lisp_Object char_category_set (int);
 
 extern void syms_of_composite (void);
+
+extern void syms_of_terminal (void);
 
 extern void tim_sort (Lisp_Object, Lisp_Object, Lisp_Object *, const ptrdiff_t,
                       bool);

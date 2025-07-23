@@ -79,4 +79,6 @@ FACE_FROM_ID (struct frame *f, int id)
 
 #define frame_name nvim_frame_name
 
+struct frame *decode_live_frame (register Lisp_Object frame);
+
 #endif

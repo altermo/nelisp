@@ -4,6 +4,7 @@
 #include "dispextern.h"
 #include "frame.h"
 #include "lua.h"
+#include "termhooks.h"
 
 static void
 push_vim_api (lua_State *L, const char *name)
@@ -471,6 +472,25 @@ nvim_buffer_option_is_true (struct buffer *b, const char opt[])
   return optval;
 }
 
+// --- terminal --
+static struct terminal _terminal_sentinel;
+static bool _terminal_sentinel_inited;
+struct terminal *
+nvim_terminal_sentinel (void)
+{
+  struct terminal *ptr = &_terminal_sentinel;
+  if (!_terminal_sentinel_inited)
+    {
+      int memlen = VECSIZE (struct terminal);
+      int lisplen = PSEUDOVECSIZE (struct terminal, _last_obj);
+      XSETPVECTYPESIZE (ptr, PVEC_TERMINAL, lisplen, memlen - lisplen);
+
+      _terminal_sentinel_inited = true;
+    }
+
+  return ptr;
+}
+
 // --- frame (tabpage) --
 
 Lisp_Object
@@ -669,4 +689,12 @@ nvim_frame_buffer_list (struct frame *f)
     lua_pop (L, 1);
   }
   return buffers;
+}
+
+struct terminal *
+nvim_frame_terminal (struct frame *f)
+{
+  if (!FRAME_LIVE_P (f))
+    return NULL;
+  return nvim_terminal_sentinel ();
 }

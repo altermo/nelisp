@@ -619,6 +619,7 @@ ret () init (lua_State *L)
   syms_of_floatfns ();
   syms_of_category ();
   syms_of_composite ();
+  syms_of_terminal ();
 
   keys_of_keyboard ();
 

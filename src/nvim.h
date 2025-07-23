@@ -84,5 +84,6 @@ extern Lisp_Object nvim_frame_buffer_list (struct frame *);
 extern Lisp_Object nvim_frame_buried_buffer_list (struct frame *);
 extern int nvim_frame_menu_bar_lines (struct frame *);
 extern int nvim_frame_tab_bar_lines (struct frame *);
+extern struct terminal *nvim_frame_terminal (struct frame *);
 
 #endif
