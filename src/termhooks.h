@@ -25,7 +25,22 @@ struct terminal
   union vectorlike_header header;
 
   Lisp_Object _last_obj;
+
+  char *name;
 } GCALIGNED_STRUCT;
+
+INLINE bool
+TERMINALP (Lisp_Object a)
+{
+  return PSEUDOVECTORP (a, PVEC_TERMINAL);
+}
+
+INLINE struct terminal *
+XTERMINAL (Lisp_Object a)
+{
+  eassert (TERMINALP (a));
+  return XUNTAG (a, Lisp_Vectorlike, struct terminal);
+}
 
 #define FRAME_TERMINAL(f) nvim_frame_terminal (f)
 

@@ -485,6 +485,8 @@ nvim_terminal_sentinel (void)
       int lisplen = PSEUDOVECSIZE (struct terminal, _last_obj);
       XSETPVECTYPESIZE (ptr, PVEC_TERMINAL, lisplen, memlen - lisplen);
 
+      ptr->name = "nvim";
+
       _terminal_sentinel_inited = true;
     }
 
