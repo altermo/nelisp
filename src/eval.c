@@ -847,6 +847,93 @@ indirect_function (Lisp_Object object)
   return object;
 }
 
+DEFUN ("commandp", Fcommandp, Scommandp, 1, 2, 0,
+       doc: /* Non-nil if FUNCTION makes provisions for interactive calling.
+This means it contains a description for how to read arguments to give it.
+The value is nil for an invalid function or a symbol with no function
+definition.
+
+Interactively callable functions include strings and vectors (treated
+as keyboard macros), lambda-expressions that contain a top-level call
+to `interactive', autoload definitions made by `autoload' with non-nil
+fourth argument, and some of the built-in functions of Lisp.
+
+Also, a symbol satisfies `commandp' if its function definition does so.
+
+If the optional argument FOR-CALL-INTERACTIVELY is non-nil,
+then strings and vectors are not accepted.  */)
+(Lisp_Object function, Lisp_Object for_call_interactively)
+{
+  register Lisp_Object fun;
+  bool genfun = false;
+
+  fun = function;
+
+  fun = indirect_function (fun);
+  if (NILP (fun))
+    return Qnil;
+
+  if (SUBRP (fun))
+    {
+      if (XSUBR (fun)->intspec.string)
+        return Qt;
+    }
+
+  else if (CLOSUREP (fun))
+    {
+      if (PVSIZE (fun) > CLOSURE_INTERACTIVE)
+        return Qt;
+      else if (PVSIZE (fun) > CLOSURE_DOC_STRING)
+        {
+          Lisp_Object doc = AREF (fun, CLOSURE_DOC_STRING);
+
+          genfun = !(NILP (doc) || VALID_DOCSTRING_P (doc));
+        }
+    }
+
+  else if (STRINGP (fun) || VECTORP (fun))
+    return (NILP (for_call_interactively) ? Qt : Qnil);
+
+  else if (!CONSP (fun))
+    return Qnil;
+  else
+    {
+      Lisp_Object funcar = XCAR (fun);
+      if (EQ (funcar, Qautoload))
+        {
+          if (!NILP (Fcar (Fcdr (Fcdr (XCDR (fun))))))
+            return Qt;
+        }
+      else
+        {
+          Lisp_Object body = CDR_SAFE (XCDR (fun));
+          if (!EQ (funcar, Qlambda))
+            return Qnil;
+          if (!NILP (Fassq (Qinteractive, body)))
+            return Qt;
+          else
+            return Qnil;
+        }
+    }
+
+  fun = function;
+  while (SYMBOLP (fun))
+    {
+      Lisp_Object tmp = Fget (fun, Qinteractive_form);
+      if (!NILP (tmp))
+        error ("Found an 'interactive-form' property!");
+      fun = Fsymbol_function (fun);
+    }
+
+  if (genfun)
+    {
+      Lisp_Object iform = call1 (Qinteractive_form, fun);
+      return NILP (iform) ? Qnil : Qt;
+    }
+  else
+    return Qnil;
+}
+
 DEFUN ("autoload", Fautoload, Sautoload, 2, 5, 0,
        doc: /* Define FUNCTION to autoload from FILE.
 FUNCTION is a symbol; FILE is a file name string to pass to `load'.
@@ -2496,6 +2583,7 @@ alist of active lexical bindings.  */);
   DEFSYM (QCsuccess, ":success");
   defsubr (&Ssignal);
   defsubr (&Sthrow);
+  defsubr (&Scommandp);
   defsubr (&Sautoload);
   defsubr (&Sfunctionp);
   defsubr (&Sfuncall);

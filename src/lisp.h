@@ -1068,6 +1068,13 @@ XSUBR (Lisp_Object a)
   return &XUNTAG (a, Lisp_Vectorlike, union Aligned_Lisp_Subr)->s;
 }
 
+INLINE bool
+VALID_DOCSTRING_P (Lisp_Object doc)
+{
+  return FIXNUMP (doc) || STRINGP (doc)
+         || (CONSP (doc) && STRINGP (XCAR (doc)) && FIXNUMP (XCDR (doc)));
+}
+
 enum char_table_specials
 {
   CHAR_TABLE_STANDARD_SLOTS = (PSEUDOVECSIZE (struct Lisp_Char_Table, contents)

@@ -2405,6 +2405,8 @@ syms_of_data (void)
   DEFSYM (Qtreesit_compiled_query, "treesit-compiled-query");
   DEFSYM (Qobarray, "obarray");
 
+  DEFSYM (Qinteractive_form, "interactive-form");
+
   defsubr (&Sindirect_variable);
   defsubr (&Ssymbol_value);
   defsubr (&Sbare_symbol);
