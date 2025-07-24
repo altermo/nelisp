@@ -1681,6 +1681,29 @@ bytecode_from_rev_list (Lisp_Object elems, Lisp_Object readcharfun)
   return obj;
 }
 static Lisp_Object
+string_props_from_rev_list (Lisp_Object elems, Lisp_Object readcharfun)
+{
+  elems = Fnreverse (elems);
+  if (NILP (elems) || !STRINGP (XCAR (elems)))
+    invalid_syntax ("#", readcharfun);
+  Lisp_Object obj = XCAR (elems);
+  for (Lisp_Object tl = XCDR (elems); !NILP (tl);)
+    {
+      Lisp_Object beg = XCAR (tl);
+      tl = XCDR (tl);
+      if (NILP (tl))
+        invalid_syntax ("Invalid string property list", readcharfun);
+      Lisp_Object end = XCAR (tl);
+      tl = XCDR (tl);
+      if (NILP (tl))
+        invalid_syntax ("Invalid string property list", readcharfun);
+      Lisp_Object plist = XCAR (tl);
+      tl = XCDR (tl);
+      Fset_text_properties (beg, end, plist, obj);
+    }
+  return obj;
+}
+static Lisp_Object
 hash_table_from_plist (Lisp_Object plist)
 {
   Lisp_Object params[4 * 2];
@@ -1806,7 +1829,10 @@ read_obj:;
             break;
           }
         case RE_string_props:
-          TODO;
+          locate_syms = read_stack_top ()->u.vector.old_locate_syms;
+          obj = string_props_from_rev_list (read_stack_pop ()->u.vector.elems,
+                                            readcharfun);
+          break;
         default:
           invalid_syntax (")", readcharfun);
         }
@@ -1876,7 +1902,13 @@ read_obj:;
           case '^':
             TODO;
           case '(':
-            TODO;
+            read_stack_push ((struct read_stack_entry) {
+              .type = RE_string_props,
+              .u.vector.elems = Qnil,
+              .u.vector.old_locate_syms = locate_syms,
+            });
+            locate_syms = false;
+            goto read_obj;
           case '[':
             read_stack_push ((struct read_stack_entry) {
               .type = RE_byte_code,

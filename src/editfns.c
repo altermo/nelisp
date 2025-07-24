@@ -398,8 +398,7 @@ retry:
 
               convbytes = nbytes;
               if (convbytes && multibyte && !STRING_MULTIBYTE (arg))
-                TODO; // convbytes = count_size_as_multibyte (SDATA (arg),
-                      // nbytes);
+                convbytes = count_size_as_multibyte (SDATA (arg), nbytes);
 
               ptrdiff_t padding = width < field_width ? field_width - width : 0;
 
