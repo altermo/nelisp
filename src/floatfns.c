@@ -62,9 +62,19 @@ This is the same as the exponent of a float.  */)
   return make_fixnum (value);
 }
 
+DEFUN ("exp", Fexp, Sexp, 1, 1, 0,
+       doc: /* Return the exponential base e of ARG.  */)
+(Lisp_Object arg)
+{
+  double d = extract_float (arg);
+  d = exp (d);
+  return make_float (d);
+}
+
 void
 syms_of_floatfns (void)
 {
   defsubr (&Satan);
   defsubr (&Slogb);
+  defsubr (&Sexp);
 }
