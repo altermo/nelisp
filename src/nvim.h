@@ -32,6 +32,7 @@ enum nvim_buffer_var_field
 {
   NVIM_BUFFER_VAR_name_,
   NVIM_BUFFER_VAR_read_only_,
+  NVIM_BUFFER_VAR_filename_,
 #define X(field) NVIM_BUFFER_VAR_##field,
   Xbuffer_vars
 #undef X
@@ -43,6 +44,7 @@ extern void nvim_set_buffer (struct buffer *);
 extern struct buffer *nvim_current_buffer (void);
 extern Lisp_Object nvim_buffer_name (struct buffer *);
 extern Lisp_Object nvim_buffer_list (void);
+extern Lisp_Object nvim_buffer_filename (struct buffer *);
 
 extern ptrdiff_t nvim_get_field_zv (struct buffer *b, bool chars);
 extern ptrdiff_t nvim_get_field_begv (struct buffer *b, bool chars);
@@ -61,6 +63,8 @@ nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
       return nvim_buffer_name (b);
     case NVIM_BUFFER_VAR_read_only_:
       return nvim_buffer_option_is_true (b, "modifiable") ? Qnil : Qt;
+    case NVIM_BUFFER_VAR_filename_:
+      return nvim_buffer_filename (b);
 #define X(field)              \
 case NVIM_BUFFER_VAR_##field: \
   return b->field;

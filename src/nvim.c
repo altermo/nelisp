@@ -79,6 +79,21 @@ push_vim_w (lua_State *L, long winid)
   }
 }
 
+static void
+push_vim_bo (lua_State *L, long bufid)
+{
+  LUALC (L, 5, 1)
+  {
+    lua_getglobal (L, "vim");
+    lua_getfield (L, -1, "bo");
+    lua_remove (L, -2);
+    lua_pushnumber (L, bufid);
+    lua_gettable (L, -2);
+    lua_remove (L, -2);
+    eassert (lua_istable (L, -1));
+  }
+}
+
 enum nvim_kind
 {
   NVIM_BUFFER,
@@ -457,19 +472,64 @@ nvim_buffer_option_is_true (struct buffer *b, const char opt[])
   eassert (BUFFER_LIVE_P (b));
   LUA (10)
   {
-    lua_getglobal (L, "vim");
-    lua_getfield (L, -1, "bo");
-    lua_remove (L, -2);
-    lua_pushnumber (L, b->bufid);
-    lua_gettable (L, -2);
-    lua_remove (L, -2);
-    eassert (lua_istable (L, -1));
+    push_vim_bo (L, b->bufid);
     lua_getfield (L, -1, opt);
     eassert (lua_isboolean (L, -1));
     optval = lua_toboolean (L, -1);
     lua_pop (L, 2);
   }
   return optval;
+}
+
+Lisp_Object
+nvim_buffer_filename (struct buffer *b)
+{
+  long bufid = b->bufid;
+  Lisp_Object obj = Qnil;
+  LUA (5)
+  {
+    push_vim_api (L, "nvim_buf_is_valid");
+    lua_pushnumber (L, bufid);
+    lua_call (L, 1, 1);
+    eassert (lua_isboolean (L, -1));
+    if (!lua_toboolean (L, -1))
+      {
+        lua_pop (L, 1);
+        return Qnil;
+      }
+    lua_pop (L, 1);
+
+    push_vim_bo (L, bufid);
+    lua_getfield (L, -1, "buftype");
+    eassert (lua_isstring (L, -1));
+    if (lua_objlen (L, -1) != 0)
+      {
+        lua_pop (L, 2);
+        return Qnil;
+      }
+    lua_pop (L, 2);
+
+    push_vim_fn (L, "fnamemodify");
+    push_vim_fn (L, "bufname");
+    lua_pushnumber (L, bufid);
+    lua_call (L, 1, 1);
+    eassert (lua_isstring (L, -1));
+    TODO_NELISP_LATER; // the returned string should always be the same until
+                       // name changed
+    if (lua_objlen (L, -1) == 0)
+      {
+        lua_pop (L, 2);
+        return Qnil;
+      }
+    lua_pushliteral (L, ":p");
+    lua_call (L, 2, 1);
+    eassert (lua_isstring (L, -1));
+    size_t len;
+    const char *name = lua_tolstring (L, -1, &len);
+    obj = make_string (name, len);
+    lua_pop (L, 1);
+  }
+  return obj;
 }
 
 // --- terminal --

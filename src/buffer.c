@@ -159,6 +159,14 @@ BUFFER defaults to the current buffer.
 Return nil if BUFFER has been killed.  */)
 (register Lisp_Object buffer) { return BVAR (decode_buffer (buffer), name); }
 
+DEFUN ("buffer-file-name", Fbuffer_file_name, Sbuffer_file_name, 0, 1, 0,
+       doc: /* Return name of file BUFFER is visiting, or nil if none.
+No argument or nil as argument means use the current buffer.  */)
+(register Lisp_Object buffer)
+{
+  return BVAR (decode_buffer (buffer), filename);
+}
+
 DEFUN ("buffer-modified-p", Fbuffer_modified_p, Sbuffer_modified_p,
        0, 1, 0,
        doc: /* Return non-nil if BUFFER was modified since its file was last read or saved.
@@ -366,6 +374,7 @@ See also Info node `(elisp)Text Representations'.  */);
   defsubr (&Scurrent_buffer);
   defsubr (&Sset_buffer);
   defsubr (&Sbuffer_name);
+  defsubr (&Sbuffer_file_name);
   defsubr (&Sforce_mode_line_update);
   defsubr (&Sbuffer_modified_p);
 
