@@ -307,6 +307,150 @@ Return t if any property value actually changed, nil otherwise.  */)
                                 TEXT_PROPERTY_REPLACE, true);
 }
 
+static void
+set_properties (Lisp_Object properties, INTERVAL interval, Lisp_Object object)
+{
+  Lisp_Object sym, value;
+
+  if (BUFFERP (object))
+    TODO;
+
+  set_interval_plist (interval, Fcopy_sequence (properties));
+}
+
+void
+set_text_properties_1 (Lisp_Object start, Lisp_Object end,
+                       Lisp_Object properties, Lisp_Object object, INTERVAL i)
+{
+  if (BUFFERP (object) && XBUFFER (object) != current_buffer)
+    TODO;
+
+  INTERVAL prev_changed = NULL;
+  ptrdiff_t s = XFIXNUM (start);
+  ptrdiff_t len = XFIXNUM (end) - s;
+
+  if (len == 0)
+    return;
+  eassert (0 < len);
+
+  eassert (i);
+
+  if (i->position != s)
+    {
+      INTERVAL unchanged = i;
+      i = split_interval_right (unchanged, s - unchanged->position);
+
+      if (LENGTH (i) > len)
+        {
+          copy_properties (unchanged, i);
+          i = split_interval_left (i, len);
+          set_properties (properties, i, object);
+          return;
+        }
+
+      set_properties (properties, i, object);
+
+      if (LENGTH (i) == len)
+        return;
+
+      prev_changed = i;
+      len -= LENGTH (i);
+      i = next_interval (i);
+    }
+
+  /* We are starting at the beginning of an interval I.  LEN is positive.  */
+  do
+    {
+      eassert (i != 0);
+
+      if (LENGTH (i) >= len)
+        {
+          if (LENGTH (i) > len)
+            i = split_interval_left (i, len);
+
+          set_properties (properties, i, object);
+          if (prev_changed)
+            merge_interval_left (i);
+          return;
+        }
+
+      len -= LENGTH (i);
+
+      set_properties (properties, i, object);
+      if (!prev_changed)
+        prev_changed = i;
+      else
+        prev_changed = i = merge_interval_left (i);
+
+      i = next_interval (i);
+    }
+  while (len > 0);
+}
+
+Lisp_Object
+set_text_properties (Lisp_Object start, Lisp_Object end, Lisp_Object properties,
+                     Lisp_Object object, Lisp_Object coherent_change_p)
+{
+  if (BUFFERP (object) && XBUFFER (object) != current_buffer)
+    TODO;
+
+  INTERVAL i;
+  bool first_time = true;
+
+  properties = validate_plist (properties);
+
+  if (NILP (object))
+    XSETBUFFER (object, current_buffer);
+
+  if (NILP (properties) && STRINGP (object) && BASE_EQ (start, make_fixnum (0))
+      && BASE_EQ (end, make_fixnum (SCHARS (object))))
+    {
+      if (!string_intervals (object))
+        return Qnil;
+
+      set_string_intervals (object, NULL);
+      return Qt;
+    }
+
+  i = validate_interval_range (object, &start, &end, soft);
+
+  if (!i)
+    {
+      if (NILP (properties))
+        return Qnil;
+
+      i = validate_interval_range (object, &start, &end, hard);
+
+      if (!i)
+        return Qnil;
+    }
+
+  if (BUFFERP (object) && !NILP (coherent_change_p) && first_time)
+    TODO;
+
+  set_text_properties_1 (start, end, properties, object, i);
+
+  if (BUFFERP (object) && !NILP (coherent_change_p))
+    TODO; // signal_after_change (XFIXNUM (start), XFIXNUM (end) - XFIXNUM
+          // (start),
+          //  XFIXNUM (end) - XFIXNUM (start));
+  return Qt;
+}
+
+DEFUN ("set-text-properties", Fset_text_properties,
+       Sset_text_properties, 3, 4, 0,
+       doc: /* Completely replace properties of text from START to END.
+The third argument PROPERTIES is the new property list.
+If the optional fourth argument OBJECT is a buffer (or nil, which means
+the current buffer), START and END are buffer positions (integers or
+markers).  If OBJECT is a string, START and END are 0-based indices into it.
+If PROPERTIES is nil, the effect is to remove all properties from
+the designated part of OBJECT.  */)
+(Lisp_Object start, Lisp_Object end, Lisp_Object properties, Lisp_Object object)
+{
+  return set_text_properties (start, end, properties, object, Qt);
+}
+
 Lisp_Object
 text_property_list (Lisp_Object object, Lisp_Object start, Lisp_Object end,
                     Lisp_Object prop)
@@ -407,4 +551,5 @@ inherits it if NONSTICKINESS is nil.  The `front-sticky' and
   DEFSYM (Qpoint_entered, "point-entered");
 
   defsubr (&Sadd_text_properties);
+  defsubr (&Sset_text_properties);
 }

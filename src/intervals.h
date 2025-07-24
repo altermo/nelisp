@@ -35,6 +35,9 @@ struct interval
 
 #define AM_LEFT_CHILD(i) (!NULL_PARENT (i) && INTERVAL_PARENT (i)->left == (i))
 
+#define AM_RIGHT_CHILD(i) \
+  (!NULL_PARENT (i) && INTERVAL_PARENT (i)->right == (i))
+
 #define ROOT_INTERVAL_P(i) NULL_PARENT (i)
 
 #define TOTAL_LENGTH(i) ((i)->total_length)
@@ -115,5 +118,6 @@ extern void traverse_intervals_noorder (INTERVAL tree,
 Lisp_Object text_property_list (Lisp_Object, Lisp_Object, Lisp_Object,
                                 Lisp_Object);
 void add_text_properties_from_list (Lisp_Object, Lisp_Object, Lisp_Object);
+extern INTERVAL merge_interval_left (INTERVAL);
 
 #endif
