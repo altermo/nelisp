@@ -167,6 +167,78 @@ No argument or nil as argument means use the current buffer.  */)
   return BVAR (decode_buffer (buffer), filename);
 }
 
+Lisp_Object
+buffer_local_value (Lisp_Object variable, Lisp_Object buffer)
+{
+  register struct buffer *buf;
+  register Lisp_Object result;
+  struct Lisp_Symbol *sym;
+
+  CHECK_SYMBOL (variable);
+  CHECK_BUFFER (buffer);
+  buf = XBUFFER (buffer);
+  sym = XSYMBOL (variable);
+
+start:
+  switch (sym->u.s.redirect)
+    {
+    case SYMBOL_VARALIAS:
+      sym = SYMBOL_ALIAS (sym);
+      goto start;
+    case SYMBOL_PLAINVAL:
+      result = SYMBOL_VAL (sym);
+      break;
+    case SYMBOL_LOCALIZED:
+      {
+        struct Lisp_Buffer_Local_Value *blv = SYMBOL_BLV (sym);
+        XSETSYMBOL (variable, sym);
+        result = assq_no_quit (variable, BVAR (buf, local_var_alist));
+        if (!NILP (result))
+          {
+            if (blv->fwd.fwdptr)
+              {
+                Lisp_Object current_alist_element = blv->valcell;
+
+                TODO; // XSETCDR (current_alist_element,
+                //          do_symval_forwarding (blv->fwd));
+              }
+            result = XCDR (result);
+          }
+        else
+          result = Fdefault_value (variable);
+        break;
+      }
+    case SYMBOL_FORWARDED:
+      {
+        lispfwd fwd = SYMBOL_FWD (sym);
+        if (BUFFER_OBJFWDP (fwd))
+          result = per_buffer_value (buf, XBUFFER_OBJFWD (fwd)->offset);
+        else
+          result = Fdefault_value (variable);
+        break;
+      }
+    default:
+      emacs_abort ();
+    }
+
+  return result;
+}
+
+DEFUN ("buffer-local-value", Fbuffer_local_value,
+       Sbuffer_local_value, 2, 2, 0,
+       doc: /* Return the value of VARIABLE in BUFFER.
+If VARIABLE does not have a buffer-local binding in BUFFER, the value
+is the default binding of the variable.  */)
+(register Lisp_Object variable, register Lisp_Object buffer)
+{
+  register Lisp_Object result = buffer_local_value (variable, buffer);
+
+  if (BASE_EQ (result, Qunbound))
+    xsignal1 (Qvoid_variable, variable);
+
+  return result;
+}
+
 DEFUN ("buffer-modified-p", Fbuffer_modified_p, Sbuffer_modified_p,
        0, 1, 0,
        doc: /* Return non-nil if BUFFER was modified since its file was last read or saved.
@@ -375,6 +447,7 @@ See also Info node `(elisp)Text Representations'.  */);
   defsubr (&Sset_buffer);
   defsubr (&Sbuffer_name);
   defsubr (&Sbuffer_file_name);
+  defsubr (&Sbuffer_local_value);
   defsubr (&Sforce_mode_line_update);
   defsubr (&Sbuffer_modified_p);
 
