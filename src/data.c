@@ -1860,6 +1860,62 @@ enum arithop
   Alogxor
 };
 
+static bool
+floating_point_op (enum arithop code)
+{
+  return code <= Adiv;
+}
+
+static Lisp_Object
+floatop_arith_driver (enum arithop code, ptrdiff_t nargs, Lisp_Object *args,
+                      ptrdiff_t argnum, double accum, double next)
+{
+  if (argnum == 0)
+    {
+      accum = next;
+      goto next_arg;
+    }
+
+  while (true)
+    {
+      switch (code)
+        {
+        case Aadd:
+          accum += next;
+          break;
+        case Asub:
+          accum -= next;
+          break;
+        case Amult:
+          accum *= next;
+          break;
+        case Adiv:
+          if (!IEEE_FLOATING_POINT && next == 0)
+            xsignal0 (Qarith_error);
+          accum /= next;
+          break;
+        default:
+          eassume (false);
+        }
+
+    next_arg:
+      argnum++;
+      if (argnum == nargs)
+        return make_float (accum);
+      next = XFLOATINT (check_number_coerce_marker (args[argnum]));
+    }
+}
+
+static Lisp_Object
+float_arith_driver (enum arithop code, ptrdiff_t nargs, Lisp_Object *args,
+                    ptrdiff_t argnum, double accum, Lisp_Object next)
+{
+  if (!floating_point_op (code))
+    wrong_type_argument (Qinteger_or_marker_p, next);
+  return floatop_arith_driver (code, nargs, args, argnum, accum,
+                               XFLOAT_DATA (next));
+}
+
 static Lisp_Object
 arith_driver (enum arithop code, ptrdiff_t nargs, Lisp_Object *args,
               Lisp_Object val)
@@ -1916,9 +1972,9 @@ arith_driver (enum arithop code, ptrdiff_t nargs, Lisp_Object *args,
         accum = a;
       }
 
-  TODO; // return (FLOATP (val)
-        //  ? float_arith_driver (code, nargs, args, argnum, accum, val)
-        //  : bignum_arith_driver (code, nargs, args, argnum, accum, val));
+  return (FLOATP (val)
+            ? float_arith_driver (code, nargs, args, argnum, accum, val)
+            : (TODO, Qnil));
 }
 
 DEFUN ("+", Fplus, Splus, 0, MANY, 0,
