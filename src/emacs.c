@@ -42,6 +42,11 @@ Anything else (in Emacs 26, the possibilities are: aix, berkeley-unix,
 hpux, usg-unix-v) indicates some sort of Unix system.  */);
   Vsystem_type = intern_c_string (SYSTEM_TYPE);
 
+  DEFVAR_LISP ("after-init-time", Vafter_init_time,
+        doc: /* Value of `current-time' after loading the init files.
+This is nil during initialization.  */);
+  Vafter_init_time = Qnil;
+
   DEFVAR_BOOL ("inhibit-x-resources", inhibit_x_resources,
         doc: /* If non-nil, X resources, Windows Registry settings, and NS defaults are not used.  */);
   inhibit_x_resources = 0;
