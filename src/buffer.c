@@ -440,6 +440,9 @@ signal an error in those cases.
 See also Info node `(elisp)Text Representations'.  */);
   make_symbol_constant (intern_c_string ("enable-multibyte-characters"));
 
+  DEFVAR_PER_BUFFER ("buffer-read-only", &MBVAR_ (current_buffer, read_only),
+                     Qnil, doc : /* Non-nil if this buffer is read-only.  */);
+
   defsubr (&Sbuffer_list);
   defsubr (&Sget_buffer);
   defsubr (&Sget_buffer_create);

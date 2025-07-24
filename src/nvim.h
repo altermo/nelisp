@@ -15,6 +15,8 @@
   X (enable_multibyte_characters_) \
   X (category_table_)
 
+#define Xmeta_buffer_vars X (read_only_)
+
 struct buffer
 {
   union vectorlike_header header;
@@ -28,13 +30,24 @@ struct buffer
   long bufid;
 };
 
+struct meta_buffer
+{
+  struct buffer b;
+
+#define X(field) Lisp_Object field;
+  Xmeta_buffer_vars
+#undef X
+};
+
 enum nvim_buffer_var_field
 {
   NVIM_BUFFER_VAR_name_,
-  NVIM_BUFFER_VAR_read_only_,
   NVIM_BUFFER_VAR_filename_,
 #define X(field) NVIM_BUFFER_VAR_##field,
   Xbuffer_vars
+#undef X
+#define X(field) NVIM_BUFFER_VAR_##field,
+    Xmeta_buffer_vars
 #undef X
 };
 
@@ -71,6 +84,23 @@ case NVIM_BUFFER_VAR_##field: \
       Xbuffer_vars
 #undef X
         default : emacs_abort ();
+    }
+}
+
+static inline Lisp_Object __attribute__ ((always_inline))
+nvim_mbvar (struct buffer *b, int offset)
+{
+  eassert (offset >= sizeof (struct buffer));
+  eassert (offset < sizeof (struct meta_buffer));
+  switch (offset)
+    {
+#define X(field)                           \
+case offsetof (struct meta_buffer, field): \
+  return nvim_bvar (b, NVIM_BUFFER_VAR_##field);
+      Xmeta_buffer_vars;
+#undef X
+    default:
+      emacs_abort ();
     }
 }
 

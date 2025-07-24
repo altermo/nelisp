@@ -62,6 +62,7 @@ record_unwind_current_buffer (void)
 
 #define BVAR(buf, field) nvim_bvar (buf, NVIM_BUFFER_VAR_##field##_)
 #define BVAR_(buf, field) ((buf)->field##_)
+#define MBVAR_(buf, field) (((struct meta_buffer *) buf)->field##_)
 
 INLINE bool
 BUFFER_LIVE_P (struct buffer *b)
@@ -91,6 +92,8 @@ extern EMACS_INT fix_position (Lisp_Object);
 INLINE Lisp_Object
 per_buffer_value (struct buffer *b, int offset)
 {
+  if (offset >= sizeof (struct buffer))
+    return nvim_mbvar (b, offset);
   return *(Lisp_Object *) (offset + (char *) b);
 }
 
