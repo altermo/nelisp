@@ -197,6 +197,24 @@ map_obarray (Lisp_Object obarray, void (*fn) (Lisp_Object, Lisp_Object),
   DOOBARRAY (XOBARRAY (obarray), it)
   (*fn) (obarray_iter_symbol (&it), arg);
 }
+static void
+mapatoms_1 (Lisp_Object sym, Lisp_Object function)
+{
+  call1 (function, sym);
+}
+
+DEFUN ("mapatoms", Fmapatoms, Smapatoms, 1, 2, 0,
+       doc: /* Call FUNCTION on every symbol in OBARRAY.
+OBARRAY defaults to the value of `obarray'.  */)
+(Lisp_Object function, Lisp_Object obarray)
+{
+  if (NILP (obarray))
+    obarray = Vobarray;
+  obarray = check_obarray (obarray);
+
+  map_obarray (obarray, mapatoms_1, function);
+  return Qnil;
+}
 
 static void
 define_symbol (Lisp_Object sym, char const *str)
@@ -2801,6 +2819,7 @@ This is useful when the file being loaded is a temporary copy.  */);
   read_objects_completed = Qnil;
 
   defsubr (&Sobarray_make);
+  defsubr (&Smapatoms);
   defsubr (&Sget_load_suffixes);
   defsubr (&Sload);
   defsubr (&Slocate_file_internal);
