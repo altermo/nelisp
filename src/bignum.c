@@ -1,4 +1,5 @@
 #include "bignum.h"
+#include <math.h>
 #include "lisp.h"
 
 mpz_t mpz[5];
@@ -67,6 +68,15 @@ init_bignum (void)
 
   for (unsigned long i = 0; i < ARRAYELTS (mpz); i++)
     mpz_init (mpz[i]);
+}
+
+Lisp_Object
+double_to_integer (double d)
+{
+  if (!isfinite (d))
+    overflow_error ();
+  mpz_set_d (mpz[0], d);
+  return make_integer_mpz ();
 }
 
 static Lisp_Object

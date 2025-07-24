@@ -2418,6 +2418,7 @@ extern uintmax_t cons_to_unsigned (Lisp_Object, uintmax_t);
 extern void set_default_internal (Lisp_Object, Lisp_Object,
                                   enum Set_Internal_Bind, KBOARD *);
 extern char *fixnum_to_string (EMACS_INT number, char *buffer, char *end);
+Lisp_Object expt_integer (Lisp_Object x, Lisp_Object y);
 
 extern void syms_of_keyboard (void);
 extern void init_keyboard (void);
@@ -2551,6 +2552,10 @@ extern void syms_of_comp (void);
 
 extern void syms_of_sqlite (void);
 
+enum
+{
+  LOG2_FLT_RADIX = FLT_RADIX == 2 ? 1 : 4
+};
 extern void syms_of_floatfns (void);
 
 extern void syms_of_category (void);
@@ -2563,6 +2568,8 @@ extern void syms_of_terminal (void);
 
 extern void tim_sort (Lisp_Object, Lisp_Object, Lisp_Object *, const ptrdiff_t,
                       bool);
+
+extern Lisp_Object double_to_integer (double);
 
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)

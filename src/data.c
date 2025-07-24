@@ -2236,6 +2236,38 @@ discarding bits.  */)
   return make_integer_mpz ();
 }
 
+Lisp_Object
+expt_integer (Lisp_Object x, Lisp_Object y)
+{
+  if (BASE_EQ (x, make_fixnum (1)))
+    return x;
+  if (BASE_EQ (x, make_fixnum (0)))
+    return BASE_EQ (x, y) ? make_fixnum (1) : x;
+  if (BASE_EQ (x, make_fixnum (-1)))
+    return ((FIXNUMP (y) ? XFIXNUM (y) & 1 : mpz_odd_p (*xbignum_val (y)))
+              ? x
+              : make_fixnum (1));
+
+  unsigned long exp;
+  if (FIXNUMP (y))
+    {
+      if (ULONG_MAX < XFIXNUM (y))
+        overflow_error ();
+      exp = XFIXNUM (y);
+    }
+  else
+    {
+      if (ULONG_MAX <= MOST_POSITIVE_FIXNUM
+          || !mpz_fits_ulong_p (*xbignum_val (y)))
+        overflow_error ();
+      exp = mpz_get_ui (*xbignum_val (y));
+    }
+
+  UNUSED (exp);
+  TODO; // emacs_mpz_pow_ui (mpz[0], *bignum_integer (&mpz[0], x), exp);
+  return make_integer_mpz ();
+}
+
 DEFUN ("1+", Fadd1, Sadd1, 1, 1, 0,
        doc: /* Return NUMBER plus one.  NUMBER may be a number or a marker.
 Markers are converted to integers.  */)
@@ -2302,6 +2334,7 @@ syms_of_data (void)
   DEFSYM (Qchar_or_string_p, "char-or-string-p");
   DEFSYM (Qvectorp, "vectorp");
   DEFSYM (Qbuffer_or_string_p, "buffer-or-string-p");
+  DEFSYM (Qfloatp, "floatp");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");
