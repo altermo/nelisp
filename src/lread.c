@@ -41,12 +41,6 @@ check_obarray_slow (Lisp_Object obarray)
   return NULL;
 }
 
-INLINE Lisp_Object
-check_obarray (Lisp_Object obarray)
-{
-  return OBARRAYP (obarray) ? obarray : check_obarray_slow (obarray);
-}
-
 static ptrdiff_t
 obarray_index (struct Lisp_Obarray *oa, const char *str, ptrdiff_t size_byte)
 {

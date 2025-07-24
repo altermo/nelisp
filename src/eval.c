@@ -2543,6 +2543,7 @@ syms_of_eval (void)
   DEFSYM (Qand_optional, "&optional");
   DEFSYM (QCdocumentation, ":documentation");
   DEFSYM (Qinteractive, "interactive");
+  DEFSYM (Qcommandp, "commandp");
 
   DEFVAR_INT ("max-lisp-eval-depth", max_lisp_eval_depth,
                 doc: /* Limit on depth in `eval', `apply' and `funcall' before error.

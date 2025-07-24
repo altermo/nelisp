@@ -1195,6 +1195,12 @@ obarray_size (const struct Lisp_Obarray *o)
 {
   return (ptrdiff_t) 1 << o->size_bits;
 }
+Lisp_Object check_obarray_slow (Lisp_Object);
+INLINE Lisp_Object
+check_obarray (Lisp_Object obarray)
+{
+  return OBARRAYP (obarray) ? obarray : check_obarray_slow (obarray);
+}
 
 typedef struct
 {
