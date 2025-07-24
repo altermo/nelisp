@@ -1655,6 +1655,11 @@ CHECK_FIXNAT (Lisp_Object x)
   CHECK_TYPE (FIXNATP (x), Qwholenump, x);
 }
 
+INLINE double
+XFLOATINT (Lisp_Object n)
+{
+  return (FIXNUMP (n) ? XFIXNUM (n) : FLOATP (n) ? XFLOAT_DATA (n) : (TODO, 0));
+}
 INLINE void
 CHECK_NUMBER (Lisp_Object x)
 {

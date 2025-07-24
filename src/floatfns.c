@@ -3,6 +3,33 @@
 #include "lisp.h"
 #include "bignum.h"
 
+double
+extract_float (Lisp_Object num)
+{
+  CHECK_NUMBER (num);
+  return XFLOATINT (num);
+}
+
+DEFUN ("atan", Fatan, Satan, 1, 2, 0,
+       doc: /* Return the inverse tangent of the arguments.
+If only one argument Y is given, return the inverse tangent of Y.
+If two arguments Y and X are given, return the inverse tangent of Y
+divided by X, i.e. the angle in radians between the vector (X, Y)
+and the x-axis.  */)
+(Lisp_Object y, Lisp_Object x)
+{
+  double d = extract_float (y);
+
+  if (NILP (x))
+    d = atan (d);
+  else
+    {
+      double d2 = extract_float (x);
+      d = atan2 (d, d2);
+    }
+  return make_float (d);
+}
+
 DEFUN ("logb", Flogb, Slogb, 1, 1, 0,
        doc: /* Returns largest integer <= the base 2 log of the magnitude of ARG.
 This is the same as the exponent of a float.  */)
@@ -38,5 +65,6 @@ This is the same as the exponent of a float.  */)
 void
 syms_of_floatfns (void)
 {
+  defsubr (&Satan);
   defsubr (&Slogb);
 }
