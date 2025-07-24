@@ -637,6 +637,24 @@ Symbols must match exactly.  */)
 {
   return internal_equal (o1, o2, EQUAL_PLAIN, 0, Qnil) ? Qt : Qnil;
 }
+DEFUN ("eql", Feql, Seql, 2, 2, 0,
+       doc: /* Return t if the two args are `eq' or are indistinguishable numbers.
+Integers with the same value are `eql'.
+Floating-point values with the same sign, exponent and fraction are `eql'.
+This differs from numeric comparison: (eql 0.0 -0.0) returns nil and
+\(eql 0.0e+NaN 0.0e+NaN) returns t, whereas `=' does the opposite.  */)
+(Lisp_Object obj1, Lisp_Object obj2)
+{
+  if (FLOATP (obj1))
+    return FLOATP (obj2) && same_float (obj1, obj2) ? Qt : Qnil;
+  else if (BIGNUMP (obj1))
+    return ((BIGNUMP (obj2)
+             && mpz_cmp (*xbignum_val (obj1), *xbignum_val (obj2)) == 0)
+              ? Qt
+              : Qnil);
+  else
+    return EQ (obj1, obj2) ? Qt : Qnil;
+}
 
 DEFUN ("nthcdr", Fnthcdr, Snthcdr, 2, 2, 0,
        doc: /* Take cdr N times on LIST, return the result.  */)
@@ -3000,6 +3018,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sput);
   defsubr (&Smember);
   defsubr (&Sequal);
+  defsubr (&Seql);
   defsubr (&Snthcdr);
   defsubr (&Snth);
   defsubr (&Sproper_list_p);
