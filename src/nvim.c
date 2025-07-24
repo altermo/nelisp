@@ -255,7 +255,13 @@ nvim_buffer_name (struct buffer *b)
                        // name changed
     size_t len;
     const char *name = lua_tolstring (L, -1, &len);
-    obj = make_string (name, len);
+
+    TODO_NELISP_LATER;
+    if (len == 0)
+      obj = make_string (" ", 1);
+    else
+
+      obj = make_string (name, len);
     lua_pop (L, 1);
   done:
     lua_pop (L, 1);
