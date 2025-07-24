@@ -50,6 +50,8 @@ syms_of_xdisp (void)
 
   DEFSYM (Qinhibit_redisplay, "inhibit-redisplay");
 
+  DEFSYM (Qdisplay, "display");
+
   echo_area_buffer[0] = echo_area_buffer[1] = Qnil;
   staticpro (&echo_area_buffer[0]);
   staticpro (&echo_area_buffer[1]);

@@ -377,6 +377,20 @@ add_text_properties_from_list (Lisp_Object object, Lisp_Object list,
 void
 syms_of_textprop (void)
 {
+  DEFVAR_LISP ("text-property-default-nonsticky",
+         Vtext_property_default_nonsticky,
+         doc: /* Alist of properties vs the corresponding non-stickiness.
+Each element has the form (PROPERTY . NONSTICKINESS).
+
+If a character in a buffer has PROPERTY, new text inserted adjacent to
+the character doesn't inherit PROPERTY if NONSTICKINESS is non-nil,
+inherits it if NONSTICKINESS is nil.  The `front-sticky' and
+`rear-nonsticky' properties of the character override NONSTICKINESS.  */);
+  /* Text properties `syntax-table'and `display' should be nonsticky
+     by default.  */
+  Vtext_property_default_nonsticky
+    = list2 (Fcons (Qsyntax_table, Qt), Fcons (Qdisplay, Qt));
+
   DEFSYM (Qfont, "font");
   DEFSYM (Qface, "face");
   DEFSYM (Qread_only, "read-only");
