@@ -468,6 +468,61 @@ openp (Lisp_Object path, Lisp_Object str, Lisp_Object suffixes,
   return -1;
 }
 
+static void
+build_load_history (Lisp_Object filename, bool entire)
+{
+  Lisp_Object tail, prev, newelt;
+  Lisp_Object tem, tem2;
+  bool foundit = 0;
+
+  tail = Vload_history;
+  prev = Qnil;
+
+  FOR_EACH_TAIL (tail)
+    {
+      tem = XCAR (tail);
+
+      if (!NILP (Fequal (filename, Fcar (tem))))
+        {
+          foundit = 1;
+
+          if (entire)
+            {
+              if (NILP (prev))
+                Vload_history = XCDR (tail);
+              else
+                Fsetcdr (prev, XCDR (tail));
+            }
+          else
+            {
+              tem2 = Vcurrent_load_list;
+
+              FOR_EACH_TAIL (tem2)
+                {
+                  newelt = XCAR (tem2);
+
+                  if (NILP (Fmember (newelt, tem)))
+                    Fsetcar (tail,
+                             Fcons (XCAR (tem), Fcons (newelt, XCDR (tem))));
+                  maybe_quit ();
+                }
+            }
+        }
+      else
+        prev = tail;
+      maybe_quit ();
+    }
+
+  if (entire || !foundit)
+    {
+      Lisp_Object tem = Fnreverse (Vcurrent_load_list);
+      eassert (!NILP (Fequal (filename, Fcar (tem))));
+      Vload_history = Fcons (tem, Vload_history);
+
+      Vcurrent_load_list = Qt;
+    }
+}
+
 void
 close_file_unwind (int fd)
 {
@@ -2543,6 +2598,12 @@ lisp_file_lexical_cookie (Lisp_Object readcharfun)
     }
 }
 
+static void
+loadhist_initialize (Lisp_Object filename)
+{
+  eassert (STRINGP (filename) || NILP (filename));
+  specbind (Qcurrent_load_list, Fcons (filename, Qnil));
+}
 static Lisp_Object
 read_internal_start (Lisp_Object stream, Lisp_Object start, Lisp_Object end,
                      bool locate_syms)
@@ -2601,6 +2662,7 @@ readevalloop (Lisp_Object readcharfun, struct infile *infile0,
   Lisp_Object lex_bound;
   bool continue_reading_p;
   specpdl_ref count = SPECPDL_INDEX ();
+  bool whole_buffer = 0;
 
   if (!NILP (sourcename))
     CHECK_STRING (sourcename);
@@ -2613,6 +2675,8 @@ readevalloop (Lisp_Object readcharfun, struct infile *infile0,
             (NILP (lex_bound) || BASE_EQ (lex_bound, Qunbound) ? Qnil
                                                                : list1 (Qt)));
   specbind (Qmacroexp__dynvars, Vmacroexp__dynvars);
+
+  loadhist_initialize (sourcename);
 
   continue_reading_p = 1;
   while (continue_reading_p)
@@ -2664,6 +2728,9 @@ readevalloop (Lisp_Object readcharfun, struct infile *infile0,
       if (printflag)
         TODO;
     }
+
+  build_load_history (sourcename, infile0 || whole_buffer);
+
   unbind_to (count, Qnil);
 }
 
@@ -2781,6 +2848,26 @@ An error in FUNCS does not undo the load, but does prevent calling
 the rest of the FUNCS.  */);
   Vafter_load_alist = Qnil;
 
+  DEFVAR_LISP ("load-history", Vload_history,
+        doc: /* Alist mapping loaded file names to symbols and features.
+Each alist element should be a list (FILE-NAME ENTRIES...), where
+FILE-NAME is the name of a file that has been loaded into Emacs.
+The file name is absolute and true (i.e. it doesn't contain symlinks).
+As an exception, one of the alist elements may have FILE-NAME nil,
+for symbols and features not associated with any file.
+
+The remaining ENTRIES in the alist element describe the functions and
+variables defined in that file, the features provided, and the
+features required.  Each entry has the form `(provide . FEATURE)',
+`(require . FEATURE)', `(defun . FUNCTION)', `(defface . SYMBOL)',
+ `(define-type . SYMBOL)', or `(cl-defmethod METHOD SPECIALIZERS)'.
+In addition, entries may also be single symbols,
+which means that symbol was defined by `defvar' or `defconst'.
+
+During preloading, the file name recorded is relative to the main Lisp
+directory.  These file names are converted to absolute at startup.  */);
+  Vload_history = Qnil;
+
   DEFVAR_LISP ("load-file-name", Vload_file_name,
         doc: /* Full name of file being loaded by `load'.
 
@@ -2812,6 +2899,8 @@ For internal use only.  */);
         doc: /* Non-nil means `load' should force-load all dynamic doc strings.
 This is useful when the file being loaded is a temporary copy.  */);
   load_force_doc_strings = 0;
+
+  DEFSYM (Qcurrent_load_list, "current-load-list");
 
   staticpro (&read_objects_map);
   read_objects_map = Qnil;

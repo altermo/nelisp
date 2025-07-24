@@ -2301,8 +2301,10 @@ extern lexical_cookie_t lisp_file_lexical_cookie (Lisp_Object readcharfun);
 INLINE void
 LOADHIST_ATTACH (Lisp_Object x)
 {
-  UNUSED (x);
-  TODO_NELISP_LATER;
+#if TODO_NELISP_LATER_AND
+  if (initialized)
+#endif
+    Vcurrent_load_list = Fcons (x, Vcurrent_load_list);
 }
 extern Lisp_Object intern_c_string_1 (const char *, ptrdiff_t);
 INLINE Lisp_Object
