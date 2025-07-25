@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "lisp.h"
+#include "bignum.h"
 #include "buffer.h"
 #include "character.h"
 #include "frame.h"
@@ -8,6 +9,7 @@
 #include "lua.h"
 #include "pdumper.h"
 #include "puresize.h"
+#include "termhooks.h"
 
 #define USE_ALIGNED_ALLOC 1
 #define MALLOC_0_IS_NONNULL 1
@@ -19,25 +21,25 @@ EMACS_INT consing_until_gc = 0;
 
 union emacs_align_type
 {
-  // // TODO
-  // struct frame frame;
-  // struct Lisp_Bignum Lisp_Bignum;
+  // TODO
+  struct frame frame;
+  struct Lisp_Bignum Lisp_Bignum;
   struct Lisp_Bool_Vector Lisp_Bool_Vector;
-  // struct Lisp_Char_Table Lisp_Char_Table;
+  struct Lisp_Char_Table Lisp_Char_Table;
   // struct Lisp_CondVar Lisp_CondVar;
   // struct Lisp_Finalizer Lisp_Finalizer;
   struct Lisp_Float Lisp_Float;
-  // struct Lisp_Hash_Table Lisp_Hash_Table;
-  // struct Lisp_Marker Lisp_Marker;
+  struct Lisp_Hash_Table Lisp_Hash_Table;
+  struct Lisp_Marker Lisp_Marker;
   // struct Lisp_Misc_Ptr Lisp_Misc_Ptr;
   // struct Lisp_Mutex Lisp_Mutex;
-  // struct Lisp_Overlay Lisp_Overlay;
-  // struct Lisp_Sub_Char_Table Lisp_Sub_Char_Table;
+  struct Lisp_Overlay Lisp_Overlay;
+  struct Lisp_Sub_Char_Table Lisp_Sub_Char_Table;
   struct Lisp_Subr Lisp_Subr;
   // struct Lisp_Sqlite Lisp_Sqlite;
   // struct Lisp_User_Ptr Lisp_User_Ptr;
   struct Lisp_Vector Lisp_Vector;
-  // struct terminal terminal;
+  struct terminal terminal;
   // struct thread_state thread_state;
   // struct window window;
 };
@@ -1622,7 +1624,7 @@ cleanup_vector (struct Lisp_Vector *vector)
   switch (PSEUDOVECTOR_TYPE (vector))
     {
     case PVEC_BIGNUM:
-      TODO;
+      mpz_clear (PSEUDOVEC_STRUCT (vector, Lisp_Bignum)->value);
       break;
     case PVEC_OVERLAY:
       TODO;
@@ -2118,6 +2120,12 @@ set_vector_marked (struct Lisp_Vector *v)
     }
   else
     XMARK_VECTOR (v);
+}
+
+static void
+set_vectorlike_marked (union vectorlike_header *header)
+{
+  set_vector_marked ((struct Lisp_Vector *) header);
 }
 
 static bool
@@ -2988,10 +2996,49 @@ mark_char_table (struct Lisp_Vector *ptr, enum pvec_type pvectype)
 }
 
 static void
+mark_overlay (struct Lisp_Overlay *ov)
+{
+  TODO_NELISP_LATER;
+
+  set_vectorlike_marked (&ov->header);
+  mark_object (ov->plist);
+}
+
+static void
 mark_buffer (struct buffer *buffer)
 {
   TODO_NELISP_LATER;
   mark_vectorlike (&buffer->header);
+}
+NO_INLINE
+static void
+mark_face_cache (struct face_cache *c)
+{
+  if (c)
+    {
+      for (int i = 0; i < c->used; i++)
+        {
+          struct face *face = FACE_FROM_ID_OR_NULL (c->f, i);
+
+          if (face)
+            {
+#if TODO_NELISP_LATER_AND
+              if (face->font && !vectorlike_marked_p (&face->font->header))
+                mark_vectorlike (&face->font->header);
+#endif
+
+              mark_objects (face->lface, LFACE_VECTOR_SIZE);
+            }
+        }
+    }
+}
+static void
+mark_frame (struct Lisp_Vector *ptr)
+{
+  struct frame *f = (struct frame *) ptr;
+
+  mark_vectorlike (&ptr->header);
+  mark_face_cache (f->face_cache);
 }
 
 struct mark_entry
@@ -3102,7 +3149,7 @@ process_mark_stack (ptrdiff_t base_sp)
                 break;
 
               case PVEC_FRAME:
-                TODO;
+                mark_frame (ptr);
                 break;
 
               case PVEC_WINDOW:
@@ -3144,7 +3191,7 @@ process_mark_stack (ptrdiff_t base_sp)
                 break;
 
               case PVEC_OVERLAY:
-                TODO;
+                mark_overlay (XOVERLAY (obj));
                 break;
 
               case PVEC_SUBR:
