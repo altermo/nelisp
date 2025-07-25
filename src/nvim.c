@@ -538,6 +538,20 @@ nvim_buffer_filename (struct buffer *b)
   return obj;
 }
 
+void
+nvim_buffer_set_bool_option (struct buffer *b, const char opt[], bool value)
+{
+  eassert (BUFFER_LIVE_P (b));
+
+  LUA (5)
+  {
+    push_vim_bo (L, b->bufid);
+    lua_pushboolean (L, value);
+    lua_setfield (L, -2, opt);
+    lua_pop (L, 1);
+  }
+}
+
 // --- terminal --
 static struct terminal _terminal_sentinel;
 static bool _terminal_sentinel_inited;

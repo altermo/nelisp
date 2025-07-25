@@ -275,6 +275,44 @@ menu bar menus and the frame title.  */)
   return all;
 }
 
+DEFUN ("set-buffer-modified-p", Fset_buffer_modified_p, Sset_buffer_modified_p,
+       1, 1, 0,
+       doc: /* Mark current buffer as modified or unmodified according to FLAG.
+A non-nil FLAG means mark the buffer modified.
+In addition, this function unconditionally forces redisplay of the
+mode lines of the windows that display the current buffer, and also
+locks or unlocks the file visited by the buffer, depending on whether
+the function's argument is non-nil, but only if both `buffer-file-name'
+and `buffer-file-truename' are non-nil.  */)
+(Lisp_Object flag)
+{
+  Frestore_buffer_modified_p (flag);
+
+  return Fforce_mode_line_update (Qnil);
+}
+
+DEFUN ("restore-buffer-modified-p", Frestore_buffer_modified_p,
+       Srestore_buffer_modified_p, 1, 1, 0,
+       doc: /* Like `set-buffer-modified-p', but doesn't redisplay buffer's mode line.
+A nil FLAG means to mark the buffer as unmodified.  A non-nil FLAG
+means mark the buffer as modified.  A special value of `autosaved'
+will mark the buffer as modified and also as autosaved since it was
+last modified.
+
+This function also locks or unlocks the file visited by the buffer,
+if both `buffer-file-truename' and `buffer-file-name' are non-nil.
+
+It is not ensured that mode lines will be updated to show the modified
+state of the current buffer.  Use with care.  */)
+(Lisp_Object flag)
+{
+  TODO_NELISP_LATER;
+
+  nvim_buffer_set_bool_option (current_buffer, "modified", !NILP (flag));
+
+  return flag;
+}
+
 DEFUN ("make-overlay", Fmake_overlay, Smake_overlay, 2, 5, 0,
        doc: /* Create a new overlay with range BEG to END in BUFFER and return it.
 If omitted, BUFFER defaults to the current buffer.
@@ -452,6 +490,8 @@ See also Info node `(elisp)Text Representations'.  */);
   defsubr (&Sbuffer_file_name);
   defsubr (&Sbuffer_local_value);
   defsubr (&Sforce_mode_line_update);
+  defsubr (&Sset_buffer_modified_p);
+  defsubr (&Srestore_buffer_modified_p);
   defsubr (&Sbuffer_modified_p);
 
   defsubr (&Smake_overlay);
