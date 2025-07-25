@@ -433,6 +433,26 @@ load_charset (struct charset *charset, int control_flag)
     TODO; // load_charset_map_from_vector (charset, map, control_flag);
 }
 
+DEFUN ("clear-charset-maps", Fclear_charset_maps, Sclear_charset_maps,
+       0, 0, 0,
+       doc: /*
+Internal use only.
+Clear temporary charset mapping tables.
+It should be called only from temacs invoked for dumping.  */)
+(void)
+{
+  if (temp_charset_work)
+    {
+      xfree (temp_charset_work);
+      temp_charset_work = NULL;
+    }
+
+  if (CHAR_TABLE_P (Vchar_unify_table))
+    Foptimize_char_table (Vchar_unify_table, Qnil);
+
+  return Qnil;
+}
+
 DEFUN ("set-charset-priority", Fset_charset_priority, Sset_charset_priority,
        1, MANY, 0,
        doc: /* Assign higher priority to the charsets given as arguments.
@@ -1500,6 +1520,7 @@ syms_of_charset (void)
   charset_table_size = ARRAYELTS (charset_table_init);
   charset_table_used = 0;
 
+  defsubr (&Sclear_charset_maps);
   defsubr (&Sset_charset_priority);
   defsubr (&Scharsetp);
   defsubr (&Smap_charset_chars);
