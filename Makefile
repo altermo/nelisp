@@ -20,7 +20,7 @@ else
 	echo $(SOURCES)|sed 's/src\/\([^ ]*\)/\n#include "\1"/g'|$(CC) -xc - $(CFLAGS) -I./src -shared -o nelisp.so
 endif
 
-nelisp.so: src/globals.h $(SOURCES)
+nelisp.so: src/globals.h $(SOURCES) src/*.h
 	make nelisp
 
 nelisp: src/globals.h
