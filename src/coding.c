@@ -1292,6 +1292,12 @@ Don't modify this variable directly, but use `set-coding-system-priority'.  */);
         = Fcons (AREF (Vcoding_category_table, i), Vcoding_category_list);
   }
 
+  DEFVAR_LISP ("locale-coding-system", Vlocale_coding_system,
+    doc: /* Coding system to use with system messages.
+Potentially also used for decoding keyboard input on X Windows, and is
+used for encoding standard output and error streams.  */);
+  Vlocale_coding_system = Qnil;
+
   DEFVAR_BOOL ("inhibit-eol-conversion", inhibit_eol_conversion,
         doc: /*
 Non-nil means always inhibit code conversion of end-of-line format.
