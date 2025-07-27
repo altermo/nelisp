@@ -590,6 +590,31 @@ nvim_buffer_set_undo_list (struct buffer *b, Lisp_Object value)
   }
 }
 
+bool
+nvim_buffer_kill (struct buffer *b)
+{
+  TODO_NELISP_LATER;
+
+  eassert (BUFFER_LIVE_P (b));
+  bool success;
+
+  LUA (10)
+  {
+    push_vim_api (L, "nvim_buf_delete");
+    lua_pushnumber (L, b->bufid);
+    lua_newtable (L);
+    int err = lua_pcall (L, 2, 0, 0);
+    if (err == 0)
+      success = true;
+    else
+      {
+        success = false;
+        lua_pop (L, 1);
+      }
+  }
+  return success;
+}
+
 // --- terminal --
 static struct terminal _terminal_sentinel;
 static bool _terminal_sentinel_inited;

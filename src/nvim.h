@@ -60,6 +60,7 @@ extern struct buffer *nvim_current_buffer (void);
 extern Lisp_Object nvim_buffer_name (struct buffer *);
 extern Lisp_Object nvim_buffer_list (void);
 extern Lisp_Object nvim_buffer_filename (struct buffer *);
+extern bool nvim_buffer_kill (struct buffer *);
 
 extern ptrdiff_t nvim_get_field_zv (struct buffer *b, bool chars);
 extern ptrdiff_t nvim_get_field_begv (struct buffer *b, bool chars);

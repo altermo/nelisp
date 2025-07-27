@@ -110,6 +110,48 @@ even if it is dead.  The return value is never nil.  */)
   return buffer;
 }
 
+DEFUN ("kill-buffer", Fkill_buffer, Skill_buffer, 0, 1, "bKill buffer: ",
+       doc: /* Kill the buffer specified by BUFFER-OR-NAME.
+The argument may be a buffer or the name of an existing buffer.
+Argument nil or omitted means kill the current buffer.  Return t if the
+buffer is actually killed, nil otherwise.
+
+The functions in `kill-buffer-query-functions' are called with the
+buffer to be killed as the current buffer.  If any of them returns nil,
+the buffer is not killed.  The hook `kill-buffer-hook' is run before the
+buffer is actually killed.  The buffer being killed will be current
+while the hook is running.  Functions called by any of these hooks are
+supposed to not change the current buffer.  Neither hook is run for
+internal or temporary buffers created by `get-buffer-create' or
+`generate-new-buffer' with argument INHIBIT-BUFFER-HOOKS non-nil.
+
+Any processes that have this buffer as the `process-buffer' are killed
+with SIGHUP.  This function calls `replace-buffer-in-windows' for
+cleaning up all windows currently displaying the buffer to be killed. */)
+(Lisp_Object buffer_or_name)
+{
+  Lisp_Object buffer;
+  struct buffer *b;
+  Lisp_Object tem;
+  struct Lisp_Marker *m;
+
+  if (NILP (buffer_or_name))
+    buffer = Fcurrent_buffer ();
+  else
+    buffer = Fget_buffer (buffer_or_name);
+  if (NILP (buffer))
+    nsberror (buffer_or_name);
+
+  b = XBUFFER (buffer);
+
+  if (!BUFFER_LIVE_P (b))
+    return Qnil;
+
+  TODO_NELISP_LATER;
+
+  return nvim_buffer_kill (b) ? Qt : Qnil;
+}
+
 DEFUN ("current-buffer", Fcurrent_buffer, Scurrent_buffer, 0, 0, 0,
        doc: /* Return the current buffer as a Lisp object.  */)
 (void)
@@ -608,6 +650,7 @@ If the value of the variable is t, undo information is not recorded.  */);
   defsubr (&Sbuffer_list);
   defsubr (&Sget_buffer);
   defsubr (&Sget_buffer_create);
+  defsubr (&Skill_buffer);
   defsubr (&Scurrent_buffer);
   defsubr (&Sset_buffer);
   defsubr (&Sgenerate_new_buffer_name);
