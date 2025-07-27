@@ -117,6 +117,11 @@ bset_undo_list (struct buffer *b, Lisp_Object val)
 {
   BVAR_SET (b, undo_list, val);
 }
+INLINE void
+bset_enable_multibyte_characters (struct buffer *b, Lisp_Object val)
+{
+  b->enable_multibyte_characters_ = val;
+}
 
 INLINE ptrdiff_t
 BUF_BEG (struct buffer *buf)

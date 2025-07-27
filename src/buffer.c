@@ -430,6 +430,29 @@ state of the current buffer.  Use with care.  */)
   return flag;
 }
 
+DEFUN ("set-buffer-multibyte", Fset_buffer_multibyte, Sset_buffer_multibyte,
+       1, 1, 0,
+       doc: /* Set the multibyte flag of the current buffer to FLAG.
+If FLAG is t, this makes the buffer a multibyte buffer.
+If FLAG is nil, this makes the buffer a single-byte buffer.
+In these cases, the buffer contents remain unchanged as a sequence of
+bytes but the contents viewed as characters do change.
+If FLAG is `to', this makes the buffer a multibyte buffer by changing
+all eight-bit bytes to eight-bit characters.
+If the multibyte flag was really changed, undo information of the
+current buffer is cleared.  */)
+(Lisp_Object flag)
+{
+  if (NILP (flag) == NILP (BVAR (current_buffer, enable_multibyte_characters)))
+    return flag;
+
+  bset_enable_multibyte_characters (current_buffer, flag);
+
+  TODO_NELISP_LATER;
+
+  return flag;
+}
+
 DEFUN ("make-overlay", Fmake_overlay, Smake_overlay, 2, 5, 0,
        doc: /* Create a new overlay with range BEG to END in BUFFER and return it.
 If omitted, BUFFER defaults to the current buffer.
@@ -662,6 +685,7 @@ If the value of the variable is t, undo information is not recorded.  */);
   defsubr (&Srestore_buffer_modified_p);
   defsubr (&Sbuffer_modified_p);
   defsubr (&Sbuffer_enable_undo);
+  defsubr (&Sset_buffer_multibyte);
 
   defsubr (&Smake_overlay);
   defsubr (&Sdelete_overlay);
