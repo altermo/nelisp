@@ -2122,8 +2122,7 @@ usage: (/ NUMBER &rest DIVISORS)  */)
 
   for (ptrdiff_t argnum = 2; argnum < nargs; argnum++)
     if (FLOATP (args[argnum]))
-      TODO; // return floatop_arith_driver (Adiv, nargs, args, 0, 0, XFLOATINT
-            // (a));
+      return floatop_arith_driver (Adiv, nargs, args, 0, 0, XFLOATINT (a));
   return arith_driver (Adiv, nargs, args, a);
 }
 
@@ -2145,7 +2144,12 @@ integer_remainder (Lisp_Object num, Lisp_Object den, bool modulo)
         }
       else if ((unsigned long) eabs (d) <= ULONG_MAX)
         {
-          TODO;
+          mpz_t const *n = xbignum_val (num);
+          bool neg_n = mpz_sgn (*n) < 0;
+          r = mpz_tdiv_ui (*n, eabs (d));
+          if (neg_n)
+            r = -r;
+          have_r = true;
         }
 
       if (have_r)
@@ -2157,7 +2161,18 @@ integer_remainder (Lisp_Object num, Lisp_Object den, bool modulo)
         }
     }
 
-  TODO;
+  mpz_t const *d = bignum_integer (&mpz[1], den);
+  mpz_t *r = &mpz[0];
+  mpz_tdiv_r (*r, *bignum_integer (&mpz[0], num), *d);
+
+  if (modulo)
+    {
+      int sgn_r = mpz_sgn (*r);
+      if (mpz_sgn (*d) < 0 ? sgn_r > 0 : sgn_r < 0)
+        mpz_add (*r, *r, *d);
+    }
+
+  return make_integer_mpz ();
 }
 
 DEFUN ("%", Frem, Srem, 2, 2, 0,

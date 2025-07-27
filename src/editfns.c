@@ -830,7 +830,7 @@ retry:
     }
 
   if (maybe_combine_byte)
-    TODO; // nchars = multibyte_chars_in_text ((unsigned char *) buf, p - buf);
+    nchars = multibyte_chars_in_text ((unsigned char *) buf, p - buf);
   val = make_specified_string (buf, nchars, p - buf, multibyte);
 
   if (string_intervals (args[0]) || arg_intervals)

@@ -2996,9 +2996,7 @@ syms_of_fns (void)
 Used by `featurep' and `require', and altered by `provide'.  */);
   Vfeatures = list1 (Qemacs);
   DEFSYM (Qfeatures, "features");
-#if TODO_NELISP_LATER_AND
   Fmake_var_non_special (Qfeatures);
-#endif
   DEFSYM (Qsubfeatures, "subfeatures");
   DEFSYM (Qfuncall, "funcall");
   DEFSYM (Qplistp, "plistp");

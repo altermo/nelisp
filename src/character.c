@@ -212,7 +212,7 @@ count_size_as_multibyte (const unsigned char *str, ptrdiff_t len)
     nonascii += str[i] >> 7;
   ptrdiff_t bytes;
   if (ckd_add (&bytes, len, nonascii))
-    TODO; // string_overflow ();
+    string_overflow ();
   return bytes;
 }
 

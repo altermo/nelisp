@@ -288,14 +288,10 @@ intern_c_string_1 (const char *str, ptrdiff_t len)
     {
       Lisp_Object string;
 
-#if TODO_NELISP_LATER_AND
       if (NILP (Vpurify_flag))
         string = make_string (str, len);
       else
         string = make_pure_c_string (str, len);
-#else
-      string = make_pure_c_string (str, len);
-#endif
 
       tem = intern_driver (string, obarray, tem);
     }
