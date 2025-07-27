@@ -2511,6 +2511,7 @@ extern void syms_of_print (void);
 extern void syms_of_timefns (void);
 
 extern void syms_of_callproc (void);
+extern void set_initial_environment (void);
 
 extern void syms_of_display (void);
 

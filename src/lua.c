@@ -623,6 +623,8 @@ ret () init (lua_State *L)
 
   keys_of_keyboard ();
 
+  set_initial_environment ();
+
   init_keyboard ();
   init_eval ();
   running_asynch_code = false;

@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include "lisp.h"
 
 static bool
@@ -69,6 +71,18 @@ If optional parameter ENV is a list, then search this list instead of
     return make_string (value, valuelen);
   else
     return Qnil;
+}
+
+void
+set_initial_environment (void)
+{
+  char **envp;
+#if TODO_NELISP_LATER_AND
+  for (envp = environ; *envp; envp++)
+#else
+  for (envp = __environ; *envp; envp++)
+#endif
+    Vprocess_environment = Fcons (build_string (*envp), Vprocess_environment);
 }
 
 void
