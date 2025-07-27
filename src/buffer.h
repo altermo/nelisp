@@ -63,6 +63,8 @@ record_unwind_current_buffer (void)
 #define BVAR(buf, field) nvim_bvar (buf, NVIM_BUFFER_VAR_##field##_)
 #define BVAR_(buf, field) ((buf)->field##_)
 #define MBVAR_(buf, field) (((struct meta_buffer *) buf)->field##_)
+#define BVAR_SET(buf, field, val) \
+  nvim_bvar_set (buf, NVIM_BUFFER_VAR_##field##_, val)
 
 INLINE bool
 BUFFER_LIVE_P (struct buffer *b)
@@ -96,11 +98,24 @@ per_buffer_value (struct buffer *b, int offset)
     return nvim_mbvar (b, offset);
   return *(Lisp_Object *) (offset + (char *) b);
 }
+INLINE void
+set_per_buffer_value (struct buffer *b, int offset, Lisp_Object value)
+{
+  if (offset >= sizeof (struct buffer))
+    nvim_mbvar_set (b, offset, value);
+  else
+    *(Lisp_Object *) (offset + (char *) b) = value;
+}
 
 INLINE void
 bset_local_var_alist (struct buffer *b, Lisp_Object val)
 {
   b->local_var_alist_ = val;
+}
+INLINE void
+bset_undo_list (struct buffer *b, Lisp_Object val)
+{
+  BVAR_SET (b, undo_list, val);
 }
 
 INLINE ptrdiff_t

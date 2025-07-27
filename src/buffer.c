@@ -263,6 +263,29 @@ returns the symbol `autosaved'.  */)
     return Qnil;
 }
 
+DEFUN ("buffer-enable-undo", Fbuffer_enable_undo, Sbuffer_enable_undo,
+       0, 1, "",
+       doc: /* Start keeping undo information for buffer BUFFER.
+No argument or nil as argument means do this for the current buffer.  */)
+(register Lisp_Object buffer)
+{
+  Lisp_Object real_buffer;
+
+  if (NILP (buffer))
+    XSETBUFFER (real_buffer, current_buffer);
+  else
+    {
+      real_buffer = Fget_buffer (buffer);
+      if (NILP (real_buffer))
+        nsberror (buffer);
+    }
+
+  if (EQ (BVAR (XBUFFER (real_buffer), undo_list), Qt))
+    bset_undo_list (XBUFFER (real_buffer), Qnil);
+
+  return Qnil;
+}
+
 DEFUN ("force-mode-line-update", Fforce_mode_line_update,
        Sforce_mode_line_update, 0, 1, 0,
        doc: /* Force redisplay of the current buffer's mode line and header line.
@@ -456,6 +479,9 @@ init_buffer (void)
 void
 syms_of_buffer (void)
 {
+  DEFSYM (Qchoice, "choice");
+  DEFSYM (Qrange, "range");
+
   DEFSYM (Qoverlayp, "overlayp");
 
   DEFVAR_LISP ("case-fold-search", Vcase_fold_search,
@@ -481,6 +507,52 @@ See also Info node `(elisp)Text Representations'.  */);
   DEFVAR_PER_BUFFER ("buffer-read-only", &MBVAR_ (current_buffer, read_only),
                      Qnil, doc : /* Non-nil if this buffer is read-only.  */);
 
+  DEFVAR_PER_BUFFER ("buffer-undo-list", &MBVAR_ (current_buffer, undo_list), Qnil,
+        doc: /* List of undo entries in current buffer.
+Recent changes come first; older changes follow newer.
+
+An entry (BEG . END) represents an insertion which begins at
+position BEG and ends at position END.
+
+An entry (TEXT . POSITION) represents the deletion of the string TEXT
+from (abs POSITION).  If POSITION is positive, point was at the front
+of the text being deleted; if negative, point was at the end.
+
+An entry (t . TIMESTAMP), where TIMESTAMP is in the style of
+`current-time', indicates that the buffer was previously unmodified;
+TIMESTAMP is the visited file's modification time, as of that time.
+If the modification time of the most recent save is different, this
+entry is obsolete.
+
+An entry (t . 0) means the buffer was previously unmodified but
+its time stamp was unknown because it was not associated with a file.
+An entry (t . -1) is similar, except that it means the buffer's visited
+file did not exist.
+
+An entry (nil PROPERTY VALUE BEG . END) indicates that a text property
+was modified between BEG and END.  PROPERTY is the property name,
+and VALUE is the old value.
+
+An entry (apply FUN-NAME . ARGS) means undo the change with
+\(apply FUN-NAME ARGS).
+
+An entry (apply DELTA BEG END FUN-NAME . ARGS) supports selective undo
+in the active region.  BEG and END is the range affected by this entry
+and DELTA is the number of characters added or deleted in that range by
+this change.
+
+An entry (MARKER . DISTANCE) indicates that the marker MARKER
+was adjusted in position by the offset DISTANCE (an integer).
+
+An entry of the form POSITION indicates that point was at the buffer
+location given by the integer.  Undoing an entry of this form places
+point at POSITION.
+
+Entries with value nil mark undo boundaries.  The undo command treats
+the changes between two undo boundaries as a single step to be undone.
+
+If the value of the variable is t, undo information is not recorded.  */);
+
   defsubr (&Sbuffer_list);
   defsubr (&Sget_buffer);
   defsubr (&Sget_buffer_create);
@@ -493,6 +565,7 @@ See also Info node `(elisp)Text Representations'.  */);
   defsubr (&Sset_buffer_modified_p);
   defsubr (&Srestore_buffer_modified_p);
   defsubr (&Sbuffer_modified_p);
+  defsubr (&Sbuffer_enable_undo);
 
   defsubr (&Smake_overlay);
   defsubr (&Sdelete_overlay);

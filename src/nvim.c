@@ -552,6 +552,44 @@ nvim_buffer_set_bool_option (struct buffer *b, const char opt[], bool value)
   }
 }
 
+Lisp_Object
+nvim_buffer_undo_list (struct buffer *b)
+{
+  TODO_NELISP_LATER;
+
+  ptrdiff_t undolevels;
+  eassert (BUFFER_LIVE_P (b));
+
+  LUA (5)
+  {
+    push_vim_bo (L, b->bufid);
+    lua_getfield (L, -1, "undolevels");
+    eassert (lua_isnumber (L, -1));
+    undolevels = lua_tointeger (L, -1);
+    lua_pop (L, 2);
+  }
+
+  return undolevels == -1 ? Qt : (TODO, Qnil);
+}
+void
+nvim_buffer_set_undo_list (struct buffer *b, Lisp_Object value)
+{
+  TODO_NELISP_LATER;
+
+  eassert (BUFFER_LIVE_P (b));
+
+  LUA (5)
+  {
+    push_vim_bo (L, b->bufid);
+    if (EQ (value, Qt))
+      lua_pushinteger (L, -1);
+    else
+      lua_pushnil (L);
+    lua_setfield (L, -2, "undolevels");
+    lua_pop (L, 1);
+  }
+}
+
 // --- terminal --
 static struct terminal _terminal_sentinel;
 static bool _terminal_sentinel_inited;

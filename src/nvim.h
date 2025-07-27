@@ -15,7 +15,9 @@
   X (enable_multibyte_characters_) \
   X (category_table_)
 
-#define Xmeta_buffer_vars X (read_only_)
+#define Xmeta_buffer_vars \
+  X (read_only_)          \
+  X (undo_list_)
 
 struct buffer
 {
@@ -67,6 +69,9 @@ extern bool nvim_buffer_option_is_true (struct buffer *b, const char[]);
 extern void nvim_buffer_set_bool_option (struct buffer *b, const char[],
                                          bool value);
 
+extern void nvim_buffer_set_undo_list (struct buffer *b, Lisp_Object value);
+extern Lisp_Object nvim_buffer_undo_list (struct buffer *b);
+
 extern void nvim_buf_memcpy (unsigned char *dst, ptrdiff_t beg, ptrdiff_t size);
 
 static inline Lisp_Object __attribute__ ((always_inline))
@@ -80,6 +85,8 @@ nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
       return nvim_buffer_option_is_true (b, "modifiable") ? Qnil : Qt;
     case NVIM_BUFFER_VAR_filename_:
       return nvim_buffer_filename (b);
+    case NVIM_BUFFER_VAR_undo_list_:
+      return nvim_buffer_undo_list (b);
 #define X(field)              \
 case NVIM_BUFFER_VAR_##field: \
   return b->field;
@@ -99,6 +106,38 @@ nvim_mbvar (struct buffer *b, int offset)
 #define X(field)                           \
 case offsetof (struct meta_buffer, field): \
   return nvim_bvar (b, NVIM_BUFFER_VAR_##field);
+      Xmeta_buffer_vars;
+#undef X
+    default:
+      emacs_abort ();
+    }
+}
+
+static inline void __attribute__ ((always_inline))
+nvim_bvar_set (struct buffer *b, enum nvim_buffer_var_field field,
+               Lisp_Object value)
+{
+  switch (field)
+    {
+    case NVIM_BUFFER_VAR_undo_list_:
+      nvim_buffer_set_undo_list (b, value);
+      break;
+    default:
+      emacs_abort ();
+    }
+}
+
+static inline void __attribute__ ((always_inline))
+nvim_mbvar_set (struct buffer *b, int offset, Lisp_Object value)
+{
+  eassert (offset >= sizeof (struct buffer));
+  eassert (offset < sizeof (struct meta_buffer));
+  switch (offset)
+    {
+#define X(field)                                     \
+case offsetof (struct meta_buffer, field):           \
+  nvim_bvar_set (b, NVIM_BUFFER_VAR_##field, value); \
+  break;
       Xmeta_buffer_vars;
 #undef X
     default:

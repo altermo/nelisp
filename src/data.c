@@ -138,6 +138,45 @@ do_symval_forwarding (lispfwd valcontents)
       emacs_abort ();
     }
 }
+void
+wrong_choice (Lisp_Object choice, Lisp_Object wrong)
+{
+  ptrdiff_t i = 0, len = list_length (choice);
+  Lisp_Object obj, *args;
+  AUTO_STRING (one_of, "One of ");
+  AUTO_STRING (comma, ", ");
+  AUTO_STRING (or, " or ");
+  AUTO_STRING (should_be_specified, " should be specified");
+
+  USE_SAFE_ALLOCA;
+  SAFE_ALLOCA_LISP (args, len * 2 + 1);
+
+  args[i++] = one_of;
+
+  for (obj = choice; !NILP (obj); obj = XCDR (obj))
+    {
+      args[i++] = SYMBOL_NAME (XCAR (obj));
+      args[i++] = (NILP (XCDR (obj))          ? should_be_specified
+                   : NILP (XCDR (XCDR (obj))) ? or
+                                              : comma);
+    }
+
+  obj = Fconcat (i, args);
+
+  (void) sa_count;
+
+  xsignal2 (Qerror, obj, wrong);
+}
+static void
+wrong_range (Lisp_Object min, Lisp_Object max, Lisp_Object wrong)
+{
+  AUTO_STRING (value_should_be_from, "Value should be from ");
+  AUTO_STRING (to, " to ");
+  TODO; // xsignal2 (Qerror,
+  //    CALLN (Fconcat, value_should_be_from, Fnumber_to_string (min),
+  //    to, Fnumber_to_string (max)),
+  //    wrong);
+}
 Lisp_Object
 find_symbol_value (Lisp_Object symbol)
 {
@@ -580,7 +619,41 @@ store_symval_forwarding (lispfwd valcontents, Lisp_Object newval,
 #endif
       break;
     case Lisp_Fwd_Buffer_Obj:
-      TODO;
+      {
+        int offset = XBUFFER_OBJFWD (valcontents)->offset;
+        Lisp_Object predicate = XBUFFER_OBJFWD (valcontents)->predicate;
+
+        if (!NILP (newval) && !NILP (predicate))
+          {
+            eassert (SYMBOLP (predicate));
+            Lisp_Object choiceprop = Fget (predicate, Qchoice);
+            if (!NILP (choiceprop))
+              {
+                if (NILP (Fmemq (newval, choiceprop)))
+                  wrong_choice (choiceprop, newval);
+              }
+            else
+              {
+                Lisp_Object rangeprop = Fget (predicate, Qrange);
+                if (CONSP (rangeprop))
+                  {
+                    Lisp_Object min = XCAR (rangeprop), max = XCDR (rangeprop);
+                    if (!NUMBERP (newval)
+                        || NILP (CALLN (Fleq, min, newval, max)))
+                      wrong_range (min, max, newval);
+                  }
+                else if (FUNCTIONP (predicate))
+                  {
+                    if (NILP (call1 (predicate, newval)))
+                      wrong_type_argument (predicate, newval);
+                  }
+              }
+          }
+        if (buf == NULL)
+          buf = current_buffer;
+        set_per_buffer_value (buf, offset, newval);
+      }
+      break;
     case Lisp_Fwd_Kboard_Obj:
       TODO;
     default:
@@ -678,7 +751,7 @@ start:
         lispfwd innercontents = SYMBOL_FWD (sym);
         if (BUFFER_OBJFWDP (innercontents))
           {
-            TODO;
+            TODO_NELISP_LATER;
           }
 
         if (voide)
