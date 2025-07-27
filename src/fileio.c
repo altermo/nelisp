@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <filename.h>
 #include <unistd.h>
 
 #include "lisp.h"
@@ -74,6 +75,18 @@ Given a Unix syntax file name, returns a string ending in slash.  */)
 #endif
 
   return file_name_directory (filename);
+}
+
+char const *
+get_homedir (void)
+{
+  char const *home = egetenv ("HOME");
+
+  if (!home)
+    TODO;
+  if (IS_ABSOLUTE_FILE_NAME (home))
+    return home;
+  TODO;
 }
 
 DEFUN ("expand-file-name", Fexpand_file_name, Sexpand_file_name, 1, 2, 0,
@@ -212,7 +225,24 @@ the root directory.  */)
     }
   newdir = newdirlim = 0;
   if (nm[0] == '~')
-    TODO;
+    {
+      if (IS_DIRECTORY_SEP (nm[1]) || nm[1] == 0)
+        {
+          Lisp_Object tem;
+
+          newdir = get_homedir ();
+          nm++;
+          tem = build_string (newdir);
+          newdirlim = newdir + SBYTES (tem);
+
+          if (multibyte && !STRING_MULTIBYTE (tem))
+            TODO;
+          else if (!multibyte && STRING_MULTIBYTE (tem))
+            multibyte = 1;
+        }
+      else
+        TODO;
+    }
   if (1 && !newdir)
     {
       newdir = SSDATA (default_directory);
@@ -342,6 +372,37 @@ file_directory_p (Lisp_Object file)
   return false;
 }
 
+static Lisp_Object
+check_file_access (Lisp_Object file, Lisp_Object operation, int amode)
+{
+  file = Fexpand_file_name (file, Qnil);
+#if TODO_NELISP_LATER_AND
+  Lisp_Object handler = Ffind_file_name_handler (file, operation);
+  if (!NILP (handler))
+    {
+      Lisp_Object ok = call2 (handler, operation, file);
+
+      errno = 0;
+      return ok;
+    }
+#endif
+
+  char *encoded_file = SSDATA (ENCODE_FILE (file));
+  return file_access_p (encoded_file, amode) ? Qt : Qnil;
+}
+
+DEFUN ("file-exists-p", Ffile_exists_p, Sfile_exists_p, 1, 1, 0,
+       doc: /* Return t if file FILENAME exists (whether or not you can read it).
+Return nil if FILENAME does not exist, or if there was trouble
+determining whether the file exists.
+See also `file-readable-p' and `file-attributes'.
+This returns nil for a symlink to a nonexistent file.
+Use `file-symlink-p' to test for such links.  */)
+(Lisp_Object filename)
+{
+  return check_file_access (filename, Qfile_exists_p, F_OK);
+}
+
 DEFUN ("file-directory-p", Ffile_directory_p, Sfile_directory_p, 1, 1, 0,
        doc: /* Return t if FILENAME names an existing directory.
 Return nil if FILENAME does not name a directory, or if there
@@ -379,8 +440,11 @@ DEFUN ("car-less-than-car", Fcar_less_than_car, Scar_less_than_car, 2, 2, 0,
 void
 syms_of_fileio (void)
 {
+  DEFSYM (Qfile_exists_p, "file-exists-p");
+
   defsubr (&Sfile_name_directory);
   defsubr (&Sexpand_file_name);
+  defsubr (&Sfile_exists_p);
   defsubr (&Sfile_directory_p);
   defsubr (&Scar_less_than_car);
 

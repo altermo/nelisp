@@ -2454,6 +2454,12 @@ extern int sys_faccessat (int, const char *, int, int);
 extern void init_system_name (void);
 extern int emacs_fstatat (int dirfd, char const *filename, void *st, int flags);
 extern _Noreturn void emacs_abort (void);
+extern char *egetenv_internal (const char *, ptrdiff_t);
+INLINE char *
+egetenv (const char *var)
+{
+  return egetenv_internal (var, strlen (var));
+}
 
 extern void syms_of_bytecode (void);
 void init_bytecode (void);

@@ -73,6 +73,18 @@ If optional parameter ENV is a list, then search this list instead of
     return Qnil;
 }
 
+char *
+egetenv_internal (const char *var, ptrdiff_t len)
+{
+  char *value;
+  ptrdiff_t valuelen;
+
+  if (getenv_internal (var, len, &value, &valuelen, Qnil))
+    return value;
+  else
+    return 0;
+}
+
 void
 set_initial_environment (void)
 {
