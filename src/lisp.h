@@ -2460,6 +2460,7 @@ egetenv (const char *var)
 {
   return egetenv_internal (var, strlen (var));
 }
+extern EMACS_INT get_random (void);
 
 extern void syms_of_bytecode (void);
 void init_bytecode (void);

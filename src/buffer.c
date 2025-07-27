@@ -153,6 +153,58 @@ set_buffer_if_live (Lisp_Object buffer)
     set_buffer_internal (XBUFFER (buffer));
 }
 
+DEFUN ("generate-new-buffer-name", Fgenerate_new_buffer_name,
+       Sgenerate_new_buffer_name, 1, 2, 0,
+       doc: /* Return a string that is the name of no existing buffer based on NAME.
+If there is no live buffer named NAME, then return NAME.
+Otherwise modify name by appending `<NUMBER>', incrementing NUMBER
+\(starting at 2) until an unused name is found, and then return that name.
+Optional second argument IGNORE specifies a name that is okay to use (if
+it is in the sequence to be tried) even if a buffer with that name exists.
+
+If NAME begins with a space (i.e., a buffer that is not normally
+visible to users), then if buffer NAME already exists a random number
+is first appended to NAME, to speed up finding a non-existent buffer.  */)
+(Lisp_Object name, Lisp_Object ignore)
+{
+  Lisp_Object genbase;
+
+  CHECK_STRING (name);
+
+  if ((!NILP (ignore) && !NILP (Fstring_equal (name, ignore)))
+      || NILP (Fget_buffer (name)))
+    return name;
+
+  if (SREF (name, 0) != ' ') /* See bug#1229.  */
+    genbase = name;
+  else
+    {
+      enum
+      {
+        bug_52711 = true
+      };
+      char number[bug_52711 ? INT_BUFSIZE_BOUND (int) + 1 : sizeof "-999999"];
+      EMACS_INT r = get_random ();
+      eassume (0 <= r);
+      int i = r % 1000000;
+      AUTO_STRING_WITH_LEN (lnumber, number, sprintf (number, "-%d", i));
+      genbase = concat2 (name, lnumber);
+      if (NILP (Fget_buffer (genbase)))
+        return genbase;
+    }
+
+  for (ptrdiff_t count = 2;; count++)
+    {
+      char number[INT_BUFSIZE_BOUND (ptrdiff_t) + sizeof "<>"];
+      AUTO_STRING_WITH_LEN (lnumber, number,
+                            sprintf (number, "<%" pD "d>", count));
+      Lisp_Object gentemp = concat2 (genbase, lnumber);
+      if (!NILP (Fstring_equal (gentemp, ignore))
+          || NILP (Fget_buffer (gentemp)))
+        return gentemp;
+    }
+}
+
 DEFUN ("buffer-name", Fbuffer_name, Sbuffer_name, 0, 1, 0,
        doc: /* Return the name of BUFFER, as a string.
 BUFFER defaults to the current buffer.
@@ -558,6 +610,7 @@ If the value of the variable is t, undo information is not recorded.  */);
   defsubr (&Sget_buffer_create);
   defsubr (&Scurrent_buffer);
   defsubr (&Sset_buffer);
+  defsubr (&Sgenerate_new_buffer_name);
   defsubr (&Sbuffer_name);
   defsubr (&Sbuffer_file_name);
   defsubr (&Sbuffer_local_value);

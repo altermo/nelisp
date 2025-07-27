@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -78,6 +79,44 @@ FILE *
 emacs_fdopen (int fd, const char *mode)
 {
   return fdopen (fd, mode);
+}
+
+#ifndef RAND_BITS
+# ifdef HAVE_RANDOM
+#  define RAND_BITS 31
+# else
+#  ifdef HAVE_LRAND48
+#   define RAND_BITS 31
+#   define random lrand48
+#  else
+#   define RAND_BITS 15
+#   if RAND_MAX == 32767
+#    define random rand
+#   else
+#    if RAND_MAX == 2147483647
+#     define random() (rand () >> 16)
+#    else
+#     ifdef USG
+#      define random rand
+#     else
+#      define random() (rand () >> 16)
+#     endif
+#    endif
+#   endif
+#  endif
+# endif
+#endif
+
+EMACS_INT
+get_random (void)
+{
+  EMACS_UINT val = 0;
+  int i;
+  for (i = 0; i < (FIXNUM_BITS + RAND_BITS - 1) / RAND_BITS; i++)
+    val = (random () ^ (val << RAND_BITS)
+           ^ (val >> (EMACS_INT_WIDTH - RAND_BITS)));
+  val ^= val >> (EMACS_INT_WIDTH - FIXNUM_BITS);
+  return val & INTMASK;
 }
 
 void
