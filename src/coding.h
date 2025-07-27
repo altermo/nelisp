@@ -233,6 +233,8 @@ enum coding_result_code
   CODING_RESULT_INTERRUPT
 };
 
+#define CODING_MODE_LAST_BLOCK 0x01
+
 struct iso_2022_spec
 {
   unsigned flags;

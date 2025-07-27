@@ -1,5 +1,6 @@
 #include "coding.h"
 #include "lisp.h"
+#include "buffer.h"
 #include "character.h"
 #include "charset.h"
 
@@ -1104,6 +1105,82 @@ usage: (set-coding-system-priority &rest coding-systems)  */)
   return Qnil;
 }
 
+Lisp_Object
+code_convert_string (Lisp_Object string, Lisp_Object coding_system,
+                     Lisp_Object dst_object, bool encodep, bool nocopy,
+                     bool norecord)
+{
+  struct coding_system coding;
+  ptrdiff_t chars, bytes;
+
+  CHECK_STRING (string);
+  if (NILP (coding_system))
+    {
+      if (!norecord)
+        Vlast_coding_system_used = Qno_conversion;
+      if (NILP (dst_object))
+        return nocopy ? string : Fcopy_sequence (string);
+    }
+
+  if (NILP (coding_system))
+    coding_system = Qno_conversion;
+  else
+    CHECK_CODING_SYSTEM (coding_system);
+  if (NILP (dst_object))
+    dst_object = Qt;
+  else if (!EQ (dst_object, Qt))
+    CHECK_BUFFER (dst_object);
+
+  setup_coding_system (coding_system, &coding);
+  coding.mode |= CODING_MODE_LAST_BLOCK;
+  chars = SCHARS (string);
+  bytes = SBYTES (string);
+
+  if (EQ (dst_object, Qt))
+    {
+      Lisp_Object attrs = CODING_ID_ATTRS (coding.id);
+      if (!NILP (CODING_ATTR_ASCII_COMPAT (attrs))
+          && (STRING_MULTIBYTE (string) ? (chars == bytes)
+                                        : string_ascii_p (string))
+          && (EQ (CODING_ID_EOL_TYPE (coding.id), Qunix)
+              || inhibit_eol_conversion
+              || !memchr (SDATA (string), encodep ? '\n' : '\r', bytes)))
+        {
+          if (!norecord)
+            Vlast_coding_system_used = coding_system;
+          return (nocopy
+                    ? string
+                    : (encodep ? make_unibyte_string (SSDATA (string), bytes)
+                               : make_multibyte_string (SSDATA (string), bytes,
+                                                        bytes)));
+        }
+    }
+  TODO;
+}
+
+DEFUN ("decode-coding-string", Fdecode_coding_string, Sdecode_coding_string,
+       2, 4, 0,
+       doc: /* Decode STRING which is encoded in CODING-SYSTEM, and return the result.
+
+Optional third arg NOCOPY non-nil means it is OK to return STRING itself
+if the decoding operation is trivial.
+
+Optional fourth arg BUFFER non-nil means that the decoded text is
+inserted in that buffer after point (point does not move).  In this
+case, the return value is the length of the decoded text.  If that
+buffer is unibyte, it receives the individual bytes of the internal
+representation of the decoded text.
+
+This function sets `last-coding-system-used' to the precise coding system
+used (which may be different from CODING-SYSTEM if CODING-SYSTEM is
+not fully specified.)  The function does not change the match data.  */)
+(Lisp_Object string, Lisp_Object coding_system, Lisp_Object nocopy,
+ Lisp_Object buffer)
+{
+  return code_convert_string (string, coding_system, buffer, 0, !NILP (nocopy),
+                              0);
+}
+
 DEFUN ("set-safe-terminal-coding-system-internal",
        Fset_safe_terminal_coding_system_internal,
        Sset_safe_terminal_coding_system_internal, 1, 1, 0,
@@ -1255,6 +1332,7 @@ syms_of_coding (void)
   defsubr (&Scoding_system_base);
   defsubr (&Scoding_system_eol_type);
   defsubr (&Sset_coding_system_priority);
+  defsubr (&Sdecode_coding_string);
   defsubr (&Sset_safe_terminal_coding_system_internal);
 
   DEFVAR_LISP ("coding-system-list", Vcoding_system_list,
@@ -1297,6 +1375,11 @@ Don't modify this variable directly, but use `set-coding-system-priority'.  */);
 Potentially also used for decoding keyboard input on X Windows, and is
 used for encoding standard output and error streams.  */);
   Vlocale_coding_system = Qnil;
+
+  DEFVAR_LISP ("last-coding-system-used", Vlast_coding_system_used,
+        doc: /*
+Coding system used in the latest file or process I/O.  */);
+  Vlast_coding_system_used = Qnil;
 
   DEFVAR_BOOL ("inhibit-eol-conversion", inhibit_eol_conversion,
         doc: /*
