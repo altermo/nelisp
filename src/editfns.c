@@ -1035,6 +1035,58 @@ minibuffer.  The default value is the number at point (if any).  */)
   return position;
 }
 
+DEFUN ("insert", Finsert, Sinsert, 0, MANY, 0,
+       doc: /* Insert the arguments, either strings or characters, at point.
+Point and after-insertion markers move forward to end up
+ after the inserted text.
+Any other markers at the point of insertion remain before the text.
+
+If the current buffer is multibyte, unibyte strings are converted
+to multibyte for insertion (see `string-make-multibyte').
+If the current buffer is unibyte, multibyte strings are converted
+to unibyte for insertion (see `string-make-unibyte').
+
+When operating on binary data, it may be necessary to preserve the
+original bytes of a unibyte string when inserting it into a multibyte
+buffer; to accomplish this, apply `decode-coding-string' with the
+`no-conversion' coding system to the string and insert the result.
+
+usage: (insert &rest ARGS)  */)
+(ptrdiff_t nargs, Lisp_Object *args)
+{
+  ptrdiff_t argnum;
+  Lisp_Object val;
+
+  for (argnum = 0; argnum < nargs; argnum++)
+    {
+      val = args[argnum];
+      if (CHARACTERP (val))
+        {
+          int c = XFIXNAT (val);
+          unsigned char str[MAX_MULTIBYTE_LENGTH];
+          int len;
+
+          if (!NILP (BVAR (current_buffer, enable_multibyte_characters)))
+            len = CHAR_STRING (c, str);
+          else
+            {
+              str[0] = CHAR_TO_BYTE8 (c);
+              len = 1;
+            }
+          insert ((char *) str, len);
+        }
+      else if (STRINGP (val))
+        {
+          if (string_intervals (val))
+            TODO;
+          insert ((const char *) SDATA (val), SBYTES (val));
+        }
+      else
+        wrong_type_argument (Qchar_or_string_p, val);
+    }
+  return Qnil;
+}
+
 void
 syms_of_editfns (void)
 {
@@ -1067,4 +1119,5 @@ it to be non-nil.  */);
   defsubr (&Schar_equal);
   defsubr (&Schar_to_string);
   defsubr (&Sgoto_char);
+  defsubr (&Sinsert);
 }

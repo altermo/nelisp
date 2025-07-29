@@ -649,6 +649,9 @@ nvim_set_point (ptrdiff_t position)
 void
 nvim_buf_insert (const char *string, ptrdiff_t nbytes)
 {
+  if (nbytes == 0)
+    return;
+
   LUA (20)
   {
     push_vim_api (L, "nvim_buf_set_text");

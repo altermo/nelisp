@@ -1064,13 +1064,13 @@ setup_frame:;
           NEXT;
 
         CASE (Binsert):
-          TODO; // TOP = Finsert (1, &TOP);
+          TOP = Finsert (1, &TOP);
           NEXT;
 
         CASE (BinsertN):
           op = FETCH;
           DISCARD (op - 1);
-          TODO; // TOP = Finsert (op, &TOP);
+          TOP = Finsert (op, &TOP);
           NEXT;
 
         CASE (Bpoint_max):
