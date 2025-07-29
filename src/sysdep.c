@@ -10,6 +10,12 @@
 #include "lisp.h"
 
 int
+sys_fstat (int fd, struct stat *statb)
+{
+  return fstat (fd, statb);
+}
+
+int
 sys_faccessat (int fd, const char *pathname, int mode, int flags)
 {
   return faccessat (fd, pathname, mode, flags);
@@ -79,6 +85,34 @@ FILE *
 emacs_fdopen (int fd, const char *mode)
 {
   return fdopen (fd, mode);
+}
+
+#ifndef MAX_RW_COUNT
+# define MAX_RW_COUNT (INT_MAX >> 18 << 18)
+#endif
+
+static ptrdiff_t
+emacs_intr_read (int fd, void *buf, ptrdiff_t nbyte, bool interruptible)
+{
+  eassert (nbyte <= MAX_RW_COUNT);
+
+  ssize_t result;
+
+  do
+    {
+      if (interruptible)
+        maybe_quit ();
+      result = read (fd, buf, nbyte);
+    }
+  while (result < 0 && errno == EINTR);
+
+  return result;
+}
+
+ptrdiff_t
+emacs_read_quit (int fd, void *buf, ptrdiff_t nbyte)
+{
+  return emacs_intr_read (fd, buf, nbyte, true);
 }
 
 #ifndef RAND_BITS

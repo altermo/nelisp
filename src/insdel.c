@@ -1,5 +1,12 @@
 #include "lisp.h"
 #include "character.h"
+#include "nvim.h"
+
+void
+insert (const char *string, ptrdiff_t nbytes)
+{
+  nvim_buf_insert (string, nbytes);
+}
 
 ptrdiff_t
 copy_text (const unsigned char *from_addr, unsigned char *to_addr,

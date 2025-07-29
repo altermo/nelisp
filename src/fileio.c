@@ -4,7 +4,26 @@
 #include <unistd.h>
 
 #include "lisp.h"
+#include "buffer.h"
 #include "coding.h"
+
+typedef int emacs_fd;
+
+#define emacs_fd_open emacs_open
+#define emacs_fd_close emacs_close
+#define emacs_fd_read emacs_read_quit
+#define emacs_fd_lseek lseek
+#define emacs_fd_fstat sys_fstat
+#define emacs_fd_valid_p(fd) ((fd) >= 0)
+
+static void
+close_file_unwind_emacs_fd (void *ptr)
+{
+  emacs_fd *fd;
+
+  fd = ptr;
+  emacs_fd_close (*fd);
+}
 
 void
 fclose_unwind (void *arg)
@@ -437,6 +456,138 @@ DEFUN ("car-less-than-car", Fcar_less_than_car, Scar_less_than_car, 2, 2, 0,
   return arithcompare (ca, cb, ARITH_LESS);
 }
 
+static void
+restore_point_unwind (void *location)
+{
+  SET_PT (*(ptrdiff_t *) location);
+}
+
+enum
+{
+  READ_BUF_SIZE = MAX_ALLOCA
+};
+
+DEFUN ("insert-file-contents", Finsert_file_contents, Sinsert_file_contents,
+       1, 5, 0,
+       doc: /* Insert contents of file FILENAME after point.
+Returns list of absolute file name and number of characters inserted.
+If second argument VISIT is non-nil, the buffer's visited filename and
+last save file modtime are set, and it is marked unmodified.  If
+visiting and the file does not exist, visiting is completed before the
+error is signaled.
+
+The optional third and fourth arguments BEG and END specify what portion
+of the file to insert.  These arguments count bytes in the file, not
+characters in the buffer.  If VISIT is non-nil, BEG and END must be nil.
+
+When inserting data from a special file (e.g., /dev/urandom), you
+can't specify VISIT or BEG, and END should be specified to avoid
+inserting unlimited data into the buffer from some special files
+which otherwise could supply infinite amounts of data.
+
+If optional fifth argument REPLACE is non-nil and FILENAME names a
+regular file, replace the current buffer contents (in the accessible
+portion) with the file's contents.  This is better than simply
+deleting and inserting the whole thing because (1) it preserves some
+marker positions (in unchanged portions at the start and end of the
+buffer) and (2) it puts less data in the undo list.  When REPLACE is
+non-nil, the second element of the return value is the number of
+characters that replace the previous buffer contents.
+
+If FILENAME is not a regular file and REPLACE is `if-regular', erase
+the accessible portion of the buffer and insert the new contents.  Any
+other non-nil value of REPLACE will signal an error if FILENAME is not
+a regular file.
+
+This function does code conversion according to the value of
+`coding-system-for-read' or `file-coding-system-alist', and sets the
+variable `last-coding-system-used' to the coding system actually used.
+
+In addition, this function decodes the inserted text from known formats
+by calling `format-decode', which see.  */)
+(Lisp_Object filename, Lisp_Object visit, Lisp_Object beg, Lisp_Object end,
+ Lisp_Object replace)
+{
+  struct stat st;
+  specpdl_ref count = SPECPDL_INDEX ();
+  Lisp_Object val, orig_filename;
+  ptrdiff_t inserted = 0;
+  emacs_fd fd;
+  ptrdiff_t total = 0;
+  char read_buf[READ_BUF_SIZE];
+  ptrdiff_t read_quit = 0;
+  val = Qnil;
+
+  TODO_NELISP_LATER;
+
+  if (!NILP (visit) || !NILP (beg) || !NILP (end) || !NILP (replace))
+    TODO;
+
+#if TODO_NELISP_LATER_AND
+  handler = Ffind_file_name_handler (filename, Qinsert_file_contents);
+  if (!NILP (handler))
+    {
+      val = call6 (handler, Qinsert_file_contents, filename, visit, beg, end,
+                   replace);
+      if (CONSP (val) && CONSP (XCDR (val))
+          && RANGED_FIXNUMP (0, XCAR (XCDR (val)), ZV - PT))
+        inserted = XFIXNUM (XCAR (XCDR (val)));
+      goto handled;
+    }
+#endif
+
+  CHECK_STRING (filename);
+  filename = Fexpand_file_name (filename, Qnil);
+
+  orig_filename = filename;
+  filename = ENCODE_FILE (filename);
+
+  fd = emacs_fd_open (SSDATA (filename), O_RDONLY, 0);
+  if (!emacs_fd_valid_p (fd))
+    TODO;
+
+  specpdl_ref fd_index = SPECPDL_INDEX ();
+  record_unwind_protect_ptr (close_file_unwind_emacs_fd, &fd);
+
+  if (emacs_fd_fstat (fd, &st) != 0)
+    TODO;
+
+  if (!(S_ISREG (st.st_mode) || S_ISDIR (st.st_mode)))
+    TODO;
+
+  total = st.st_size;
+  if (total < 0)
+    TODO;
+
+  if (total == 0)
+    total = READ_BUF_SIZE;
+
+  ptrdiff_t point = PT;
+  record_unwind_protect_ptr (restore_point_unwind, &point);
+
+  while (inserted < total)
+    {
+      ptrdiff_t this;
+      ptrdiff_t trytry = READ_BUF_SIZE;
+      this = emacs_fd_read (fd, read_buf, READ_BUF_SIZE);
+      insert (read_buf, this);
+      if (this <= 0)
+        {
+          read_quit = this;
+          break;
+        }
+      inserted += this;
+    }
+
+  if (read_quit < 0)
+    TODO;
+
+  if (NILP (val))
+    val = list2 (orig_filename, make_fixnum (inserted));
+
+  return unbind_to (count, val);
+}
+
 void
 syms_of_fileio (void)
 {
@@ -447,6 +598,7 @@ syms_of_fileio (void)
   defsubr (&Sfile_exists_p);
   defsubr (&Sfile_directory_p);
   defsubr (&Scar_less_than_car);
+  defsubr (&Sinsert_file_contents);
 
   DEFVAR_LISP ("file-name-handler-alist", Vfile_name_handler_alist,
         doc: /* Alist of elements (REGEXP . HANDLER) for file names handled specially.

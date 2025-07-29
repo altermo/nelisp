@@ -646,6 +646,44 @@ nvim_set_point (ptrdiff_t position)
   }
 }
 
+void
+nvim_buf_insert (const char *string, ptrdiff_t nbytes)
+{
+  LUA (20)
+  {
+    push_vim_api (L, "nvim_buf_set_text");
+    lua_pushnumber (L, 0);
+    push_vim_api (L, "nvim_win_get_cursor");
+    lua_pushnumber (L, 0);
+    lua_call (L, 1, 1);
+    eassert (lua_istable (L, -1));
+    lua_rawgeti (L, -1, 1);
+    eassert (lua_isnumber (L, -1));
+    lua_pushnumber (L, lua_tonumber (L, -1) - 1);
+    lua_remove (L, -2);
+    lua_rawgeti (L, -2, 2);
+    eassert (lua_isnumber (L, -1));
+    lua_remove (L, -3);
+    lua_pushvalue (L, -2);
+    lua_pushvalue (L, -2);
+    lua_createtable (L, 1, 0);
+
+    long index = 1;
+    char *next_newline;
+    while ((next_newline = memchr (string, '\n', nbytes)))
+      {
+        ptrdiff_t diff = next_newline - string;
+        nbytes = nbytes - diff - 1;
+        lua_pushlstring (L, string, diff);
+        lua_rawseti (L, -2, index++);
+        string = next_newline + 1;
+      }
+    lua_pushlstring (L, string, nbytes);
+    lua_rawseti (L, -2, index);
+    lua_call (L, 6, 0);
+  }
+}
+
 // --- terminal --
 static struct terminal _terminal_sentinel;
 static bool _terminal_sentinel_inited;

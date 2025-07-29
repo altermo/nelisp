@@ -2461,6 +2461,8 @@ egetenv (const char *var)
   return egetenv_internal (var, strlen (var));
 }
 extern EMACS_INT get_random (void);
+extern int sys_fstat (int fd, struct stat *statb);
+ptrdiff_t emacs_read_quit (int fd, void *buf, ptrdiff_t nbyte);
 
 extern void syms_of_bytecode (void);
 void init_bytecode (void);
@@ -2525,6 +2527,7 @@ extern void syms_of_display (void);
 extern ptrdiff_t copy_text (const unsigned char *from_addr,
                             unsigned char *to_addr, ptrdiff_t nbytes,
                             bool from_multibyte, bool to_multibyte);
+extern void insert (const char *, ptrdiff_t);
 
 extern void syms_of_casefiddle (void);
 
