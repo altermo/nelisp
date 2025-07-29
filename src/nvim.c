@@ -94,6 +94,20 @@ push_vim_bo (lua_State *L, long bufid)
   }
 }
 
+static void
+push_vim_cmd (lua_State *L, const char *name)
+{
+  LUALC (L, 5, 1)
+  {
+    lua_getglobal (L, "vim");
+    lua_getfield (L, -1, "cmd");
+    lua_remove (L, -2);
+    lua_getfield (L, -1, name);
+    lua_remove (L, -2);
+    eassert (lua_isfunction (L, -1));
+  }
+}
+
 enum nvim_kind
 {
   NVIM_BUFFER,
@@ -613,6 +627,23 @@ nvim_buffer_kill (struct buffer *b)
       }
   }
   return success;
+}
+
+void
+nvim_set_point (ptrdiff_t position)
+{
+  if (position < 0)
+    position = 0;
+  LUA (10)
+  {
+    push_vim_cmd (L, "goto");
+    lua_createtable (L, 0, 1);
+    lua_createtable (L, 1, 0);
+    lua_pushnumber (L, position);
+    lua_rawseti (L, -2, 1);
+    lua_setfield (L, -2, "range");
+    lua_call (L, 1, 0);
+  }
 }
 
 // --- terminal --

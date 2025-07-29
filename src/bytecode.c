@@ -1060,7 +1060,7 @@ setup_frame:;
           NEXT;
 
         CASE (Bgoto_char):
-          TODO; // TOP = Fgoto_char (TOP);
+          TOP = Fgoto_char (TOP);
           NEXT;
 
         CASE (Binsert):

@@ -1014,6 +1014,27 @@ usage: (char-to-string CHAR)  */)
   return make_string_from_bytes ((char *) str, 1, len);
 }
 
+DEFUN ("goto-char", Fgoto_char, Sgoto_char, 1, 1,
+         "(goto-char--read-natnum-interactive \"Go to char: \")",
+       doc: /* Set point to POSITION, a number or marker.
+Beginning of buffer is position (point-min), end is (point-max).
+
+The return value is POSITION.
+
+If called interactively, a numeric prefix argument specifies
+POSITION; without a numeric prefix argument, read POSITION from the
+minibuffer.  The default value is the number at point (if any).  */)
+(register Lisp_Object position)
+{
+  if (MARKERP (position))
+    TODO; // set_point_from_marker (position);
+  else if (FIXNUMP (position))
+    SET_PT (clip_to_bounds (BEGV, XFIXNUM (position), ZV));
+  else
+    wrong_type_argument (Qinteger_or_marker_p, position);
+  return position;
+}
+
 void
 syms_of_editfns (void)
 {
@@ -1045,4 +1066,5 @@ it to be non-nil.  */);
   defsubr (&Spropertize);
   defsubr (&Schar_equal);
   defsubr (&Schar_to_string);
+  defsubr (&Sgoto_char);
 }

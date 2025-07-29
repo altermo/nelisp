@@ -22,6 +22,14 @@ enum
 #define BEGV_BYTE (nvim_get_field_begv (current_buffer, false))
 #define PT (nvim_get_field_pt (current_buffer))
 
+#define set_point nvim_set_point
+
+INLINE void
+SET_PT (ptrdiff_t position)
+{
+  set_point (position);
+}
+
 extern void set_buffer_if_live (Lisp_Object);
 
 INLINE bool
