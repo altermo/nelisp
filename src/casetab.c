@@ -194,6 +194,12 @@ init_casetab_once (void)
   set_case_table (down, 1);
 }
 
+DEFUN ("set-standard-case-table", Fset_standard_case_table,
+       Sset_standard_case_table, 1, 1, 0,
+       doc: /* Select a new standard case table for new buffers.
+See `set-case-table' for more info on case tables.  */)
+(Lisp_Object table) { return set_case_table (table, 1); }
+
 DEFUN ("current-case-table", Fcurrent_case_table, Scurrent_case_table, 0, 0, 0,
        doc: /* Return the case table of the current buffer.  */)
 (void) { return BVAR (current_buffer, downcase_table); }
@@ -211,4 +217,5 @@ syms_of_casetab (void)
   defsubr (&Scase_table_p);
   defsubr (&Sstandard_case_table);
   defsubr (&Scurrent_case_table);
+  defsubr (&Sset_standard_case_table);
 }
