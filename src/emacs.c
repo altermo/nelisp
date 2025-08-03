@@ -47,6 +47,10 @@ hpux, usg-unix-v) indicates some sort of Unix system.  */);
 This is nil during initialization.  */);
   Vafter_init_time = Qnil;
 
+  DEFVAR_LISP ("system-messages-locale", Vsystem_messages_locale,
+        doc: /* System locale for messages.  */);
+  Vsystem_messages_locale = Qnil;
+
   DEFVAR_BOOL ("inhibit-x-resources", inhibit_x_resources,
         doc: /* If non-nil, X resources, Windows Registry settings, and NS defaults are not used.  */);
   inhibit_x_resources = 0;
