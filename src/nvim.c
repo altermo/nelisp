@@ -419,14 +419,14 @@ nvim_buf_byte1_to_pos0 (ptrdiff_t byte1)
     lua_call (L, 1, 1);
     eassert (lua_isnumber (L, -1));
     eassert (lua_tointeger (L, -1) != -1);
-    pos.row = lua_tointeger (L, -1);
+    pos.row = lua_tointeger (L, -1) - 1;
     lua_call (L, 1, 1);
     eassert (lua_isnumber (L, -1));
     eassert (lua_tointeger (L, -1) != -1);
-    pos.col = lua_tointeger (L, -1);
+    pos.col = byte1 - lua_tointeger (L, -1);
     lua_pop (L, 1);
     push_vim_fn (L, "getline");
-    lua_pushnumber (L, pos.row);
+    lua_pushnumber (L, pos.row + 1);
     lua_call (L, 1, 1);
     eassert (lua_isstring (L, -1));
     ptrdiff_t len = lua_objlen (L, -1);
