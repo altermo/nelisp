@@ -269,6 +269,342 @@ match_limit (Lisp_Object num, bool beginningp)
     make_fixnum ((beginningp) ? search_regs.start[n] : search_regs.end[n]));
 }
 
+static void
+set_search_regs (ptrdiff_t beg_byte, ptrdiff_t nbytes)
+{
+  ptrdiff_t i;
+
+  if (!NILP (Vinhibit_changing_match_data))
+    return;
+
+  if (search_regs.num_regs == 0)
+    {
+      search_regs.start = xmalloc (2 * sizeof *search_regs.start);
+      search_regs.end = xmalloc (2 * sizeof *search_regs.end);
+      search_regs.num_regs = 2;
+    }
+
+  for (i = 1; i < search_regs.num_regs; i++)
+    {
+      search_regs.start[i] = -1;
+      search_regs.end[i] = -1;
+    }
+
+  search_regs.start[0] = BYTE_TO_CHAR (beg_byte);
+  search_regs.end[0] = BYTE_TO_CHAR (beg_byte + nbytes);
+  XSETBUFFER (last_thing_searched, current_buffer);
+}
+
+static bool
+trivial_regexp_p (Lisp_Object regexp)
+{
+  ptrdiff_t len = SBYTES (regexp);
+  unsigned char *s = SDATA (regexp);
+  while (--len >= 0)
+    {
+      switch (*s++)
+        {
+        case '.':
+        case '*':
+        case '+':
+        case '?':
+        case '[':
+        case '^':
+        case '$':
+          return 0;
+        case '\\':
+          if (--len < 0)
+            return 0;
+          switch (*s++)
+            {
+            case '|':
+            case '(':
+            case ')':
+            case '`':
+            case '\'':
+            case 'b':
+            case 'B':
+            case '<':
+            case '>':
+            case 'w':
+            case 'W':
+            case 's':
+            case 'S':
+            case '=':
+            case '{':
+            case '}':
+            case '_':
+            case 'c':
+            case 'C':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+              return 0;
+            }
+        }
+    }
+  return 1;
+}
+
+static void
+freeze_buffer_relocation (void)
+{
+}
+
+static struct re_registers search_regs_1;
+
+static EMACS_INT
+search_buffer_re (Lisp_Object string, ptrdiff_t pos, ptrdiff_t pos_byte,
+                  ptrdiff_t lim, ptrdiff_t lim_byte, EMACS_INT n,
+                  Lisp_Object trt, Lisp_Object inverse_trt, bool posix)
+{
+  ptrdiff_t s1;
+
+  bool preserve_match_data = NILP (Vinhibit_changing_match_data);
+
+  struct regexp_cache *cache_entry
+    = compile_pattern (string,
+                       preserve_match_data ? &search_regs : &search_regs_1, trt,
+                       posix,
+                       !NILP (
+                         BVAR (current_buffer, enable_multibyte_characters)));
+  struct re_pattern_buffer *bufp = &cache_entry->buf;
+
+  maybe_quit ();
+
+  s1 = ZV_BYTE - BEG_BYTE;
+  // TODO: somehow implement chunkwise(linewise) search system
+  //  instead of copying the whole buffer into a char[]
+  unsigned char p1[s1];
+  unrecoverable_error = true;
+  buffer_memcpy (p1, 1, s1);
+
+  specpdl_ref count = SPECPDL_INDEX ();
+  freeze_buffer_relocation ();
+  freeze_pattern (cache_entry);
+
+  while (n < 0)
+    {
+      ptrdiff_t val;
+
+      re_match_object = Qnil;
+      val = re_search (bufp, (char *) p1, s1, pos_byte - BEGV_BYTE,
+                       lim_byte - pos_byte,
+                       preserve_match_data ? &search_regs : &search_regs_1);
+      if (val == -2)
+        {
+          unbind_to (count, Qnil);
+          matcher_overflow ();
+        }
+      if (val >= 0)
+        {
+          if (preserve_match_data)
+            {
+              pos_byte = search_regs.start[0] + BEGV_BYTE;
+              for (ptrdiff_t i = 0; i < search_regs.num_regs; i++)
+                if (search_regs.start[i] >= 0)
+                  {
+                    search_regs.start[i]
+                      = BYTE_TO_CHAR (search_regs.start[i] + BEGV_BYTE);
+                    search_regs.end[i]
+                      = BYTE_TO_CHAR (search_regs.end[i] + BEGV_BYTE);
+                  }
+              XSETBUFFER (last_thing_searched, current_buffer);
+
+              pos = search_regs.start[0];
+            }
+          else
+            {
+              pos_byte = search_regs_1.start[0] + BEGV_BYTE;
+
+              pos = BYTE_TO_CHAR (search_regs_1.start[0] + BEGV_BYTE);
+            }
+        }
+      else
+        {
+          unbind_to (count, Qnil);
+          return (n);
+        }
+      n++;
+      maybe_quit ();
+    }
+  while (n > 0)
+    {
+      ptrdiff_t val;
+
+      re_match_object = Qnil;
+      val = re_search (bufp, (char *) p1, s1, pos_byte - BEGV_BYTE,
+                       lim_byte - pos_byte,
+                       preserve_match_data ? &search_regs : &search_regs_1);
+      if (val == -2)
+        {
+          unbind_to (count, Qnil);
+          matcher_overflow ();
+        }
+      if (val >= 0)
+        {
+          if (preserve_match_data)
+            {
+              pos_byte = search_regs.end[0] + BEGV_BYTE;
+              for (ptrdiff_t i = 0; i < search_regs.num_regs; i++)
+                if (search_regs.start[i] >= 0)
+                  {
+                    search_regs.start[i]
+                      = BYTE_TO_CHAR (search_regs.start[i] + BEGV_BYTE);
+                    search_regs.end[i]
+                      = BYTE_TO_CHAR (search_regs.end[i] + BEGV_BYTE);
+                  }
+              XSETBUFFER (last_thing_searched, current_buffer);
+              pos = search_regs.end[0];
+            }
+          else
+            {
+              pos_byte = search_regs_1.end[0] + BEGV_BYTE;
+              pos = BYTE_TO_CHAR (search_regs_1.end[0] + BEGV_BYTE);
+            }
+        }
+      else
+        {
+          unbind_to (count, Qnil);
+          return (0 - n);
+        }
+      n--;
+      maybe_quit ();
+    }
+  unbind_to (count, Qnil);
+  return (pos);
+}
+
+EMACS_INT
+search_buffer (Lisp_Object string, ptrdiff_t pos, ptrdiff_t pos_byte,
+               ptrdiff_t lim, ptrdiff_t lim_byte, EMACS_INT n, bool RE,
+               Lisp_Object trt, Lisp_Object inverse_trt, bool posix)
+{
+  if (running_asynch_code)
+    TODO; // save_search_regs ();
+
+  if (n == 0 || SCHARS (string) == 0)
+    {
+      set_search_regs (pos_byte, 0);
+      return pos;
+    }
+
+  if (RE && !(trivial_regexp_p (string) && NILP (Vsearch_spaces_regexp)))
+    pos = search_buffer_re (string, pos, pos_byte, lim, lim_byte, n, trt,
+                            inverse_trt, posix);
+  else
+    TODO; // pos = search_buffer_non_re (string, pos, pos_byte, lim, lim_byte,
+          // n, RE,
+  //                             trt, inverse_trt, posix);
+
+  return pos;
+}
+
+static Lisp_Object
+search_command (Lisp_Object string, Lisp_Object bound, Lisp_Object noerror,
+                Lisp_Object count, int direction, bool RE, bool posix)
+{
+  EMACS_INT np;
+  EMACS_INT lim;
+  ptrdiff_t lim_byte;
+  EMACS_INT n = direction;
+
+  if (!NILP (count))
+    {
+      CHECK_FIXNUM (count);
+      n *= XFIXNUM (count);
+    }
+
+  CHECK_STRING (string);
+  if (NILP (bound))
+    {
+      if (n > 0)
+        lim = ZV, lim_byte = ZV_BYTE;
+      else
+        lim = BEGV, lim_byte = BEGV_BYTE;
+    }
+  else
+    {
+      lim = fix_position (bound);
+      if (n > 0 ? lim < PT : lim > PT)
+        error ("Invalid search bound (wrong side of point)");
+      if (lim > ZV)
+        lim = ZV, lim_byte = ZV_BYTE;
+      else if (lim < BEGV)
+        lim = BEGV, lim_byte = BEGV_BYTE;
+      else
+        lim_byte = CHAR_TO_BYTE (lim);
+    }
+
+  set_char_table_extras (BVAR (current_buffer, case_canon_table), 2,
+                         BVAR (current_buffer, case_eqv_table));
+
+  np = search_buffer (string, PT, PT_BYTE, lim, lim_byte, n, RE,
+                      (!NILP (Vcase_fold_search)
+                         ? BVAR (current_buffer, case_canon_table)
+                         : Qnil),
+                      (!NILP (Vcase_fold_search)
+                         ? BVAR (current_buffer, case_eqv_table)
+                         : Qnil),
+                      posix);
+  if (np <= 0)
+    {
+      if (NILP (noerror))
+        TODO; // xsignal1 (Qsearch_failed, string);
+
+      if (!EQ (noerror, Qt))
+        {
+          eassert (BEGV <= lim && lim <= ZV);
+          TODO; // SET_PT_BOTH (lim, lim_byte);
+          return Qnil;
+        }
+      else
+        return Qnil;
+    }
+
+  eassert (BEGV <= np && np <= ZV);
+  SET_PT (np);
+
+  return make_fixnum (np);
+}
+
+DEFUN ("re-search-forward", Fre_search_forward, Sre_search_forward, 1, 4,
+       "sRE search: ",
+       doc: /* Search forward from point for regular expression REGEXP.
+Set point to the end of the occurrence found, and return point.
+The optional second argument BOUND is a buffer position that bounds
+  the search.  The match found must not end after that position.  A
+  value of nil means search to the end of the accessible portion of
+  the buffer.
+The optional third argument NOERROR indicates how errors are handled
+  when the search fails: if it is nil or omitted, emit an error; if
+  it is t, simply return nil and do nothing; if it is neither nil nor
+  t, move to the limit of search and return nil.
+The optional fourth argument COUNT is a number that indicates the
+  search direction and the number of occurrences to search for.  If it
+  is positive, search forward for COUNT successive occurrences; if it
+  is negative, search backward, instead of forward, for -COUNT
+  occurrences.  A value of nil means the same as 1.
+With COUNT positive/negative, the match found is the COUNTth/-COUNTth
+  one in the buffer located entirely after/before the origin of the
+  search.
+
+Search case-sensitivity is determined by the value of the variable
+`case-fold-search', which see.
+
+See also the functions `match-beginning', `match-end', `match-string',
+and `replace-match'.  */)
+(Lisp_Object regexp, Lisp_Object bound, Lisp_Object noerror, Lisp_Object count)
+{
+  return search_command (regexp, bound, noerror, count, 1, true, false);
+}
+
 DEFUN ("replace-match", Freplace_match, Sreplace_match, 1, 5, 0,
        doc: /* Replace text matched by last search with NEWTEXT.
 Leave point at the end of the replacement text.
@@ -779,6 +1115,7 @@ is to bind it with `let' around a small expression.  */);
 
   defsubr (&Sregexp_quote);
   defsubr (&Sstring_match);
+  defsubr (&Sre_search_forward);
   defsubr (&Sreplace_match);
   defsubr (&Smatch_beginning);
   defsubr (&Smatch_end);

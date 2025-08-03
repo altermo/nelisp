@@ -370,7 +370,7 @@ nvim_get_field_begv (struct buffer *b, bool chars)
 }
 
 ptrdiff_t
-nvim_get_field_pt (struct buffer *b)
+nvim_get_field_pt (struct buffer *b, bool chars)
 {
   eassert (BUFFER_LIVE_P (b));
   long bufid = b->bufid;
@@ -381,7 +381,10 @@ nvim_get_field_pt (struct buffer *b)
     lua_pushnumber (L, bufid);
     push_vim_fn (L, "wordcount");
     lua_call (L, 2, 1);
-    lua_getfield (L, -1, "cursor_chars");
+    if (chars)
+      lua_getfield (L, -1, "cursor_chars");
+    else
+      lua_getfield (L, -1, "cursor_bytes");
     eassert (lua_isnumber (L, -1));
     pt = lua_tointeger (L, -1);
     if (pt == 0)

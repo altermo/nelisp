@@ -26,7 +26,8 @@ RE_SETUP_SYNTAX_TABLE_FOR_OBJECT (Lisp_Object object, ptrdiff_t frombyte)
     }
   else if (NILP (gl_state.object))
     {
-      TODO;
+      gl_state.b_property = BEG;
+      gl_state.e_property = ZV;
     }
   else if (EQ (gl_state.object, Qt))
     {

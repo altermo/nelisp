@@ -64,7 +64,7 @@ extern bool nvim_buffer_kill (struct buffer *);
 
 extern ptrdiff_t nvim_get_field_zv (struct buffer *b, bool chars);
 extern ptrdiff_t nvim_get_field_begv (struct buffer *b, bool chars);
-extern ptrdiff_t nvim_get_field_pt (struct buffer *b);
+extern ptrdiff_t nvim_get_field_pt (struct buffer *b, bool chars);
 
 extern void nvim_set_point (ptrdiff_t);
 

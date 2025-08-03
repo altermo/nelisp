@@ -15,12 +15,15 @@ enum
 };
 
 #define BUF_Z(buf) ZV // TODO: is this correct? (we presume there's no gap)
+#define BUF_Z_BYTE(buf) \
+  ZV_BYTE // TODO: is this correct? (we presume there's no gap)
 
 #define ZV (nvim_get_field_zv (current_buffer, true))
 #define ZV_BYTE (nvim_get_field_zv (current_buffer, false))
 #define BEGV (nvim_get_field_begv (current_buffer, true))
 #define BEGV_BYTE (nvim_get_field_begv (current_buffer, false))
-#define PT (nvim_get_field_pt (current_buffer))
+#define PT (nvim_get_field_pt (current_buffer, true))
+#define PT_BYTE (nvim_get_field_pt (current_buffer, false))
 
 #define set_point nvim_set_point
 
@@ -28,6 +31,26 @@ INLINE void
 SET_PT (ptrdiff_t position)
 {
   set_point (position);
+}
+
+INLINE ptrdiff_t
+BYTE_TO_CHAR (ptrdiff_t bytepos)
+{
+#if TODO_NELISP_LATER_AND
+  return buf_bytepos_to_charpos (current_buffer, bytepos);
+#else
+  return bytepos;
+#endif
+}
+
+INLINE ptrdiff_t
+CHAR_TO_BYTE (ptrdiff_t charpos)
+{
+#if TODO_NELISP_LATER_AND
+  return buf_charpos_to_bytepos (current_buffer, charpos);
+#else
+  return charpos;
+#endif
 }
 
 extern void set_buffer_if_live (Lisp_Object);
@@ -132,9 +155,34 @@ bset_enable_multibyte_characters (struct buffer *b, Lisp_Object val)
 }
 
 INLINE ptrdiff_t
+BUF_PT (struct buffer *buf)
+{
+  return (buf == current_buffer ? PT : (TODO, 0));
+}
+INLINE ptrdiff_t
+BUF_PT_BYTE (struct buffer *buf)
+{
+  return (buf == current_buffer ? PT_BYTE : (TODO, 0));
+}
+INLINE ptrdiff_t
 BUF_BEG (struct buffer *buf)
 {
   return BEG;
+}
+INLINE ptrdiff_t
+BUF_BEG_BYTE (struct buffer *buf)
+{
+  return BEG_BYTE;
+}
+INLINE ptrdiff_t
+BUF_ZV (struct buffer *buf)
+{
+  return (buf == current_buffer ? ZV : (TODO, 0));
+}
+INLINE ptrdiff_t
+BUF_ZV_BYTE (struct buffer *buf)
+{
+  return (buf == current_buffer ? ZV_BYTE : (TODO, 0));
 }
 
 INLINE void
