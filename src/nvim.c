@@ -180,6 +180,11 @@ create_buffer (long bufid)
   register struct buffer *b;
   b = allocate_buffer ();
 
+  if (!(CHAR_TABLE_P (XCHAR_TABLE (Vascii_downcase_table)->extras[0])
+        && CHAR_TABLE_P (XCHAR_TABLE (Vascii_downcase_table)->extras[1])
+        && CHAR_TABLE_P (XCHAR_TABLE (Vascii_downcase_table)->extras[2])))
+    Fset_standard_case_table (Vascii_downcase_table);
+
   b->local_var_alist_ = Qnil;
   b->last_obj_ = Qnil;
   b->downcase_table_ = Vascii_downcase_table;
