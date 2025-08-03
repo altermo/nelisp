@@ -24,8 +24,11 @@ struct terminal
 {
   union vectorlike_header header;
 
+  Lisp_Object charset_list;
+
   Lisp_Object _last_obj;
 
+  struct coding_system *terminal_coding;
   char *name;
 } GCALIGNED_STRUCT;
 
@@ -42,6 +45,16 @@ XTERMINAL (Lisp_Object a)
   return XUNTAG (a, Lisp_Vectorlike, struct terminal);
 }
 
+INLINE void
+tset_charset_list (struct terminal *t, Lisp_Object val)
+{
+  t->charset_list = val;
+}
+
+#define TERMINAL_TERMINAL_CODING(d) ((d)->terminal_coding)
+
 #define FRAME_TERMINAL(f) nvim_frame_terminal (f)
+
+extern struct terminal *decode_live_terminal (Lisp_Object);
 
 #endif

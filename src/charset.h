@@ -276,5 +276,6 @@ extern unsigned encode_char (struct charset *, int);
   iso_charset_table[(dimension) - 1][chars_96][final]
 
 extern int charset_unibyte;
+extern int charset_ascii;
 
 #endif

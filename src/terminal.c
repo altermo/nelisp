@@ -64,4 +64,6 @@ syms_of_terminal (void)
 
   defsubr (&Sframe_terminal);
   defsubr (&Sterminal_name);
+
+  DEFSYM (Qdefault_terminal_coding_system, "default-terminal-coding-system");
 }

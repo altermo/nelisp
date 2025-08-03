@@ -1,6 +1,7 @@
 #include "nvim.h"
 #include "lisp.h"
 #include "buffer.h"
+#include "coding.h"
 #include "dispextern.h"
 #include "frame.h"
 #include "lua.h"
@@ -709,6 +710,17 @@ nvim_terminal_sentinel (void)
       XSETPVECTYPESIZE (ptr, PVEC_TERMINAL, lisplen, memlen - lisplen);
 
       ptr->name = "nvim";
+
+      ptr->terminal_coding = xmalloc (sizeof (struct coding_system));
+
+      Lisp_Object terminal_coding;
+
+      terminal_coding = find_symbol_value (Qdefault_terminal_coding_system);
+      if (NILP (terminal_coding) || BASE_EQ (terminal_coding, Qunbound)
+          || NILP (Fcoding_system_p (terminal_coding)))
+        terminal_coding = Qundecided;
+
+      setup_coding_system (terminal_coding, ptr->terminal_coding);
 
       _terminal_sentinel_inited = true;
     }

@@ -399,4 +399,6 @@ encode_file_name (Lisp_Object name)
 
 extern char emacs_mule_bytes[256];
 
+extern void setup_coding_system (Lisp_Object, struct coding_system *);
+
 #endif

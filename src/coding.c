@@ -3,6 +3,7 @@
 #include "buffer.h"
 #include "character.h"
 #include "charset.h"
+#include "termhooks.h"
 
 static Lisp_Object Vsjis_coding_system;
 static Lisp_Object Vbig5_coding_system;
@@ -63,6 +64,14 @@ encode_inhibit_flag (Lisp_Object flag)
 {
   return NILP (flag) ? -1 : EQ (flag, Qt);
 }
+
+#define CODING_GET_INFO(coding, attrs, charset_list)     \
+  do                                                     \
+    {                                                    \
+      (attrs) = CODING_ID_ATTRS ((coding)->id);          \
+      (charset_list) = CODING_ATTR_CHARSET_LIST (attrs); \
+    }                                                    \
+  while (false)
 
 DEFUN ("coding-system-p", Fcoding_system_p, Scoding_system_p, 1, 1, 0,
        doc: /* Return t if OBJECT is nil or a coding-system.
@@ -318,6 +327,26 @@ setup_coding_system (Lisp_Object coding_system, struct coding_system *coding)
     }
 
   return;
+}
+
+Lisp_Object
+coding_charset_list (struct coding_system *coding)
+{
+  Lisp_Object attrs, charset_list;
+
+  CODING_GET_INFO (coding, attrs, charset_list);
+  if (EQ (CODING_ATTR_TYPE (attrs), Qiso_2022))
+    {
+      int flags = XFIXNUM (AREF (attrs, coding_attr_iso_flags));
+
+      if (flags & CODING_ISO_FLAG_FULL_SUPPORT)
+        charset_list = Viso_2022_charset_list;
+    }
+  else if (EQ (CODING_ATTR_TYPE (attrs), Qemacs_mule))
+    {
+      charset_list = Vemacs_mule_charset_list;
+    }
+  return charset_list;
 }
 
 static void
@@ -1181,6 +1210,28 @@ not fully specified.)  The function does not change the match data.  */)
                               0);
 }
 
+DEFUN ("set-terminal-coding-system-internal", Fset_terminal_coding_system_internal,
+       Sset_terminal_coding_system_internal, 1, 2, 0,
+       doc: /* Internal use only.  */)
+(Lisp_Object coding_system, Lisp_Object terminal)
+{
+  struct terminal *term = decode_live_terminal (terminal);
+  struct coding_system *terminal_coding = TERMINAL_TERMINAL_CODING (term);
+  CHECK_SYMBOL (coding_system);
+  setup_coding_system (Fcheck_coding_system (coding_system), terminal_coding);
+
+  terminal_coding->mode |= CODING_MODE_SAFE_ENCODING;
+
+  terminal_coding->common_flags &= ~CODING_ANNOTATE_COMPOSITION_MASK;
+  terminal_coding->src_multibyte = 1;
+  terminal_coding->dst_multibyte = 0;
+  tset_charset_list (term, (terminal_coding->common_flags
+                                & CODING_REQUIRE_ENCODING_MASK
+                              ? coding_charset_list (terminal_coding)
+                              : list1i (charset_ascii)));
+  return Qnil;
+}
+
 DEFUN ("set-safe-terminal-coding-system-internal",
        Fset_safe_terminal_coding_system_internal,
        Sset_safe_terminal_coding_system_internal, 1, 1, 0,
@@ -1333,6 +1384,7 @@ syms_of_coding (void)
   defsubr (&Scoding_system_eol_type);
   defsubr (&Sset_coding_system_priority);
   defsubr (&Sdecode_coding_string);
+  defsubr (&Sset_terminal_coding_system_internal);
   defsubr (&Sset_safe_terminal_coding_system_internal);
 
   DEFVAR_LISP ("coding-system-list", Vcoding_system_list,
