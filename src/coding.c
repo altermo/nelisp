@@ -1054,6 +1054,20 @@ Any alias or subsidiary coding system is not a base coding system.  */)
   return CODING_ATTR_BASE_NAME (attrs);
 }
 
+DEFUN ("coding-system-plist", Fcoding_system_plist, Scoding_system_plist,
+       1, 1, 0,
+       doc: /* Return the property list of CODING-SYSTEM.  */)
+(Lisp_Object coding_system)
+{
+  Lisp_Object spec, attrs;
+
+  if (NILP (coding_system))
+    coding_system = Qno_conversion;
+  CHECK_CODING_SYSTEM_GET_SPEC (coding_system, spec);
+  attrs = AREF (spec, 0);
+  return CODING_ATTR_PLIST (attrs);
+}
+
 DEFUN ("coding-system-eol-type", Fcoding_system_eol_type,
        Scoding_system_eol_type, 1, 1, 0,
        doc: /* Return eol-type of CODING-SYSTEM.
@@ -1381,6 +1395,7 @@ syms_of_coding (void)
   defsubr (&Scoding_system_put);
   defsubr (&Sdefine_coding_system_alias);
   defsubr (&Scoding_system_base);
+  defsubr (&Scoding_system_plist);
   defsubr (&Scoding_system_eol_type);
   defsubr (&Sset_coding_system_priority);
   defsubr (&Sdecode_coding_string);
