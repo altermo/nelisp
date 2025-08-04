@@ -1,10 +1,15 @@
 #include "lisp.h"
 #include "commands.h"
+#include "frame.h"
 #include "keymap.h"
 #include "lua.h"
 #include "termhooks.h"
 
+int quit_char;
+
 EMACS_INT command_loop_level;
+
+bool interrupt_input;
 
 int
 make_ctrl_char (int c)
@@ -626,10 +631,57 @@ reorder_modifiers (Lisp_Object symbol)
   return apply_modifiers (XFIXNAT (XCAR (XCDR (parsed))), XCAR (parsed));
 }
 
+DEFUN ("current-input-mode", Fcurrent_input_mode, Scurrent_input_mode, 0, 0, 0,
+       doc: /* Return information about the way Emacs currently reads keyboard input.
+The value is a list of the form (INTERRUPT FLOW META QUIT), where
+  INTERRUPT is non-nil if Emacs is using interrupt-driven input; if
+    nil, Emacs is using CBREAK mode.
+  FLOW is non-nil if Emacs uses ^S/^Q flow control for output to the
+    terminal; this does not apply if Emacs uses interrupt-driven input.
+  META is t if accepting 8-bit unencoded input with 8th bit as Meta flag.
+  META is `encoded' if accepting 8-bit encoded input with 8th bit as
+    Meta flag which has to be interpreted after decoding the input.
+  META is nil if ignoring the top bit of input, on the assumption that
+    it is a parity bit.
+  META is neither t nor nil if accepting 8-bit input and using
+    all 8 bits as the character code.
+  QUIT is the character Emacs currently uses to quit.
+The elements of this list correspond to the arguments of
+`set-input-mode'.  */)
+(void)
+{
+  struct frame *sf = XFRAME (selected_frame);
+
+  Lisp_Object interrupt = interrupt_input ? Qt : Qnil;
+  Lisp_Object flow, meta;
+  if (FRAME_TERMCAP_P (sf) || FRAME_MSDOS_P (sf))
+    {
+#if TODO_NELISP_LATER_ELSE
+      flow = Qnil;
+      meta = Qt;
+#endif
+    }
+  else
+    {
+      flow = Qnil;
+      meta = Qt;
+    }
+  Lisp_Object quit = make_fixnum (quit_char);
+
+  return list4 (interrupt, flow, meta, quit);
+}
+
 void
 init_keyboard (void)
 {
   command_loop_level = -1;
+  quit_char = Ctl ('g');
+
+#ifdef INTERRUPT_INPUT
+  interrupt_input = 1;
+#else
+  interrupt_input = 0;
+#endif
 }
 
 void
@@ -660,6 +712,7 @@ syms_of_keyboard (void)
 
   defsubr (&Sevent_convert_list);
   defsubr (&Srecursive_edit);
+  defsubr (&Scurrent_input_mode);
 
   DEFVAR_LISP ("meta-prefix-char", meta_prefix_char,
                doc: /* Meta-prefix character code.
