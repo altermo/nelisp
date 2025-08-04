@@ -57,6 +57,16 @@ selected frame's terminal). */)
   return t->name ? build_string (t->name) : Qnil;
 }
 
+DEFUN ("terminal-parameter", Fterminal_parameter, Sterminal_parameter, 2, 2, 0,
+       doc: /* Return TERMINAL's value for parameter PARAMETER.
+TERMINAL can be a terminal object, a frame, or nil (meaning the
+selected frame's terminal).  */)
+(Lisp_Object terminal, Lisp_Object parameter)
+{
+  CHECK_SYMBOL (parameter);
+  return Fcdr (Fassq (parameter, decode_live_terminal (terminal)->param_alist));
+}
+
 void
 syms_of_terminal (void)
 {
@@ -64,6 +74,7 @@ syms_of_terminal (void)
 
   defsubr (&Sframe_terminal);
   defsubr (&Sterminal_name);
+  defsubr (&Sterminal_parameter);
 
   DEFSYM (Qdefault_terminal_coding_system, "default-terminal-coding-system");
 }

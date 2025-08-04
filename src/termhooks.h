@@ -26,6 +26,8 @@ struct terminal
 
   Lisp_Object charset_list;
 
+  Lisp_Object param_alist;
+
   Lisp_Object _last_obj;
 
   struct coding_system *terminal_coding;
