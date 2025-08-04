@@ -112,12 +112,24 @@ changed:
   return Qt;
 }
 
+DEFUN ("redraw-frame", Fredraw_frame, Sredraw_frame, 0, 1, 0,
+       doc: /* Clear frame FRAME and output again what is supposed to appear on it.
+If FRAME is omitted or nil, the selected frame is used.  */)
+(Lisp_Object frame)
+{
+#if TODO_NELISP_LATER_AND
+  redraw_frame (decode_live_frame (frame));
+#endif
+  return Qnil;
+}
+
 void
 syms_of_display (void)
 {
   DEFSYM (Qdisplay_table, "display-table");
 
   defsubr (&Sframe_or_buffer_changed_p);
+  defsubr (&Sredraw_frame);
 
   frame_and_buffer_state = make_vector (20, Qlambda);
   staticpro (&frame_and_buffer_state);
