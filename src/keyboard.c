@@ -671,6 +671,34 @@ The elements of this list correspond to the arguments of
   return list4 (interrupt, flow, meta, quit);
 }
 
+DEFUN ("set-input-meta-mode", Fset_input_meta_mode, Sset_input_meta_mode, 1, 2, 0,
+       doc: /* Enable or disable 8-bit input on TERMINAL.
+If META is t, Emacs will accept 8-bit input, and interpret the 8th
+bit as the Meta modifier before it decodes the characters.
+
+If META is `encoded', Emacs will interpret the 8th bit of single-byte
+characters after decoding the characters.
+
+If META is nil, Emacs will ignore the top bit, on the assumption it is
+parity.
+
+Otherwise, Emacs will accept and pass through 8-bit input without
+specially interpreting the top bit.
+
+This setting only has an effect on tty terminal devices.
+
+Optional parameter TERMINAL specifies the tty terminal device to use.
+It may be a terminal object, a frame, or nil for the terminal used by
+the currently selected frame.
+
+See also `current-input-mode'.  */)
+(Lisp_Object meta, Lisp_Object terminal)
+{
+  TODO_NELISP_LATER;
+
+  return Qnil;
+}
+
 void
 init_keyboard (void)
 {
@@ -713,6 +741,7 @@ syms_of_keyboard (void)
   defsubr (&Sevent_convert_list);
   defsubr (&Srecursive_edit);
   defsubr (&Scurrent_input_mode);
+  defsubr (&Sset_input_meta_mode);
 
   DEFVAR_LISP ("meta-prefix-char", meta_prefix_char,
                doc: /* Meta-prefix character code.
