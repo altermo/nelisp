@@ -711,15 +711,21 @@ nvim_terminal_sentinel (void)
 
       ptr->name = "nvim";
 
+      ptr->keyboard_coding = xmalloc (sizeof (struct coding_system));
       ptr->terminal_coding = xmalloc (sizeof (struct coding_system));
 
-      Lisp_Object terminal_coding;
+      Lisp_Object terminal_coding, keyboard_coding;
 
+      keyboard_coding = find_symbol_value (Qdefault_keyboard_coding_system);
+      if (NILP (keyboard_coding) || BASE_EQ (keyboard_coding, Qunbound)
+          || NILP (Fcoding_system_p (keyboard_coding)))
+        keyboard_coding = Qno_conversion;
       terminal_coding = find_symbol_value (Qdefault_terminal_coding_system);
       if (NILP (terminal_coding) || BASE_EQ (terminal_coding, Qunbound)
           || NILP (Fcoding_system_p (terminal_coding)))
         terminal_coding = Qundecided;
 
+      setup_coding_system (keyboard_coding, ptr->keyboard_coding);
       setup_coding_system (terminal_coding, ptr->terminal_coding);
 
       _terminal_sentinel_inited = true;

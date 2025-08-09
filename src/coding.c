@@ -1261,6 +1261,24 @@ DEFUN ("set-safe-terminal-coding-system-internal",
   return Qnil;
 }
 
+DEFUN ("set-keyboard-coding-system-internal", Fset_keyboard_coding_system_internal,
+       Sset_keyboard_coding_system_internal, 1, 2, 0,
+       doc: /* Internal use only.  */)
+(Lisp_Object coding_system, Lisp_Object terminal)
+{
+  struct terminal *t = decode_live_terminal (terminal);
+  CHECK_SYMBOL (coding_system);
+  if (NILP (coding_system))
+    coding_system = Qno_conversion;
+  else
+    Fcheck_coding_system (coding_system);
+  setup_coding_system (coding_system, TERMINAL_KEYBOARD_CODING (t));
+
+  TERMINAL_KEYBOARD_CODING (t)->common_flags
+    &= ~CODING_ANNOTATE_COMPOSITION_MASK;
+  return Qnil;
+}
+
 bool
 string_ascii_p (Lisp_Object string)
 {
@@ -1401,6 +1419,7 @@ syms_of_coding (void)
   defsubr (&Sdecode_coding_string);
   defsubr (&Sset_terminal_coding_system_internal);
   defsubr (&Sset_safe_terminal_coding_system_internal);
+  defsubr (&Sset_keyboard_coding_system_internal);
 
   DEFVAR_LISP ("coding-system-list", Vcoding_system_list,
         doc: /* List of coding systems.

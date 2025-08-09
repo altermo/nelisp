@@ -31,6 +31,7 @@ struct terminal
   Lisp_Object _last_obj;
 
   struct coding_system *terminal_coding;
+  struct coding_system *keyboard_coding;
   char *name;
 } GCALIGNED_STRUCT;
 
@@ -54,6 +55,7 @@ tset_charset_list (struct terminal *t, Lisp_Object val)
 }
 
 #define TERMINAL_TERMINAL_CODING(d) ((d)->terminal_coding)
+#define TERMINAL_KEYBOARD_CODING(d) ((d)->keyboard_coding)
 
 #define FRAME_TERMINAL(f) nvim_frame_terminal (f)
 

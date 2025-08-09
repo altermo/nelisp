@@ -114,5 +114,6 @@ syms_of_terminal (void)
   defsubr (&Sterminal_parameter);
   defsubr (&Sset_terminal_parameter);
 
+  DEFSYM (Qdefault_keyboard_coding_system, "default-keyboard-coding-system");
   DEFSYM (Qdefault_terminal_coding_system, "default-terminal-coding-system");
 }
