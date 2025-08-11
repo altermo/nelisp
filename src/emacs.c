@@ -1,10 +1,36 @@
 #include "lisp.h"
 
+#ifdef HAVE_SETLOCALE
+# include <locale.h>
+#endif
+
 bool running_asynch_code;
 bool build_details;
 bool noninteractive;
 
 static const char emacs_version[] = PACKAGE_VERSION;
+
+static void
+synchronize_locale (int category, Lisp_Object *plocale,
+                    Lisp_Object desired_locale)
+{
+  if (!EQ (*plocale, desired_locale))
+    {
+      *plocale = desired_locale;
+      char const *locale_string
+        = STRINGP (desired_locale) ? SSDATA (desired_locale) : "";
+      setlocale (category, locale_string);
+    }
+}
+
+static Lisp_Object Vprevious_system_time_locale;
+
+void
+synchronize_system_time_locale (void)
+{
+  synchronize_locale (LC_TIME, &Vprevious_system_time_locale,
+                      Vsystem_time_locale);
+}
 
 void
 syms_of_emacs (void)
@@ -50,6 +76,12 @@ This is nil during initialization.  */);
   DEFVAR_LISP ("system-messages-locale", Vsystem_messages_locale,
         doc: /* System locale for messages.  */);
   Vsystem_messages_locale = Qnil;
+
+  DEFVAR_LISP ("system-time-locale", Vsystem_time_locale,
+        doc: /* System locale for time.  */);
+  Vsystem_time_locale = Qnil;
+  Vprevious_system_time_locale = Qnil;
+  staticpro (&Vprevious_system_time_locale);
 
   DEFVAR_BOOL ("inhibit-x-resources", inhibit_x_resources,
         doc: /* If non-nil, X resources, Windows Registry settings, and NS defaults are not used.  */);

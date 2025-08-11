@@ -1289,6 +1289,13 @@ string_ascii_p (Lisp_Object string)
   return true;
 }
 
+Lisp_Object
+code_convert_string_norecord (Lisp_Object string, Lisp_Object coding_system,
+                              bool encodep)
+{
+  return code_convert_string (string, coding_system, Qt, encodep, 0, 1);
+}
+
 void
 init_coding_once (void)
 {

@@ -2434,6 +2434,14 @@ extern void syms_of_emacs (void);
 extern bool running_asynch_code;
 extern bool build_details;
 extern bool noninteractive;
+#if HAVE_SETLOCALE
+void synchronize_system_time_locale (void);
+#else
+INLINE void
+synchronize_system_time_locale (void)
+{
+}
+#endif
 
 extern void syms_of_fileio (void);
 extern void fclose_unwind (void *);
@@ -2442,6 +2450,8 @@ extern bool file_accessible_directory_p (Lisp_Object);
 extern void syms_of_coding (void);
 extern void init_coding_once (void);
 extern bool string_ascii_p (Lisp_Object);
+extern Lisp_Object code_convert_string_norecord (Lisp_Object, Lisp_Object,
+                                                 bool);
 
 extern void syms_of_buffer (void);
 extern void init_buffer (void);

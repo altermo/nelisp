@@ -2962,6 +2962,86 @@ FILENAME are suppressed.  */)
   return feature;
 }
 
+#ifdef HAVE_LANGINFO_CODESET
+# include <langinfo.h>
+#endif
+
+DEFUN ("locale-info", Flocale_info, Slocale_info, 1, 1, 0,
+       doc: /* Access locale data ITEM for the current C locale, if available.
+ITEM should be one of the following:
+
+`codeset', returning the character set as a string (locale item CODESET);
+
+`days', returning a 7-element vector of day names (locale items DAY_n);
+
+`months', returning a 12-element vector of month names (locale items MON_n);
+
+`paper', returning a list of 2 integers (WIDTH HEIGHT) for the default
+  paper size, both measured in millimeters (locale items _NL_PAPER_WIDTH,
+  _NL_PAPER_HEIGHT).
+
+If the system can't provide such information through a call to
+`nl_langinfo', or if ITEM isn't from the list above, return nil.
+
+See also Info node `(libc)Locales'.
+
+The data read from the system are decoded using `locale-coding-system'.  */)
+(Lisp_Object item)
+{
+  char *str = NULL;
+
+  ((void) str);
+
+#ifdef HAVE_LANGINFO_CODESET
+  if (EQ (item, Qcodeset))
+    {
+      str = nl_langinfo (CODESET);
+      return build_string (str);
+    }
+# ifdef DAY_1
+  if (EQ (item, Qdays))
+    {
+      Lisp_Object v = make_nil_vector (7);
+      const int days[7] = { DAY_1, DAY_2, DAY_3, DAY_4, DAY_5, DAY_6, DAY_7 };
+      int i;
+      synchronize_system_time_locale ();
+      for (i = 0; i < 7; i++)
+        {
+          str = nl_langinfo (days[i]);
+          AUTO_STRING (val, str);
+
+          ASET (v, i,
+                code_convert_string_norecord (val, Vlocale_coding_system, 0));
+        }
+      return v;
+    }
+# endif
+# ifdef MON_1
+  if (EQ (item, Qmonths))
+    {
+      Lisp_Object v = make_nil_vector (12);
+      const int months[12] = { MON_1, MON_2, MON_3, MON_4,  MON_5,  MON_6,
+                               MON_7, MON_8, MON_9, MON_10, MON_11, MON_12 };
+      synchronize_system_time_locale ();
+      for (int i = 0; i < 12; i++)
+        {
+          str = nl_langinfo (months[i]);
+          AUTO_STRING (val, str);
+          ASET (v, i,
+                code_convert_string_norecord (val, Vlocale_coding_system, 0));
+        }
+      return v;
+    }
+# endif
+# ifdef HAVE_LANGINFO__NL_PAPER_WIDTH
+  if (EQ (item, Qpaper))
+    return list2i ((int) (intptr_t) nl_langinfo (_NL_PAPER_WIDTH),
+                   (int) (intptr_t) nl_langinfo (_NL_PAPER_HEIGHT));
+# endif
+#endif
+  return Qnil;
+}
+
 void
 syms_of_fns (void)
 {
@@ -2990,6 +3070,13 @@ syms_of_fns (void)
 
   DEFSYM (Qrequire, "require");
   DEFSYM (Qprovide, "provide");
+
+#ifdef HAVE_LANGINFO_CODESET
+  DEFSYM (Qcodeset, "codeset");
+  DEFSYM (Qdays, "days");
+  DEFSYM (Qmonths, "months");
+  DEFSYM (Qpaper, "paper");
+#endif
 
   DEFVAR_LISP ("features", Vfeatures,
     doc: /* A list of symbols which are the features of the executing Emacs.
@@ -3049,6 +3136,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   defsubr (&Sfeaturep);
   defsubr (&Sprovide);
   defsubr (&Srequire);
+  defsubr (&Slocale_info);
 
   DEFSYM (QCkey, ":key");
   DEFSYM (QClessp, ":lessp");
