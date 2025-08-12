@@ -2594,6 +2594,8 @@ extern void tim_sort (Lisp_Object, Lisp_Object, Lisp_Object *, const ptrdiff_t,
 
 extern Lisp_Object double_to_integer (double);
 
+extern Lisp_Object build_marker (struct buffer *, ptrdiff_t, ptrdiff_t);
+
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)
 {

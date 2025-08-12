@@ -1014,6 +1014,10 @@ usage: (char-to-string CHAR)  */)
   return make_string_from_bytes ((char *) str, 1, len);
 }
 
+DEFUN ("point-marker", Fpoint_marker, Spoint_marker, 0, 0, 0,
+       doc: /* Return value of point, as a marker object.  */)
+(void) { return build_marker (current_buffer, PT, PT_BYTE); }
+
 DEFUN ("goto-char", Fgoto_char, Sgoto_char, 1, 1,
          "(goto-char--read-natnum-interactive \"Go to char: \")",
        doc: /* Set point to POSITION, a number or marker.
@@ -1118,6 +1122,7 @@ it to be non-nil.  */);
   defsubr (&Spropertize);
   defsubr (&Schar_equal);
   defsubr (&Schar_to_string);
+  defsubr (&Spoint_marker);
   defsubr (&Sgoto_char);
   defsubr (&Sinsert);
 }

@@ -2095,6 +2095,21 @@ DEFUN ("make-marker", Fmake_marker, Smake_marker, 0, 0, 0,
   return make_lisp_ptr (p, Lisp_Vectorlike);
 }
 
+Lisp_Object
+build_marker (struct buffer *buf, ptrdiff_t charpos, ptrdiff_t bytepos)
+{
+  TODO_NELISP_LATER;
+
+  eassert (BUFFER_LIVE_P (buf));
+
+  eassert (charpos <= bytepos);
+
+  struct Lisp_Marker *m
+    = ALLOCATE_PLAIN_PSEUDOVECTOR (struct Lisp_Marker, PVEC_MARKER);
+
+  return make_lisp_ptr (m, Lisp_Vectorlike);
+}
+
 /* --- mark bit -- */
 static bool
 vector_marked_p (const struct Lisp_Vector *v)
