@@ -165,4 +165,8 @@ extern int nvim_frame_menu_bar_lines (struct frame *);
 extern int nvim_frame_tab_bar_lines (struct frame *);
 extern struct terminal *nvim_frame_terminal (struct frame *);
 
+// ---- window --
+
+extern Lisp_Object nvim_get_current_window (void);
+
 #endif

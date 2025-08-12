@@ -1,8 +1,18 @@
+#include "window.h"
 #include "lisp.h"
+
+DEFUN ("selected-window", Fselected_window, Sselected_window, 0, 0, 0,
+       doc: /* Return the selected window.
+The selected window is the window in which the standard cursor for
+selected windows appears and to which many commands apply.
+
+Also see `old-selected-window' and `minibuffer-selected-window'.  */)
+(void) { return selected_window; }
 
 void
 syms_of_window (void)
 {
+  DEFSYM (Qwindowp, "windowp");
   DEFSYM (Qclone_of, "clone-of");
 
   DEFVAR_LISP ("window-persistent-parameters", Vwindow_persistent_parameters,
@@ -29,4 +39,6 @@ Parameters not saved by `current-window-configuration' or
 `window-state-get' are left alone by `set-window-configuration'
 respectively are not installed by `window-state-put'.  */);
   Vwindow_persistent_parameters = list1 (Fcons (Qclone_of, Qt));
+
+  defsubr (&Sselected_window);
 }

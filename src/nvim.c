@@ -6,6 +6,7 @@
 #include "frame.h"
 #include "lua.h"
 #include "termhooks.h"
+#include "window.h"
 
 static void
 push_vim_api (lua_State *L, const char *name)
@@ -940,4 +941,26 @@ nvim_frame_terminal (struct frame *f)
   if (!FRAME_LIVE_P (f))
     return NULL;
   return nvim_terminal_sentinel ();
+}
+
+// --- window --
+Lisp_Object
+nvim_winid_to_winobj (long winid)
+{
+  return nvim_id_to_obj (winid, NVIM_WINDOW, create_buffer);
+}
+
+Lisp_Object
+nvim_get_current_window (void)
+{
+  long winid;
+  LUA (5)
+  {
+    push_vim_api (L, "nvim_get_current_win");
+    lua_call (L, 0, 1);
+    eassert (lua_isnumber (L, -1));
+    winid = lua_tointeger (L, -1);
+    lua_pop (L, 1);
+  }
+  return nvim_winid_to_winobj (winid);
 }
