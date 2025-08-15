@@ -7,6 +7,7 @@
 #include "frame.h"
 #include "intervals.h"
 #include "lua.h"
+#include "nvim.h"
 #include "pdumper.h"
 #include "puresize.h"
 #include "termhooks.h"
@@ -2087,10 +2088,11 @@ DEFUN ("make-marker", Fmake_marker, Smake_marker, 0, 0, 0,
        doc: /* Return a newly allocated marker which does not point at any place.  */)
 (void)
 {
-  TODO_NELISP_LATER;
-
   struct Lisp_Marker *p
     = ALLOCATE_PLAIN_PSEUDOVECTOR (struct Lisp_Marker, PVEC_MARKER);
+
+  p->buffer = 0;
+  p->extmark_id = 0;
 
   return make_lisp_ptr (p, Lisp_Vectorlike);
 }
@@ -2098,14 +2100,14 @@ DEFUN ("make-marker", Fmake_marker, Smake_marker, 0, 0, 0,
 Lisp_Object
 build_marker (struct buffer *buf, ptrdiff_t charpos, ptrdiff_t bytepos)
 {
-  TODO_NELISP_LATER;
-
   eassert (BUFFER_LIVE_P (buf));
 
   eassert (charpos <= bytepos);
 
   struct Lisp_Marker *m
     = ALLOCATE_PLAIN_PSEUDOVECTOR (struct Lisp_Marker, PVEC_MARKER);
+
+  nvim_mark_set_all (m, buf, charpos, bytepos, false);
 
   return make_lisp_ptr (m, Lisp_Vectorlike);
 }

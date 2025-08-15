@@ -601,7 +601,7 @@ setup_frame:;
           NEXT;
 
         CASE (Bsave_excursion):
-          TODO; // record_unwind_protect_excursion ();
+          record_unwind_protect_excursion ();
           NEXT;
 
         CASE (Bsave_current_buffer_OBSOLETE):

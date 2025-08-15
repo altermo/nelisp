@@ -567,6 +567,18 @@ ret () init (lua_State *L)
   // Well there's errors.
   lua_pop (L, 1);
 
+  lua_getglobal (L, "vim");
+  lua_getfield (L, -1, "api");
+  lua_remove (L, -2);
+  lua_getfield (L, -1, "nvim_create_namespace");
+  lua_remove (L, -2);
+  eassert (lua_isfunction (L, -1));
+  lua_pushliteral (L, "nelisp");
+  lua_call (L, 1, 1);
+  eassert (lua_isnumber (L, -1));
+  nvim_ns = lua_tonumber (L, -1);
+  lua_pop (L, -1);
+
   init_alloc_once ();
   init_eval_once ();
   init_obarray_once ();

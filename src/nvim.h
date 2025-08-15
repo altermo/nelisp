@@ -168,5 +168,10 @@ extern struct terminal *nvim_frame_terminal (struct frame *);
 // ---- window --
 
 extern Lisp_Object nvim_get_current_window (void);
+extern Lisp_Object nvim_window_content (struct window *);
+
+// ---- marker (extmark) --
+extern void nvim_mark_set_all (struct Lisp_Marker *, struct buffer *, ptrdiff_t,
+                               ptrdiff_t, bool);
 
 #endif

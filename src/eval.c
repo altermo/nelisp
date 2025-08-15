@@ -133,6 +133,13 @@ record_unwind_protect_void (void (*function) (void))
   specpdl_ptr->unwind_void.func = function;
   grow_specpdl ();
 }
+void
+record_unwind_protect_excursion (void)
+{
+  specpdl_ptr->unwind_excursion.kind = SPECPDL_UNWIND_EXCURSION;
+  save_excursion_save (specpdl_ptr);
+  grow_specpdl ();
+}
 
 specpdl_ref
 record_in_backtrace (Lisp_Object function, Lisp_Object *args, ptrdiff_t nargs)

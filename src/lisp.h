@@ -37,6 +37,7 @@ extern bool unrecoverable_error;
 #define UNUSED(x) (void) x
 #define STATIC_ASSERT(expr, msg) \
   (void) (sizeof (struct { int static_error___##msg##__ : ((expr) ? 1 : -1); }))
+extern uint32_t nvim_ns;
 
 // LSP being anyoing about them existing and not existing, so just define them
 // here // TODO: lsp HACK
@@ -544,6 +545,7 @@ dead_object (void)
    eassert ((size & (PSEUDOVECTOR_FLAG | PVEC_TYPE_MASK)) \
             == (PSEUDOVECTOR_FLAG | (code << PSEUDOVECTOR_AREA_BITS))))
 
+#define XSETWINDOW(a, b) XSETPSEUDOVECTOR (a, b, PVEC_WINDOW)
 #define XSETTERMINAL(a, b) XSETPSEUDOVECTOR (a, b, PVEC_TERMINAL)
 #define XSETSUBR(a, b) XSETPSEUDOVECTOR (a, b, PVEC_SUBR)
 #define XSETBUFFER(a, b) XSETPSEUDOVECTOR (a, b, PVEC_BUFFER)
@@ -1530,9 +1532,9 @@ struct Lisp_Marker
 {
   union vectorlike_header header;
 
-  int _dummy;
-
-  // TODO: make it a wrapper around an extmark
+  struct buffer *buffer;
+  bool_bf insertion_type_ : 1;
+  uint32_t extmark_id;
 } GCALIGNED_STRUCT;
 
 struct Lisp_Overlay
@@ -1979,6 +1981,7 @@ extern void record_unwind_protect_void (void (*function) (void));
 extern void record_unwind_protect_nothing (void);
 extern void record_unwind_protect_ptr_mark (void (*function) (void *),
                                             void *arg, void (*mark) (void *));
+void record_unwind_protect_excursion (void);
 extern void clear_unwind_protect (specpdl_ref count);
 specpdl_ref record_in_backtrace (Lisp_Object function, Lisp_Object *args,
                                  ptrdiff_t nargs);
@@ -2429,6 +2432,7 @@ extern Lisp_Object reorder_modifiers (Lisp_Object);
 extern void keys_of_keyboard (void);
 
 extern void syms_of_editfns (void);
+void save_excursion_save (union specbinding *pdl);
 
 extern void syms_of_emacs (void);
 extern bool running_asynch_code;

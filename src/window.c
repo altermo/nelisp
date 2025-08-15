@@ -1,6 +1,12 @@
 #include "window.h"
 #include "lisp.h"
 
+struct window *
+allocate_window (void)
+{
+  return ALLOCATE_ZEROED_PSEUDOVECTOR (struct window, _last_obj, PVEC_WINDOW);
+}
+
 DEFUN ("selected-window", Fselected_window, Sselected_window, 0, 0, 0,
        doc: /* Return the selected window.
 The selected window is the window in which the standard cursor for

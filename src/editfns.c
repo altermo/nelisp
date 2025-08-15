@@ -1,6 +1,7 @@
 #include "lisp.h"
 #include "buffer.h"
 #include "character.h"
+#include "window.h"
 
 #include <c-ctype.h>
 
@@ -11,6 +12,19 @@ init_and_cache_system_name (void)
 {
   init_system_name ();
   cached_system_name = Vsystem_name;
+}
+
+void
+save_excursion_save (union specbinding *pdl)
+{
+  eassert (pdl->unwind_excursion.kind == SPECPDL_UNWIND_EXCURSION);
+  pdl->unwind_excursion.marker = Fpoint_marker ();
+
+  pdl->unwind_excursion.window
+    = (BASE_EQ (nvim_window_content (XWINDOW (selected_window)),
+                Fcurrent_buffer ())
+         ? selected_window
+         : Qnil);
 }
 
 DEFUN ("point-max", Fpoint_max, Spoint_max, 0, 0, 0,

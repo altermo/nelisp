@@ -8,6 +8,8 @@
 #include "termhooks.h"
 #include "window.h"
 
+uint32_t nvim_ns;
+
 static void
 push_vim_api (lua_State *L, const char *name)
 {
@@ -945,9 +947,23 @@ nvim_frame_terminal (struct frame *f)
 
 // --- window --
 Lisp_Object
+create_window (long id)
+{
+  Lisp_Object window;
+  register struct window *w;
+
+  w = allocate_window ();
+  w->winid = id;
+
+  XSETWINDOW (window, w);
+  return window;
+  TODO;
+}
+
+Lisp_Object
 nvim_winid_to_winobj (long winid)
 {
-  return nvim_id_to_obj (winid, NVIM_WINDOW, create_buffer);
+  return nvim_id_to_obj (winid, NVIM_WINDOW, create_window);
 }
 
 Lisp_Object
@@ -963,4 +979,66 @@ nvim_get_current_window (void)
     lua_pop (L, 1);
   }
   return nvim_winid_to_winobj (winid);
+}
+
+Lisp_Object
+nvim_window_content (struct window *w)
+{
+  long winid = w->winid;
+  Lisp_Object buf = Qnil;
+  LUA (5)
+  {
+    push_vim_api (L, "nvim_win_is_valid");
+    lua_pushnumber (L, winid);
+    lua_call (L, 1, 1);
+    eassert (lua_isboolean (L, -1));
+    if (!lua_toboolean (L, -1))
+      goto done;
+    push_vim_api (L, "nvim_win_get_buf");
+    lua_pushnumber (L, winid);
+    lua_call (L, 1, 1);
+    eassert (lua_isnumber (L, -1));
+    buf = nvim_bufid_to_bufobj (lua_tonumber (L, -1));
+    lua_pop (L, 1);
+  done:
+    lua_pop (L, 1);
+  }
+  return buf;
+}
+
+// --- mark (extmark) --
+void
+nvim_mark_set_all (struct Lisp_Marker *m, struct buffer *b, ptrdiff_t charpos,
+                   ptrdiff_t bytepos, bool insertion_type)
+{
+  eassert (BUFFER_LIVE_P (b));
+
+  LUA (20)
+  {
+    push_vim_api (L, "nvim_buf_set_extmark");
+    lua_pushnumber (L, b->bufid);
+    lua_pushnumber (L, nvim_ns);
+    struct pos pos = nvim_buf_byte1_to_pos0 (bytepos);
+    lua_pushnumber (L, pos.row);
+    lua_pushnumber (L, pos.col);
+    lua_newtable (L);
+    if (m->extmark_id != 0)
+      {
+        lua_pushnumber (L, m->extmark_id);
+        lua_setfield (L, -2, "id");
+      }
+    if (insertion_type == false)
+      {
+        lua_pushboolean (L, true);
+        lua_setfield (L, -2, "right_gravity");
+      }
+    lua_call (L, 5, 1);
+    eassert (lua_isnumber (L, -1));
+    uint32_t id = lua_tonumber (L, -1);
+    lua_pop (L, 1);
+
+    m->buffer = b;
+    m->insertion_type_ = insertion_type;
+    m->extmark_id = id;
+  }
 }
