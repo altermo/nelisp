@@ -1561,6 +1561,12 @@ MARKERP (Lisp_Object x)
 {
   return PSEUDOVECTORP (x, PVEC_MARKER);
 }
+INLINE struct Lisp_Marker *
+XMARKER (Lisp_Object a)
+{
+  eassert (MARKERP (a));
+  return XUNTAG (a, Lisp_Vectorlike, struct Lisp_Marker);
+}
 INLINE bool
 OVERLAYP (Lisp_Object x)
 {
@@ -2599,6 +2605,8 @@ extern void tim_sort (Lisp_Object, Lisp_Object, Lisp_Object *, const ptrdiff_t,
 extern Lisp_Object double_to_integer (double);
 
 extern Lisp_Object build_marker (struct buffer *, ptrdiff_t, ptrdiff_t);
+
+extern void syms_of_marker (void);
 
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)

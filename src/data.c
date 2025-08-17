@@ -2423,6 +2423,7 @@ syms_of_data (void)
   DEFSYM (Qvectorp, "vectorp");
   DEFSYM (Qbuffer_or_string_p, "buffer-or-string-p");
   DEFSYM (Qfloatp, "floatp");
+  DEFSYM (Qmarkerp, "markerp");
 
   DEFSYM (Qvoid_function, "void-function");
   DEFSYM (Qwrong_type_argument, "wrong-type-argument");
