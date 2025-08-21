@@ -229,7 +229,9 @@ do_one_unbind (union specbinding *this_binding, bool unwinding,
       this_binding->unwind_void.func ();
       break;
     case SPECPDL_UNWIND_EXCURSION:
-      TODO;
+      save_excursion_restore (this_binding->unwind_excursion.marker,
+                              this_binding->unwind_excursion.window);
+      break;
     case SPECPDL_BACKTRACE:
     case SPECPDL_NOP:
       break;

@@ -27,6 +27,26 @@ save_excursion_save (union specbinding *pdl)
          : Qnil);
 }
 
+void
+save_excursion_restore (Lisp_Object marker, Lisp_Object window)
+{
+  Lisp_Object buffer = Fmarker_buffer (marker);
+
+  if (NILP (buffer))
+    return;
+
+  Fset_buffer (buffer);
+
+  Fgoto_char (marker);
+  unchain_marker (XMARKER (marker));
+
+  if (WINDOWP (window) && !BASE_EQ (window, selected_window))
+    {
+      TODO; // Lisp_Object contents = XWINDOW (window)->contents;
+      // if (BUFFERP (contents) && XBUFFER (contents) == current_buffer)
+      //   Fset_window_point (window, make_fixnum (PT));
+    }
+}
 DEFUN ("point-max", Fpoint_max, Spoint_max, 0, 0, 0,
        doc: /* Return the maximum permissible value of point in the current buffer.
 This is (1+ (buffer-size)), unless narrowing (a buffer restriction)
@@ -1045,7 +1065,7 @@ minibuffer.  The default value is the number at point (if any).  */)
 (register Lisp_Object position)
 {
   if (MARKERP (position))
-    TODO; // set_point_from_marker (position);
+    set_point_from_marker (position);
   else if (FIXNUMP (position))
     SET_PT (clip_to_bounds (BEGV, XFIXNUM (position), ZV));
   else

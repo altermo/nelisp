@@ -173,5 +173,6 @@ extern Lisp_Object nvim_window_content (struct window *);
 // ---- marker (extmark) --
 extern void nvim_mark_set_all (struct Lisp_Marker *, struct buffer *, ptrdiff_t,
                                ptrdiff_t, bool);
+extern ptrdiff_t nvim_mark_bytepos (struct Lisp_Marker *);
 
 #endif

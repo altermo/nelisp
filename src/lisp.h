@@ -2439,6 +2439,7 @@ extern void keys_of_keyboard (void);
 
 extern void syms_of_editfns (void);
 void save_excursion_save (union specbinding *pdl);
+extern void save_excursion_restore (Lisp_Object, Lisp_Object);
 
 extern void syms_of_emacs (void);
 extern bool running_asynch_code;
@@ -2607,6 +2608,8 @@ extern Lisp_Object double_to_integer (double);
 extern Lisp_Object build_marker (struct buffer *, ptrdiff_t, ptrdiff_t);
 
 extern void syms_of_marker (void);
+extern void unchain_marker (struct Lisp_Marker *);
+extern ptrdiff_t marker_byte_position (Lisp_Object);
 
 INLINE Lisp_Object *
 xvector_contents_addr (Lisp_Object a, ptrdiff_t i)

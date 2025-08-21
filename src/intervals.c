@@ -477,3 +477,15 @@ merge_interval_left (register INTERVAL i)
 
   emacs_abort ();
 }
+
+void
+set_point_from_marker (Lisp_Object marker)
+{
+  ptrdiff_t bytepos = marker_byte_position (marker);
+
+  if (XMARKER (marker)->buffer != current_buffer)
+    TODO; // bytepos = buf_charpos_to_bytepos (current_buffer, charpos);
+  else
+    bytepos = clip_to_bounds (BEGV_BYTE, bytepos, ZV_BYTE);
+  set_point (bytepos);
+}

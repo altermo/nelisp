@@ -27,6 +27,8 @@ enum
 
 #define set_point nvim_set_point
 
+extern void set_point_from_marker (Lisp_Object);
+
 INLINE void
 SET_PT (ptrdiff_t position)
 {

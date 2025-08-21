@@ -447,6 +447,36 @@ nvim_buf_byte1_to_pos0 (ptrdiff_t byte1)
   return pos;
 }
 
+ptrdiff_t
+nvim_buf_pos0_to_byte1 (const struct pos pos, struct buffer *b)
+{
+#if TODO_NELISP_LATER_ELSE
+  eassert (b == current_buffer);
+#endif
+
+  ptrdiff_t byte1;
+  LUA (10)
+  {
+    push_vim_fn (L, "line2byte");
+    lua_pushnumber (L, pos.row + 1);
+    lua_call (L, 1, 1);
+    eassert (lua_isnumber (L, -1));
+#if TODO_NELISP_LATER_ELSE
+    if (pos.row == 0 && lua_tonumber (L, -1))
+      {
+        // unloaded buffers... how to deal with them
+        lua_pop (L, 1);
+        lua_pushnumber (L, 1);
+      }
+    else
+#endif
+      eassert (lua_tonumber (L, -1) != -1);
+    byte1 = lua_tonumber (L, -1) + pos.col;
+    lua_pop (L, 1);
+  }
+  return byte1;
+}
+
 void
 nvim_buf_memcpy (unsigned char *dst, ptrdiff_t beg1, ptrdiff_t size)
 {
@@ -1041,4 +1071,30 @@ nvim_mark_set_all (struct Lisp_Marker *m, struct buffer *b, ptrdiff_t charpos,
     m->insertion_type_ = insertion_type;
     m->extmark_id = id;
   }
+}
+
+ptrdiff_t
+nvim_mark_bytepos (struct Lisp_Marker *m)
+{
+  ptrdiff_t bytepos;
+  eassert (BUFFER_LIVE_P (m->buffer));
+  LUA (10)
+  {
+    push_vim_api (L, "nvim_buf_get_extmark_by_id");
+    lua_pushnumber (L, m->buffer->bufid);
+    lua_pushnumber (L, nvim_ns);
+    lua_pushnumber (L, m->extmark_id);
+    lua_newtable (L);
+    lua_call (L, 4, 1);
+    eassert (lua_istable (L, -1));
+    eassert (lua_objlen (L, -1) == 2);
+    lua_rawgeti (L, -1, 1);
+    lua_rawgeti (L, -2, 2);
+    struct pos pos;
+    pos.row = lua_tonumber (L, -2);
+    pos.col = lua_tonumber (L, -1);
+    bytepos = nvim_buf_pos0_to_byte1 (pos, m->buffer);
+    lua_pop (L, 3);
+  }
+  return bytepos;
 }
