@@ -621,6 +621,13 @@ signal an error in those cases.
 See also Info node `(elisp)Text Representations'.  */);
   make_symbol_constant (intern_c_string ("enable-multibyte-characters"));
 
+  DEFVAR_PER_BUFFER ("default-directory", &MBVAR_ (current_buffer, directory),
+        Qstringp,
+        doc: /* Name of default directory of current buffer.
+It should be an absolute directory name; on GNU and Unix systems,
+these names start with "/" or "~" and end with "/".
+To interactively change the default directory, use the command `cd'. */);
+
   DEFVAR_PER_BUFFER ("buffer-read-only", &MBVAR_ (current_buffer, read_only),
                      Qnil, doc : /* Non-nil if this buffer is read-only.  */);
 

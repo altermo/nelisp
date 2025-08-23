@@ -17,7 +17,8 @@
 
 #define Xmeta_buffer_vars \
   X (read_only_)          \
-  X (undo_list_)
+  X (undo_list_)          \
+  X (directory_)
 
 struct buffer
 {
@@ -74,6 +75,7 @@ extern void nvim_buffer_set_bool_option (struct buffer *b, const char[],
 
 extern void nvim_buffer_set_undo_list (struct buffer *b, Lisp_Object value);
 extern Lisp_Object nvim_buffer_undo_list (struct buffer *b);
+extern Lisp_Object nvim_buffer_directory (struct buffer *b);
 
 extern void nvim_buf_memcpy (unsigned char *dst, ptrdiff_t beg, ptrdiff_t size);
 extern void nvim_buf_insert (const char *string, ptrdiff_t nbytes);
@@ -91,6 +93,8 @@ nvim_bvar (struct buffer *b, enum nvim_buffer_var_field field)
       return nvim_buffer_filename (b);
     case NVIM_BUFFER_VAR_undo_list_:
       return nvim_buffer_undo_list (b);
+    case NVIM_BUFFER_VAR_directory_:
+      return nvim_buffer_directory (b);
 #define X(field)              \
 case NVIM_BUFFER_VAR_##field: \
   return b->field;

@@ -729,6 +729,34 @@ nvim_buf_insert (const char *string, ptrdiff_t nbytes)
   }
 }
 
+Lisp_Object
+nvim_buffer_directory (struct buffer *b)
+{
+  // TODO: in neovim it's window local, but in emacs it's buffer local
+  Lisp_Object obj;
+
+  LUA (10)
+  {
+    push_vim_fn (L, "getcwd");
+    push_vim_fn (L, "win_findbuf");
+    lua_pushnumber (L, b->bufid);
+    lua_call (L, 1, 1);
+    eassert (lua_istable (L, -1));
+    if (lua_objlen (L, -1) == 0)
+      TODO;
+    lua_rawgeti (L, -1, 1);
+    eassert (lua_isnumber (L, -1));
+    lua_remove (L, -2);
+    lua_call (L, 1, 1);
+    eassert (lua_isstring (L, -1));
+    size_t len;
+    const char *name = lua_tolstring (L, -1, &len);
+    obj = make_string (name, len);
+    lua_pop (L, 1);
+  }
+  return obj;
+}
+
 // --- terminal --
 static struct terminal _terminal_sentinel;
 static bool _terminal_sentinel_inited;
