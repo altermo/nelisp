@@ -744,7 +744,8 @@ nvim_buffer_directory (struct buffer *b)
     eassert (lua_istable (L, -1));
     if (lua_objlen (L, -1) == 0)
       TODO;
-    lua_rawgeti (L, -1, 1);
+    // TODO: HACK: (load "loadup") causes E5002 if n=1, so let n=len(tbl)
+    lua_rawgeti (L, -1, lua_objlen (L, -1));
     eassert (lua_isnumber (L, -1));
     lua_remove (L, -2);
     lua_call (L, 1, 1);
@@ -755,6 +756,32 @@ nvim_buffer_directory (struct buffer *b)
     lua_pop (L, 1);
   }
   return obj;
+}
+
+void
+nvim_buffer_set_directory (struct buffer *b, Lisp_Object value)
+{
+  // TODO: in neovim it's window local, but in emacs it's buffer local
+
+  LUA (5)
+  {
+    push_vim_api (L, "nvim_win_call");
+    push_vim_fn (L, "win_findbuf");
+    lua_pushnumber (L, b->bufid);
+    lua_call (L, 1, 1);
+    eassert (lua_istable (L, -1));
+    if (lua_objlen (L, -1) == 0)
+      TODO;
+    lua_rawgeti (L, -1, 1);
+    eassert (lua_isnumber (L, -1));
+    lua_remove (L, -2);
+    luaL_loadstring (L, "local arg=...;return function() vim.cmd.lcd(arg) end");
+    lua_pushlstring (L, (char *) SDATA (value), SBYTES (value));
+    lua_call (L, 1, 1);
+    eassert (lua_isfunction (L, -1));
+    // TODO: :lcd can error, so pcall and do something with error
+    lua_call (L, 2, 0);
+  }
 }
 
 // --- terminal --

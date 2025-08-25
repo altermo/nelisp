@@ -539,7 +539,12 @@ start:
       {
         lispfwd valcontents = SYMBOL_FWD (sym);
         if (BUFFER_OBJFWDP (valcontents))
-          TODO;
+          {
+            int offset = XBUFFER_OBJFWD (valcontents)->offset;
+            int idx = PER_BUFFER_IDX (offset);
+            if (idx == -1 || PER_BUFFER_VALUE_P (buf, idx))
+              return Qt;
+          }
         return Qnil;
       }
     default:

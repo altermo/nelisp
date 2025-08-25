@@ -226,4 +226,21 @@ upcase (int c)
   Lisp_Object up = CHAR_TABLE_REF (upcase_table, c);
   return FIXNATP (up) ? XFIXNAT (up) : c;
 }
+
+INLINE bool
+PER_BUFFER_VALUE_P (struct buffer *b, int idx)
+{
+  TODO_NELISP_LATER;
+  // eassert (valid_per_buffer_idx (idx));
+  // return b->local_flags[idx];
+  return 1;
+}
+INLINE int
+PER_BUFFER_IDX (ptrdiff_t offset)
+{
+  TODO_NELISP_LATER;
+  // return XFIXNUM (*(Lisp_Object *) (offset + (char *) &buffer_local_flags));
+  return -1;
+}
+
 #endif

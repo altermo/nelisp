@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "lisp.h"
+#include "buffer.h"
 
 #define CACHEABLE
 #define clobbered_eassert(E) eassert (sizeof (E) != 0)
@@ -36,6 +37,13 @@ set_specpdl_old_value (union specbinding *pdl, Lisp_Object val)
 {
   eassert (pdl->kind >= SPECPDL_LET);
   pdl->let.old_value = val;
+}
+
+static Lisp_Object
+specpdl_where (union specbinding *pdl)
+{
+  eassert (pdl->kind > SPECPDL_LET);
+  return pdl->let.where.buf;
 }
 
 Lisp_Object
@@ -267,7 +275,15 @@ do_one_unbind (union specbinding *this_binding, bool unwinding,
                             kbdwhere);
       break;
     case SPECPDL_LET_LOCAL:
-      TODO;
+      {
+        Lisp_Object symbol = specpdl_symbol (this_binding);
+        Lisp_Object where = specpdl_where (this_binding);
+        Lisp_Object old_value = specpdl_old_value (this_binding);
+        eassert (BUFFERP (where));
+
+        if (!NILP (Flocal_variable_p (symbol, where)))
+          set_internal (symbol, old_value, where, bindflag);
+      }
     }
 }
 Lisp_Object
@@ -619,6 +635,7 @@ specbind (Lisp_Object symbol, Lisp_Object value)
         specpdl_ptr->let.kind = SPECPDL_LET_LOCAL;
         specpdl_ptr->let.symbol = symbol;
         specpdl_ptr->let.old_value = ovalue;
+        specpdl_ptr->let.where.buf = Fcurrent_buffer ();
 
         eassert (sym->u.s.redirect != SYMBOL_LOCALIZED
                  || (BASE_EQ (SYMBOL_BLV (sym)->where, Fcurrent_buffer ())));
@@ -630,7 +647,8 @@ specbind (Lisp_Object symbol, Lisp_Object value)
           }
         else if (BUFFER_OBJFWDP (SYMBOL_FWD (sym)))
           {
-            TODO;
+            if (NILP (Flocal_variable_p (symbol, Qnil)))
+              specpdl_ptr->let.kind = SPECPDL_LET_DEFAULT;
           }
         else if (KBOARD_OBJFWDP (SYMBOL_FWD (sym)))
           {
