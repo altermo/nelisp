@@ -100,9 +100,18 @@ set_initial_environment (void)
 void
 syms_of_callproc (void)
 {
+  DEFVAR_LISP ("exec-directory", Vexec_directory,
+        doc: /* Directory for executables for Emacs to invoke.
+More generally, this includes any architecture-dependent files
+that are built and installed from the Emacs distribution.  */);
+
   DEFVAR_LISP ("data-directory", Vdata_directory,
         doc: /* Directory of machine-independent files that come with GNU Emacs.
 These are files intended for Emacs to use while it runs.  */);
+
+  DEFVAR_LISP ("doc-directory", Vdoc_directory,
+        doc: /* Directory containing the DOC file that comes with GNU Emacs.
+This is usually the same as `data-directory'.  */);
 
   DEFVAR_LISP ("process-environment", Vprocess_environment,
         doc: /* List of overridden environment variables for subprocesses to inherit.
@@ -127,5 +136,12 @@ use.
 See `setenv' and `getenv'.  */);
   Vprocess_environment = Qnil;
 
+  DEFVAR_LISP ("exec-path", Vexec_path,
+         doc: /* List of directories to search programs to run in subprocesses.
+Each element is a string (directory name) or nil (try default directory).
+
+By default the last element of this list is `exec-directory'. The
+last element is not always used, for example in shell completion
+\(`shell-dynamic-complete-command').  */);
   defsubr (&Sgetenv_internal);
 }

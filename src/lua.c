@@ -590,6 +590,10 @@ ret () init (lua_State *L)
 
   Vload_path = list1 (make_unibyte_string (lisp_dir, len_lisp_dir));
   Vdata_directory = make_unibyte_string (data_dir, len_data_dir);
+  Vexec_path = decode_env_path ("PATH", "", 0);
+  Vdoc_directory = Vdata_directory;
+  // TODO: What should this be?
+  Vexec_directory = build_pure_c_string ("/bin");
 
   syms_of_lread ();
   syms_of_data ();

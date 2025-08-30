@@ -2445,6 +2445,7 @@ extern void syms_of_emacs (void);
 extern bool running_asynch_code;
 extern bool build_details;
 extern bool noninteractive;
+extern Lisp_Object decode_env_path (const char *, const char *, bool);
 #if HAVE_SETLOCALE
 void synchronize_system_time_locale (void);
 #else

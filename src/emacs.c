@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "lisp.h"
 
 #ifdef HAVE_SETLOCALE
@@ -30,6 +32,62 @@ synchronize_system_time_locale (void)
 {
   synchronize_locale (LC_TIME, &Vprevious_system_time_locale,
                       Vsystem_time_locale);
+}
+
+Lisp_Object
+decode_env_path (const char *evarname, const char *defalt, bool empty)
+{
+  const char *path, *p;
+  Lisp_Object lpath, element, tem;
+
+  Lisp_Object empty_element = empty ? Qnil : build_string (".");
+
+  if (evarname != 0)
+    path = getenv (evarname);
+  else
+    path = 0;
+  if (!path)
+    {
+      path = defalt;
+    }
+
+  lpath = Qnil;
+  while (1)
+    {
+      p = strchr (path, SEPCHAR);
+      if (!p)
+        p = path + strlen (path);
+      element
+        = ((p - path) ? make_unibyte_string (path, p - path) : empty_element);
+      if (!NILP (element))
+        {
+#if TODO_NELISP_LATER_AND
+          tem = Ffind_file_name_handler (element, Qt);
+
+          if (SYMBOLP (tem))
+            {
+              Lisp_Object prop;
+              prop = Fget (tem, Qsafe_magic);
+              if (!NILP (prop))
+                tem = Qnil;
+            }
+
+          if (!NILP (tem))
+            {
+              AUTO_STRING (slash_colon, "/:");
+              element = concat2 (slash_colon, element);
+            }
+#endif
+        }
+
+      lpath = Fcons (element, lpath);
+      if (*p)
+        path = p + 1;
+      else
+        break;
+    }
+
+  return Fnreverse (lpath);
 }
 
 void

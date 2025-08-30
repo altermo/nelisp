@@ -19,6 +19,8 @@
 #define HAVE_LANGINFO_CODESET 1
 #define HAVE_SETLOCALE 1
 
+#define SEPCHAR ':'
+
 #define _GL_INLINE_HEADER_BEGIN
 #define _GL_INLINE_HEADER_END
 #define _GL_INLINE static inline __attribute__ ((__gnu_inline__))
