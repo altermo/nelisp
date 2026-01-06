@@ -1,5 +1,0 @@
-*.so
-*.o
-/src/globals.h
-/.cache
-/compile_commands.json
